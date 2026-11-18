@@ -477,7 +477,10 @@ jobs:
   # Only main releases: a workflow_dispatch from any other branch publishes its `envoy:<sha>` image
   # above and stops there.
   release_build:
-    if: github.ref == 'refs/heads/main'
+    # A repository that sets the variable FORK_RELEASES to `off` publishes the image above and cuts
+    # no `legion-envoy-v*` tag or release: a fork's own commits would otherwise take the next
+    # number in the upstream line, which upstream later cuts on another commit.
+    if: github.ref == 'refs/heads/main' && vars.FORK_RELEASES != 'off'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -620,7 +623,7 @@ jobs:
     # On `always()`, so a skipped release_build does not skip this job; every job whose outputs
     # the steps below read has its result tested, targets' among them.
     if: >-
-      always() && github.ref == 'refs/heads/main' &&
+      always() && github.ref == 'refs/heads/main' && vars.FORK_RELEASES != 'off' &&
       needs.build.result == 'success' && needs.image_index.result == 'success' &&
       needs.targets.result == 'success'
     concurrency:
