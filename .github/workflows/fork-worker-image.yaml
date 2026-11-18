@@ -1,0 +1,45 @@
+name: Fork worker image
+
+# This repository is a fork that turns off release.yaml (a repository setting, not a change to that
+# file), so its own commits never take a number in the upstream release line, never try to publish
+# the plugins to npm, and never wait on the plugin pair npm carries. Its consumers pin the worker
+# image by digest and verify its attestation; they need no release, no version tag and no npm
+# package.
+#
+# So this file, which upstream does not have, builds and attests the worker image for every commit
+# that reaches main: one call of worker-image.yaml with no inputs, whose build job pushes
+# `:sha-<12 hex>` and whose attest job attests that digest. The attestation is signed by
+# worker-image.yaml's attest job, so it verifies as
+# `<this repository>/.github/workflows/worker-image.yaml@refs/heads/main`, the identity a release
+# run's attestation carries too. The image packs both Oh My Pi plugins and the Claude plugin from
+# this checkout's own packages, so a change to them here is in the image with no npm release.
+#
+# No `paths:` filter: every commit on main gets an image, which also covers every input the build
+# reads (.github/scripts/check-image-trigger-paths.sh). A dispatch builds and attests the
+# dispatched ref; only a run on main carries an attestation that names `refs/heads/main`.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # One run per commit; a later commit's run never cancels an earlier one's, so no commit on main
+  # is left without an image to pin.
+  group: fork-worker-image-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  worker_image:
+    uses: ./.github/workflows/worker-image.yaml
+    # No `secrets:`: the called workflow reads only GITHUB_TOKEN. The grant covers every
+    # `permissions:` block worker-image.yaml declares: its workflow-level block for the build, and
+    # its attest job's id-token and attestations: write for the image's GitHub attestation.
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      checks: write
+      id-token: write
+      attestations: write
