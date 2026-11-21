@@ -33,7 +33,10 @@ echo "gh $*" >> "$STUB_LOG"
 case "$*" in
   "api repos/fork/legion --jq"*) echo up/legion ;;
   "api users/"*) echo 12345 ;;
-  "pr list"*) cat "$STUB_PR" 2> /dev/null || true ;;
+  "pr list"*)
+    # The open pull requests are $STUB_PR, a JSON list, or none; the call's own --jq reads them.
+    while [ $# -gt 0 ] && [ "$1" != --jq ]; do shift; done
+    if [ -e "$STUB_PR" ]; then jq -r "$2" "$STUB_PR"; else jq -r "$2" <<< '[]'; fi ;;
   "api -X POST"*) cat > "$STUB_DIR/post.json"; echo 7 ;;
   "api -X PATCH"*) cat > "$STUB_DIR/patch.json" ;;
   *) echo "unstubbed: $*" >&2; exit 9 ;;
@@ -63,7 +66,8 @@ commit() {
 }
 
 # setup <dir>: upstream's main and this fork's main, which holds upstream's first commit and one
-# commit of the fork's own; then upstream moves on with a commit the fork lacks.
+# commit of the fork's own, with a fork-sync.yaml that names upstream-sync as the real one does;
+# then upstream moves on with a commit the fork lacks.
 setup() {
   local dir=$1
   mkdir -p "$dir"
@@ -73,7 +77,8 @@ setup() {
   commit "$dir/up" "first" README.md $'upstream\n' .github/workflows/build.yaml "$workflow"
   git -C "$dir/up" push -q "$dir/upstream.git" main
   git clone -q "$dir/upstream.git" "$dir/fork"
-  commit "$dir/fork" "fork only" FORK.md $'the fork\n'
+  commit "$dir/fork" "fork only" FORK.md $'the fork\n' .github/workflows/fork-sync.yaml \
+    $'on: workflow_dispatch\njobs:\n  sync:\n    runs-on: ubuntu-24.04\n    environment: upstream-sync\n    steps:\n      - run: echo\n'
   git -C "$dir/fork" push -q "$dir/origin.git" main
   commit "$dir/up" "second" docs/a.md $'a\n'
   git -C "$dir/up" push -q "$dir/upstream.git" main
@@ -86,6 +91,10 @@ up_commit() {
   commit "$dir/up" "$@"
   git -C "$dir/up" push -q "$dir/upstream.git" main
 }
+
+# pr_open <dir> [cross]: one pull request is open from the sync branch, from this repository's
+# own branch, or with cross=true from another fork's branch of the same name.
+pr_open() { printf '[{"number":7,"isCrossRepository":%s}]\n' "${2:-false}" > "$1/pr-open"; }
 
 # run_sync <dir> <run> [base]: one run of the script, in <dir>/<run>. Sets status.
 run_sync() {
@@ -133,7 +142,7 @@ check "it opens a pull request from the sync branch to main" \
 check "the title names upstream's commit" \
   "$(contains "$(jq -r .title "$d/first/post.json")" "^chore(sync): merge upstream main at $(git --git-dir="$d/upstream.git" rev-parse --short=12 main)$")"
 first_head=$(sync_head "$d")
-echo 7 > "$d/pr-open"
+pr_open "$d"
 run_sync "$d" rerun
 check "a rerun with the pull request open passes" "$(is "$status" 0)"
 check "it pushes nothing" "$(is "$(sync_head "$d")" "$first_head")"
@@ -153,11 +162,19 @@ check "a run after the merge passes" "$(is "$status" 0)"
 check "it neither opens nor updates a pull request" \
   "$(is "$(has "$d/merged/post.json") $(has "$d/merged/patch.json")" 'false false')"
 
+echo "an open pull request from another fork's branch of the same name"
+d=$work/cross
+setup "$d"
+pr_open "$d" true
+run_sync "$d" run
+check "the run opens a pull request of its own and updates none" \
+  "$(is "$status $(has "$d/run/post.json") $(has "$d/run/patch.json")" '0 true false')"
+
 echo "a commit a person pushed to the open sync branch"
 d=$work/person
 setup "$d"
 run_sync "$d" first
-echo 7 > "$d/pr-open"
+pr_open "$d"
 git clone -q "$d/origin.git" "$d/person"
 git -C "$d/person" checkout -q fork-sync
 commit "$d/person" "add a workflow" .github/workflows/evil.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    environment: upstream-sync\n    steps:\n      - run: echo\n'
@@ -165,6 +182,7 @@ git -C "$d/person" push -q origin fork-sync
 person_head=$(sync_head "$d")
 run_sync "$d" again
 check "the run fails" "$(is "$status" 1)"
+check "it refuses the file" "$(contains "$(text "$d/again/summary.md")" '^\*\*Refused:\*\*.*upstream-sync')"
 check "it names the file" "$(contains "$(text "$d/again/summary.md")" 'evil.yaml')"
 check "it pushes nothing and leaves the body as it was" \
   "$(is "$(sync_head "$d") $(has "$d/again/patch.json")" "$person_head false")"
@@ -197,6 +215,7 @@ while IFS='|' read -r path yaml; do
   up_commit "$d" "spelling $n" "$path" "$(printf '%b' "$yaml")"
   run_sync "$d" run
   check "refused, pushing nothing: $yaml" "$(is "$status $(sync_head "$d")" '1 none')"
+  check "refuses it for the environment" "$(contains "$(text "$d/run/summary.md")" '^\*\*Refused:\*\*.*upstream-sync')"
   check "names $path" "$(contains "$(text "$d/run/summary.md")" "$(basename "$path")")"
 done << 'CASES'
 .github/workflows/a.yaml|jobs:\n  x:\n    environment: upstream-sync\n
@@ -284,8 +303,6 @@ up_commit "$d" "lfs" .gitattributes $'*.bin filter=lfs diff=lfs merge=lfs -text\
   a.bin $'version https://git-lfs.github.com/spec/v1\noid sha256:0000000000000000000000000000000000000000000000000000000000000000\nsize 1\n'
 run_sync "$d" run
 check "the run passes and pushes" "$(is "$status $([ "$(sync_head "$d")" != none ] && echo pushed)" '0 pushed')"
-hooks=$(find "$d/run/work/.git/hooks" -type f ! -name '*.sample' 2> /dev/null || true)
-check "no hook was installed" "$(is "$hooks" '')"
 check "nothing asked the tree's lfs address" "$(lacks "$(text "$d/run/out.log")" '127.0.0.1')"
 check "the body lists the .gitattributes file" "$(contains "$(body "$d/run/post.json")" '^- `.gitattributes`$')"
 

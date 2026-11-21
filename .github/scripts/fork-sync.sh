@@ -11,7 +11,7 @@
 # Trust. The workflow runs this file from the commit the run is at, which is main, because the
 # upstream-sync environment admits no other branch. It runs no script or action from the merged
 # tree: it reads that tree's workflow files as data, with yq and jq, and it runs git with no
-# system or user configuration and no hooks, so no filter or hook of the runner (git lfs among
+# system or user configuration, so no filter or hook that the runner configures (git lfs among
 # them) runs on that tree.
 #
 # Tests: .github/scripts/fork-sync.test.sh, which fork-sync-test.yaml runs.
@@ -19,9 +19,9 @@ set -euo pipefail
 # A failure inside $(...) fails the assignment, so no list comes out empty by mistake.
 shopt -s inherit_errexit
 
-export GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_GLOBAL=/dev/null
-# A file of upstream's tree makes this job download nothing.
-export GIT_LFS_SKIP_SMUDGE=1 LC_ALL=C
+# No configuration of the runner applies, so a file of upstream's tree reaches no filter that
+# the runner sets up (git lfs, for one), and this job downloads nothing.
+export GIT_CONFIG_SYSTEM=/dev/null GIT_CONFIG_GLOBAL=/dev/null LC_ALL=C
 
 summary() { printf '%s\n' "$@" >> "$GITHUB_STEP_SUMMARY"; }
 # The annotation goes to stderr, so it reaches the log from inside $(...) too.
@@ -43,7 +43,6 @@ upstream=$(gh api "repos/$REPOSITORY" --jq '.parent.full_name // empty')
 git init -q work
 cd work
 git config core.quotePath false
-git config core.hooksPath /dev/null
 auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
 echo "::add-mask::$auth"
 git config http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
