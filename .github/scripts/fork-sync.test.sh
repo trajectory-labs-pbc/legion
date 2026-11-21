@@ -206,6 +206,7 @@ done << 'CASES'
 .github/workflows/e.yaml|x: &e upstream-sync\njobs:\n  x:\n    environment: *e\n
 .github/workflows/f.yaml|on: push\n---\njobs:\n  x:\n    environment: upstream-sync\n
 .github/workflows/g.yaml|jobs:\n  x:\n    environment: "upstream\\x2dsync"\n
+.github/workflows/h.yaml|jobs:\n  x:\n    "environment": {url: "https://example.com", "name": upstream-sync}\n
 tools/x/action.yml|runs:\n  using: composite\n  environment: upstream-sync\n
 CASES
 
@@ -226,12 +227,33 @@ check "an environment written as an expression" "$(contains "$b" 'expr.yaml`: `$
 check "a workflow called from another repository" "$(contains "$b" 'call.yaml`: `other/repo/.github/workflows/w.yaml@v1`')"
 check "a shared build workflow this sync leaves alone is not listed" "$(lacks "$b" 'worker-image')"
 
+echo "a renamed workflow, each spelling of a secret, and file names the body cannot hold"
+d=$work/lists-more
+setup "$d"
+git -C "$d/up" mv .github/workflows/build.yaml .github/workflows/renamed.yaml
+# shellcheck disable=SC2016 # each ${{ }} is workflow text, not an expansion
+up_commit "$d" "more workflows" \
+  .github/workflows/renamed.yaml "$workflow"$'    env:\n      K: ${{ secrets.MOVED }}\n' \
+  .github/workflows/sec.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo ${{ secrets.A }} ${{ secrets[\'B\'] }} ${{ secrets . C }} ${{ toJSON(secrets) }}\n  y:\n    uses: ./.github/workflows/sec.yaml\n    secrets: inherit\n' \
+  $'.github/workflows/caf\xc3\xa9.yaml' "$workflow" \
+  '.github/workflows/a`<b.yaml' "$workflow"
+run_sync "$d" run
+b=$(body "$d/run/post.json")
+check "the run passes" "$(is "$status" 0)"
+check "a renamed workflow is listed as added" "$(contains "$b" '^- `.github/workflows/renamed.yaml`$')"
+check "with the secret it gains" "$(contains "$b" 'renamed.yaml`: `secret secrets.moved`')"
+for name in 'secrets.a' "secrets\\['b'\\]" 'secrets.c' 'secrets' 'secrets: inherit'; do
+  check "a secret spelled $name" "$(contains "$b" "sec.yaml\`:.*\`secret $name\` ")"
+done
+check "a file name that is not ASCII" "$(contains "$b" $'^- `.github/workflows/caf\xc3\xa9.yaml`$')"
+check "a file name with a backtick and a <, without them" "$(contains "$b" '^- `.github/workflows/ab.yaml`$')"
+
 echo "bases"
 d=$work/bases
 setup "$d"
 i=0
 # shellcheck disable=SC2016 # '$(id)' is a base to refuse, not an expansion
-for base in -x 'a b' 'a;b' '$(id)' '@{-1}' HEAD; do
+for base in -x 'a b' 'a;b' 'a..b' $'a\nb' '$(id)' '@{-1}' HEAD; do
   i=$((i + 1))
   run_sync "$d" "bad-$i" "$base"
   check "refused as no branch name: $base" \
