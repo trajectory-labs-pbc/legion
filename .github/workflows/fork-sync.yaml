@@ -61,6 +61,10 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           # A file of upstream's tree makes this job download nothing.
           GIT_LFS_SKIP_SMUDGE: '1'
+          # No system or user git configuration, so no filter or hook that the runner installs (git
+          # lfs among them) runs on the merged tree.
+          GIT_CONFIG_SYSTEM: /dev/null
+          GIT_CONFIG_GLOBAL: /dev/null
           LC_ALL: C
         shell: bash
         run: |
@@ -68,7 +72,8 @@ jobs:
           # A failure inside $(...) fails the assignment, so no list comes out empty by mistake.
           shopt -s inherit_errexit
           summary() { printf '%s\n' "$@" >> "$GITHUB_STEP_SUMMARY"; }
-          fail() { echo "::error::$1"; summary "**Failed:** $1"; exit 1; }
+          # The annotation goes to stderr, so it reaches the log from inside $(...) too.
+          fail() { echo "::error::$1" >&2; summary "**Failed:** $1"; exit 1; }
           # Text from upstream's tree goes into the body inside backticks: drop what could end the span.
           clean() { printf '%s' "$1" | tr -d '`<\r\n'; }
 
@@ -86,6 +91,7 @@ jobs:
           git init -q work
           cd work
           git config core.quotePath false
+          git config core.hooksPath /dev/null
           auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
           echo "::add-mask::$auth"
           git config http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
@@ -137,11 +143,11 @@ jobs:
             push=false
             echo "upstream main $short is already in $start"
             summary "Upstream's main at \`$short\` is already in \`${start#refs/remotes/origin/}\`; nothing to push."
-            if git merge-base --is-ancestor "$up" "$base_ref" || [ -n "$open_pr" ]; then
+            if git merge-base --is-ancestor "$up" "$base_ref"; then
               exit 0
             fi
-            # The sync branch holds upstream commits the base lacks, and no pull request is open (a
-            # person closed it, or a run failed after its push): open one below.
+            # The sync branch holds upstream commits the base lacks. Scan it again, since a person
+            # may have pushed to it, then rewrite the open pull request's body or open one below.
           else
             push=true
             git merge -q -m "chore(sync): merge $BASE into $sync" "$base_ref" || conflict "$BASE"
@@ -168,7 +174,7 @@ jobs:
             # Each environment and secret the file <path> names at <rev>; nothing where it is absent.
             git cat-file -e "$1:$2" 2> /dev/null || return 0
             local json
-            json=$(as_json "$1" "$2")
+            json=$(as_json "$1" "$2") || fail "could not read $(clean "$2") at $1 as YAML"
             { jq -r "$envs_jq"' | "environment " + .' <<< "$json"; jq -r "$secrets_jq"' | "secret " + .' <<< "$json"; } | sort -u
           }
 
@@ -201,7 +207,7 @@ jobs:
             done <<< "$values"
           done < ../yaml-files
           if [ -n "$named" ]; then
-            summary '**Refused:** these files name the `upstream-sync` environment, which holds this job'"'"'s key; nothing was pushed.' '' "$named"
+            summary '**Refused:** these files name the `upstream-sync` environment, which holds this job'"'"'s key. This run pushed nothing.' '' "$named"
             echo "::error::a workflow file names the upstream-sync environment; the run summary lists it"
             exit 1
           fi
@@ -247,7 +253,10 @@ jobs:
             echo '### Environments written as an expression'
             list "$expressions"
             echo
-            echo '### Workflows called from another repository'
+            echo '### Workflows called from another repository or ref'
+            echo
+            echo 'Each runs with this repository'"'"'s environments, and this run cannot read it. Check that none names `upstream-sync`.'
+            echo
             list "$remote"
             echo
             echo '### Shared build workflows, .gitattributes files and files the fork changed, which this sync changes too'
