@@ -1,0 +1,74 @@
+name: Fork sync
+
+# This repository is a fork. This file, which upstream does not have, merges upstream's main into a
+# sync branch every week, or when someone starts it, and keeps one pull request open from that
+# branch. A person reads the pull request's CI and the workflow changes its body lists, approves
+# it, and merges it with a merge commit, so main holds upstream's commits and the next run
+# fast-forwards the sync branch. Never squash or rebase a sync pull request. Closing it does not
+# stop the sync: the next run opens another. To stop the sync, disable this workflow.
+#
+# Base main keeps the branch fork-sync; any other base, which a dispatch names, keeps
+# fork-sync-<base>. A run pushes only when the sync branch gains an upstream commit, and only as a
+# fast-forward. When either merge conflicts it pushes nothing and fails, naming each conflicting
+# path. Upstream is this repository's parent, read through the API, so this file names no
+# repository.
+#
+# Token. A pull request that GITHUB_TOKEN opens starts no workflow, and GITHUB_TOKEN cannot push a
+# change under .github/workflows, so the job acts as the sync App: contents, pull requests and
+# workflows write, on this repository alone. Its key is a secret of the upstream-sync environment,
+# which only main reaches, and the run fails when any other workflow file names that environment.
+# The job checks out .github/scripts at the commit the run is at, which is main, because the
+# environment admits no other branch, and runs fork-sync.sh from it. It executes no script or action
+# from the merged tree; the script's header says how it reads that tree.
+on:
+  schedule:
+    # Monday 06:17 UTC, off the hour.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'The branch to merge upstream into; main when empty. Another base keeps the sync branch fork-sync-<base>.'
+        default: main
+        type: string
+
+concurrency:
+  # One run per base at a time; a later run waits, so two runs never push the same branch.
+  group: fork-sync-${{ inputs.base || 'main' }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: upstream-sync
+    # The checkout of the script; the App's token does every write.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: /.github/scripts/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+          path: trusted
+
+      - name: Make the sync App's token
+        id: token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Merge upstream's main into the sync branch
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          APP_SLUG: ${{ steps.token.outputs.app-slug }}
+          BASE: ${{ inputs.base || 'main' }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: trusted/.github/scripts/fork-sync.sh
