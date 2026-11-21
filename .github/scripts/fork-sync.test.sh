@@ -142,6 +142,9 @@ check "it opens a pull request from the sync branch to main" \
 check "the title names upstream's commit" \
   "$(contains "$(jq -r .title "$d/first/post.json")" "^chore(sync): merge upstream main at $(git --git-dir="$d/upstream.git" rev-parse --short=12 main)$")"
 first_head=$(sync_head "$d")
+run_sync "$d" reopen
+check "a run with no pull request open opens one and pushes nothing" \
+  "$(is "$status $(sync_head "$d") $(has "$d/reopen/post.json")" "0 $first_head true")"
 pr_open "$d"
 run_sync "$d" rerun
 check "a rerun with the pull request open passes" "$(is "$status" 0)"
