@@ -190,7 +190,7 @@ check "it names the file" "$(contains "$(text "$d/again/summary.md")" 'evil.yaml
 check "it pushes nothing and leaves the body as it was" \
   "$(is "$(sync_head "$d") $(has "$d/again/patch.json")" "$person_head false")"
 git -C "$d/person" rm -q .github/workflows/evil.yaml
-commit "$d/person" "read a secret" .github/workflows/okay.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo ${{ secrets.NEWONE }}\n'
+commit "$d/person" "read a secret" .github/workflows/okay.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: "true"\n        env:\n          K: ${{ secrets.NEWONE }}\n'
 git -C "$d/person" push -q origin fork-sync
 run_sync "$d" clean
 check "with the file replaced, the run passes" "$(is "$status" 0)"
@@ -238,7 +238,7 @@ setup "$d"
 up_commit "$d" "workflows" \
   .github/workflows/expr.yaml $'jobs:\n  x:\n    environment: ${{ inputs.target }}\n' \
   .github/workflows/call.yaml $'jobs:\n  x:\n    uses: other/repo/.github/workflows/w.yaml@v1\n' \
-  .github/workflows/build.yaml $'on: push\njobs:\n  build:\n    runs-on: ubuntu-24.04\n    environment: release\n    steps:\n      - run: echo ${{ secrets.KEY }}\n'
+  .github/workflows/build.yaml $'on: push\njobs:\n  build:\n    runs-on: ubuntu-24.04\n    environment: release\n    steps:\n      - run: "true"\n        env:\n          K: ${{ secrets.KEY }}\n'
 run_sync "$d" run
 b=$(body "$d/run/post.json")
 check "the run passes" "$(is "$status" 0)"
@@ -256,7 +256,7 @@ git -C "$d/up" mv .github/workflows/build.yaml .github/workflows/renamed.yaml
 # shellcheck disable=SC2016 # each ${{ }} is workflow text, not an expansion
 up_commit "$d" "more workflows" \
   .github/workflows/renamed.yaml "$workflow"$'    env:\n      K: ${{ secrets.MOVED }}\n' \
-  .github/workflows/sec.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo ${{ secrets.A }} ${{ secrets[\'B\'] }} ${{ secrets . C }} ${{ toJSON(secrets) }}\n  y:\n    uses: ./.github/workflows/sec.yaml\n    secrets: inherit\n' \
+  .github/workflows/sec.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: "true"\n        env:\n          A: ${{ secrets.A }}\n          B: ${{ secrets[\'B\'] }}\n          C: ${{ secrets . C }}\n          D: ${{ toJSON(secrets) }}\n  y:\n    uses: ./.github/workflows/sec.yaml\n    secrets: inherit\n' \
   $'.github/workflows/caf\xc3\xa9.yaml' "$workflow" \
   '.github/workflows/a`<b.yaml' "$workflow"
 run_sync "$d" run
