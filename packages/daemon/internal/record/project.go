@@ -51,6 +51,57 @@ func OutOfWorkflow(status string) bool {
 	return slices.Contains(OutOfWorkflowStatuses, status)
 }
 
+// EndChildRule is how an architect ends a child, in the short form that the daemon's refusals
+// and notices carry (dispatch://INFRA-3178 R6). The daemon takes the owning architect's done,
+// backlog, icebox or triage on a child as it takes a person's move (workflow's
+// sessionStatusWrite). So the move is the architect's own status write in Dispatch, and no
+// operation of the legion tool makes it. Each thing the rule says stops a loss
+// that the move alone does not stop. A fold names its carrier, and the issues that wait on the
+// folded child wait on the carrier first, because done starts them. A running child's worker
+// pushes first, because done ends its turn and its pod at once. An open pull request leaves the
+// merge queue and closes unless its work should land, because the daemon changes no pull request.
+// Backlog and icebox are for a person's request or a restart, and finished work is done. A child
+// already done takes no status, because a move out of done ends its production check. And a read
+// back after each move finds a move that the daemon set back.
+//
+// It lives here because two packages send it, and api does not import workflow: workflow's
+// refusals and notices over children still in the workflow, and api's refusals of close_root on a
+// child and of the removed child route. The architect prompts carry the same rules whole
+// (prompts/go/architect-common.md). The legion tool's description carries these words
+// (packages/pi-legion/src/tools.ts), and these tests hold the copies together:
+// TestTheEndChildRuleGolden in internal/api writes this constant and StatusNotTakenYet to
+// packages/contracts/fixtures/daemon-api/end-child-rule.json, and
+// packages/pi-legion/src/tools.test.ts holds the description to that file.
+const EndChildRule = "End a child with your own status write in Dispatch. " +
+	"Write done with a reason when the child's work is done, folded into another issue or no longer needed: " +
+	"dispatch issue-update --issue <KEY> --status done --reason '<why>'. " +
+	"For a fold, name the carrier in the reason: the issue that carries the work. " +
+	"Before the done of a fold, make each issue that is blocked_by the child wait on the carrier instead. " +
+	"Done starts those issues, and the Referenced by list of dispatch read names each of them as blocked_by. " +
+	"Before done on a running child, have its worker push the work that the carrier needs. " +
+	"Done ends the worker's turn and the pod at once. " +
+	"Unless the work of the child's open pull request should land, close that pull request with your own App (gh pr close). " +
+	"When it is in the merge queue, first take it out (GraphQL dequeuePullRequest). " +
+	"Do this before done, or at once after a done that you wrote first. " +
+	"Write backlog or icebox only when a person asked for that move, or as the first step of a restart. " +
+	"A restart is backlog, then rerun_child. " +
+	"Say why in a dispatch comment. " +
+	"Write no status on a child that is already done, because a move out of done ends an open production check. " +
+	"After each move, read the child back (dispatch read --issue <KEY>). " +
+	"When the daemon set the move back, write it again."
+
+// StatusNotTakenYet is the sentence that each refusal and notice over children still in the
+// workflow adds: sign_off's and close_root's (workflow's endChildrenFirst) and the pr-merged
+// notice (workflow's waitingForTree). The daemon reads the architect's status write on a child
+// from that write's Dispatch event, and the event consumer can deliver the event after the
+// architect calls again. Until then the record holds the child in the workflow and the refusal
+// names it, so the architect waits for read_record to show its move (dispatch://INFRA-3178 R1).
+//
+// It lives here, beside EndChildRule, because the legion tool's description carries both texts
+// (packages/pi-legion/src/tools.ts). The tests that hold EndChildRule to that description
+// hold this sentence to it too: TestTheEndChildRuleGolden writes both to end-child-rule.json.
+const StatusNotTakenYet = "A status that you wrote and that the daemon has not taken yet does not count until read_record shows it."
+
 // InWorkflow says whether an issue is in the workflow: its Dispatch status is one the workflow
 // runs in (OutOfWorkflow) and its phase is short of done. One still admitted counts, since it
 // will run — a root reopened inside its linger (admit's readmit) stands in admitted with no
@@ -171,6 +222,25 @@ func Ancestors(issue Issue, byKey map[string]Issue) []Issue {
 		above = append(above, root)
 	}
 	return above
+}
+
+// OwnsUnder says whether the architect of architectIssue, an issue of tree, owns target, an issue
+// of the same tree, for a move of target into or out of the workflow. members is the tree's
+// records (Store.TreeIssues). The tree root's architect owns every issue of its tree. A
+// sub-architect owns only the issues under its own issue through their recorded parents
+// (Ancestors), and not its own issue: an architect above it moves that issue, as one released it.
+// A chain that leaves the tree, or loops back on itself, ends at the root, so only the root's
+// architect owns an issue on such a chain.
+//
+// It is the one statement of that rule, and two readers ask it: the API's operations on a child
+// (api's childOfTree) and the engine's exception for the owning architect's status on a
+// child (workflow's sessionStatusWrite). Written twice, the API could refuse an architect a child
+// whose status the engine takes from that architect, or the other way round.
+func OwnsUnder(members []Issue, tree, architectIssue string, target Issue) bool {
+	if claim.IsTreeRoot(architectIssue, tree) {
+		return true
+	}
+	return target.Key != architectIssue && descends(target, architectIssue, byKey(members))
 }
 
 // chainOf is the records one admission pass walks its parent chains over (Ancestors): the pass's
@@ -809,7 +879,8 @@ func PhaseKeepsSlot(at phase.Phase) bool {
 // issue the daemon has started that waits on one gives its row back and stands in the line for
 // one again, by the rule beside this (blockers.waitsOf, admit's releaseSlotsForWaits), save the
 // roots that rule names as keepers. That rule reads this one first, so an issue past its review
-// waits on nothing there (blockers.waitsOf). The rule whole is root AGENTS.md's "Admission".
+// waits on nothing there (blockers.waitsOf). The rule whole is "Admission and the `legion` label"
+// in docs/site/src/content/docs/legion/concepts.md.
 //
 // The cap bounds the work in progress, and an issue whose review has passed writes no more of
 // the change: its sign-off, its retro and its merge run on no slot at all, so their starts are
@@ -860,7 +931,8 @@ func PastReview(issue Issue) bool {
 // with a root that does not linger after its close — and the issue keeps a slot where it stands
 // (KeepsSlot). An issue holds its admission slot from the moment the daemon starts it until its
 // work is past its review, until it is done or until it leaves the workflow, except while it
-// waits on another issue before that point (root AGENTS.md, "Admission"), so the cap counts the
+// waits on another issue before that point (docs/site/src/content/docs/legion/concepts.md,
+// "Admission and the `legion` label"), so the cap counts the
 // issues the daemon has started whose change is still to write, rather than the ones a worker of
 // them is running this second. Nothing of a tree that has left the workflow works until its
 // re-admission runs it again, which is why the tree's own terms are here.
@@ -1155,9 +1227,10 @@ func Waiting(issues []Issue, slots []Slot, facts LineFacts) ([]LineEntry, []Held
 		// release reads the linger in the transaction that records the close, before the
 		// hand-over writes the root of its own — so the carried row is the case this is written
 		// against rather than the usual one. It is the one statement of that reasoning: the doc
-		// above, QueuedRoot and WaitsForSlot each point here rather than repeating it.
+		// above, QueuedRoot, WaitsForSlot and AwaitsPromotion, which reads it, each point here
+		// rather than repeating it.
 		_, holds := slotted[issue.Key]
-		if holds && issue.HandedOverFrom == "" {
+		if !AwaitsPromotion(issue, facts.Gates[issue.Key], holds) {
 			hold(issue)
 			continue
 		}
@@ -1361,6 +1434,18 @@ func ran(issue Issue, gate TreeGate) bool {
 	return issue.HandedOverFrom == "" && (issue.CarriesRun() || gate.EverOpened())
 }
 
+// AwaitsPromotion says whether root waits for the promotion that opens its tree: it is a queued
+// root (QueuedRoot, over gate, its own design gate), and holds, whether it holds a slot row, names
+// no row the daemon granted it in this tree. A queued root holding such a row has been promoted
+// already, while a root that arrived from another tree (Issue.HandedOverFrom) may carry the row it
+// held there and still wait; Waiting's queued-root loop, which reads this, states why. Until that
+// promotion nothing of the tree runs: the root's carried phase, and each member a re-admission
+// left mid-phase, start their runs there (admit's startMidPhaseMembers), so the boot and the settle
+// open and record no run of such a tree (workflow's generationStarted).
+func AwaitsPromotion(root Issue, gate TreeGate, holds bool) bool {
+	return QueuedRoot(root, gate) && !(holds && root.HandedOverFrom == "")
+}
+
 // treeLive is TreeLive over the facts of one root already in hand: its tree's lifecycle and its
 // own design gate. It is the one statement of the rule; the pass that judges many trees reads it
 // through liveRoots and the one that judges a single root through TreeLive, so no reader of
@@ -1441,9 +1526,10 @@ func TreeRunning(ctx context.Context, store Store, tx pgx.Tx, root Issue, steps 
 // (treelifecycle.ErrAuthorityHeld) and never opens a workflow tree under it. A tree with no
 // lifecycle row is no tree the operator holds, which is the read's own answer for it.
 //
-// It is the one statement of that rule, and the readers that must agree — the park of such a
-// root (workflow.Engine.leave) and the claim release row every other park queues
-// (outbox.releaseClaim) — both call it.
+// It is the one statement of that rule, and every reader that must agree calls it: the park of
+// such a root (workflow.Engine.leave), the claim release row every other park queues
+// (outbox.releaseClaim), and the boot's answer to whether a run no start counted is open
+// (workflow.Engine.uncountedRunOpen).
 func OperatorHoldsTree(ctx context.Context, store Store, tx pgx.Tx, issue Issue) (bool, error) {
 	project, err := claim.ProjectToken(issue.Project)
 	if err != nil {

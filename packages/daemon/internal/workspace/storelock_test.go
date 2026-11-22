@@ -10,10 +10,12 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/sjawhar/legion/daemon/internal/ghrepo"
+	"github.com/sjawhar/legion/daemon/internal/testwait"
 )
 
 // heldLock is a Request.StoreLock that knows whether it is held, so a runner can read, at each
@@ -364,6 +366,44 @@ func TestRemoveLetsTheStoreLockGoBeforeItDeletesTheWorkspace(t *testing.T) {
 		t.Fatal("Remove returned with the store lock held")
 	}
 	lock.mu.Unlock()
+}
+
+// Remove renames the workspace aside and deletes the aside once the store lock is let go. The
+// workspace's parent directory is on the issue's volume, which a role can swap for a fifo, and a
+// plain os.RemoveAll of the aside then opens that fifo plainly and waits for a writer for as long
+// as none comes, holding the outbox's turn. So the aside is removed through rolefile.RemoveTree,
+// which answers ENOTDIR without waiting: Remove returns, refusing, and the fifo is left as it was.
+// The parent is swapped as the store lock is let go, which is after the git worktree entry's
+// removal and before the aside's deletion. Remove's answer is waited for with no span of its own
+// (testwait.Receive), so a removal that waits on the fifo fails the row by name before the test
+// binary's deadline, and the jj and git runs before it are as slow as the host makes them.
+func TestRemoveAsideAnswersAParentSwappedForAFifo(t *testing.T) {
+	run := newLocalRunner(t)
+	working, err := Provision(context.Background(), run, provisionRequest(t))
+	if err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	parent := filepath.Dir(working.Dir)
+	var once sync.Once
+	lock := &unlockWatch{onUnlock: func() {
+		once.Do(func() {
+			if err := os.Rename(parent, parent+".moved"); err != nil {
+				t.Error(err)
+			}
+			if err := syscall.Mkfifo(parent, 0o644); err != nil {
+				t.Error(err)
+			}
+		})
+	}}
+	done := make(chan error, 1)
+	go func() { done <- Remove(context.Background(), run, working, lock) }()
+	err = testwait.Receive(t, "Remove with its workspace's parent "+parent+" swapped for a fifo", done)
+	if !errors.Is(err, syscall.ENOTDIR) || !strings.Contains(err.Error(), "remove workspace directory") {
+		t.Fatalf("Remove with its workspace's parent swapped for a fifo answered %v, want the aside's removal refused with ENOTDIR", err)
+	}
+	if info, err := os.Lstat(parent); err != nil || info.Mode()&os.ModeNamedPipe == 0 {
+		t.Fatalf("the fifo %s is no longer there as it was (%v, %v)", parent, info, err)
+	}
 }
 
 // overlapRunner holds the first checkout until a second one starts, so two provisions' checkouts

@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { type LegionRole, roleToken } from "@legion/contracts";
 import {
   LEGION_PHASES,
@@ -8,7 +10,7 @@ import {
   LegionStateResponse,
 } from "@legion/contracts/legion-api";
 import { DispatchServiceError } from "@legion/envoy-client/dispatch-http";
-import type { LegionDaemonClient } from "@legion/pi-shared/daemon-client";
+import { createLegionDaemonClient, type LegionDaemonClient } from "@legion/pi-shared/daemon-client";
 import {
   findHandoffReport,
   type JjRunner,
@@ -16,7 +18,10 @@ import {
 } from "@legion/pi-shared/handoff-record";
 import { phaseOpParameters } from "@legion/pi-shared/legion-phase-ops";
 import type { PiApi, RegisteredTool, SessionContext } from "@legion/pi-shared/pi-types";
+import { withImageManifest } from "@legion/pi-shared/test/image-manifest";
+import { fixtureSecret } from "@legion/test-fixtures/fixture-secret";
 import { z } from "zod";
+import pkg from "../package.json";
 import { createLegionTool, type LegionToolSession } from "./tools";
 
 function context(sessionId = "ses_208"): SessionContext {
@@ -67,6 +72,9 @@ const noBranchHead = async (): Promise<string> => {
   throw new Error("branchHead is not expected in this test");
 };
 
+/** The claim's registration secret: random, as the daemon's is, since the pane holds it. */
+const CLAIM_SECRET = fixtureSecret("claim");
+
 /** A claim's session on LEGION-208: a root architect's, a sub-architect's (its issue is not its
  * tree), or a phase worker's by role. */
 function claimSession(role: LegionRole, issue = "LEGION-208"): LegionToolSession {
@@ -76,17 +84,19 @@ function claimSession(role: LegionRole, issue = "LEGION-208"): LegionToolSession
     sessionID: "ses_208",
     tree: "LEGION-208",
     issue,
-    secret: "claim-secret",
+    secret: CLAIM_SECRET,
     claimToken: roleToken("omp", issue, role),
     generation: 1,
   };
 }
 
-/** A daemon stub that records every call: `grant` answers a grant, `state` the state given, and
- * every other route the answer given for it (an empty object by default). */
+/** A daemon stub that records every call: `grant` answers a grant, `state` the state given,
+ * `record` the issue's record out of that state, `daemonContract` the contract the daemon
+ * states, and every other route the answer given for it (an empty object by default). */
 function recordingDaemon(options: {
   readonly state?: unknown;
   readonly answers?: Readonly<Record<string, unknown>>;
+  readonly daemonContract?: number;
 }) {
   const calls: Array<readonly [string, object | undefined]> = [];
   const routes = [
@@ -96,7 +106,6 @@ function recordingDaemon(options: {
     "phaseRetry",
     "signOff",
     "rootClose",
-    "childPark",
     "childRerun",
     "issueStatus",
     "freshSession",
@@ -113,6 +122,15 @@ function recordingDaemon(options: {
       calls.push(["state", undefined]);
       return options.state ?? { issues: {} };
     },
+    record: async (issue: string) => {
+      calls.push(["record", { issue }]);
+      const state = (options.state ?? { issues: {} }) as { issues: Record<string, unknown> };
+      return state.issues[issue];
+    },
+    daemonContract: async () => {
+      calls.push(["daemonContract", undefined]);
+      return options.daemonContract;
+    },
     ...Object.fromEntries(
       routes.map((name) => [
         name,
@@ -128,15 +146,44 @@ function recordingDaemon(options: {
   return { calls, daemon: () => daemon as never };
 }
 
+/** An answer the daemon's own golden test wrote (`packages/daemon/internal/api`). */
+function daemonFixture(name: string): Record<string, unknown> {
+  return JSON.parse(
+    readFileSync(path.resolve(import.meta.dir, "../../contracts/fixtures/daemon-api", name), "utf8")
+  );
+}
+
+/** The real daemon client over a daemon that answers each route of `answers` with that golden,
+ * under `status`, and records what reached it. A tool call over it goes through the contract's
+ * request and answer schemas, as it does in a session, and states this build's own contract,
+ * as the extension's client does (`extensions/legion.ts`). */
+function goldenDaemon(answers: Readonly<Record<string, string>>, status = 200) {
+  const posted: Array<readonly [string, unknown]> = [];
+  const stub = (async (input, init) => {
+    const route = new URL(input.toString()).pathname;
+    posted.push([route, init?.body == null ? undefined : JSON.parse(init.body.toString())]);
+    const golden = answers[route];
+    return golden === undefined
+      ? Response.json({ error: `no golden answers ${route}` }, { status: 404 })
+      : Response.json(daemonFixture(golden), { status });
+  }) as typeof fetch;
+  const client = createLegionDaemonClient("http://daemon.test", {
+    pluginContract: pkg.legion.daemonApiVersion,
+    fetch: stub,
+  });
+  return { posted, daemon: () => client };
+}
+
 /** The `legion` tool description Oh My Pi agents read, written out whole: the shared template
  * (`legionToolDescription` in `@legion/pi-shared/legion-phase-ops`) must reproduce it exactly. */
 const OMP_LEGION_TOOL_DESCRIPTION =
   "Perform the workflow operation the Legion daemon assigned this role. The daemon advances phases; this tool cannot spawn workers. " +
-  "read_record returns the record of `issue` from the daemon's state, your own issue when you leave `issue` out. A held issue names in `heldFrom` the phase the hold took it out of. A failed claim carries `failure`: the `cause` word for what failed it, the `detail` sentence beside that word, `at`, when it failed, and `attempts`, the four counts it failed with. A todo written on a held root releases the hold and starts that phase again, as the architect's retry_or_escalate with retry does. " +
+  "read_record returns the record of `issue` from the daemon's record route for that issue, your own issue when you leave `issue` out. A held issue names in `heldFrom` the phase the hold took it out of. A failed claim carries `failure`: the `cause` word for what failed it, the `detail` sentence beside that word, `at`, when it failed, and `attempts`, the four counts it failed with. A todo written on a held root releases the hold and starts that phase again, as the architect's retry_or_escalate with retry does. " +
   "read_release_records returns this deployment's idle-release records from `since` (an RFC 3339 time) on, read with this session's own claim: " +
   "every release, resume and hold the daemon recorded, and over them the counts of releases, of the releases among them that suspended no " +
   "role, of resumes by wake kind and of holds by reason, the pod-hours released, the share of releases woken again within ten minutes, and " +
-  "the median, 90th percentile and maximum seconds from a wake to the woken role's first turn. A release that suspended no role is woken by " +
+  "the median, 90th percentile and maximum seconds from a wake to the woken role's first turn. A wake that a project pause held is " +
+  "counted as `heldByPause` and left out of those seconds, since its wait measures the pause. A release that suspended no role is woken by " +
   "nothing, so the pod-hours released and the woken share count the releases that suspended a role alone. " +
   "handoff_complete (phase workers alone: the daemon refuses an architect's completion, with ACCEPTANCE_IS_SIGN_OFF where nothing else refuses it first, since an architect accepts with sign_off; " +
   "the daemon accepts a completion only from the role working the issue's current phase, " +
@@ -144,7 +191,7 @@ const OMP_LEGION_TOOL_DESCRIPTION =
   "and the checking role's report on a look of its closed issue's production check) reports this phase complete: `summary` (two sentences for the " +
   "architect), `verdict` pass|fail from the tester alone on a phase completion (the daemon refuses a verdict from " +
   "any other role there) and pass|pending|fail on a production check report (pending: production does not carry the merge " +
-  "yet, or carries it with a requirement only the deploy can show still unobserved and a look still to follow). " +
+  "yet, or carries it with a requirement only the deploy can show still unobserved and a look still to follow; on the check's last look, only for an issue with no such requirement). " +
   "A planning, implementing, testing or reviewing phase ends with a handoff record on the " +
   "Dispatch issue: write it with `dispatch handoff-write --issue <issue> --phase <plan|implement|test|review> --body-file <file>` before " +
   "calling. This call reads from Dispatch the newest record of the phase your role works or, once the issue has moved on, of the phase it left, " +
@@ -158,6 +205,9 @@ const OMP_LEGION_TOOL_DESCRIPTION =
   "next look. A pass, a fail, and a pending on the check's last look end the check, so none of them carries `wake_at` " +
   "(CHECK_WAKE_UNEXPECTED), and a pending on any other look is refused without one (CHECK_WAKE_REQUIRED). A report on an issue whose check is " +
   "closed or never opened is refused (CHECK_NOT_OPEN), and so is one from a role the check does not record (CHECK_ROLE_MISMATCH). " +
+  "The completion that ends the retro carries `plan_rating` (1 to 5) and `plan_reason`, as " +
+  "skill://legion-retro says, and the daemon refuses a completion that breaks that skill's rating rule " +
+  "(PLAN_RATING_REQUIRED, PLAN_RATING_UNEXPECTED or PLAN_RATING_INPUT). " +
   "The daemon refuses " +
   "HANDOFF_SESSION_MISMATCH (another session wrote the record), HANDOFF_NOT_NEW (the record is the one you named for your previous phase: " +
   "write this phase's handoff), " +
@@ -170,32 +220,62 @@ const OMP_LEGION_TOOL_DESCRIPTION =
   "nothing, so fix what it names and complete again. " +
   "ready_for_update answers the daemon's update message on this issue's pod: `round` is the round id that message names, and the " +
   "daemon takes your answer for that round alone. Push every commit you want kept to the issue branch " +
-  "first. The daemon replaces the pod and its disk when the round ends: at the moment the message names, or earlier when every " +
-  "role has answered and no turn runs. No answer delays that moment, and the end of a turn is no answer. The call ends no phase. The " +
-  "daemon holds your next task until your process comes back on the new pod, in this same session. " +
+  "first. Then let each subagent and each background job that you started finish, or stop it. Commit and push what it made " +
+  "before you answer. The daemon replaces the pod and its disk when the round ends. The round ends at the moment the message " +
+  "names. It can end earlier, once every role has answered, no role is in a turn and each role's last report names no running " +
+  "subagent or background job. No answer delays that moment, and the end of a turn is no answer. If a subagent or a background " +
+  "job finishes after you answer, commit and push what it made. Then call ready_for_update again with the same round. " +
+  "The call ends no phase. The daemon holds your next task until your process comes back on the new pod, in this same session. " +
   "request_backward_move returns an issue to an earlier phase (`to`, `reason`). A phase worker moves its own issue. " +
   "The architect that owns an issue in accepting moves it, named by `issue`, back to implementing or testing. That move " +
   "counts a review round. " +
+  "read_build reports the build this process runs: the plugin package and version the process loaded, and the contract that build speaks. " +
+  "It also reports the contract the daemon states on its answer to the health route. " +
+  "That contract is null where the daemon stated none, where the daemon refused the health route and where no answer reached this process at all, and a note of its own says which. " +
+  "The two numbers can differ, and the answer shows both. " +
+  "Report the version this call answers, never the one at the plugin's path on the image. " +
+  "In a pod, an Oh My Pi role relaunched onto the daemon's contract loads the build that relaunch installed under the role's own state home, " +
+  "and a Claude Code role installs no plugin: it loads its pod image's own claude-envoy. " +
+  "read_build reads no project state. " +
   "retry_or_escalate decides an issue the daemon holds after its worker failed (issue, decision): retry puts the issue " +
   "back in the phase it was held from and starts that phase's worker again, escalate leaves it held for the controller, " +
   "and an optional reason says why you decided as you did: a retry writes it into the restarted worker's task and the " +
   "daemon's own log line for the release, and an escalation sends it to the controller with the hold. " +
   "sign_off is the architect's acceptance of an issue in accepting, moving it to retro; the daemon refuses it in every " +
   "other phase (SIGNOFF_OUTSIDE_ACCEPTING) and while an issue beneath it is still in the workflow " +
-  "(SIGNOFF_CHILD_IN_WORKFLOW, naming each one), since a parent's head proves its children's merged work: run each one " +
-  "to done, and sign off again. " +
-  "Park one with park_child only when a person asked for that move, or when the work is done, folded into another issue or no longer needed, and say in a comment which of those it is. " +
-  "Ask the person about a child that can reach neither done nor a park under that rule, and hold the acceptance until they answer. " +
+  "(SIGNOFF_CHILD_IN_WORKFLOW, naming each one), since a parent's head proves its children's merged work. " +
+  "Sign off again when each of them has left the workflow. " +
+  "The daemon takes the owning architect's done, backlog, icebox or triage on a child as it takes a person's move. " +
+  "End a child with your own status write in Dispatch. " +
+  "Write done with a reason when the child's work is done, folded into another issue or no longer needed: " +
+  "dispatch issue-update --issue <KEY> --status done --reason '<why>'. " +
+  "For a fold, name the carrier in the reason: the issue that carries the work. " +
+  "Before the done of a fold, make each issue that is blocked_by the child wait on the carrier instead. " +
+  "Done starts those issues, and the Referenced by list of dispatch read names each of them as blocked_by. " +
+  "Before done on a running child, have its worker push the work that the carrier needs. " +
+  "Done ends the worker's turn and the pod at once. " +
+  "Unless the work of the child's open pull request should land, close that pull request with your own App (gh pr close). " +
+  "When it is in the merge queue, first take it out (GraphQL dequeuePullRequest). " +
+  "Do this before done, or at once after a done that you wrote first. " +
+  "Write backlog or icebox only when a person asked for that move, or as the first step of a restart. " +
+  "A restart is backlog, then rerun_child. " +
+  "Say why in a dispatch comment. " +
+  "Write no status on a child that is already done, because a move out of done ends an open production check. " +
+  "After each move, read the child back (dispatch read --issue <KEY>). " +
+  "When the daemon set the move back, write it again. " +
+  "A status that you wrote and that the daemon has not taken yet does not count until read_record shows it. " +
+  "When a child can neither finish nor take one of these moves, ask the person. Hold the acceptance until they answer. " +
   "close_root is refused the same way and with the same code while an issue beneath the root is still in the workflow, " +
-  "since closing it would stop that work mid-turn: answer it the same way, park_child under the same rule included. " +
+  "because closing it would stop that work mid-turn. Answer that refusal the same way. " +
   "release_children and rerun_child are refused for a child whose ancestor is in retro or merging " +
   "(CHILD_UNDER_ACCEPTED_PARENT, naming the ancestor), since that ancestor's approved head cannot carry work released " +
   "under it now: wait for the ancestor to close, then release it. " +
-  "The controller's read_state with no field returns a summary of the daemon's whole state — the project, admission, each " +
+  "The controller's read_state with no field returns a summary of the daemon's whole state — the project, the pause " +
+  "that stands or the last one ended, admission, how many wakes the daemon's pacing holds and when the next is due, each " +
   "capability, one line per recorded issue, and under each issue Legion still runs its slot, hold, gate and each claim's " +
   "state with its last turn times — and with issue, issues, phase or settings returns the full records it names; " +
   "set_status moves an issue to todo, backlog or icebox. " +
-  "Move an issue to backlog or icebox only when a person asked for that move, or when the work is done, folded into another issue or no longer needed, and cite that reason in a comment on the issue. " +
+  "With set_status, the controller moves an issue to backlog or icebox only when a person asked for that move, or when the work is done, folded into another issue or no longer needed, and cites that reason in a comment on the issue. " +
   "Two writes are not that move: a root's restart, which sets backlog and then todo in the same turn, and the " +
   "controller's report issue's icebox, because that issue holds no work. " +
   "fresh_session (issue, role) has one claim leave the session it runs in behind and start again in a new one: the daemon " +
@@ -239,6 +319,18 @@ const OMP_LEGION_TOOL_DESCRIPTION =
   "Each refusal says what the claim does now and which operation reaches each state. It " +
   "names no moment to come back at: ask again later, and read the claim's state in " +
   "read_state. " +
+  "pause (reason) pauses the whole project, and resume ends its pause; neither takes an issue. While the project " +
+  "is paused the daemon admits no issue, and it starts no role and gives no role a task except the controller. Every " +
+  "other role stops with its conversation kept, an idle one at once and one in a turn when that turn ends, and the " +
+  "pause deletes no pod. Each task, notice and wake for a stopped role waits for the resume. The answer is the " +
+  "pause: its id, since, by and reason. The daemon refuses a second pause (PROJECT_ALREADY_PAUSED, naming the " +
+  "pause that stands) and a pause its configuration cannot hold (PAUSE_UNAVAILABLE, naming the setting). " +
+  "resume ends the pause whoever made it, the operator's included. Each role the pause held something for then " +
+  "starts once, at the daemon's wake pacing, and every other role it stopped stays stopped until its next wake. " +
+  "The answer is the pause with endedAt and endedBy, and released, how many held rows the resume let out. The " +
+  "daemon refuses a resume of a project that is not paused (PROJECT_NOT_PAUSED, naming its last pause when it has one). While " +
+  "the project is paused it refuses fresh_session and compact (PROJECT_PAUSED, naming the pause that stands), " +
+  "since each would start a turn. " +
   "What a later phase needs goes in your handoff; a question for another live role goes to its role topic with envoy_publish.";
 
 /** Every session kind the tool answers for: a root architect, a sub-architect, each phase worker,
@@ -271,6 +363,25 @@ test("the legion tool's description is the exact text Oh My Pi agents read, for 
   }
 });
 
+// The daemon's refusals and notices over children carry its rules for ending a child
+// (record.EndChildRule) and its sentence on a status it has not taken yet
+// (record.StatusNotTakenYet), and the description gives an architect the same words. The daemon's
+// golden test (`packages/daemon/internal/api`, TestTheEndChildRuleGolden) writes both texts to
+// `end-child-rule.json`. This case holds the description to the file, so a word changed on either
+// side alone fails one test or the other. The first and the last sentence of the rule are written
+// out here, so a fixture that holds only a part of the rule fails here too.
+test("the legion tool's description carries the daemon's rules for ending a child and its not-taken-yet sentence, word for word", () => {
+  const { rule, notTakenYet } = daemonFixture("end-child-rule.json") as {
+    readonly rule: string;
+    readonly notTakenYet: string;
+  };
+  expect(rule).toStartWith("End a child with your own status write in Dispatch. ");
+  expect(rule).toEndWith(" When the daemon set the move back, write it again.");
+  const { description } = toolFor(claimSession("architect"));
+  expect(description).toContain(rule);
+  expect(description).toContain(notTakenYet);
+});
+
 /** The `legion` tool's parameter schema as Oh My Pi agents are given it, serialized whole: every
  * property and every `op` value in the order the tool declares them. */
 const OMP_LEGION_TOOL_SCHEMA = JSON.stringify({
@@ -286,16 +397,18 @@ const OMP_LEGION_TOOL_SCHEMA = JSON.stringify({
         "retry_or_escalate",
         "sign_off",
         "close_root",
-        "park_child",
         "rerun_child",
         "read_record",
         "read_release_records",
         "handoff_complete",
         "ready_for_update",
+        "read_build",
         "read_state",
         "set_status",
         "fresh_session",
         "compact",
+        "pause",
+        "resume",
       ],
     },
     issue: { type: "string" },
@@ -331,12 +444,14 @@ const OMP_LEGION_TOOL_SCHEMA = JSON.stringify({
     reason: {
       type: "string",
       description:
-        "close_root's and request_backward_move's why; no other operation takes it. park_child and rerun_child take only issue: say why you park a child in a dispatch comment on it",
+        "close_root's and request_backward_move's why, retry_or_escalate's optional why, and the controller's pause's why. No other operation takes it. rerun_child takes only issue: say why in a dispatch comment on the child",
     },
     decision: { type: "string", enum: ["retry", "escalate"] },
     summary: { type: "string" },
     verdict: { type: "string", enum: ["pass", "pending", "fail"] },
     wake_at: { type: "string" },
+    plan_rating: { type: "integer", minimum: 1, maximum: 5 },
+    plan_reason: { type: "string" },
     round: { type: "string" },
     status: { type: "string", enum: ["todo", "backlog", "icebox"] },
     phase: { type: "string", enum: [...LEGION_PHASES] },
@@ -390,7 +505,7 @@ test("a root architect's handoff_complete is refused as unavailable before its a
     content: [
       {
         type: "text",
-        text: 'handoff_complete does not accept field "phase"; it takes summary, issue, verdict, wake_at; handoff_complete is not available to a root architect session, which runs no phase',
+        text: 'handoff_complete does not accept field "phase"; it takes summary, issue, verdict, wake_at, plan_rating, plan_reason; handoff_complete is not available to a root architect session, which runs no phase',
       },
     ],
   });
@@ -438,7 +553,7 @@ test("the legion tool exposes only the workflow operations each role owns", asyn
   expect(calls).toEqual([
     [
       "grant",
-      { sessionId: "ses_208", secret: "claim-secret", tree: "LEGION-208", issue: "LEGION-208" },
+      { sessionId: "ses_208", secret: CLAIM_SECRET, tree: "LEGION-208", issue: "LEGION-208" },
     ],
     [
       "gateRegister",
@@ -546,10 +661,6 @@ test("the legion tool exposes only the workflow operations each role owns", asyn
   await expect(run(architect, { op: "close_root", issue: "LEGION-208" })).resolves.toMatchObject({
     isError: true,
   });
-  await expect(run(architect, { op: "park_child", issue: "LEGION-209" })).resolves.toMatchObject({
-    details: {},
-  });
-  expect(calls.at(-1)).toEqual(["childPark", { grantId: "grant-208", issue: "LEGION-209" }]);
   await expect(run(architect, { op: "rerun_child", issue: "LEGION-209" })).resolves.toMatchObject({
     details: {},
   });
@@ -557,7 +668,7 @@ test("the legion tool exposes only the workflow operations each role owns", asyn
   await expect(run(architect, { op: "read_record", issue: "LEGION-208" })).resolves.toMatchObject({
     details: { record: state.issues["LEGION-208"] },
   });
-  for (const op of ["sign_off", "close_root", "park_child", "rerun_child"]) {
+  for (const op of ["sign_off", "close_root", "rerun_child"]) {
     await expect(run(worker, { op, issue: "LEGION-208" })).resolves.toMatchObject({
       isError: true,
     });
@@ -638,13 +749,13 @@ test("retry_or_escalate takes a reason", async () => {
   expect(calls).toHaveLength(before);
 });
 
-// Architects sent park_child a `reason`, as close_root and request_backward_move take one, and
-// were told only that the field is refused: five refusals over four days of architect sessions,
-// each sent again without it and its why lost. The daemon keeps no why for a park or a rerun, so
-// a refusal of their `reason` names the fields the operation takes and the dispatch comment on
-// the child the why goes in, before any grant is minted. Any other operation's refusal names the
+// Architects sent a child operation a `reason`, as close_root and request_backward_move take one,
+// and were told only that the field is refused: five refusals over four days of architect
+// sessions, each sent again without it and its why lost. The daemon keeps no why for a rerun, so a
+// refusal of its `reason` names the fields the operation takes and the dispatch comment on the
+// child the why goes in, before any grant is minted. Any other operation's refusal names the
 // fields it takes alone: it may name no single issue (release_children, whose field is `issues`).
-test("park_child refuses a reason before any grant, naming issue and the dispatch comment the why goes in", async () => {
+test("rerun_child refuses a reason before any grant, naming issue and the dispatch comment the why goes in", async () => {
   const { calls, daemon } = recordingDaemon({});
   const tool = createLegionTool({
     pi,
@@ -658,10 +769,6 @@ test("park_child refuses a reason before any grant, naming issue and the dispatc
     session: () => claimSession("architect"),
   });
   const refusals = [
-    [
-      { op: "park_child", issue: "LEGION-209", reason: "Folded into LEGION-208's pull request" },
-      'park_child does not accept field "reason"; it takes issue. Say why in a dispatch comment on the child',
-    ],
     [
       { op: "rerun_child", issue: "LEGION-209", reason: "The spec changed" },
       'rerun_child does not accept field "reason"; it takes issue. Say why in a dispatch comment on the child',
@@ -752,7 +859,7 @@ test("read_release_records reads the window with this session's claim, and repor
           "LEGION-208",
           session.kind === "architect" ? "architect" : "tester"
         ),
-        secret: "claim-secret",
+        secret: CLAIM_SECRET,
         since: "2026-11-01T00:00:00Z",
       },
     ]);
@@ -988,10 +1095,10 @@ test("handoff_complete finds the phase's handoff record and the pushed tip, post
     run(claimSession("implementer"), { op: "handoff_complete", summary: "Done." }, paneJj(TIP))
   ).resolves.toEqual({ content: [{ type: "text", text: "{}" }], details: {} });
   expect(calls).toEqual([
-    ["state", undefined],
+    ["record", { issue: "LEGION-208" }],
     [
       "grant",
-      { sessionId: "ses_208", secret: "claim-secret", tree: "LEGION-208", issue: "LEGION-208" },
+      { sessionId: "ses_208", secret: CLAIM_SECRET, tree: "LEGION-208", issue: "LEGION-208" },
     ],
     [
       "handoffComplete",
@@ -1081,7 +1188,7 @@ test("handoff_complete finds the phase's handoff record and the pushed tip, post
       text: "handoff_complete's verdict is pass or fail on a phase completion; pending is a production check's",
     },
   ]);
-  expect(calls.at(-1)).toEqual(["state", undefined]);
+  expect(calls.at(-1)).toEqual(["record", { issue: "LEGION-208" }]);
   expect(completed).toHaveLength(4);
 
   // Each refusal of the report is the tool's error, naming the remedy: the state is read, and
@@ -1129,7 +1236,7 @@ test("handoff_complete finds the phase's handoff record and the pushed tip, post
     );
     expect(result.isError).toBe(true);
     expect(result.content).toEqual([{ type: "text", text: message }]);
-    expect(calls.at(-1)).toEqual(["state", undefined]);
+    expect(calls.at(-1)).toEqual(["record", { issue: "LEGION-208" }]);
   }
   expect(completed).toHaveLength(4);
 });
@@ -1186,6 +1293,52 @@ test("the planner, the tester and the reviewer post their phase's handoff record
       },
     ]);
   }
+});
+
+// The agent that does the retro rates the plan the issue ran in the completion that ends the
+// retro. Retro writes no handoff, so the completion reports the commit the workspace stands on,
+// and the rating travels beside it under the daemon's names.
+test("the retro's handoff_complete posts its rating of the plan as planRating and planReason, with the commit the workspace stands on", async () => {
+  const reads: string[] = [];
+  const { calls, daemon } = recordingDaemon({ state: stateAt("retro") });
+  const reason = "The plan's tester step caught the regression the review would have missed.";
+  const result = await createLegionTool({
+    pi,
+    daemon,
+    controllerGrant: noControllerGrant,
+    onPhaseCompleted: () => undefined,
+    onUpdateAnswered: () => undefined,
+    handoffReport: (phase, role) =>
+      findHandoffReport({
+        phase,
+        role,
+        env: paneEnv,
+        jj: paneJj(),
+        latestHandoff: paneDispatch(reads),
+      }),
+    branchHead: noBranchHead,
+    resolveDocument: noDocumentLookup,
+    session: () => claimSession("implementer"),
+  }).execute(
+    "",
+    { op: "handoff_complete", summary: "Retro done.", plan_rating: 5, plan_reason: reason },
+    undefined,
+    undefined,
+    context()
+  );
+  expect(result.isError).toBeUndefined();
+  expect(reads).toEqual([]);
+  expect(calls.at(-1)).toEqual([
+    "handoffComplete",
+    {
+      grantId: "grant-208",
+      summary: "Retro done.",
+      verdict: "",
+      commit: STANDING,
+      planRating: 5,
+      planReason: reason,
+    },
+  ]);
 });
 
 test("a completion once the issue moved on posts the role's own newest record of the phase it left, and @- where that phase writes none", async () => {
@@ -1409,10 +1562,10 @@ test("a report on its closed issue's production check carries a verdict and no c
       })
     ).resolves.toEqual({ content: [{ type: "text", text: "{}" }], details: {} });
     expect(calls.slice(-3)).toEqual([
-      ["state", undefined],
+      ["record", { issue: "LEGION-208" }],
       [
         "grant",
-        { sessionId: "ses_208", secret: "claim-secret", tree: "LEGION-208", issue: "LEGION-208" },
+        { sessionId: "ses_208", secret: CLAIM_SECRET, tree: "LEGION-208", issue: "LEGION-208" },
       ],
       [
         "handoffComplete",
@@ -1439,7 +1592,7 @@ test("a report on its closed issue's production check carries a verdict and no c
       text: "handoff_complete on a production check names a verdict of pass, pending or fail",
     },
   ]);
-  expect(calls.at(-1)).toEqual(["state", undefined]);
+  expect(calls.at(-1)).toEqual(["record", { issue: "LEGION-208" }]);
   expect(completed).toHaveLength(3);
 
   // A completion on a done issue carries what a check report carries, whatever role sends it, and
@@ -1566,7 +1719,7 @@ function legionState(overrides: Record<string, unknown> = {}): LegionState {
     heldOutboxRows: [],
     strandedClaims: [],
     capabilities: [],
-    repositories: { owners: ["acme"], mapped: [], refused: [], withoutWebhookApp: [], caches: [] },
+    repositories: { live: [], withoutWebhookApp: [], caches: [] },
     consumers: [],
     settings: { review_round_cap: 3, worker_boot_timeout_seconds: 900 },
     ...overrides,
@@ -1697,6 +1850,19 @@ function controllerTool(daemon: () => LegionDaemonClient, minted: string[]): Reg
   });
 }
 
+/** The lines of `read_state`'s summary, read as the controller reads them from `daemon`. */
+async function summaryLinesOf(daemon: () => LegionDaemonClient): Promise<string[]> {
+  const result = await controllerTool(daemon, []).execute(
+    "",
+    { op: "read_state" },
+    undefined,
+    undefined,
+    context("ses_controller")
+  );
+  const [block] = result.content;
+  return (block !== undefined && block.type === "text" ? block.text : "").split("\n");
+}
+
 test("the controller reads the state without a grant and sets an issue's status with its own", async () => {
   const state = legionState({
     admission: { cap: 2, free: 0, active: ["LEGION-208"], waiting: [], blocked: [] },
@@ -1821,6 +1987,237 @@ test("the controller reads the state without a grant and sets an issue's status 
   expect(minted).toEqual(["ses_controller", "ses_controller", "ses_controller"]);
 });
 
+// R6: a role reads which plugin build its own process runs. The build is the manifest of the
+// module this process loaded: `tools.ts` imports `../package.json` and takes `pluginBuildOf` of
+// it, never the image's copy at `/opt/legion/pi-legion`, which a relaunch never updates. For this
+// case alone a read of that copy answers a manifest with a version and a contract of its own
+// (withImageManifest), so the answer below fails wherever the build is read from that path,
+// whatever the image holds. The case imports `tools.ts` again under the mock and asks that copy.
+const TOOLS_LOADED_UNDER_THE_IMAGE_MOCK = "./tools?read_build";
+test("read_build answers the package and version this process loaded, both contract numbers, and reads no state", async () => {
+  const atImagePath = {
+    ...pkg,
+    version: "0.0.0-image",
+    legion: { daemonApiVersion: pkg.legion.daemonApiVersion - 1 },
+  };
+  await withImageManifest("/opt/legion/pi-legion/package.json", atImagePath, async () => {
+    const { createLegionTool: createFreshLegionTool } = (await import(
+      TOOLS_LOADED_UNDER_THE_IMAGE_MOCK
+    )) as { readonly createLegionTool: typeof createLegionTool };
+    const { calls, daemon } = recordingDaemon({ daemonContract: pkg.legion.daemonApiVersion + 1 });
+    const tool = createFreshLegionTool({
+      pi,
+      daemon,
+      controllerGrant: noControllerGrant,
+      onPhaseCompleted: () => undefined,
+      onUpdateAnswered: () => undefined,
+      handoffReport: noHandoffReport,
+      branchHead: noBranchHead,
+      resolveDocument: noDocumentLookup,
+      session: () => claimSession("implementer"),
+    });
+
+    await expect(
+      tool.execute("", { op: "read_build" }, undefined, undefined, context())
+    ).resolves.toMatchObject({
+      details: {
+        plugin: pkg.name,
+        version: pkg.version,
+        pluginContract: pkg.legion.daemonApiVersion,
+        daemonContract: pkg.legion.daemonApiVersion + 1,
+        daemonContractNote: null,
+      },
+    });
+    // The health route's header is the one read, and no project state is asked for.
+    expect(calls).toEqual([["daemonContract", undefined]]);
+  });
+});
+
+test("read_build says the daemon stated no contract, and belongs to the controller session too", async () => {
+  const { daemon } = recordingDaemon({});
+  const toolFor = (active: LegionToolSession) =>
+    createLegionTool({
+      pi,
+      daemon,
+      controllerGrant: noControllerGrant,
+      onPhaseCompleted: () => undefined,
+      onUpdateAnswered: () => undefined,
+      handoffReport: noHandoffReport,
+      branchHead: noBranchHead,
+      resolveDocument: noDocumentLookup,
+      session: () => active,
+    });
+
+  for (const active of [claimSession("architect"), claimSession("implementer")]) {
+    await expect(
+      toolFor(active).execute("", { op: "read_build" }, undefined, undefined, context())
+    ).resolves.toMatchObject({
+      details: { daemonContract: null, daemonContractNote: "the daemon stated no contract" },
+    });
+  }
+  // The controller holds a claim like any other role, and it is the session that compares two
+  // contract numbers when a roll goes wrong (dispatch://INFRA-2694). It reaches no claim grant,
+  // so its answer comes from the controller's own branch of the tool.
+  const controller = toolFor({ kind: "controller", sessionID: "ses_controller" });
+  await expect(
+    controller.execute("", { op: "read_build" }, undefined, undefined, context("ses_controller"))
+  ).resolves.toMatchObject({
+    details: {
+      plugin: pkg.name,
+      version: pkg.version,
+      pluginContract: pkg.legion.daemonApiVersion,
+      daemonContract: null,
+      daemonContractNote: "the daemon stated no contract",
+    },
+  });
+  // It takes no field there either.
+  await expect(
+    controller.execute(
+      "",
+      { op: "read_build", issue: "LEGION-208" },
+      undefined,
+      undefined,
+      context("ses_controller")
+    )
+  ).resolves.toMatchObject({
+    isError: true,
+    content: [{ type: "text", text: 'read_build does not accept field "issue"; it takes none' }],
+  });
+});
+
+// The project's pause (dispatch://INFRA-3759, check k6). The controller pauses its project with
+// one operation, which sends its reason, and resumes it with one more, which names nothing: the
+// daemon acts on its own project. Each goes through the real daemon client, so the answer the
+// controller reads is the golden the daemon's own test wrote, parsed by the contract's schema.
+// A call the tool can tell is wrong is refused before a grant is minted or a request sent.
+test("the controller pauses the project with its reason and resumes it, and each answer is the daemon's golden", async () => {
+  const { posted, daemon } = goldenDaemon({
+    "/legion/v1/project/pause": "project-pause.json",
+    "/legion/v1/project/resume": "project-resume.json",
+  });
+  const minted: string[] = [];
+  const tool = controllerTool(daemon, minted);
+  const run = (parameters: Record<string, unknown>) =>
+    tool.execute("", parameters, undefined, undefined, context("ses_controller"));
+  const reason = "the model provider is refusing every turn";
+
+  const paused = await run({ op: "pause", reason });
+  expect(paused.isError).toBeUndefined();
+  expect(paused.details).toEqual(daemonFixture("project-pause.json"));
+  expect(paused.content).toEqual([{ type: "text", text: JSON.stringify(paused.details) }]);
+  expect(posted).toEqual([["/legion/v1/project/pause", { grantId: "controller-grant-1", reason }]]);
+  expect(minted).toEqual(["ses_controller"]);
+
+  const resumed = await run({ op: "resume" });
+  expect(resumed.isError).toBeUndefined();
+  expect(resumed.details).toEqual(daemonFixture("project-resume.json"));
+  expect(resumed.content).toEqual([{ type: "text", text: JSON.stringify(resumed.details) }]);
+  expect(posted.at(-1)).toEqual(["/legion/v1/project/resume", { grantId: "controller-grant-1" }]);
+  expect(minted).toEqual(["ses_controller", "ses_controller"]);
+
+  const refusals = [
+    [{ op: "pause" }, "pause requires reason"],
+    [{ op: "pause", reason: " " }, "pause requires reason"],
+    [
+      { op: "pause", reason, issue: "LEGION-208" },
+      'pause does not accept field "issue"; it takes reason',
+    ],
+    [{ op: "resume", reason }, 'resume does not accept field "reason"; it takes none'],
+    [{ op: "resume", issue: "LEGION-208" }, 'resume does not accept field "issue"; it takes none'],
+  ] as const;
+  for (const [parameters, text] of refusals) {
+    await expect(run(parameters)).resolves.toEqual({
+      content: [{ type: "text", text }],
+      details: {},
+      isError: true,
+    });
+  }
+  expect(posted).toHaveLength(2);
+  expect(minted).toHaveLength(2);
+});
+
+// The daemon's refusals reach the controller as every other write's do: the code, then the
+// daemon's sentence, which names the pause that stands, the last pause, or the setting that
+// turns the pause off. The bodies are the daemon's goldens, which carry that pause beside the
+// sentence; the client reads the code and the sentence.
+test("a refused pause and a refused resume tell the controller the daemon's code and its sentence", async () => {
+  const refusals = [
+    [
+      { op: "pause", reason: "a second pause" },
+      "/legion/v1/project/pause",
+      "project-pause-refused.json",
+      "PROJECT_ALREADY_PAUSED",
+    ],
+    [
+      { op: "pause", reason: "a pause under tmux" },
+      "/legion/v1/project/pause",
+      "project-pause-unavailable.json",
+      "PAUSE_UNAVAILABLE",
+    ],
+    [
+      { op: "resume" },
+      "/legion/v1/project/resume",
+      "project-resume-refused.json",
+      "PROJECT_NOT_PAUSED",
+    ],
+  ] as const;
+  for (const [parameters, route, golden, code] of refusals) {
+    const { daemon } = goldenDaemon({ [route]: golden }, 409);
+    await expect(
+      controllerTool(daemon, []).execute(
+        "",
+        parameters,
+        undefined,
+        undefined,
+        context("ses_controller")
+      )
+    ).resolves.toEqual({
+      content: [
+        {
+          type: "text",
+          text: `POST ${route} failed with 409 ${code}: ${daemonFixture(golden).error}`,
+        },
+      ],
+      details: {},
+      isError: true,
+    });
+  }
+});
+
+// Neither operation is a claim's: a root architect, a sub-architect and every phase worker are
+// refused by the operation's name, before a grant is minted or a request sent.
+test("pause and resume are offered to no architect and no phase worker", async () => {
+  const { posted, daemon } = goldenDaemon({
+    "/legion/v1/project/pause": "project-pause.json",
+    "/legion/v1/project/resume": "project-resume.json",
+  });
+  const claims = EVERY_SESSION.filter((session) => session.kind !== "controller");
+  expect(claims).toHaveLength(7);
+  for (const session of claims) {
+    const tool = createLegionTool({
+      pi,
+      daemon,
+      controllerGrant: noControllerGrant,
+      onPhaseCompleted: () => undefined,
+      onUpdateAnswered: () => undefined,
+      handoffReport: noHandoffReport,
+      branchHead: noBranchHead,
+      resolveDocument: noDocumentLookup,
+      session: () => session,
+    });
+    for (const parameters of [{ op: "pause", reason: "the provider is down" }, { op: "resume" }]) {
+      await expect(tool.execute("", parameters, undefined, undefined, context())).resolves.toEqual({
+        content: [
+          { type: "text", text: `${parameters.op} is not available to a ${session.kind} session` },
+        ],
+        details: {},
+        isError: true,
+      });
+    }
+  }
+  expect(posted).toEqual([]);
+});
+
 test("read_state with no field summarizes 92 issues under the tool's limit, naming every one", async () => {
   const state = stateOf92Issues();
   const { daemon } = recordingDaemon({ state });
@@ -1876,6 +2273,137 @@ test("read_state with no field summarizes 92 issues under the tool's limit, nami
   // A done issue's claims are retired, so its line stands alone: that is what pays for naming
   // every key.
   expect(summary).toContain("\nINFRA-146 done done\nINFRA-147 done done\n");
+});
+
+// What the controller reads of the pause in `read_state` with no field (dispatch://INFRA-3759,
+// R6): one line while the project is paused, naming the pause, since when, by whom and why, the
+// roles whose stop it still waits on and how many rows it holds; one line while the project
+// runs after a pause, naming that pause and when and by whom it was ended; and neither before
+// the project's first pause. The two states are the daemon's goldens, read through the client.
+test("read_state's summary prints the pause's line while the project is paused and the last pause's line while it runs", async () => {
+  const pauseLines = (lines: readonly string[]) =>
+    lines.filter((line) => line.startsWith("paused: ") || line.startsWith("last pause: "));
+
+  const paused = await summaryLinesOf(goldenDaemon({ "/legion/v1/state": "state.json" }).daemon);
+  const pausedLine =
+    "paused: pause 7 since 2026-09-22T09:09:00Z by the controller (session ses_controller): " +
+    "the model provider is refusing every turn; waits on 1 role — LEGION-208 implementer; " +
+    "holds 2 rows";
+  expect(pauseLines(paused)).toEqual([pausedLine]);
+
+  const running = await summaryLinesOf(
+    goldenDaemon({ "/legion/v1/state": "state-last-pause.json" }).daemon
+  );
+  expect(pauseLines(running)).toEqual([
+    "last pause: pause 7 since 2026-11-15T09:00:00Z by the operator: " +
+      "the model provider is refusing every turn; " +
+      "ended 2026-11-15T09:41:30Z by the controller (session ses_controller)",
+  ]);
+
+  const unpaused = await summaryLinesOf(recordingDaemon({ state: legionState() }).daemon);
+  expect(pauseLines(unpaused)).toEqual([]);
+
+  // A pause every role has stopped for, with nothing held yet, and one that waits on two roles
+  // and holds one row.
+  const pause = {
+    id: 9,
+    since: "2026-11-16T08:00:00Z",
+    by: { kind: "operator" },
+    reason: "a provider outage",
+  };
+  const settled = legionState({ paused: { ...pause, waitsOn: [], held: [] } });
+  expect(pauseLines(await summaryLinesOf(recordingDaemon({ state: settled }).daemon))).toEqual([
+    "paused: pause 9 since 2026-11-16T08:00:00Z by the operator: a provider outage; " +
+      "waits on no role; holds no row",
+  ]);
+  const waiting = legionState({
+    paused: {
+      ...pause,
+      waitsOn: [
+        {
+          claim: "legion-infra-infra-100-architect",
+          issue: "INFRA-100",
+          role: "architect",
+          askedAt: "2026-11-16T08:00:00Z",
+        },
+        {
+          claim: "legion-infra-infra-101-tester",
+          issue: "INFRA-101",
+          role: "tester",
+          askedAt: "2026-11-16T08:00:00Z",
+        },
+      ],
+      held: [{ id: 41, kind: "notice", issue: "INFRA-100", waitedSeconds: 30 }],
+    },
+  });
+  expect(pauseLines(await summaryLinesOf(recordingDaemon({ state: waiting }).daemon))).toEqual([
+    "paused: pause 9 since 2026-11-16T08:00:00Z by the operator: a provider outage; " +
+      "waits on 2 roles — INFRA-100 architect, INFRA-101 tester; holds 1 row",
+  ]);
+});
+
+// What the controller reads of the wake pacing in `read_state` with no field: one line with how
+// many wakes the pacing holds until their turn and when the earliest of them is due. The
+// controller's skill has it read that line after a resume (`skills/legion-controller/references/
+// wakes.md`, `project-resumed`), so a summary without it leaves that step with nothing to read.
+test("read_state's summary counts the wakes the pacing holds and says when the earliest is due", async () => {
+  const wakesLines = (lines: readonly string[]) =>
+    lines.filter((line) => line.startsWith("wakes waiting"));
+
+  // A state without the key says nothing of what waits, so the summary has no such line: the
+  // daemon leaves the key off the state it serves a caller it reads as below the contract that
+  // added the key (`LegionStateResponse`).
+  const unsaid = await summaryLinesOf(recordingDaemon({ state: legionState() }).daemon);
+  expect(wakesLines(unsaid)).toEqual([]);
+
+  // Outside a wave the list is empty, and the line says so and names no moment.
+  const none = legionState({ wakesWaiting: [] });
+  expect(wakesLines(await summaryLinesOf(recordingDaemon({ state: none }).daemon))).toEqual([
+    "wakes waiting 0",
+  ]);
+
+  // The daemon lists the wakes in claim order, so the earliest is not the first. It is the
+  // earliest as a time: read as text, the half second after it would sort before it.
+  const wave = legionState({
+    admission: {
+      cap: 8,
+      free: 0,
+      active: ["INFRA-100", "INFRA-101"],
+      waiting: ["INFRA-102"],
+      blocked: [{ issue: "INFRA-102", blockedBy: ["INFRA-103"] }],
+    },
+    capabilities: [{ name: "subagents", status: "present", detail: "6 agents discovered" }],
+    wakesWaiting: [
+      {
+        claim: "legion-infra-infra-100-architect",
+        issue: "INFRA-100",
+        role: "architect",
+        kind: "catch-up",
+        dueAt: "2026-11-16T08:00:23Z",
+      },
+      {
+        claim: "legion-infra-infra-100-implementer",
+        issue: "INFRA-100",
+        role: "implementer",
+        kind: "launch",
+        dueAt: "2026-11-16T08:00:08.5Z",
+      },
+      {
+        claim: "legion-infra-infra-101-tester",
+        issue: "INFRA-101",
+        role: "tester",
+        kind: "plugin-refresh",
+        dueAt: "2026-11-16T08:00:08Z",
+      },
+    ],
+  });
+  const waiting = await summaryLinesOf(recordingDaemon({ state: wave }).daemon);
+  const waitingLine = "wakes waiting 3 next 2026-11-16T08:00:08Z";
+  expect(wakesLines(waiting)).toEqual([waitingLine]);
+
+  // The daemon's own golden, read through the client: three wakes, the first of them the earliest.
+  const golden = await summaryLinesOf(goldenDaemon({ "/legion/v1/state": "state.json" }).daemon);
+  expect(wakesLines(golden)).toEqual(["wakes waiting 3 next 2026-09-22T09:17:56Z"]);
 });
 
 test("read_state's filters answer full records, and name what they cannot select", async () => {

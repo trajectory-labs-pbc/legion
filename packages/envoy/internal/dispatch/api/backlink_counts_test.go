@@ -166,8 +166,9 @@ func requireIssueBacklinkCount(t *testing.T, handler http.Handler, key string, w
 }
 
 // A reader carrying a batched backlink count refreshes the rows of the nodes a write cited, so
-// the event has to name them. The write itself is the only place that knows: refs.ReplaceCounted
-// reconciles the edges and resolves what moved in the same transaction that appends the event.
+// the event has to name them. The write itself is the only place that knows: it plans the
+// reconciliation of the edges and resolves what moved (planFoundReferences) in the same
+// transaction that appends the event.
 func TestReferenceWritesNameChangedTargets(t *testing.T) {
 	handler := newTestHandler(t)
 	createReferenceAPIProject(t, handler, "CORE")
@@ -371,6 +372,7 @@ func TestDocumentVersionsNameChangedTargets(t *testing.T) {
 		}
 		if reflect.DeepEqual(event.Payload.ReferencesChanged, []model.ChangedReference{
 			{Kind: "ask", ID: askID, IssueKey: &issueKey},
+			{Kind: "issue", ID: issueKey},
 		}) {
 			named = true
 		}
@@ -433,6 +435,7 @@ func TestDocumentWritePathsNameChangedTargets(t *testing.T) {
 	}
 	requireArtifactEventNames(t, handler, events, document.ID, []model.ChangedReference{
 		{Kind: "ask", ID: askIDs[0], IssueKey: &issueKey},
+		{Kind: "issue", ID: issueKey},
 	})
 
 	// The named-version branch of the same endpoint.
@@ -446,6 +449,7 @@ func TestDocumentWritePathsNameChangedTargets(t *testing.T) {
 	}
 	requireArtifactEventNames(t, handler, events, document.ID, []model.ChangedReference{
 		{Kind: "ask", ID: askIDs[1], IssueKey: &issueKey},
+		{Kind: "issue", ID: issueKey},
 	})
 
 	// Accepting a suggestion writes a named version of its own.
@@ -463,6 +467,7 @@ func TestDocumentWritePathsNameChangedTargets(t *testing.T) {
 	}
 	requireArtifactEventNames(t, handler, events, document.ID, []model.ChangedReference{
 		{Kind: "ask", ID: askIDs[2], IssueKey: &issueKey},
+		{Kind: "issue", ID: issueKey},
 	})
 }
 
@@ -718,7 +723,7 @@ func TestReferenceWritesNameTheDocumentsTheyCite(t *testing.T) {
 		t.Fatalf("create citing comment: status=%d body=%s", comment.Code, comment.Body.String())
 	}
 	commentID := decodeBody[writtenRecord](t, comment).ID
-	requireReferencesChanged(t, handler, source.Key, "comment.created", commentID, []model.ChangedReference{runbookNamed, notesNamed, specNamed})
+	requireReferencesChanged(t, handler, source.Key, "comment.created", commentID, []model.ChangedReference{runbookNamed, notesNamed, specNamed, {Kind: "issue", ID: target.Key}})
 
 	message := sessionRequest(t, handler, http.MethodPost, "/api/v1/issues/"+source.Key+"/messages", map[string]any{
 		"actor": sessionActor(),
@@ -735,7 +740,7 @@ func TestReferenceWritesNameTheDocumentsTheyCite(t *testing.T) {
 	if ask.Code != http.StatusCreated {
 		t.Fatalf("open a citing ask: status=%d body=%s", ask.Code, ask.Body.String())
 	}
-	requireReferencesChanged(t, handler, source.Key, "ask.opened", decodeBody[writtenRecord](t, ask).ID, []model.ChangedReference{notesNamed})
+	requireReferencesChanged(t, handler, source.Key, "ask.opened", decodeBody[writtenRecord](t, ask).ID, []model.ChangedReference{notesNamed, {Kind: "issue", ID: target.Key}})
 
 	// The edit keeps all three edges but moves the citing block's text, which is each panel's
 	// excerpt; an edit past that excerpt (refs.BlockExcerptRunes, 480 runes) moves nothing a panel
@@ -748,7 +753,7 @@ func TestReferenceWritesNameTheDocumentsTheyCite(t *testing.T) {
 	}
 	head := "First follow " + runbookRef + " and " + notesRef + ", then " + specRef + ". " + strings.Repeat("x", 500)
 	editComment(head)
-	requireReferencesChanged(t, handler, source.Key, "comment.edited", commentID, []model.ChangedReference{runbookNamed, notesNamed, specNamed})
+	requireReferencesChanged(t, handler, source.Key, "comment.edited", commentID, []model.ChangedReference{runbookNamed, notesNamed, specNamed, {Kind: "issue", ID: target.Key}})
 	editComment(head + " More.")
 	requireReferencesChanged(t, handler, source.Key, "comment.edited", commentID, nil)
 
@@ -790,19 +795,19 @@ func TestReferenceWritesNameTheBlocksTheyCite(t *testing.T) {
 	}
 
 	comment := createReferenceAPIComment(t, handler, issue.Key, "Decided in "+blockRef+".")
-	requireReferencesChanged(t, handler, issue.Key, "comment.created", comment.ID, []model.ChangedReference{blockNamed})
+	requireReferencesChanged(t, handler, issue.Key, "comment.created", comment.ID, []model.ChangedReference{blockNamed, {Kind: "issue", ID: issue.Key}})
 
 	// The spec's events are its issue's.
 	events := "/api/v1/issues/" + issue.Key + "/events"
 	editSpec(t, handler, issue.Key, []map[string]any{{"op": "replace", "find": "Other paragraph.", "with": "Another paragraph."}})
 	requireArtifactEventNames(t, handler, events, spec, nil)
 	editSpec(t, handler, issue.Key, []map[string]any{{"op": "replace", "find": "Ship it.", "with": "Ship it today."}})
-	requireArtifactEventNames(t, handler, events, spec, []model.ChangedReference{blockNamed})
+	requireArtifactEventNames(t, handler, events, spec, []model.ChangedReference{blockNamed, {Kind: "issue", ID: issue.Key}})
 	editSpec(t, handler, issue.Key, []map[string]any{{"op": "delete", "block": "ship_it"}})
-	requireArtifactEventNames(t, handler, events, spec, []model.ChangedReference{blockNamed})
+	requireArtifactEventNames(t, handler, events, spec, []model.ChangedReference{blockNamed, {Kind: "issue", ID: issue.Key}})
 
 	if response := dispatchRequest(t, handler, http.MethodPatch, "/api/v1/comments/"+comment.ID, map[string]any{"body": "Decided elsewhere."}, "alice"); response.Code != http.StatusOK {
 		t.Fatalf("edit comment: status=%d body=%s", response.Code, response.Body.String())
 	}
-	requireReferencesChanged(t, handler, issue.Key, "comment.edited", comment.ID, []model.ChangedReference{blockNamed})
+	requireReferencesChanged(t, handler, issue.Key, "comment.edited", comment.ID, []model.ChangedReference{blockNamed, {Kind: "issue", ID: issue.Key}})
 }
