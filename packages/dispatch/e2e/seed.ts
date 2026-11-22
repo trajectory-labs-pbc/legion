@@ -17,6 +17,10 @@ const tables = [
   "agent_tokens",
   "repo_projects",
   "architecture_sources",
+  "legion_current",
+  "legion_observations",
+  "legion_reads",
+  "legion_settings",
   "delivery_settings",
   "delivery_changes",
   "delivery_session_group_members",
@@ -60,6 +64,19 @@ const tables = [
   // by its state and its node row stays.
   "priority_tuples",
   "priority_nodes",
+  // The step records Legion's daemon writes of an issue, and their tuple log (the
+  // `workflow_nodes` migration). No foreign key reaches either table, so the closure below does
+  // not find them: a step a row wrote would otherwise stand in the next row's Steps tab, under
+  // the issue key the next row's issue takes again.
+  "workflow_tuples",
+  "workflow_nodes",
+  // The keyword table of each past version of the searchable text, and its fill's cursor row
+  // (the `search_text_versions` migration). No foreign key reaches either table, so the closure
+  // below does not find them: a row's versions would otherwise answer the next row's search at a
+  // past time, under the issue keys the next row's issues take again, and the fill's cursor would
+  // name a position in the log this reset emptied.
+  "search_text_versions",
+  "search_text_versions_fill",
   "user_sessions",
 ];
 
@@ -195,9 +212,9 @@ async function resetDatabaseOnce(): Promise<void> {
           FROM pg_trigger t
           WHERE t.tgrelid = ANY (targets::oid[]) AND NOT t.tgisinternal AND (t.tgtype & 8) <> 0;
         LOOP
-          -- Almost every row dirties a handful of the closure's 63 tables, and emptying the ones
-          -- that hold no rows is most of what the old TRUNCATE of all of them cost. Each table is
-          -- probed instead, and only the ones holding rows are emptied.
+          -- Almost every row dirties a handful of the closure's tables, and emptying the ones that
+          -- hold no rows is most of what a TRUNCATE of all of them cost. Each table is probed
+          -- instead, and only the ones holding rows are emptied.
           deletes := '{}';
           refilled := false;
           FOREACH target IN ARRAY targets LOOP

@@ -29,16 +29,19 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/testcontainers/testcontainers-go"
 	tcnats "github.com/testcontainers/testcontainers-go/modules/nats"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Image is the NATS server image the daemon's NATS tests use: ghcr.io/cybermonklabs/legion/ci, the
@@ -130,13 +133,13 @@ func URL(t testing.TB) string {
 		if startErr != nil || serverURL != "" {
 			return
 		}
-		started, err := start(Image)
+		started, err := start(Image, nil)
 		if err != nil {
 			startErr = err
 			return
 		}
 		shared = started
-		serverURL, startErr = started.ConnectionString(context.Background())
+		serverURL, startErr = clientURL(started)
 		if startErr == nil {
 			monitorURL, startErr = monitor(started)
 		}
@@ -350,16 +353,21 @@ func clientConnections() ([]Connection, error) {
 
 // monitor returns the base URL of a container's NATS monitoring endpoint.
 func monitor(container *tcnats.NATSContainer) (string, error) {
-	ctx := context.Background()
-	host, err := container.Host(ctx)
+	address, err := endpoint(container, monitorPort)
 	if err != nil {
 		return "", err
 	}
-	port, err := container.MappedPort(ctx, "8222/tcp")
+	return "http://" + address, nil
+}
+
+// clientURL returns a container's NATS client URL, at the loopback address start published its
+// client port on.
+func clientURL(container *tcnats.NATSContainer) (string, error) {
+	address, err := endpoint(container, clientPort)
 	if err != nil {
 		return "", err
 	}
-	return "http://" + host + ":" + port.Port(), nil
+	return "nats://" + address, nil
 }
 
 // JetStream returns a JetStream client of the package's NATS server, as URL gives it to t.
@@ -499,23 +507,70 @@ func retryStreamStoreFailure(create func() error) error {
 	}
 }
 
-// limits caps a NATS test container at one CPU and 512 MiB, as every container the repository's
-// tests and proofs start is capped on a shared host: a test server holds a few small streams.
-var limits = testcontainers.WithHostConfigModifier(func(hostConfig *container.HostConfig) {
-	hostConfig.NanoCPUs = 1_000_000_000
-	hostConfig.Memory = 512 << 20
-})
+// hostConfig caps a NATS test container at one CPU and 512 MiB, as every container the
+// repository's tests and proofs start is capped on a shared host (a test server holds a few small
+// streams), and publishes its client and monitoring ports at host on the ports given. It is one
+// modifier because testcontainers keeps only the last a request is given.
+func hostConfig(host string, client, monitoring int) testcontainers.CustomizeRequestOption {
+	return testcontainers.WithHostConfigModifier(func(config *container.HostConfig) {
+		config.NanoCPUs = 1_000_000_000
+		config.Memory = 512 << 20
+		if config.PortBindings == nil {
+			config.PortBindings = nat.PortMap{}
+		}
+		config.PortBindings[clientPort] = []nat.PortBinding{{HostIP: host, HostPort: strconv.Itoa(client)}}
+		config.PortBindings[monitorPort] = []nat.PortBinding{{HostIP: host, HostPort: strconv.Itoa(monitoring)}}
+	})
+}
 
-// start runs a NATS container, with its monitoring endpoint on 8222. A container Docker created and never saw ready (a readiness wait
-// that timed out under load) comes back beside the error, and is removed before start returns:
-// no test's end would remove a container the package shares.
-func start(image string, options ...testcontainers.ContainerCustomizer) (*tcnats.NATSContainer, error) {
-	options = append([]testcontainers.ContainerCustomizer{tcnats.WithArgument("http_port", "8222"), limits}, options...)
-	started, err := tcnats.Run(context.Background(), image, options...)
-	if err != nil {
-		return started, errors.Join(err, testcontainers.TerminateContainer(started))
+// startTries bounds the starts start makes, each on a fresh address and ports, while Docker
+// refuses to publish a port because something took the probed one first (loopbackPorts).
+const startTries = 5
+
+// start runs a NATS container, with its monitoring endpoint on 8222. It publishes the client and
+// monitoring ports on a loopback address of its own and ports the kernel chose there
+// (loopbackPorts), so a client another test left dialing an earlier container's port cannot reach
+// this one, and tries again on a fresh address and ports, up to startTries starts, when Docker
+// refuses the publish because a probed port was taken in between; an error names every refusal
+// before it as well as its own failure. It waits for the line nats-server logs once its listeners
+// are up, in place of the NATS module's own wait, a dial of the client port at localhost, where
+// the port is not published; each caller's own connect (connect, ready, answering) is the proof a
+// client reaches the server. A container Docker created and never saw ready (a readiness wait that
+// timed out under load, or a refused publish) comes back beside the error, and is removed before
+// start returns: no test's end would remove a container the package shares.
+//
+// options, when not nil, builds the caller's options, and each attempt calls it for options of its
+// own: an option can carry a reader that an attempt uses up, as a configuration file's does
+// (testcontainers v0.41.0 lifecycle.go:159 reads it to its end as it creates the container, before
+// Docker refuses a publish at the start), and a retry handed the first attempt's would start a
+// server with an empty configuration.
+func start(image string, options func() []testcontainers.ContainerCustomizer) (*tcnats.NATSContainer, error) {
+	var refused []error
+	var started *tcnats.NATSContainer
+	for range startTries {
+		host, ports, err := loopbackPorts(2)
+		if err != nil {
+			return started, errors.Join(append(refused, fmt.Errorf("choose loopback ports to publish NATS on: %w", err))...)
+		}
+		attempt := []testcontainers.ContainerCustomizer{
+			tcnats.WithArgument("http_port", monitorPort.Port()),
+			hostConfig(host, ports[0], ports[1]),
+			testcontainers.WithWaitStrategy(wait.ForLog("Server is ready")),
+		}
+		if options != nil {
+			attempt = append(attempt, options()...)
+		}
+		started, err = tcnats.Run(context.Background(), image, attempt...)
+		if err == nil {
+			return started, nil
+		}
+		err = fmt.Errorf("%s ports %d and %d: %w", host, ports[0], ports[1], errors.Join(err, testcontainers.TerminateContainer(started)))
+		if !addressInUse(err) {
+			return started, errors.Join(append(refused, err)...)
+		}
+		refused = append(refused, err)
 	}
-	return started, nil
+	return started, fmt.Errorf("every one of %d published addresses was refused as in use: %w", startTries, errors.Join(refused...))
 }
 
 // StartNkeyAuthorized runs a NATS container of its own, with JetStream, that accepts only clients
@@ -547,12 +602,14 @@ func StartNkeyAuthorizedUsers(t testing.TB, image string, users ...NkeyUser) (*t
 		entries = append(entries, entry+" }")
 	}
 	config := fmt.Sprintf("jetstream {}\nauthorization {\n  users = [ %s ]\n}\n", strings.Join(entries, ", "))
-	container, err := start(image, tcnats.WithConfigFile(strings.NewReader(config)))
+	container, err := start(image, func() []testcontainers.ContainerCustomizer {
+		return []testcontainers.ContainerCustomizer{tcnats.WithConfigFile(strings.NewReader(config))}
+	})
 	if err != nil {
 		t.Fatalf("start nkey-authorized NATS: %v", err)
 	}
 	testcontainers.CleanupContainer(t, container)
-	url, err := container.ConnectionString(context.Background())
+	url, err := clientURL(container)
 	if err != nil {
 		t.Fatalf("NATS connection string: %v", err)
 	}
@@ -566,12 +623,12 @@ func StartNkeyAuthorizedUsers(t testing.TB, image string, users ...NkeyUser) (*t
 // every other test shares the package's server through URL.
 func StartImage(t testing.TB, image string) string {
 	t.Helper()
-	container, err := start(image)
+	container, err := start(image, nil)
 	if err != nil {
 		t.Fatalf("start NATS of %s: %v", image, err)
 	}
 	testcontainers.CleanupContainer(t, container)
-	url, err := container.ConnectionString(context.Background())
+	url, err := clientURL(container)
 	if err != nil {
 		t.Fatalf("NATS connection string: %v", err)
 	}

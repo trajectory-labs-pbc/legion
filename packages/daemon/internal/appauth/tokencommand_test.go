@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/sjawhar/legion/daemon/internal/config"
+	"github.com/sjawhar/legion/daemon/internal/envlisting"
 	"github.com/sjawhar/legion/daemon/internal/ghrepo"
 	"github.com/sjawhar/legion/daemon/internal/githubtest"
+	"github.com/sjawhar/legion/daemon/internal/testwait"
 )
 
 // fakeBroker is a token_command that answers as `agent-secrets <NAME> [--github-owner O
@@ -49,6 +51,7 @@ printf '%%s|%%s\n' "$LEGION_GITHUB_OWNER" "$LEGION_GITHUB_READ_ONLY" >>%q
 mode=write
 [ -z "$LEGION_GITHUB_READ_ONLY" ] || mode=read
 [ -z "$FAKE_BROKER_FAIL" ] || { echo "broker: refused" >&2; exit 3; }
+[ -z "$FAKE_BROKER_KILLED" ] || { echo "broker: dying" >&2; kill -KILL 0; }
 if [ -n "$FAKE_BROKER_NONE" ]; then
   [ -n "$LEGION_GITHUB_OWNER" ] || { printf '{"installations":{}}'; exit 0; }
   echo "agent-secrets: github app has no installation on $LEGION_GITHUB_OWNER" >&2; exit 1
@@ -257,6 +260,25 @@ func TestTokenModeAnOwnerWithoutAnInstallationIsNotInstalled(t *testing.T) {
 	}
 }
 
+// A command a signal ended (the kernel's out-of-memory kill, say) fails naming the signal, with its
+// stderr, where an exit names its status: it has none, and read as one it was `failed (exit -1)`.
+// It is no more transient than any other failure but exit 75. The fake kills its whole process
+// group, which procgroup.Configure made its own, so the signal reaches the shell the daemon runs.
+func TestTokenModeACommandASignalEndedFailsNamingTheSignal(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	broker := newFakeBroker(t, []string{"sjawhar"}, now.Add(time.Hour))
+	github := &fakeTokenGitHub{slug: "legion-implementer", appID: "12345"}
+	tokens := tokenModeManager(github.serve(t), broker, &now, &bytes.Buffer{})
+	t.Setenv("FAKE_BROKER_KILLED", "1")
+
+	_, err := tokens.Token(context.Background(), Implement, "sjawhar")
+
+	var transient *TransientError
+	if err == nil || errors.As(err, &transient) || !strings.Contains(err.Error(), "github_apps.implement.token_command failed (signal: killed): broker: dying") {
+		t.Fatalf("Token with a command a signal ended = %v, want a failure that is not transient naming the signal and the command's stderr", err)
+	}
+}
+
 // What a command prints is never quoted in an error: output that is no release, an entry without
 // a token or with an expired one, all fail naming the field and the account alone.
 func TestTokenModeRefusesAMalformedReleaseWithoutQuotingIt(t *testing.T) {
@@ -386,13 +408,13 @@ func TestTokenModeARepositoryOutsideTheInstallationsListIsNotInstalled(t *testin
 	}
 }
 
-// A narrowing the broker refuses is ErrNarrowingRefused, the refusal key mode gives, and the
-// mapping's installation read is the one source of its own answer: it runs the command and reads
-// GitHub however recently a narrowing was refused for the read scope it asks under
+// A narrowing the broker refuses is ErrNarrowingRefused, the refusal key mode gives, and a
+// repository's installation read is the one source of its own answer: it runs the command and
+// reads GitHub however recently a narrowing was refused for the read scope it asks under
 // (listInstallation, forgetNarrowingRefusal). Served from the Manager's memory instead, an
-// operator who fixes what the broker refused and saves the mapping inside the five minutes a
-// refusal is remembered for would be told the check failed, while the bundle refreshes behind it
-// kept that memory alive (INFRA-513).
+// operator who fixes what the broker refused, inside the five minutes a refusal is remembered
+// for, would be told at the repository's next preparation that the check failed, while the
+// bundle refreshes behind it kept that memory alive (INFRA-513).
 func TestTheInstallationReadAsksPastARememberedNarrowingRefusal(t *testing.T) {
 	now := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
 	broker := newFakeBroker(t, []string{"acme"}, now.Add(time.Hour))
@@ -407,8 +429,8 @@ func TestTheInstallationReadAsksPastARememberedNarrowingRefusal(t *testing.T) {
 		t.Fatalf("the read lease the broker refuses the narrowing of = %v, want ErrNarrowingRefused", err)
 	}
 
-	// The operator fixes what the broker refused and saves the mapping a minute later, well
-	// inside the window the refusal is remembered for.
+	// The operator fixes what the broker refused a minute later, well inside the window the
+	// refusal is remembered for, and the repository is prepared again.
 	t.Setenv("FAKE_BROKER_NARROW", "")
 	now = now.Add(time.Minute)
 
@@ -489,6 +511,54 @@ func TestTokenModeACallerDeadlineNeitherKillsNorRepeatsTheCommand(t *testing.T) 
 	}
 }
 
+// A caller of InstalledOwners in token mode whose deadline ends while the App's token_command is
+// still releasing every installation is told the command is pending, as runTokenCommand tells
+// every caller past its deadline: ErrCommandPending in a TransientError, which wraps the deadline
+// too. The boot's key proof reads that as pending and spends no attempt on it (internal/daemon's
+// appAttempt), so a grant that waits on a person's approval holds the boot without ending it. A
+// caller that joins the run still going gets the release once the command prints it, and the
+// command runs once.
+func TestTokenModeAnInstalledOwnersCallerPastItsDeadlineIsToldTheCommandIsPending(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	dir := t.TempDir()
+	runs, gate := filepath.Join(dir, "runs"), filepath.Join(dir, "gate")
+	command := fmt.Sprintf(`echo run >>%q; while [ ! -e %q ]; do sleep 0.05; done; printf '{"installations":{"acme":{"installation_id":1,"token":"ghs_x","expires_at":"%s"}}}'`,
+		runs, gate, now.Add(time.Hour).Format(time.RFC3339))
+	tokens := New(config.GitHubApps{Implement: config.GitHubApp{AppID: "1", TokenCommand: command}}, Options{Now: func() time.Time { return now }})
+	defer tokens.Close()
+	short, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	var transient *TransientError
+	if _, err := tokens.InstalledOwners(short, Implement); !errors.Is(err, ErrCommandPending) || !errors.As(err, &transient) || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("InstalledOwners past its deadline = %v, want a transient ErrCommandPending that wraps the deadline", err)
+	}
+	type answer struct {
+		owners []string
+		err    error
+	}
+	joined := make(chan answer, 1)
+	go func() {
+		owners, err := tokens.InstalledOwners(context.Background(), Implement)
+		joined <- answer{owners, err}
+	}()
+	// The second caller joins the run still going before the command may print.
+	time.Sleep(50 * time.Millisecond)
+	if err := os.WriteFile(gate, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case got := <-joined:
+		if got.err != nil || !slices.Equal(got.owners, []string{"acme"}) {
+			t.Fatalf("the caller that joined the read = %v, %v; want acme, the release of the command still running", got.owners, got.err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the caller that joined the read was never answered")
+	}
+	if data, _ := os.ReadFile(runs); strings.Count(string(data), "run") != 1 {
+		t.Fatalf("the command ran %d times, want once", strings.Count(string(data), "run"))
+	}
+}
+
 // A caller whose deadline ended before the command finished, and who comes back only after it
 // finished, gets the finished run's release; the command does not run again.
 func TestTokenModeACallerAfterTheRunFinishedGetsItsResult(t *testing.T) {
@@ -511,6 +581,51 @@ func TestTokenModeACallerAfterTheRunFinishedGetsItsResult(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(runs); strings.Count(string(data), "run") != 1 {
 		t.Fatalf("the command ran %d times, want once", strings.Count(string(data), "run"))
+	}
+}
+
+// An InstalledOwners caller whose deadline ended while the token_command ran (the boot's key
+// proof, which then waits and asks again), and who comes back only after the command finished,
+// gets that run's release: the command does not run again. The run finished with no caller
+// waiting for it, and runTokenCommand keeps it for the caller that comes back (finishedRunKeep);
+// an installation read that took the run's result while no caller waited, and kept nothing of it,
+// would leave that caller to run the command again, and a grant a person approved would be asked
+// for once more.
+func TestTokenModeAnInstalledOwnersCallerBackAfterTheRunFinishedGetsItsRelease(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	runs := filepath.Join(t.TempDir(), "runs")
+	command := fmt.Sprintf(`echo run >>%q; sleep 0.5; printf '{"installations":{"acme":{"installation_id":1,"token":"ghs_x","expires_at":"%s"}}}'`,
+		runs, now.Add(time.Hour).Format(time.RFC3339))
+	tokens := New(config.GitHubApps{Implement: config.GitHubApp{AppID: "1", TokenCommand: command}}, Options{Now: func() time.Time { return now }})
+	defer tokens.Close()
+	short, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if _, err := tokens.InstalledOwners(short, Implement); !errors.Is(err, ErrCommandPending) {
+		t.Fatalf("InstalledOwners past its deadline = %v, want ErrCommandPending", err)
+	}
+	// The command finishes while no caller waits: the run the first call started ends.
+	tokens.mu.Lock()
+	run := tokens.commands[leaseScope(false, Implement, "")]
+	tokens.mu.Unlock()
+	if run == nil {
+		t.Fatal("no token_command run goes on after the caller past its deadline left")
+	}
+	testwait.Eventually(t, "the token_command's run to end", func() bool {
+		select {
+		case <-run.done:
+			return true
+		default:
+			return false
+		}
+	})
+	later, cancelLater := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancelLater()
+	owners, err := tokens.InstalledOwners(later, Implement)
+	if err != nil || !slices.Equal(owners, []string{"acme"}) {
+		t.Fatalf("the caller back after the run finished = %v, %v; want acme, the finished run's release", owners, err)
+	}
+	if data, _ := os.ReadFile(runs); strings.Count(string(data), "run") != 1 {
+		t.Fatalf("the command ran %d times, want once: the caller back after the run finished ran it again", strings.Count(string(data), "run"))
 	}
 }
 
@@ -607,18 +722,25 @@ func TestTokenModeCommandEnvironmentAndDeadline(t *testing.T) {
 	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
 	dir := t.TempDir()
 	seen := filepath.Join(dir, "env")
-	t.Setenv("NATS_NKEY_SEED", "seed-value")
-	t.Setenv(TokenCommandOwner, "inherited")
-	t.Setenv(TokenCommandReadOnly, "inherited")
+	// Unique values, so that only a variable they reached can hold one (envlisting).
+	seed, inherited := envlisting.Unique("seed-"), envlisting.Unique("inherited-")
+	t.Setenv("NATS_NKEY_SEED", seed)
+	t.Setenv(TokenCommandOwner, inherited)
+	t.Setenv(TokenCommandReadOnly, inherited)
 	command := fmt.Sprintf(`env >%q; printf '{"installations":{"acme":{"installation_id":1,"token":"ghs_x","expires_at":"%s"}}}'`, seen, now.Add(time.Hour).Format(time.RFC3339))
 	tokens := New(config.GitHubApps{Implement: config.GitHubApp{AppID: "1", TokenCommand: command}}, Options{Now: func() time.Time { return now }})
 	if _, err := tokens.runTokenCommand(context.Background(), tokens.apps.Implement, mintRequest{role: Implement, owner: "acme"}); err != nil {
 		t.Fatal(err)
 	}
 	env, _ := os.ReadFile(seen)
-	if strings.Contains(string(env), "seed-value") || !strings.Contains(string(env), "\nLEGION_GITHUB_OWNER=acme\n") ||
-		!strings.Contains(string(env), "\nLEGION_GITHUB_READ_ONLY=\n") || strings.Contains(string(env), "inherited") {
-		t.Fatalf("the command's environment:\n%s", env)
+	// Each variable is read whole (envlisting): the daemon's own two can be the listing's first
+	// line, and a variable the test does not set, such as PWD, can contain any word.
+	vars := envlisting.Vars(string(env))
+	if name, leaked := envlisting.Carrying(vars, seed, inherited); leaked {
+		t.Fatalf("the command's environment: %s carries a value the daemon must not pass:\n%s", name, env)
+	}
+	if readOnly, set := vars[TokenCommandReadOnly]; vars[TokenCommandOwner] != "acme" || !set || readOnly != "" {
+		t.Fatalf("the command's environment: want %s=acme and %s set and empty:\n%s", TokenCommandOwner, TokenCommandReadOnly, env)
 	}
 
 	slow := New(config.GitHubApps{Implement: config.GitHubApp{AppID: "1", TokenCommand: "sleep 30"}}, Options{})

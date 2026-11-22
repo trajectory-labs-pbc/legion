@@ -19,7 +19,7 @@ import (
 
 // A close withdraws the spec's approval request and a reopen restores it with the turn it had, so
 // a person who was asked to approve the spec is asked again after the reopen, as before the close
-// (restoreIssueAsksTx). The settlements the closed period and the reopen leave owed save the
+// (prepareRestoration, recordRestoredAsksTx). The settlements the closed period and the reopen leave owed save the
 // blocks the close and the reopen wrote, and nothing else: neither is a change the request's agent
 // made to the text it handed the person. So after both have run, the request still waits on the
 // person, the spec still reads awaiting approval from the person, and the request is still in the
@@ -150,8 +150,11 @@ func describeApproval(read approvalRead) string {
 // store admits inside the close margin is settled while the issue is closed, into version 2. The
 // reopen through PATCH leaves the restored request naming version 2, and waiting on its agent
 // since version 2 is not the text alice was asked about, as a settlement of the same edit on an
-// open issue leaves it. alice's approval from the request then reviews the latest version, and
-// the spec reads approved.
+// open issue leaves it. The reopen moves it with one ask.edited in the name of alice, the editor
+// the closed issue's settlement of her edit credited (doc_closed_edit_sources), which is not quiet
+// and so wakes the request's agent (events.Broker.Notify), as that settlement's version on an open
+// issue would have moved it. alice's approval from the request then reviews the latest version,
+// and the spec reads approved.
 func TestAReopenedApprovalRequestNamesTheVersionAClosedSettlementWrote(t *testing.T) {
 	handler, database, documentService := newClosedSettlementHandler(t)
 	issue := createInteractionIssue(t, handler, "TEST", "Approval and a margin edit", "Context\n")
@@ -175,6 +178,7 @@ func TestAReopenedApprovalRequestNamesTheVersionAClosedSettlementWrote(t *testin
 		t.Fatalf("the closed issue's settlement moved the withdrawn request to version %d, want it left at %d", still.Approval.Version, named)
 	}
 
+	seq := latestIssueSeq(t, database, issue.Key)
 	reopenAndSettle(t, f, issue.Key)
 	var restored carriedAsk
 	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(20 * time.Millisecond) {
@@ -189,6 +193,16 @@ func TestAReopenedApprovalRequestNamesTheVersionAClosedSettlementWrote(t *testin
 	if ask := readBlockAsk(t, handler, request.ID); ask.State != "open" || ask.WaitingOn != "agent" || restored.Approval.RequestedVersion != named {
 		t.Fatalf("restored request = %s waiting on %q requested at version %d, want open waiting on its agent, requested at %d, since version %d changed the text",
 			ask.State, ask.WaitingOn, restored.Approval.RequestedVersion, named, closed)
+	}
+	var edits []loggedEvent
+	for _, event := range issueEventsAfter(t, database, issue.Key, seq) {
+		if event.kind == "ask.edited" {
+			edits = append(edits, event)
+		}
+	}
+	alice := model.Actor{Kind: "user", ID: "alice"}
+	if len(edits) != 1 || edits[0].quiet || !edits[0].notify || !edits[0].actor.SameAs(alice) {
+		t.Fatalf("the reopen's ask.edited events = %+v, want one move in the name of %+v that wakes the request's agent", edits, alice)
 	}
 
 	review := reviewDocument(t, handler, f.spec, "alice", "approved", "")
@@ -394,8 +408,11 @@ func TestOnlyASettlementsVersionKeepsAnApprovalRequestWithThePerson(t *testing.T
 				if text == "" {
 					t.Fatal("the spec's latest version reads no text to upload again")
 				}
+				// The upload replaces the spec the issue already holds, so it names the token of the
+				// version it replaces, as every replacement of this server must.
 				if uploaded := sessionRequest(t, c.handler, http.MethodPost, "/api/v1/issues/"+c.issue+"/artifacts", map[string]any{
 					"actor": sessionActor(), "name": "spec.md", "content": text,
+					"precondition": uploadBase(t, c.handler, c.spec),
 				}); uploaded.Code != http.StatusCreated {
 					t.Fatalf("upload the spec's text again: status=%d body=%s", uploaded.Code, uploaded.Body.String())
 				}
