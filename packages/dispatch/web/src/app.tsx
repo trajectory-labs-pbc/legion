@@ -69,6 +69,7 @@ import {
 } from "./features/refs/routes";
 import { useRecordRecents } from "./features/search/recents";
 import { SearchPalette } from "./features/search/SearchPalette";
+import { buildCommit } from "./features/shell/build-commit";
 import { ErrorBoundary } from "./features/shell/ErrorBoundary";
 import { KeymapProvider } from "./features/shell/KeymapProvider";
 import {
@@ -501,8 +502,19 @@ function NavigationContents({
             </button>
           </p>
         )}
+        <BuildCommit />
       </div>
     </>
+  );
+}
+
+function BuildCommit(): ReactNode {
+  const commit = buildCommit();
+  if (commit === undefined) return null;
+  return (
+    <p className={`mt-3 px-2 font-mono text-xs ${railMutedText}`} title={commit}>
+      Build {commit.slice(0, 7)}
+    </p>
   );
 }
 
