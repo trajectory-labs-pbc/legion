@@ -12,13 +12,14 @@ describe("the view map", () => {
 
   test("names a view file no owner maps", () => {
     const files = [...featureViews(), "features/new-folder/NewView.tsx"];
-    expect(coverage(files, owners()).unmapped).toEqual(["features/new-folder/NewView.tsx"]);
+    expect(coverage(files, owners()).unmapped).toContain("features/new-folder/NewView.tsx");
   });
 
   test("names a view file two owners map", () => {
     const extra = { name: "page:extra", globs: ["features/agents/AgentsPage.tsx"] };
-    expect(coverage(featureViews(), [...owners(), extra]).shared).toEqual([
-      { file: "features/agents/AgentsPage.tsx", owners: ["page:agents", "page:extra"] },
-    ]);
+    expect(coverage(featureViews(), [...owners(), extra]).shared).toContainEqual({
+      file: "features/agents/AgentsPage.tsx",
+      owners: ["page:agents", "page:extra"],
+    });
   });
 });

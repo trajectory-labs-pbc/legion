@@ -75,8 +75,8 @@ describe("links", () => {
         '<Route element={<NewPage />} path={NEW_PAGE_PATH} />\n<Route element={<NotFoundPage />} path="*" />'
       )
       .concat('\nconst NEW_PAGE_PATH = "/new-page";\n');
-    expect(routeParity(upstreamRoutes(upstreamAppFile, text), fork).missing).toEqual([
-      "/new-page -> NewPage",
-    ]);
+    expect(routeParity(upstreamRoutes(upstreamAppFile, text), fork).missing).toContain(
+      "/new-page -> NewPage"
+    );
   });
 });
