@@ -6,7 +6,8 @@ import { openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
-import { ShortcutsSheet, useShortcutsSheet } from "./shortcuts-sheet";
+import { ShortcutsSheet as LazyShortcutsSheet, useShortcutsSheet } from "./shortcuts-sheet";
+import { ShortcutsSheet } from "./shortcuts-sheet-view";
 import { specsFor } from "./specs";
 
 const globalSpecs = (toggle: () => void, disabled: readonly string[]) =>
@@ -183,5 +184,27 @@ describe("ShortcutsSheet", () => {
     type("zzz");
     expect(rows()).toEqual([]);
     expect(sheet()?.textContent).toContain("No shortcut matches “zzz”.");
+  });
+
+  test("the shell's sheet loads its code on the first open, and draws nothing before", async () => {
+    function Lazy() {
+      const state = useShortcutsSheet();
+      useRegisterCommands(appCatalog, "global", globalSpecs(state.toggle, []));
+      return (
+        <LazyShortcutsSheet
+          onOpenChange={state.setOpen}
+          open={state.open}
+          sections={state.sections}
+        />
+      );
+    }
+    const view = render(<Lazy />);
+    cleanups.push(() => view.unmount());
+    expect(sheet()).toBeNull();
+    press("?", { shiftKey: true });
+    for (let tries = 0; tries < 20 && sheet() === null; tries += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    }
+    expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
 });

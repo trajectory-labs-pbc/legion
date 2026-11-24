@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
 import { render, settle } from "../../tests/react";
@@ -6,7 +6,7 @@ import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
 import { CommandButton, commandButtonVariant } from "./command-button";
 import { useCommandShortcut } from "./hooks";
-import { HotkeyTooltip } from "./hotkey-tooltip";
+import { HotkeyTooltip, loadHotkeyTooltip } from "./hotkey-tooltip";
 import { specsFor } from "./specs";
 
 const globalSpecs = (fired: string[], enabled: boolean) =>
@@ -16,6 +16,9 @@ function Shell({ fired, enabled = true }: { fired: string[]; enabled?: boolean }
   useRegisterCommands(appCatalog, "global", globalSpecs(fired, enabled));
   return null;
 }
+
+// The tooltip's code is its own chunk; the shell loads it after the first paint.
+beforeAll(() => loadHotkeyTooltip());
 
 const mounted: { unmount(): void }[] = [];
 function mount(element: Parameters<typeof render>[0]) {

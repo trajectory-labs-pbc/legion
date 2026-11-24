@@ -66,14 +66,17 @@ describe("AppShell", () => {
     expect(alert()).toContain("did not go through");
   });
 
-  test("? anywhere on the shell opens the shortcuts sheet", () => {
+  test("? anywhere on the shell opens the shortcuts sheet, whose code loads then", async () => {
     mount();
     settle(() => {
       document.body.dispatchEvent(
         new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true, cancelable: true })
       );
     });
-    const sheet = document.body.querySelector('[data-slot="sheet-content"]');
-    expect(sheet?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
+    const sheet = () => document.body.querySelector('[data-slot="sheet-content"]');
+    for (let tries = 0; tries < 20 && sheet() === null; tries += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    }
+    expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
 });
