@@ -8,7 +8,7 @@ export const notFound = {
   id: "not-found",
   server: "upstream",
   routes: {
-    any: pageRoute({ path: "*", element: <NotFoundPage /> }),
+    any: pageRoute({ path: "/*", element: <NotFoundPage /> }),
   },
   // The shell owns NotFoundPage.tsx.
   views: [],

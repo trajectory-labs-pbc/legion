@@ -75,28 +75,40 @@ engine and the command store. Everything else reads the store:
 ## Navigation
 
 Each page file names its routes with `pageRoute`, which keeps the path and search keys as
-literal types. `src/navigation` builds everything else from them:
+literal types. Paths are written in navigation's own grammar, which `src/navigation/path.ts`
+alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of the address.
+`src/navigation` builds everything else from them:
 
-- `pageHref(route, params, search?)`, `<PageLink page params search>`, `<Redirect>`,
+- `pageHref(route, params?, search?)`, `<PageLink page params? search>`, `<Redirect>`,
   `usePageNavigate()`, `usePageParams(route)`, `usePageSearch(route)` and `useCurrentPage()`, each
-  typed from the route's path.
+  typed from the route's path. `params` is required only where the path binds a `:name`.
 - `<PageLink>` starts the route's `prefetch` reads when the pointer rests on it for 100 ms or it
-  takes focus, and stops a read nothing else watches when the pointer or focus leaves.
-- `route-tree.tsx` builds the route tree from the page files.
+  takes focus. The pointer leaving with no click stops a read nothing else watches; losing focus
+  and a click stop nothing, since the page that opens reads it.
+- `route-tree.tsx` builds the route tree from the page files, through `routerPath`.
 
 ### Changing the router
 
-Only these files import the router, so a move to another router (TanStack Router, say) changes
-them alone:
+A move to another router (TanStack Router, say) changes these files of this package:
 
+- `src/navigation/router-path.ts`: the grammar written in the router's syntax (TanStack: `$name`
+  for `:name` and `$` for `*`).
 - `src/navigation/provider.tsx`: the router provider, for the app and for tests.
-- `src/navigation/route-tree.tsx`: the route tree, its outlet and `useCurrentPage`.
+- `src/navigation/route-tree.tsx`: the route tree, its outlet, `pageAt` and `useCurrentPage`.
+  Each route's `element` becomes the new router's component there.
 - `src/navigation/page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `src/navigation/hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
+- `package.json` and the lockfile: the dependency.
+- `vite.config.ts`: its `dedupe` list names `react-router-dom`.
+- The tests under `src/navigation` that call the router (`hooks.test.tsx` reads
+  `useNavigationType`).
 
-`src/navigation/page-route.ts` and the page files stay. Upstream's pages import React Router
-themselves, so until they are replaced the new router must keep a React Router context around
-them.
+The page files, `page-route.ts`, `path.ts`, the shell and `tests/layering.ts` (whose rule names
+both routers) stay as they are.
+
+That holds for this package only. 111 of upstream's files import React Router, and every upstream
+page drawn here is one of them, so until the last of those pages is replaced the app must keep a
+React Router context around them. Before then, a swap means running both routers.
 
 ## Checks
 

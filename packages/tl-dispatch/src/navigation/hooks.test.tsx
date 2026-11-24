@@ -57,7 +57,7 @@ describe("the page hooks", () => {
       go = usePageNavigate();
       return useAddress();
     });
-    settle(() => go(machine, { machine: "m" }, { search: { tab: "logs" } }));
+    settle(() => go(machine, { params: { machine: "m" }, search: { tab: "logs" } }));
     expect(address.value()).toEqual({ pathname: "/machines/m", search: "?tab=logs" });
   });
 
@@ -83,9 +83,9 @@ describe("the page hooks", () => {
       go = usePageNavigate();
       return useNavigationType();
     });
-    settle(() => go(machine, { machine: "m" }, { replace: true }));
+    settle(() => go(machine, { params: { machine: "m" }, replace: true }));
     expect(String(kind.value())).toBe("REPLACE");
-    settle(() => go(machine, { machine: "n" }));
+    settle(() => go(machine, { params: { machine: "n" } }));
     expect(String(kind.value())).toBe("PUSH");
   });
 
@@ -103,7 +103,7 @@ describe("the page hooks", () => {
       return `${found?.page.id}.${found?.route.path} ${JSON.stringify(found?.params)}`;
     });
     expect(current.value()).toBe('issue./issues/:key/* {"key":"AB-1","*":"plan"}');
-    settle(() => go(machine, { machine: "m" }));
+    settle(() => go(machine, { params: { machine: "m" } }));
     expect(current.value()).toBe('machines./machines/:machine {"machine":"m"}');
   });
 });

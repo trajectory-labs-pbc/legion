@@ -200,4 +200,13 @@ describe("PageLink", () => {
     await wait(0);
     expect(read.log).toEqual(["start"]);
   });
+
+  test("takes no params for a page whose path binds none, and requires them where it does", () => {
+    const { page, client } = setup();
+    const home = pageRoute({ path: "/", element: null });
+    const link = mount(client, <PageLink page={home}>Home</PageLink>);
+    expect(link.getAttribute("href")).toBe("/");
+    // @ts-expect-error the route binds :machine
+    expect(() => render(<PageLink page={page}>Box</PageLink>)).toThrow();
+  });
 });

@@ -6,7 +6,7 @@ import { NAV_DESTINATIONS } from "@/commands/nav";
 import { MemoryNavigationProvider } from "@/navigation/provider";
 import { render } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
-import { NAV_PAGES, navLit } from "./nav-pages";
+import { NAV_PAGES } from "./nav-pages";
 import { Sidebar } from "./sidebar";
 
 const realFetch = globalThis.fetch;
@@ -83,7 +83,5 @@ describe("the sidebar", () => {
     expect(rows.filter((row) => row.current === "page").map((row) => row.label)).toEqual([
       "Priorities",
     ]);
-    expect(navLit(NAV_PAGES.inbox, "/agents")).toBe(false);
-    expect(navLit(NAV_PAGES.agents, "/agents/broadcasts")).toBe(true);
   });
 });

@@ -17,8 +17,3 @@ export const NAV_PAGES = {
   machines: machines.routes.list,
   settings: settings.routes.settings,
 } as const satisfies Readonly<Record<NavName, PageRoute<string, string>>>;
-
-/** A destination stays lit on the pages under it: Priorities on one priority's page. */
-export function navLit(route: PageRoute<string, string>, pathname: string): boolean {
-  return pathname === route.path || (route.path !== "/" && pathname.startsWith(`${route.path}/`));
-}

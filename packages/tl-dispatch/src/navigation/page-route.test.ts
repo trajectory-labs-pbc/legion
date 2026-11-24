@@ -22,6 +22,8 @@ describe("pageHref", () => {
       "/issues/AB-1/plan/step%202"
     );
     expect(pageHref(inbox.routes.home, {})).toBe("/");
+    // A path that binds no param takes none.
+    expect(pageHref(inbox.routes.home)).toBe("/");
   });
 
   test("control: a missing param throws instead of writing a broken address", () => {

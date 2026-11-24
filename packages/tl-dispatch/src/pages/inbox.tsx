@@ -24,7 +24,7 @@ export function InboxPage(): ReactNode {
     <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col" : undefined}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[22px] font-semibold tracking-tight">Inbox</h1>
-        <PageLink className={`text-sm ${linkText} ${linkHoverText}`} page={answers} params={{}}>
+        <PageLink className={`text-sm ${linkText} ${linkHoverText}`} page={answers}>
           Answered by you
         </PageLink>
       </div>
@@ -52,7 +52,7 @@ export const inbox = {
     // The old Replies page is the Inbox's reply rows.
     replies: pageRoute({
       path: "/replies",
-      element: <Redirect page={home} params={{}} search={{ type: "reply" }} />,
+      element: <Redirect page={home} search={{ type: "reply" }} />,
     }),
   },
   views: ["features/inbox/**", "features/answers/**"],

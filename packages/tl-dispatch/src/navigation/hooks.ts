@@ -1,17 +1,21 @@
 import { useMemo } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 
-import { type PageRoute, type PageSearch, type PathParams, pageHref } from "./page-route";
+import { addressOf, type PageRoute, type PageSearch } from "./page-route";
+import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from "./path";
+import { routerPath } from "./router-path";
 
-export interface PageNavigateOptions<Search extends string> {
+/** Where a move goes on a page: its params, required where its path binds any, and search. */
+export type PageTarget<Path extends string, Search extends string> = ParamsProp<Path> & {
   search?: PageSearch<Search>;
   replace?: boolean;
-}
+};
 
 export type PageNavigate = <Path extends string, Search extends string>(
   page: PageRoute<Path, Search>,
-  params: PathParams<Path>,
-  options?: PageNavigateOptions<Search>
+  ...target: [PathParamName<Path>] extends [never]
+    ? [target?: PageTarget<Path, Search>]
+    : [target: PageTarget<Path, Search>]
 ) => void;
 
 /** Moves to a page, typed from its route. */
@@ -19,8 +23,8 @@ export function usePageNavigate(): PageNavigate {
   const navigate = useNavigate();
   return useMemo<PageNavigate>(
     () =>
-      (page, params, options = {}) =>
-        navigate(pageHref(page, params, options.search), { replace: options.replace }),
+      (page, ...[target]) =>
+        navigate(addressOf(page, target?.params, target?.search), { replace: target?.replace }),
     [navigate]
   );
 }
@@ -29,17 +33,18 @@ export function usePageNavigate(): PageNavigate {
 export function usePageParams<Path extends string>(
   page: PageRoute<Path, string>
 ): PathParams<Path> {
-  const match = useMatch(page.path);
-  if (match === null) throw new Error(`usePageParams: the address is not on ${page.path}`);
-  // The router's match has exactly the path's params.
-  return match.params as PathParams<Path>;
+  const match = useMatch(routerPath(page.path));
+  if (match === null || !isParamsOf(page.path, match.params)) {
+    throw new Error(`usePageParams: the address is not on ${page.path}`);
+  }
+  return match.params;
 }
 
 /** The search keys the page reads, from the address. Called on another page, it throws. */
 export function usePageSearch<Search extends string>(
   page: PageRoute<string, Search>
 ): PageSearch<Search> {
-  const match = useMatch(page.path);
+  const match = useMatch(routerPath(page.path));
   const { search } = useLocation();
   const values = useMemo(() => {
     const query = new URLSearchParams(search);

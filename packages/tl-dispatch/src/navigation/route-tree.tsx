@@ -14,6 +14,7 @@ import { priorities } from "@/pages/priorities";
 import { project } from "@/pages/project";
 import { settings } from "@/pages/settings";
 import type { PageRoute } from "./page-route";
+import { routerPath } from "./router-path";
 
 /** The route map: every page and the routes it serves. */
 export const pages = [
@@ -37,7 +38,7 @@ const ROUTES: readonly { id: string; page: Page; route: PageRoute }[] = pages.fl
 
 const ROUTE_OBJECTS: RouteObject[] = ROUTES.map(({ id, route }) => ({
   id,
-  path: route.path,
+  path: routerPath(route.path),
   element: route.element,
 }));
 

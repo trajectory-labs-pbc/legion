@@ -10,13 +10,8 @@ import {
 } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import {
-  type PageRoute,
-  type PageSearch,
-  type PathParams,
-  type Prefetch,
-  pageHref,
-} from "./page-route";
+import { addressOf, type PageRoute, type PageSearch, type Prefetch } from "./page-route";
+import { isParamsOf, type ParamsProp } from "./path";
 
 /** How long the pointer rests on a link before its page's reads start. */
 export const PREFETCH_INTENT_MS = 100;
@@ -87,12 +82,25 @@ export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined
 export type PageLinkProps<Path extends string, Search extends string> = Omit<
   ComponentProps<"a">,
   "href"
-> & {
-  page: PageRoute<Path, Search>;
-  params: PathParams<Path>;
-  search?: PageSearch<Search>;
-  replace?: boolean;
-};
+> &
+  ParamsProp<Path> & {
+    page: PageRoute<Path, Search>;
+    search?: PageSearch<Search>;
+    replace?: boolean;
+  };
+
+/** The page's first reads for these params, or none when it declares none. */
+function readsOf<Path extends string>(
+  page: PageRoute<Path, string>,
+  params: Readonly<Record<string, string | undefined>> | undefined
+): (() => readonly Prefetch[]) | undefined {
+  const { prefetch } = page;
+  if (prefetch === undefined) return undefined;
+  return () => {
+    const given = params ?? {};
+    return isParamsOf(page.path, given) ? prefetch.call(page, given) : [];
+  };
+}
 
 /** A link to a page, typed from its route, which starts the page's reads on intent. */
 export function PageLink<Path extends string, Search extends string>({
@@ -107,9 +115,7 @@ export function PageLink<Path extends string, Search extends string>({
   onClick,
   ...rest
 }: PageLinkProps<Path, Search>) {
-  const intent = usePrefetchIntent(
-    page.prefetch === undefined ? undefined : () => page.prefetch?.(params) ?? []
-  );
+  const intent = usePrefetchIntent(readsOf(page, params));
   return (
     <Link
       {...rest}
@@ -134,7 +140,7 @@ export function PageLink<Path extends string, Search extends string>({
         intent.onPointerLeave();
       }}
       replace={replace}
-      to={pageHref(page, params, search)}
+      to={addressOf(page, params, search)}
     />
   );
 }
@@ -144,10 +150,6 @@ export function Redirect<Path extends string, Search extends string>({
   page,
   params,
   search,
-}: {
-  page: PageRoute<Path, Search>;
-  params: PathParams<Path>;
-  search?: PageSearch<Search>;
-}) {
-  return <Navigate replace to={pageHref(page, params, search)} />;
+}: ParamsProp<Path> & { page: PageRoute<Path, Search>; search?: PageSearch<Search> }) {
+  return <Navigate replace to={addressOf(page, params, search)} />;
 }

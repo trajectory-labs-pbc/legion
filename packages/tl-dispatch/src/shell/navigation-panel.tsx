@@ -31,7 +31,6 @@ export function NavigationPanel({
           className="rounded-md text-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={onClose}
           page={inbox.routes.home}
-          params={{}}
         >
           Dispatch
         </PageLink>

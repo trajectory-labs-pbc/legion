@@ -23,11 +23,12 @@ import { useCommandShortcut } from "@/commands/hooks";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useAddress } from "@/navigation/hooks";
 import { PageLink } from "@/navigation/page-link";
+import { pathUnder } from "@/navigation/path";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
 import { Heading } from "@/ui/heading";
 import { KbdSequence } from "@/ui/kbd";
-import { NAV_PAGES, navLit } from "./nav-pages";
+import { NAV_PAGES } from "./nav-pages";
 
 const ROW =
   "flex h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground";
@@ -139,11 +140,10 @@ export function Sidebar({
         {destinations.map(({ name, label, icon: Icon }) => (
           <li key={name}>
             <PageLink
-              aria-current={navLit(NAV_PAGES[name], pathname) ? "page" : undefined}
+              aria-current={pathUnder(NAV_PAGES[name].path, pathname) ? "page" : undefined}
               className={ROW}
               onClick={onNavigate}
               page={NAV_PAGES[name]}
-              params={{}}
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>

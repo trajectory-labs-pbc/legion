@@ -29,7 +29,7 @@ export function CompactHeader({
   return (
     <header className="flex items-center justify-between border-b border-sidebar-border bg-sidebar px-3 text-sidebar-foreground">
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <PageLink className="shrink-0 text-lg font-semibold" page={inbox.routes.home} params={{}}>
+        <PageLink className="shrink-0 text-lg font-semibold" page={inbox.routes.home}>
           Dispatch
         </PageLink>
         {onInbox ? (
@@ -37,7 +37,7 @@ export function CompactHeader({
         ) : (
           <>
             <CommandButton commandId="global.inbox-drawer" label="Peek" size="xs" variant="ghost" />
-            <PageLink className={inboxClass} page={inbox.routes.home} params={{}}>
+            <PageLink className={inboxClass} page={inbox.routes.home}>
               {inboxLabel}
             </PageLink>
           </>
@@ -46,7 +46,6 @@ export function CompactHeader({
           <PageLink
             className={`${CHIP} bg-sidebar-primary text-sidebar-primary-foreground`}
             page={agents.routes.list}
-            params={{}}
           >
             {unreadRepliesLabel(unread)}
           </PageLink>

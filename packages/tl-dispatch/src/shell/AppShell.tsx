@@ -146,11 +146,11 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
       setNavigationOpen(false);
       setCreateOpen(true);
     },
-    goTo: (destination) => navigate(NAV_PAGES[destination], {}),
+    goTo: (destination) => navigate(NAV_PAGES[destination]),
     openDocuments:
       routeProject === undefined
         ? undefined
-        : () => navigate(project.routes.documents, { key: routeProject }),
+        : () => navigate(project.routes.documents, { params: { key: routeProject } }),
     toggleInboxDrawer: onInbox ? undefined : () => setInboxDrawerOpen((open) => !open),
     toggleSidebar: inDrawer
       ? undefined

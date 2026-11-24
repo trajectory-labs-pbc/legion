@@ -1,18 +1,7 @@
 import type { FetchQueryOptions, QueryClient, QueryKey } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-type Segments<Path extends string> = Path extends `${infer Head}/${infer Tail}`
-  ? Head | Segments<Tail>
-  : Path;
-
-/** The names a path's `:name` segments bind: `"/issues/:key/*"` binds `"key"`. */
-export type PathParamName<Path extends string> =
-  Segments<Path> extends infer Segment ? (Segment extends `:${infer Name}` ? Name : never) : never;
-
-/** A path's params: each `:name`, and the rest of the address under a trailing `*`. */
-export type PathParams<Path extends string> = {
-  readonly [Name in PathParamName<Path>]: string;
-} & (Path extends `${string}*` ? { readonly "*"?: string } : unknown);
+import { fillPath, type ParamsArg, type PathParams } from "./path";
 
 /** The search keys a page reads, each optional. */
 export type PageSearch<Search extends string> = { readonly [Key in Search]?: string };
@@ -29,7 +18,10 @@ export function prefetchOf<TQueryFnData, TError, TData, TQueryKey extends QueryK
   return { queryKey: options.queryKey, start: (client) => client.prefetchQuery(options) };
 }
 
-/** One address of a page: its path, what it draws, its search keys and its first reads. */
+/**
+ * One address of a page: its path in navigation's grammar (`path.ts`), what it draws, its search
+ * keys and its first reads.
+ */
 export interface PageRoute<Path extends string = string, Search extends string = string> {
   readonly path: Path;
   readonly element: ReactNode;
@@ -44,34 +36,26 @@ export function pageRoute<const Path extends string, const Search extends string
   return route;
 }
 
-const encodeRest = (rest: string) => rest.split("/").map(encodeURIComponent).join("/");
-
-/** The address of a route with these params and search. A missing param throws. */
-export function pageHref<Path extends string, Search extends string>(
-  page: PageRoute<Path, Search>,
-  params: PathParams<Path>,
-  search?: PageSearch<Search>
+/** The address of a route with these params and search, untyped; a missing param throws. */
+export function addressOf(
+  page: PageRoute,
+  params: Readonly<Record<string, string | undefined>> = {},
+  search: Readonly<Record<string, string | undefined>> = {}
 ): string {
-  const values: Readonly<Record<string, string | undefined>> = params;
-  const path = page.path
-    .split("/")
-    .map((segment) => {
-      if (segment === "*") return encodeRest(values["*"] ?? "");
-      if (!segment.startsWith(":")) return segment;
-      const value = values[segment.slice(1)];
-      if (value === undefined || value === "") {
-        throw new Error(`${page.path} needs its "${segment.slice(1)}" param`);
-      }
-      return encodeURIComponent(value);
-    })
-    .join("/")
-    .replace(/(.)\/+$/, "$1");
+  const path = fillPath(page.path, params);
   const query = new URLSearchParams();
-  const given: Readonly<Record<string, string | undefined>> = search ?? {};
   for (const key of page.search ?? []) {
-    const value = given[key];
+    const value = search[key];
     if (value !== undefined) query.set(key, value);
   }
   const text = query.toString();
   return text === "" ? path : `${path}?${text}`;
+}
+
+/** The address of a route, typed from it: params where its path binds any, and its search keys. */
+export function pageHref<Path extends string, Search extends string>(
+  page: PageRoute<Path, Search>,
+  ...[params, search]: [...ParamsArg<Path>, search?: PageSearch<Search>]
+): string {
+  return addressOf(page, params, search);
 }
