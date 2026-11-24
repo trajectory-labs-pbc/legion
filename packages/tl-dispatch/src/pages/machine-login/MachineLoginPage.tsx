@@ -101,20 +101,22 @@ export function MachineLoginPage(): ReactNode {
       lookup.mutate(code);
     });
   };
-  const madeHere = approve.data ?? deny.data ?? undefined;
+  // An approval names the credential it minted; a denial names none.
+  const approved = approve.data ?? undefined;
+  const denied = deny.data ?? undefined;
+  const madeHere =
+    approved !== undefined
+      ? { credential_id: approved.credential_id, state: approved.state }
+      : denied === undefined
+        ? undefined
+        : { credential_id: null, state: denied.state };
   const view =
     record === undefined
       ? undefined
       : madeHere === undefined
         ? { decided: record.decided, record }
         : {
-            decided: {
-              credential_id:
-                madeHere.state === "approved" && "credential_id" in madeHere
-                  ? madeHere.credential_id
-                  : null,
-              event: madeHere.state,
-            },
+            decided: { credential_id: madeHere.credential_id, event: madeHere.state },
             record: { ...record, state: madeHere.state },
           };
 
