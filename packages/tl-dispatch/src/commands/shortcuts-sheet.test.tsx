@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { act } from "react";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
 import { openAppLayer } from "../../tests/layers";
@@ -91,12 +92,40 @@ describe("ShortcutsSheet", () => {
     expect(rows()).toContain("Keyboard shortcuts: ?");
   });
 
-  test("? closes it again, and Escape closes it", () => {
+  // A browser sends a key to the focused element, and the window's listener reads it there.
+  const pressFocused = (key: string, init: KeyboardEventInit = {}) =>
+    settle(() => {
+      (document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init })
+      );
+    });
+  const listen = () => {
+    const onKeyDown = (event: KeyboardEvent) => appKeymap.handleKeyDown(event);
+    window.addEventListener("keydown", onKeyDown);
+    cleanups.push(() => window.removeEventListener("keydown", onKeyDown));
+  };
+  const focusSettles = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+  const closed = () => sheet()?.hasAttribute("data-closed") ?? true;
+
+  test("focus lands on the sheet, not in the filter, so ? closes it", async () => {
     mount();
-    press("?", { shiftKey: true });
-    expect(sheet()).not.toBeNull();
-    press("?", { shiftKey: true });
-    expect(sheet()?.hasAttribute("data-closed") ?? true).toBe(true);
+    listen();
+    pressFocused("?", { shiftKey: true });
+    await focusSettles();
+    expect(document.activeElement?.getAttribute("data-slot")).toBe("sheet-content");
+    pressFocused("?", { shiftKey: true });
+    expect(closed()).toBe(true);
+  });
+
+  test("Escape closes it, pressed where the focus is", async () => {
+    mount();
+    listen();
+    pressFocused("?", { shiftKey: true });
+    await focusSettles();
+    expect(closed()).toBe(false);
+    pressFocused("Escape");
+    await focusSettles();
+    expect(closed()).toBe(true);
   });
 
   test("opens under a dialog or a sheet of ours, and not under an alert dialog", () => {

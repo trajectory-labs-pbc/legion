@@ -58,9 +58,11 @@ export interface ShortcutsSheetProps {
 
 /** Every key that runs where `?` was pressed, grouped, with a filter. */
 export function ShortcutsSheet({ open, onOpenChange, sections }: ShortcutsSheetProps) {
+  // Focus starts on the sheet itself, where `?` and Escape still reach the keys; the filter is a Tab away.
+  const popup = useRef<HTMLDivElement>(null);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent closeLabel="Close the shortcuts" side="right">
+      <SheetContent closeLabel="Close the shortcuts" initialFocus={popup} ref={popup} side="right">
         <SheetHeader>
           <SheetTitle>Keyboard shortcuts</SheetTitle>
           <SheetDescription>The keys that work here, where you pressed ?</SheetDescription>
