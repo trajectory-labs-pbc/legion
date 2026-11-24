@@ -6,19 +6,14 @@ name: Fork envoy image
 # `envoy:<sha>-tl` to the same package and attests it, signed as
 # `<this repository>/.github/workflows/fork-envoy-image.yaml@refs/heads/main`.
 #
-# Every commit on main gets one. A commit that changed upstream's envoy inputs waits for
-# release-envoy-listener.yaml's run of it; any other commit derives from the newest ancestor's
-# upstream image (.github/scripts/fork-envoy-base.sh). A dispatch builds the dispatched ref, from
-# `envoy_image` when it is given.
+# Every commit on main gets one, and a dispatch rebuilds the dispatched ref. A commit that changed
+# upstream's envoy inputs waits for release-envoy-listener.yaml's run of it; any other commit
+# derives from the newest ancestor's upstream image. Either way the base is used only once its
+# attestation shows that workflow built it on main (.github/scripts/fork-envoy-base.sh).
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      envoy_image:
-        description: "Upstream's envoy image to derive from, by digest (ghcr.io/<owner>/legion/envoy@sha256:...); empty finds it"
-        type: string
-        default: ""
 
 concurrency:
   group: fork-envoy-image-${{ github.sha }}
@@ -35,6 +30,7 @@ jobs:
       contents: read
       packages: write
       actions: read
+      attestations: read
     outputs:
       image: ${{ steps.names.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
@@ -53,12 +49,12 @@ jobs:
       - id: names
         env:
           GH_TOKEN: ${{ github.token }}
-          ENVOY_IMAGE: ${{ inputs.envoy_image }}
         run: |
           image=$(.github/scripts/repo-paths.sh envoy_image)
-          base=$ENVOY_IMAGE
-          if [ -z "$base" ]; then
-            base=$(.github/scripts/fork-envoy-base.sh "$COMMIT" "$image")
+          base=$(.github/scripts/fork-envoy-base.sh "$COMMIT" "$image")
+          if ! [[ $base =~ ^$image@sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::fork-envoy-base.sh printed '$base', not $image@sha256:<digest>"
+            exit 1
           fi
           bun=$(awk '$1 == "FROM" && $3 == "AS" && $4 == "web" { print $2; exit }' packages/envoy/docker/Dockerfile)
           if [ -z "$bun" ]; then
