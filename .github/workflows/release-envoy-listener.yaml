@@ -17,6 +17,7 @@ on:
       - "!packages/envoy/infra/**"
       - "packages/contracts/**"
       - "packages/dispatch/**"
+      - "packages/tl-dispatch/**"
       - "packages/proof-editor/**"
       - "package.json"
       - "bun.lock"

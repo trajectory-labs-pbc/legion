@@ -8,6 +8,11 @@ package.json
 bun.lock
 packages/envoy/docker/Dockerfile
 packages/daemon/docker/worker.Dockerfile
+# A new root workspace and image input: the filters and the job-reads model name it.
+.github/ci-filters.yaml
+.github/scripts/ci_job_reads.py
+.github/workflows/docs-pages.yaml
+.github/workflows/release.yaml
 
 # The fork's checks.
 .github/fork-allowlist.txt
