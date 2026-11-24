@@ -1,0 +1,47 @@
+name: tl-dispatch
+
+# The fork's own web app. Upstream's web source is in the paths because the tests read its keys
+# and imports, so a sync that adds a clash fails here.
+on:
+  pull_request:
+    paths:
+      - packages/tl-dispatch/**
+      - packages/dispatch/web/**
+      - bun.lock
+      - .github/workflows/tl-dispatch.yaml
+  push:
+    branches: [main]
+    paths:
+      - packages/tl-dispatch/**
+      - packages/dispatch/web/**
+      - bun.lock
+      - .github/workflows/tl-dispatch.yaml
+  workflow_dispatch:
+
+concurrency:
+  group: tl-dispatch-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  tl-dispatch:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: packages/tl-dispatch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun test
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run build
+      - run: bun run check:entry-budget
