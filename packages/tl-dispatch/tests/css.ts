@@ -21,8 +21,8 @@ export interface ParsedCss {
 
 /**
  * Reads a stylesheet into its declarations and at-rule statements, nesting included. Comments
- * are skipped and strings kept whole, so neither a `/*` inside a string nor a `;` inside a
- * comment moves a boundary.
+ * are skipped, and strings and escapes kept whole, so neither a `/*` inside a string, a `;` inside
+ * a comment nor an escaped `\(` in a selector moves a boundary.
  */
 export function parseCss(text: string): ParsedCss {
   const declarations: CssDeclaration[] = [];
@@ -64,6 +64,11 @@ export function parseCss(text: string): ParsedCss {
       continue;
     }
     if (start === -1 && !/\s/.test(char)) start = at;
+    if (char === "\\") {
+      item += text.slice(at, at + 2);
+      at += 1;
+      continue;
+    }
     if (char === '"' || char === "'") {
       let end = at + 1;
       while (end < text.length && text[end] !== char) end += text[end] === "\\" ? 2 : 1;
