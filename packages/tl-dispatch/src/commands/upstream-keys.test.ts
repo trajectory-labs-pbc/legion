@@ -4,9 +4,9 @@ import { join } from "node:path";
 import {
   type KeyRegistration,
   keyRegistrations,
+  UPSTREAM_WEB,
   upstreamKeyRegistrations,
 } from "../../tests/key-registrations";
-import { PACKAGE_ROOT } from "../../tests/source";
 import { APP_CONTEXTS } from "./app-catalog";
 import type { CommandContext } from "./catalog";
 import { clashes, keyChecker, startsOrExtends } from "./keys";
@@ -97,9 +97,9 @@ describe("upstream's key registrations", () => {
   });
 });
 
-describe("the shell's live keys", () => {
-  test("are the catalog's global keys, so wiring the catalog in changes no key", () => {
-    const live = keyRegistrations(join(PACKAGE_ROOT, "src/shell/AppShell.tsx"))
+describe("upstream's shell keys", () => {
+  test("are the catalog's global keys, so the shell on the catalog changes no key", () => {
+    const live = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
     const global = APP_CONTEXTS.find((context) => context.name === "global");

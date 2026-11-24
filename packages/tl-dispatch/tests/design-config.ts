@@ -10,6 +10,22 @@ export const EXEMPT: Readonly<Record<string, string>> = {
   "src/shell/states.tsx":
     "copied from upstream; the shell phase rebuilds the loading and sign-in screens",
   "src/pages/inbox.tsx": "maps upstream's Inbox with its link colours; the Inbox phase rebuilds it",
+  ...Object.fromEntries(
+    [
+      "src/ui/button.tsx",
+      "src/ui/dialog.tsx",
+      "src/ui/input.tsx",
+      "src/ui/lib/typography.ts",
+      "src/ui/overlay-layer.tsx",
+      "src/ui/popover.tsx",
+      "src/ui/sheet.tsx",
+      "src/ui/spinner.tsx",
+      "src/ui/tooltip.tsx",
+    ].map((file) => [
+      file,
+      "a registry component, written by `shadcn add`: its shadows, motion and focus ring change in the registry",
+    ])
+  ),
 };
 
 /** The files in `src/ui` that draw a control, whose heights come from the scale. */

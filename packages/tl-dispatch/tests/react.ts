@@ -4,12 +4,20 @@ import { createRoot } from "react-dom/client";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /** Mounts `element` into the test document; `unmount` removes it. */
-export function render(element: ReactNode): { unmount(): void } {
+export function render(element: ReactNode): {
+  container: HTMLElement;
+  rerender(next: ReactNode): void;
+  unmount(): void;
+} {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
   act(() => root.render(element));
   return {
+    container,
+    rerender(next) {
+      act(() => root.render(next));
+    },
     unmount() {
       act(() => root.unmount());
       container.remove();

@@ -2,14 +2,17 @@ import type { Catalog, CatalogCommand } from "./catalog";
 
 /** What a feature gives for one command, read afresh on every render. */
 export interface CommandState {
-  /** The one gate, honoured by keys, menus, the palette and buttons. Default `true`. */
+  /** The one gate, honoured by keys, buttons, the palette and the sheet. Default `true`. */
   enabled?: boolean;
+  /** A label that follows the state, such as a toggle naming what it opens; default the catalog's. */
+  label?: string;
   run: () => void;
 }
 
-/** A command with its live state: what keys, menus and the palette all read. */
+/** A command with its live state: what keys, buttons, the palette and the sheet all read. */
 export interface CommandSpec {
   command: CatalogCommand;
+  label: string;
   enabled: boolean;
   run: () => void;
 }
@@ -29,7 +32,7 @@ export function defineActions<Record_, Options, Name extends string = string>(
   const names = new Set(commands.map((command) => command.name));
   let checked = false;
   return (record, options) => {
-    const states = build(record, options) as Readonly<Record<string, CommandState>>;
+    const states: Readonly<Partial<Record<string, CommandState>>> = build(record, options);
     if (!checked) {
       const missing = [...names].filter((name) => states[name] === undefined);
       const extra = Object.keys(states).filter((name) => !names.has(name));
@@ -42,8 +45,14 @@ export function defineActions<Record_, Options, Name extends string = string>(
     }
     const specs: Record<string, CommandSpec> = {};
     for (const command of commands) {
-      const state = states[command.name] as CommandState;
-      specs[command.name] = { command, enabled: state.enabled ?? true, run: state.run };
+      const state = states[command.name];
+      if (state === undefined) throw new Error(`actions of "${context}" lost "${command.name}"`);
+      specs[command.name] = {
+        command,
+        label: state.label ?? command.label,
+        enabled: state.enabled ?? true,
+        run: state.run,
+      };
     }
     return specs as CommandSpecs<Name>;
   };

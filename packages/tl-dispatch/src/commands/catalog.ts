@@ -1,18 +1,32 @@
 import type { Keymap, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import type { ComponentType } from "react";
 
+import type { OverlayReach } from "./engine-stack";
+import type { CommandGroup } from "./groups";
 import { browserKeeps, chordStartsRight, clashes, keyChecker, malformed } from "./keys";
+
+/** A surface that lists commands. A button names its command, so it reads no `hideFrom`. */
+export type CommandCatalog = "palette" | "sheet";
+
+export type CommandIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 
 /** A command as declared once: the fields that never change while it is mounted. */
 export interface CommandDefinition {
   /** Unique in its context; the id is `<context>.<name>`. */
   name: string;
   label: string;
-  /** The key engine's syntax; the first is the one a menu row or a tooltip shows. None: palette only. */
+  /** The key engine's syntax; the first is the one a tooltip shows. None: palette only. */
   keys?: readonly string[];
+  icon?: CommandIcon;
+  /** The shortcuts sheet's section; none is `DEFAULT_GROUP`. */
+  group?: CommandGroup;
+  destructive?: boolean;
+  /** The catalogs that do not list the command; its keys still run. */
+  hideFrom?: readonly CommandCatalog[];
   /** Fires while a control that takes typed text has focus. */
   inEditable?: boolean;
-  /** Whether the palette offers it; unset, the key engine decides (`KeyBinding.palette`). */
-  palette?: boolean;
+  /** A global command's reach under our overlays; none is `under-most`. */
+  overlays?: OverlayReach;
 }
 
 /** A set of commands that is live together. Each context extends one parent, up to `global`. */
@@ -24,16 +38,30 @@ export interface CommandContext {
   commands: readonly CommandDefinition[];
 }
 
+type ContextIds<C> = C extends {
+  readonly name: infer N extends string;
+  readonly commands: readonly (infer D)[];
+}
+  ? D extends { readonly name: infer M extends string }
+    ? `${N}.${M}`
+    : never
+  : never;
+
+/** Every command id of a catalog's contexts, `<context>.<name>`: a typo fails the type check. */
+export type CommandIdOf<Contexts extends readonly CommandContext[]> = ContextIds<Contexts[number]>;
+
 export interface CatalogCommand extends CommandDefinition {
   id: string;
   context: string;
 }
 
-export interface Catalog {
+export interface Catalog<Id extends string = string> {
   context(name: string): CommandContext;
   /** The context and its ancestors, nearest first. */
   chain(name: string): readonly string[];
-  command(id: string): CatalogCommand | undefined;
+  command(id: Id): CatalogCommand;
+  /** A command by an id read at run time, such as a key binding's. */
+  find(id: string): CatalogCommand | undefined;
   commandsOf(context: string): readonly CatalogCommand[];
 }
 
@@ -88,7 +116,9 @@ function clashesBetween(
 }
 
 /** Builds the catalog, or throws one error that names every problem. */
-export function createCatalog(declared: readonly CommandContext[]): Catalog {
+export function createCatalog<const Contexts extends readonly CommandContext[]>(
+  declared: Contexts
+): Catalog<CommandIdOf<Contexts>> {
   const problems: string[] = [];
   const contexts = new Map<string, CommandContext>();
   for (const context of declared) {
@@ -110,6 +140,9 @@ export function createCatalog(declared: readonly CommandContext[]): Catalog {
     for (const definition of context.commands) {
       const id = `${context.name}.${definition.name}`;
       if (!NAME.test(definition.name)) problems.push(`command name "${id}" is not kebab-case`);
+      if (definition.overlays !== undefined && context.name !== ROOT) {
+        problems.push(`"${id}": only a global command reaches under overlays`);
+      }
       if (commands.has(id)) problems.push(`two commands are named "${id}"`);
       const command: CatalogCommand = { ...definition, id, context: context.name };
       commands.set(id, command);
@@ -173,7 +206,12 @@ export function createCatalog(declared: readonly CommandContext[]): Catalog {
       if (chain === undefined) throw new Error(`no context "${name}"`);
       return chain;
     },
-    command: (id) => commands.get(id),
+    command(id) {
+      const command = commands.get(id);
+      if (command === undefined) throw new Error(`no command "${id}"`);
+      return command;
+    },
+    find: (id) => commands.get(id),
     commandsOf: (context) =>
       [...commands.values()].filter((command) => command.context === context),
   };

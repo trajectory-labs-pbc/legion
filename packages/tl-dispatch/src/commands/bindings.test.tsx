@@ -8,12 +8,12 @@ import {
   useKeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
 
+import { createLayerSource, openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
-import { createOverlayLayers, type OverlayLayers, overlayLayers } from "../ui/overlay-layer";
 import { appCatalog } from "./app-catalog";
-import { contextBindings, toBindings, useCommandKeys } from "./bindings";
+import { contextBindings, toBindings, useRegisterCommands } from "./bindings";
 import { createCatalog } from "./catalog";
-import { type EngineDialogs, trackEngineDialogs } from "./engine-dialogs";
+import { type EngineStack, trackEngineStack } from "./engine-stack";
 import { type CommandSpecs, defineActions } from "./specs";
 
 const catalog = createCatalog([
@@ -25,6 +25,7 @@ const catalog = createCatalog([
       { name: "search", label: "Search", keys: ["$mod+k"], inEditable: true },
       { name: "create", label: "Create issue", keys: ["c"] },
       { name: "go-inbox", label: "Go to Inbox", keys: ["g i"] },
+      { name: "help", label: "Keyboard shortcuts", keys: ["?"], overlays: "under-all" },
     ],
   },
   {
@@ -45,20 +46,23 @@ function recorder(context: string, fired: string[], enabled = true): CommandSpec
 
 interface Setup {
   keymap: Keymap;
-  layers: OverlayLayers;
-  dialogs: EngineDialogs;
+  layers: ReturnType<typeof createLayerSource>;
+  dialogs: EngineStack;
   fired: string[];
 }
 
 /** A key engine with the global context registered as the shell will, and the sheet's helpers. */
 function setup(enabled = true): Setup {
   const keymap = createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {} });
-  const layers = createOverlayLayers();
-  const dialogs = trackEngineDialogs(keymap, layers);
+  const layers = createLayerSource();
+  const dialogs = trackEngineStack(keymap, layers);
   const fired: string[] = [];
   const global = contextBindings(catalog, "global", recorder("global", fired, enabled), dialogs);
   keymap.register(global.scope, global.own);
-  keymap.register(DIALOG_SCOPE, global.underOverlays);
+  keymap.register(
+    DIALOG_SCOPE,
+    global.underOverlays.map(({ binding }) => binding)
+  );
   return { keymap, layers, dialogs, fired };
 }
 
@@ -119,6 +123,33 @@ describe("global commands under overlays", () => {
       layer.close();
     }
     expect(fired).toEqual(["global.create", "global.create"]);
+  });
+
+  test("the help key reaches under every overlay of ours but an alert dialog, and not upstream's", () => {
+    const { keymap, layers, fired } = setup();
+    for (const kind of ["dialog", "menu", "popover", "select", "sheet", "alert-dialog"] as const) {
+      const layer = layers.open(kind);
+      press(keymap, "?", { shiftKey: true });
+      layer.close();
+    }
+    const close = keymap.pushScope(DIALOG_SCOPE);
+    press(keymap, "?", { shiftKey: true });
+    close();
+    expect(fired).toEqual(Array(5).fill("global.help"));
+  });
+
+  test("only a global command reaches under overlays", () => {
+    expect(() =>
+      createCatalog([
+        { name: "global", parent: null, scope: "global", commands: [] },
+        {
+          name: "page",
+          parent: "global",
+          scope: "inbox",
+          commands: [{ name: "x", label: "X", keys: ["x"], overlays: "under-all" }],
+        },
+      ])
+    ).toThrow('"page.x": only a global command reaches under overlays');
   });
 
   test("stop under a sheet once one of upstream's dialogs is open, above it or below", () => {
@@ -189,7 +220,7 @@ describe("an overlay's own commands", () => {
   });
 });
 
-describe("useCommandKeys on the app's engine", () => {
+describe("useRegisterCommands on the app's engine", () => {
   const appSpecs = (fired: string[]) => {
     const states: Record<string, { run: () => void }> = {};
     for (const command of appCatalog.commandsOf("global")) {
@@ -199,7 +230,7 @@ describe("useCommandKeys on the app's engine", () => {
   };
 
   function Shell({ fired }: { fired: string[] }) {
-    useCommandKeys(appCatalog, "global", appSpecs(fired));
+    useRegisterCommands(appCatalog, "global", appSpecs(fired));
     return null;
   }
 
@@ -223,9 +254,9 @@ describe("useCommandKeys on the app's engine", () => {
     const tap = (key: string, init: KeyboardEventInit = {}) =>
       appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
     tap("c");
-    let sheet: ReturnType<typeof overlayLayers.open> | undefined;
+    let sheet: ReturnType<typeof openAppLayer> | undefined;
     settle(() => {
-      sheet = overlayLayers.open("sheet");
+      sheet = openAppLayer("sheet");
     });
     tap("?", { shiftKey: true });
     const palette = render(<UpstreamPalette fired={fired} />);

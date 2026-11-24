@@ -31,14 +31,14 @@ const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
 /** The keys the shell binds today (`src/shell/AppShell.tsx`), as the engine sees them. */
 const LIVE_KEYS: readonly CommandDefinition[] = [
   { name: "search", keys: ["$mod+k"], label: "Search and actions", inEditable: true },
-  { name: "search-only", keys: ["/"], label: "Search", palette: false },
+  { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
   { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
   { name: "create", keys: ["c"], label: "Create issue" },
   { name: "go-inbox", keys: ["g i"], label: "Go to Inbox" },
   { name: "go-agents", keys: ["g a"], label: "Go to Agents" },
   { name: "go-settings", keys: ["g s"], label: "Go to Settings" },
   { name: "go-documents", keys: ["g d"], label: "Go to Documents" },
-  { name: "go-project", keys: ["g p"], label: "Go to project…", palette: false },
+  { name: "go-project", keys: ["g p"], label: "Go to project…", hideFrom: ["palette"] },
   { name: "inbox-drawer", keys: ["i"], label: "Open the inbox" },
   { name: "toggle-sidebar", keys: ["Shift+S"], label: "Toggle sidebar" },
   { name: "toggle-margin", keys: ["Shift+M"], label: "Toggle margin" },
@@ -47,13 +47,13 @@ const LIVE_KEYS: readonly CommandDefinition[] = [
 describe("the app's catalog", () => {
   test("holds every key the shell binds today, with the same keys, typing and palette rows", () => {
     for (const live of LIVE_KEYS) {
-      const command = appCatalog.command(`global.${live.name}`);
+      const command = appCatalog.find(`global.${live.name}`);
       const catalogued: Partial<CommandDefinition> = {
         name: command?.name,
         keys: command?.keys,
         label: command?.label,
         inEditable: command?.inEditable,
-        palette: command?.palette,
+        hideFrom: command?.hideFrom,
       };
       expect(catalogued).toEqual(live);
     }
@@ -72,8 +72,8 @@ describe("the app's catalog", () => {
 
   test("gives each sidebar destination one command, with its chord when it has a key", () => {
     for (const destination of NAV_DESTINATIONS) {
-      const command = appCatalog.command(`global.${navCommandName(destination)}`);
-      expect(command?.keys).toEqual(destination.key === undefined ? [] : [`g ${destination.key}`]);
+      const command = appCatalog.command(`global.${navCommandName(destination.name)}`);
+      expect(command.keys).toEqual("key" in destination ? [`g ${destination.key}`] : []);
     }
   });
 });
