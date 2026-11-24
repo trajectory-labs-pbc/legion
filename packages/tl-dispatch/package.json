@@ -7,10 +7,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "bun test src",
+    "check:map": "bun src/map/coverage.ts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check ."
   },
   "dependencies": {
+    "@legion/contracts": "workspace:*",
     "@tanstack/react-query": "^5",
     "prosemirror-model": "^1.25.11",
     "react": "^19.2.8",

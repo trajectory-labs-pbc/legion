@@ -301,6 +301,7 @@
       "name": "tl-dispatch",
       "version": "0.1.0",
       "dependencies": {
+        "@legion/contracts": "workspace:*",
         "@tanstack/react-query": "^5",
         "prosemirror-model": "^1.25.11",
         "react": "^19.2.8",

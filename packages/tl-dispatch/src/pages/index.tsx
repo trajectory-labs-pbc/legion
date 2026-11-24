@@ -12,6 +12,7 @@ import { notFound } from "./not-found";
 import type { Page } from "./page";
 import { priorities } from "./priorities";
 import { project } from "./project";
+import { refs } from "./refs";
 import { settings } from "./settings";
 
 /** The route map: every page and the routes it serves. */
@@ -26,6 +27,7 @@ export const pages: readonly Page[] = [
   credentials,
   settings,
   delivery,
+  refs,
   notFound,
 ];
 
