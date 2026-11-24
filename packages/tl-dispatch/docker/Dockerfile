@@ -63,10 +63,19 @@ RUN set -eu; \
       cat /tmp/tl-dispatch-notices; } >> /out/THIRD_PARTY_NOTICES
 
 # Only copies from here, so no target platform runs a command.
-FROM envoy
+FROM envoy AS image
 COPY --from=notices /out/THIRD_PARTY_NOTICES /usr/share/doc/legion/THIRD_PARTY_NOTICES
 COPY --from=web --chown=envoy:envoy /repo/packages/tl-dispatch/dist /srv/tl-dispatch
 COPY --from=envoy /usr/local/bin/envoy-dispatch /usr/local/libexec/envoy-dispatch
 COPY packages/tl-dispatch/docker/envoy-dispatch.sh /usr/local/bin/envoy-dispatch
 ARG LEGION_COMMIT=
 LABEL org.opencontainers.image.revision=${LEGION_COMMIT}
+
+# Built by the workflow before the push, never pushed: fails when either app is missing or
+# envoy-dispatch starts on a folder with no build.
+FROM image AS smoke
+RUN test -s /srv/tl-dispatch/index.html \
+ && test -s /srv/dispatch-web/index.html \
+ && grep -q "the fork's web app, /srv/tl-dispatch" /usr/share/doc/legion/THIRD_PARTY_NOTICES \
+ && status=0 && { DISPATCH_WEB_DIST=/srv /usr/local/bin/envoy-dispatch || status=$?; } \
+ && if [ "$status" -ne 78 ]; then echo "envoy-dispatch on a folder with no build exited $status, not 78" >&2; exit 1; fi

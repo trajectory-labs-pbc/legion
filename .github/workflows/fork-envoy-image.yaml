@@ -75,6 +75,24 @@ jobs:
           driver-opts: |
             provenance-add-gha=false
             image=ghcr.io/cybermonklabs/legion/ci@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+      # The smoke stage builds on the runner's platform and is never pushed. It fails when the
+      # image lacks either app, or when its envoy-dispatch starts on a folder with no build.
+      - name: Smoke check
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          BUILDX_METADATA_PROVENANCE: disabled
+          DOCKER_BUILD_SUMMARY: "false"
+        with:
+          context: .
+          file: packages/tl-dispatch/docker/Dockerfile
+          target: smoke
+          platforms: linux/amd64
+          provenance: false
+          push: false
+          build-args: |
+            ENVOY_IMAGE=${{ steps.names.outputs.base }}
+            BUN_IMAGE=${{ steps.names.outputs.bun }}
+            LEGION_COMMIT=${{ env.COMMIT }}
       - id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         env:
@@ -83,6 +101,7 @@ jobs:
         with:
           context: .
           file: packages/tl-dispatch/docker/Dockerfile
+          target: image
           # The base is an index of both; every stage that runs a command runs on the build platform.
           platforms: linux/amd64,linux/arm64
           provenance: mode=min
@@ -92,20 +111,6 @@ jobs:
             ENVOY_IMAGE=${{ steps.names.outputs.base }}
             BUN_IMAGE=${{ steps.names.outputs.bun }}
             LEGION_COMMIT=${{ env.COMMIT }}
-      # The pushed image serves both apps, and its envoy-dispatch refuses a folder with no build.
-      - name: Smoke check
-        env:
-          IMAGE: ${{ steps.names.outputs.image }}@${{ steps.build.outputs.digest }}
-        run: |
-          docker pull --platform linux/amd64 "$IMAGE"
-          docker run --rm --entrypoint sh "$IMAGE" -c \
-            'test -s /srv/tl-dispatch/index.html && test -s /srv/dispatch-web/index.html && grep -q "the fork.s web app, /srv/tl-dispatch" /usr/share/doc/legion/THIRD_PARTY_NOTICES'
-          status=0
-          docker run --rm -e DISPATCH_WEB_DIST=/srv --entrypoint /usr/local/bin/envoy-dispatch "$IMAGE" || status=$?
-          if [ "$status" -ne 78 ]; then
-            echo "::error::envoy-dispatch on a folder with no build exited $status, not 78"
-            exit 1
-          fi
 
   attest:
     needs: build
