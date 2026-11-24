@@ -7,7 +7,7 @@ import {
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
 import type { OverlayLayer } from "@/ui/overlay-layer";
-import type { Catalog } from "./catalog";
+import type { Catalog, CatalogCommand } from "./catalog";
 import { appStack, type EngineStack, type OverlayReach } from "./engine-stack";
 import { type CommandStore, commandStore } from "./registry";
 import { type CommandSpec, type CommandSpecs, runCommand } from "./specs";
@@ -70,6 +70,16 @@ export function contextBindings(
           })
       : [];
   return { scope, own, underOverlays };
+}
+
+/**
+ * Whether a command's keys run with the overlays open now: its scope is live, or it is a global
+ * command whose copy reaches under them. An overlay's own context is live while it is drawn.
+ */
+export function keysReach(catalog: Catalog, command: CatalogCommand, stack: EngineStack): boolean {
+  const { scope } = catalog.context(command.context);
+  if (scope === DIALOG_SCOPE || stack.liveScopes().includes(scope)) return true;
+  return scope === "global" && stack.passes(command.overlays ?? "under-most");
 }
 
 /** The reaches that pass now, as one string, so a change re-renders and nothing else does. */

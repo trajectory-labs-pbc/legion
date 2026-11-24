@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
+import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
 import { render, settle } from "../../tests/react";
 import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
 import { CommandButton, commandButtonVariant } from "./command-button";
+import { useCommandShortcut } from "./hooks";
 import { HotkeyTooltip } from "./hotkey-tooltip";
 import { defineActions } from "./specs";
 
@@ -170,5 +171,30 @@ describe("HotkeyTooltip", () => {
     expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
       "C",
     ]);
+  });
+
+  test("shows no key a dialog masks: under upstream's drawer, search has no chip and no aria key", () => {
+    function Chips() {
+      return <output>{useCommandShortcut("global.search")?.join(" ") ?? "none"}</output>;
+    }
+    const { container } = mount(
+      <>
+        <Shell fired={[]} />
+        <CommandButton commandId="global.search" />
+        <Chips />
+      </>
+    );
+    const shown = () => [
+      container.querySelector("output")?.textContent,
+      button(container)?.hasAttribute("aria-keyshortcuts"),
+    ];
+    expect(shown()).toEqual([expect.stringMatching(/K$/), true]);
+    let close = () => {};
+    settle(() => {
+      close = appKeymap.pushScope(DIALOG_SCOPE);
+    });
+    expect(shown()).toEqual(["none", false]);
+    settle(() => close());
+    expect(shown()).toEqual([expect.stringMatching(/K$/), true]);
   });
 });

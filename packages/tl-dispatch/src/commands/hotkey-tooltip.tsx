@@ -4,7 +4,7 @@ import { KbdSequence } from "@/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import type { CommandId } from "./app-catalog";
 import { ariaKeyShortcuts } from "./chips";
-import { useCommand, useCommandShortcut } from "./hooks";
+import { useCommand, useCommandShortcut, useKeysReach } from "./hooks";
 
 export interface HotkeyTooltipProps {
   commandId: CommandId;
@@ -22,12 +22,15 @@ export interface HotkeyTooltipProps {
 export function HotkeyTooltip({ commandId, children, label, side }: HotkeyTooltipProps) {
   const view = useCommand(commandId);
   const chips = useCommandShortcut(commandId);
+  const reaches = useKeysReach(commandId);
   if (view === undefined) return children;
   return (
     <Tooltip>
       <TooltipTrigger
         render={children}
-        aria-keyshortcuts={view.enabled ? ariaKeyShortcuts(view.command.keys ?? []) : undefined}
+        aria-keyshortcuts={
+          view.enabled && reaches ? ariaKeyShortcuts(view.command.keys ?? []) : undefined
+        }
       />
       <TooltipContent className="flex items-center gap-2" side={side}>
         <span>{label ?? view.label}</span>
