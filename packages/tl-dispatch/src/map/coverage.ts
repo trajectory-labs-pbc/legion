@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { basename, relative } from "node:path";
 
 import { sharedViews, shellViews, widgetViews } from "../views";
 import { featureViews, forkSrc, readPages, upstreamWebSrc, viewImporters } from "./source";
@@ -6,104 +6,190 @@ import { featureViews, forkSrc, readPages, upstreamWebSrc, viewImporters } from 
 export interface Owner {
   name: string;
   globs: readonly string[];
+  /** Where the list is written, for a message that says what to update. */
+  list: string;
+  /** Set for a page: which app's code draws it. */
+  server?: "upstream" | "fork";
 }
 
 export interface Coverage {
   unmapped: string[];
   shared: { file: string; owners: string[] }[];
   /** Entries that match no view file: a file or folder upstream renamed or removed. */
-  unused: { owner: string; glob: string }[];
-  /** A page's views that another owner renders: they belong to that owner, or to a shared list. */
+  unused: { owner: string; glob: string; list: string }[];
+  /** A page's views that another page or the shell renders: they move to that owner or a shared list. */
   crossed: { file: string; owner: string; importers: string[] }[];
+  /** Globs of a page this app serves, which names files so a new upstream view is reported. */
+  globbed: { owner: string; glob: string; list: string }[];
 }
 
 /** Each page, the shell, each widget and each shared list, with the view files it owns. */
 export function owners(): Owner[] {
   return [
-    ...readPages().map((page) => ({ name: `page:${page.id}`, globs: page.views })),
-    { name: "shell", globs: shellViews },
-    ...Object.entries(widgetViews).map(([name, globs]) => ({ name: `widget:${name}`, globs })),
-    ...Object.entries(sharedViews).map(([name, globs]) => ({ name: `shared:${name}`, globs })),
+    ...readPages().map((page) => ({
+      name: `page:${page.id}`,
+      globs: page.views,
+      list: `src/pages/${basename(page.file)} views`,
+      server: page.server,
+    })),
+    { name: "shell", globs: shellViews, list: "src/views.ts shellViews" },
+    ...Object.entries(widgetViews).map(([name, globs]) => ({
+      name: `widget:${name}`,
+      globs,
+      list: `src/views.ts widgetViews.${name}`,
+    })),
+    ...Object.entries(sharedViews).map(([name, globs]) => ({
+      name: `shared:${name}`,
+      globs,
+      list: `src/views.ts sharedViews.${name}`,
+    })),
   ];
 }
 
 const isExact = (glob: string) => !/[*?[{]/.test(glob);
 
+interface Matcher {
+  owner: string;
+  glob: string;
+  list: string;
+  matcher: Bun.Glob;
+}
+
+const matchersOf = (all: readonly Owner[]): Matcher[] =>
+  all.flatMap((owner) =>
+    owner.globs.map((glob) => ({
+      owner: owner.name,
+      glob,
+      list: owner.list,
+      matcher: new Bun.Glob(glob),
+    }))
+  );
+
 /** The owners of a file: those naming it exactly, else those whose glob matches it. */
 function ownersOf(
   file: string,
-  matchers: readonly { owner: string; glob: string; matcher: Bun.Glob }[]
-): { owners: string[]; hits: typeof matchers } {
+  matchers: readonly Matcher[]
+): { owners: string[]; hits: Matcher[] } {
   const hits = matchers.filter((entry) => entry.matcher.match(file));
   const exact = hits.filter((entry) => isExact(entry.glob));
   const deciding = exact.length > 0 ? exact : hits;
   return { owners: [...new Set(deciding.map((entry) => entry.owner))], hits };
 }
 
-/** The owner of each file that imports a view: this app's page files are their page, the rest its shell. */
-export function importerOwners(): Map<string, string[]> {
+/**
+ * For each view file, what loads it at run time: an upstream file by its path under `web/src`, a
+ * file of this app by its owner (its page, else the shell).
+ */
+export function importGraph(): Map<string, string[]> {
   const pageOf = new Map(readPages().map((page) => [page.file, `page:${page.id}`]));
-  const all = owners();
-  const matchers = all.flatMap((owner) =>
-    owner.globs.map((glob) => ({ owner: owner.name, glob, matcher: new Bun.Glob(glob) }))
-  );
-  const result = new Map<string, string[]>();
+  const graph = new Map<string, string[]>();
   for (const [view, files] of viewImporters()) {
-    const names = files.map((file) => {
-      if (file.startsWith(forkSrc)) return pageOf.get(file) ?? "shell";
-      return ownersOf(relative(upstreamWebSrc, file), matchers).owners[0] ?? "unmapped";
-    });
-    result.set(view, [...new Set(names)].sort());
+    graph.set(
+      view,
+      files.map((file) =>
+        file.startsWith(forkSrc) ? (pageOf.get(file) ?? "shell") : relative(upstreamWebSrc, file)
+      )
+    );
   }
-  return result;
+  return graph;
+}
+
+const isOwnerName = (ref: string) => ref === "shell" || ref.includes(":");
+const spreads = (owner: string) => owner.startsWith("shared:") || owner.startsWith("widget:");
+
+/**
+ * Each file's owner once the import graph is applied: a page's view that only its own page and
+ * shared or widget files load is shared too, so a shared list names only the files two owners
+ * load directly.
+ */
+export function effectiveOwners(
+  files: readonly string[],
+  all: readonly Owner[],
+  graph: ReadonlyMap<string, readonly string[]>
+): { owner: Map<string, string>; loaders: (file: string) => string[] } {
+  const matchers = matchersOf(all);
+  const owner = new Map<string, string>();
+  for (const file of files) {
+    const found = ownersOf(file, matchers).owners;
+    if (found.length === 1 && found[0]) owner.set(file, found[0]);
+  }
+  const ownerOfRef = (ref: string): string =>
+    isOwnerName(ref) ? ref : (owner.get(ref) ?? ownersOf(ref, matchers).owners[0] ?? "unmapped");
+  const loaders = (file: string): string[] =>
+    [...new Set((graph.get(file) ?? []).map(ownerOfRef))].sort();
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const [file, name] of owner) {
+      if (!name.startsWith("page:")) continue;
+      const others = loaders(file).filter((other) => other !== name);
+      if (others.length > 0 && others.every(spreads)) {
+        owner.set(file, "shared:inferred");
+        changed = true;
+      }
+    }
+  }
+  return { owner, loaders };
 }
 
 export function coverage(
   files: readonly string[],
   all: readonly Owner[],
-  importers: ReadonlyMap<string, readonly string[]> = new Map()
+  graph: ReadonlyMap<string, readonly string[]> = new Map()
 ): Coverage {
-  const matchers = all.flatMap((owner) =>
-    owner.globs.map((glob) => ({ owner: owner.name, glob, matcher: new Bun.Glob(glob) }))
-  );
+  const matchers = matchersOf(all);
   const used = new Set<string>();
-  const result: Coverage = { unmapped: [], shared: [], unused: [], crossed: [] };
+  const result: Coverage = { unmapped: [], shared: [], unused: [], crossed: [], globbed: [] };
+  const { owner, loaders } = effectiveOwners(files, all, graph);
   for (const file of files) {
     const { owners: names, hits } = ownersOf(file, matchers);
     for (const hit of hits) used.add(`${hit.owner}\0${hit.glob}`);
-    if (names.length === 0) {
-      result.unmapped.push(file);
-      continue;
-    }
-    if (names.length > 1) {
-      result.shared.push({ file, owners: names });
-      continue;
-    }
-    const [owner] = names as [string];
-    const others = (importers.get(file) ?? []).filter((name) => name !== owner);
-    if (owner.startsWith("page:") && others.length > 0) {
-      result.crossed.push({ file, owner, importers: others });
+    if (names.length === 0) result.unmapped.push(file);
+    if (names.length > 1) result.shared.push({ file, owners: names });
+    const name = owner.get(file);
+    if (name?.startsWith("page:")) {
+      const others = loaders(file).filter((other) => other !== name);
+      if (others.length > 0) result.crossed.push({ file, owner: name, importers: others });
     }
   }
   result.unused = matchers
     .filter((entry) => !used.has(`${entry.owner}\0${entry.glob}`))
-    .map(({ owner, glob }) => ({ owner, glob }));
+    .map(({ owner: name, glob, list }) => ({ owner: name, glob, list }));
+  result.globbed = all
+    .filter((entry) => entry.server === "fork")
+    .flatMap((entry) =>
+      entry.globs
+        .filter((glob) => !isExact(glob))
+        .map((glob) => ({ owner: entry.name, glob, list: entry.list }))
+    );
   return result;
 }
 
-if (import.meta.main) {
-  const files = featureViews();
-  const result = coverage(files, owners(), importerOwners());
-  for (const file of result.unmapped) console.error(`unmapped: ${file}`);
-  for (const { file, owners: names } of result.shared) {
-    console.error(`more than one owner: ${file} (${names.join(", ")})`);
-  }
-  for (const { owner, glob } of result.unused) console.error(`matches no file: ${owner} ${glob}`);
-  for (const { file, owner, importers } of result.crossed) {
-    console.error(`${owner} owns ${file}, which ${importers.join(", ")} also renders`);
-  }
-  const problems =
-    result.unmapped.length + result.shared.length + result.unused.length + result.crossed.length;
-  console.log(`${files.length} view files, ${problems} problem(s)`);
-  process.exit(problems === 0 ? 0 : 1);
+/** One line per problem, each saying what to update. */
+export function messages(result: Coverage): string[] {
+  return [
+    ...result.unmapped.map(
+      (file) => `${file} has no owner: add it to a page's views, or to a list in src/views.ts`
+    ),
+    ...result.shared.map(
+      ({ file, owners: names }) =>
+        `${file} has more than one owner (${names.join(", ")}): keep it in one list`
+    ),
+    ...result.unused.map(
+      ({ glob, list }) =>
+        `${list} names ${glob}, which matches no upstream view: upstream renamed or removed it; name the file that replaced it, or drop the entry`
+    ),
+    ...result.crossed.map(
+      ({ file, owner: name, importers }) =>
+        `${file} is ${name}'s, and ${importers.join(", ")} also load it: name it in src/views.ts sharedViews.pages, or in the list of the one owner that loads it`
+    ),
+    ...result.globbed.map(
+      ({ glob, list }) =>
+        `${list} has the glob ${glob}: a page this app serves names each upstream file it replaces`
+    ),
+  ];
+}
+
+/** The view map's problems for the current trees. */
+export function viewMapMessages(): string[] {
+  return messages(coverage(featureViews(), owners(), importGraph()));
 }

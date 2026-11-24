@@ -1,0 +1,198 @@
+[
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "InboxPage",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "ff9d2b862a81387f2505cd63e09aa83ba4c54db3009c671b6458928f4567e6ea"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "IssuePageFallback",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "93945fbca07668a2fa9a25a41e52e9f57ba5b5ba447fc7902a87613cf79bb6de"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "IssueFrameFallback",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "853432d59f6fffe69f7c2c477eaba14b22e65085ed71bf0be30df0a8633a622d"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "ShellMessagePage",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "0083d49528c594259210f307d4ab1b2cf19141c4b556d77e58ece535b45b6b97"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "SignInPage",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "bb2e23b5f3b12277b28c4a40dc5b35c40272db0bbf0fd0138cf07fa7a534fe0a"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "ConnectionErrorPage",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "6afe5eda1b6d85c3fdd3adbf57be4c004f4e6ed35c1029b45e61ae7269cc3e21"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "ShellSkeleton",
+    "copy": "src/shell/states.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "be8519951af545828a63b6389ebac26bdcc51cc01b5bd1290562d424ce8b75f3"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "signIns",
+    "copy": "src/shell/sign-ins.ts",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "319fc28a34e88ad87d2e3d4b75a6c6278755d4be0c37b09955db2cdc0cc9a644"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "unsentChanges",
+    "copy": "src/shell/sign-ins.ts",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "55a7686e65e2517b61279e1a7c829b7e5124a87c7212892b219fcbbbfcc8840d"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "signOutQuestion",
+    "copy": "src/shell/sign-ins.ts",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "8b6aac67b0e1e043218200070bea37dfec396abea56fa3bad0e11373abcf8a64"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "AuthenticatedApp",
+    "copy": "src/shell/AuthGate.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "85892affaaa7185fde5c432acd77a2b127b327601eed8f3106abd5884a54a8f6"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "AuthGate",
+    "copy": "src/shell/AuthGate.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "4d0be98ec29486069b1a5bab8c2a8052d4674f5cf86e5cf12413fa846980f65f"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "signOutFailure",
+    "copy": "src/shell/AppShell.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "ef8343c068a774cd8dcdb536792deaeea77ae2c398ba9523f7b1b35c9cdb6714"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "NavigationContents",
+    "copy": "src/shell/AppShell.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "6097b5d0565494c692ddc6ca0e3f25328a2c9688441698fa60b2585c89a22b16"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "ShellProviders",
+    "copy": "src/shell/AppShell.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "3aa60fda11d402d7395ffd76e03edd99f8b9d5f2563bcadb91a2b9f14c68936c"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "AppShell",
+    "copy": "src/shell/AppShell.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "bffda79c64b3a88f8de6356384b1d431791f46bcd171073b2858af219d381fc2"
+  },
+  {
+    "file": "packages/dispatch/web/src/main.tsx",
+    "part": "*",
+    "copy": "src/main.tsx",
+    "commit": "733bac8101c2769d9ef715c4c28feca38d1e75be",
+    "sha256": "5e239ba02779f2d17357c0051b9627cbd56db67eb0e1d1ae5d08cb466de2a16f"
+  },
+  {
+    "file": "packages/dispatch/web/index.html",
+    "part": "script",
+    "copy": "index.html",
+    "commit": "cbedd441e29239a0381d2c9ba9046e3c5a6d6180",
+    "sha256": "a0a6f796d5388cba3c46d1685754a84501f831ec1857603e7be6148562d23a86"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "proofEditor",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "896230103f3dcf9fb4f4d617e3290a3b7cf2b3e802eeccad8656bb5d555a1fba"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "characterReferenceDecoder",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "06148c3133bd8b62647682848b655574eb80937a473009f9cb556bc21da067e0"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "vite",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "8f28be6f023a901260b858c901169a0486c0ae1c2851b356f80d3a4c93883018"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "GENERATED_CODE",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "4bcc690ec8bc27c6e418bd911b1c80ee050c4cf43295ede3a4029cc6f7c7c9da"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "thirdPartyNoticesFile",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "a2529f02f93a8960468f7a81f27deeba797c40fe092c550a24d40fc786454354"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.worker",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "e8921754cf827079803262b1ba4e3017d0aa713e9fc7bda1e96e30cd021fcb51"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.define",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "3fdf8763ea2986cfc2c9663e0bcdfe23bb7576bdc440524648c16e22a5539249"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.resolve",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "2ef29f35e228c3e375e67e40a3a9c3d3d40e277469ae35aa487518511e2ec8b6"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.build",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "93eae545dfd71223d94b84c37253418ce0b8bc46b0e93657b3867e3d8f76fbe9"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.server",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "4c29c45c5e306196277590bee3f0197f3c803cd9dc7428dad920b3f710cc4e96"
+  }
+]

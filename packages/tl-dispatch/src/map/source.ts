@@ -12,8 +12,15 @@ const UPSTREAM_ALIAS = "@upstream-dispatch/";
 
 export interface RouteEntry {
   path: string;
-  /** The JSX tag the route renders, as written. */
+  /** The JSX the route renders, as written, with its spacing normalized. */
   element: string;
+}
+
+/** The query keys and fragment forms a page this app serves reads from its URL. */
+export interface LinkForms {
+  query: string[];
+  /** `b-` for a block anchor (`#b-<id>`), else the whole fragment, such as `top`. */
+  fragments: string[];
 }
 
 export interface PageEntry {
@@ -22,6 +29,7 @@ export interface PageEntry {
   server: "upstream" | "fork";
   routes: RouteEntry[];
   views: string[];
+  linkForms?: LinkForms;
 }
 
 function parse(file: string, text?: string): ts.SourceFile {
@@ -93,58 +101,127 @@ function stringValue(source: ts.SourceFile, node: ts.Expression): string {
   throw new Error(`${source.fileName}: cannot read a path from ${node.getText(source)}`);
 }
 
-function jsxTag(source: ts.SourceFile, node: ts.Node): string {
+/** Source text with its spacing normalized, so a reformat compares equal. */
+export function normalizeSource(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{}()[\],:<>=/;])\s*/g, "$1")
+    .replace(/,([}\])])/g, "$1");
+}
+
+function jsxText(source: ts.SourceFile, node: ts.Node): string {
   if (ts.isJsxExpression(node) && node.expression) {
-    return jsxTag(source, node.expression);
+    return jsxText(source, node.expression);
   }
   if (ts.isParenthesizedExpression(node)) {
-    return jsxTag(source, node.expression);
+    return jsxText(source, node.expression);
   }
-  if (ts.isJsxSelfClosingElement(node)) {
-    return node.tagName.getText(source);
-  }
-  if (ts.isJsxElement(node)) {
-    return node.openingElement.tagName.getText(source);
+  if (ts.isJsxSelfClosingElement(node) || ts.isJsxElement(node)) {
+    return normalizeSource(node.getText(source));
   }
   throw new Error(`${source.fileName}: a route element is not JSX: ${node.getText(source)}`);
 }
+
+const tagName = (source: ts.SourceFile, node: ts.Node): string | undefined =>
+  ts.isJsxElement(node)
+    ? node.openingElement.tagName.getText(source)
+    : ts.isJsxSelfClosingElement(node)
+      ? node.tagName.getText(source)
+      : undefined;
 
 /** Every `<Route>` of upstream's app, its path constants resolved. */
 export function upstreamRoutes(file = upstreamAppFile, text?: string): RouteEntry[] {
   const source = parse(file, text);
   const routes: RouteEntry[] = [];
   const visit = (node: ts.Node): void => {
-    const element = ts.isJsxElement(node) ? node.openingElement : node;
-    if (
-      (ts.isJsxSelfClosingElement(element) || ts.isJsxOpeningElement(element)) &&
-      element.tagName.getText(source) === "Route"
-    ) {
+    if (tagName(source, node) === "Route") {
+      const element = ts.isJsxElement(node)
+        ? node.openingElement
+        : (node as ts.JsxSelfClosingElement);
       let path: string | undefined;
-      let tag: string | undefined;
+      let drawn: string | undefined;
       for (const attribute of element.attributes.properties) {
+        const name = ts.isJsxAttribute(attribute) ? attribute.name.getText(source) : "{...}";
         if (!ts.isJsxAttribute(attribute) || !attribute.initializer) {
-          continue;
+          throw new Error(`${file}: a <Route> has ${name}, which the route map cannot hold`);
         }
-        const name = attribute.name.getText(source);
+        const value = attribute.initializer;
         if (name === "path") {
-          const value = attribute.initializer;
           path =
             ts.isJsxExpression(value) && value.expression
               ? stringValue(source, value.expression)
               : stringValue(source, value as ts.StringLiteral);
         } else if (name === "element") {
-          tag = jsxTag(source, attribute.initializer);
+          drawn = jsxText(source, value);
+        } else {
+          throw new Error(`${file}: a <Route> has ${name}, which the route map cannot hold`);
         }
       }
-      if (path === undefined || tag === undefined) {
+      if (ts.isJsxElement(node) && node.children.some((child) => !isBlank(child))) {
+        throw new Error(`${file}: a <Route> has child routes, which the route map cannot hold`);
+      }
+      if (path === undefined || drawn === undefined) {
         throw new Error(`${file}: a <Route> without a path or an element`);
       }
-      routes.push({ path, element: tag });
+      routes.push({ path, element: drawn });
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
   return routes;
+}
+
+/** Whitespace, or a JSX comment. */
+const isBlank = (child: ts.JsxChild): boolean =>
+  (ts.isJsxText(child) && child.text.trim() === "") ||
+  (ts.isJsxExpression(child) && child.expression === undefined);
+
+/**
+ * Ways upstream's web app could route that `upstreamRoutes` would not read: a `useRoutes` call, a
+ * child of `<Routes>` that is not a `<Route>`, or a `<Routes>` outside app.tsx.
+ */
+export function routingProblems(
+  files: readonly { file: string; text: string }[] = upstreamSources()
+): string[] {
+  const problems: string[] = [];
+  for (const { file, text } of files) {
+    const source = parse(file, text);
+    const where = relative(upstreamWebSrc, file);
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "useRoutes"
+      ) {
+        problems.push(`${where}: routes through useRoutes, which the route map does not read`);
+      }
+      if (tagName(source, node) === "Routes") {
+        if (file !== upstreamAppFile) {
+          problems.push(`${where}: has a <Routes>, and the route map reads only app.tsx's`);
+        }
+        if (ts.isJsxElement(node)) {
+          for (const child of node.children) {
+            if (!isBlank(child) && tagName(source, child) !== "Route") {
+              problems.push(
+                `${where}: a child of <Routes> is not a <Route>: ${normalizeSource(child.getText(source)).slice(0, 80)}`
+              );
+            }
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return problems;
+}
+
+/** Upstream's web sources, tests and fixtures aside. */
+function upstreamSources(): { file: string; text: string }[] {
+  return sourceFiles(upstreamWebSrc, ["__tests__", "__fixtures__"]).map((file) => ({
+    file,
+    text: readFileSync(file, "utf8"),
+  }));
 }
 
 function property(
@@ -165,6 +242,23 @@ function arrayOf(source: ts.SourceFile, node: ts.Expression): ts.NodeArray<ts.Ex
     throw new Error(`${source.fileName}: not an array literal: ${node.getText(source)}`);
   }
   return node.elements;
+}
+
+function linkForms(
+  source: ts.SourceFile,
+  object: ts.ObjectLiteralExpression
+): LinkForms | undefined {
+  const declared = object.properties.some(
+    (entry) => ts.isPropertyAssignment(entry) && entry.name.getText(source) === "linkForms"
+  );
+  if (!declared) return undefined;
+  const forms = property(source, object, "linkForms");
+  if (!ts.isObjectLiteralExpression(forms)) {
+    throw new Error(`${source.fileName}: linkForms is not an object literal`);
+  }
+  const list = (name: string) =>
+    arrayOf(source, property(source, forms, name)).map((entry) => stringValue(source, entry));
+  return { query: list("query"), fragments: list("fragments") };
 }
 
 function readPage(file: string): PageEntry {
@@ -196,12 +290,13 @@ function readPage(file: string): PageEntry {
           }
           return {
             path: stringValue(source, property(source, route, "path")),
-            element: jsxTag(source, property(source, route, "element")),
+            element: jsxText(source, property(source, route, "element")),
           };
         }),
         views: arrayOf(source, property(source, object, "views")).map((view) =>
           stringValue(source, view)
         ),
+        linkForms: linkForms(source, object),
       };
     }
   }
@@ -304,9 +399,47 @@ function importTarget(from: string, specifier: string, webSrc: string): string |
   return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
 }
 
+/** The modules a file loads at run time: its imports and re-exports, type-only ones aside, and each `import()`. */
+export function runtimeImports(file: string, text: string): string[] {
+  const source = parse(file, text);
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const clause = node.importClause;
+      const bindings = clause?.namedBindings;
+      const typeOnly =
+        clause !== undefined &&
+        (clause.isTypeOnly ||
+          (clause.name === undefined &&
+            bindings !== undefined &&
+            ts.isNamedImports(bindings) &&
+            bindings.elements.length > 0 &&
+            bindings.elements.every((element) => element.isTypeOnly)));
+      if (!typeOnly) found.push(node.moduleSpecifier.text);
+    } else if (
+      ts.isExportDeclaration(node) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      !node.isTypeOnly
+    ) {
+      found.push(node.moduleSpecifier.text);
+    } else if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] &&
+      ts.isStringLiteralLike(node.arguments[0])
+    ) {
+      found.push(node.arguments[0].text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
 /**
- * For each view file under upstream's `features/`, the files that import it, statically or
- * lazily: upstream's own feature files and this app's sources.
+ * For each view file under upstream's `features/`, the files that load it at run time: upstream's
+ * own feature files and this app's sources.
  */
 export function viewImporters(webSrc = upstreamWebSrc): Map<string, string[]> {
   const importers = new Map<string, string[]>();
@@ -315,9 +448,8 @@ export function viewImporters(webSrc = upstreamWebSrc): Map<string, string[]> {
     ...sourceFiles(forkSrc, ["map"]),
   ];
   for (const file of files) {
-    const text = readFileSync(file, "utf8");
-    for (const reference of ts.preProcessFile(text, true, true).importedFiles) {
-      const target = importTarget(file, reference.fileName, webSrc);
+    for (const specifier of runtimeImports(file, readFileSync(file, "utf8"))) {
+      const target = importTarget(file, specifier, webSrc);
       if (!target) continue;
       const view = relative(webSrc, target);
       if (view.startsWith("features/") && view.endsWith(".tsx")) {
