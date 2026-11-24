@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "bun test src",
+    "test": "bun test src scripts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
     "postinstall": "bun scripts/link-root-packages.ts"
@@ -19,6 +19,7 @@
     "tailwind-merge": "3.7.0"
   },
   "rootPackages": [
+    "@biomejs/biome",
     "@happy-dom/global-registrator",
     "@tailwindcss/vite",
     "@tanstack/react-query",
@@ -33,7 +34,12 @@
     "react-dom",
     "react-router-dom",
     "tailwindcss",
+    "typescript",
     "vite",
     "yjs"
-  ]
+  ],
+  "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
 }
