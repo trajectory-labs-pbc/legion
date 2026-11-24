@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { MemoryNavigationProvider } from "@/navigation/provider";
 import { stubFetch } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
@@ -11,6 +12,7 @@ import type { SignOut } from "./use-sign-out";
 
 const user = { kind: "user", login: "reader", event_head: "0" } as const;
 const cleanups: (() => void)[] = [];
+beforeAll(() => loadHotkeyTooltip());
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
@@ -83,5 +85,31 @@ describe("NavigationPanel", () => {
     expect(buttonNamed(narrow, "Hide sidebar")).toBeUndefined();
     settle(() => buttonNamed(narrow, "Close navigation")?.click());
     expect(closed).toBe(1);
+  });
+
+  test("opens the tooltips of its buttons to the right, off the page", async () => {
+    const container = mount(panel({}));
+    for (const name of ["Hide sidebar", "Search", "New issue"]) {
+      const trigger = buttonNamed(container, name);
+      if (trigger === undefined) throw new Error(`no ${name} button`);
+      settle(() => {
+        trigger.dispatchEvent(
+          new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+        );
+        trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+        trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+      });
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      settle(() => {});
+      const popup = document.querySelector('[data-slot="tooltip-content"]');
+      expect(popup?.textContent?.startsWith(name)).toBe(true);
+      expect(popup?.getAttribute("data-side")).toBe("right");
+      settle(() => {
+        trigger.dispatchEvent(
+          new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
+        );
+        trigger.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      });
+    }
   });
 });

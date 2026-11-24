@@ -45,19 +45,26 @@ export function NavigationPanel({
             Close
           </Button>
         ) : (
-          <CommandButton commandId="global.toggle-sidebar" label="Hide sidebar" size="icon-sm" />
+          <CommandButton
+            commandId="global.toggle-sidebar"
+            label="Hide sidebar"
+            size="icon-sm"
+            tooltipSide="right"
+          />
         )}
       </div>
       <div className="mt-4 flex flex-col gap-1">
         <CommandButton
           className="w-full justify-start"
           commandId="global.search"
+          tooltipSide="right"
           label="Search"
           variant="outline"
         />
         <CommandButton
           className="w-full justify-start"
           commandId="global.create"
+          tooltipSide="right"
           label="New issue"
           variant="ghost"
         />

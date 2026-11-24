@@ -1,7 +1,7 @@
 import { Button, type ButtonProps } from "@/ui/button";
 import type { CommandId } from "./app-catalog";
 import { useCommand } from "./hooks";
-import { HotkeyTooltip } from "./hotkey-tooltip";
+import { HotkeyTooltip, type HotkeyTooltipProps } from "./hotkey-tooltip";
 import { type CommandView, commandStore } from "./registry";
 
 export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "children" | "render"> {
@@ -12,6 +12,8 @@ export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "child
   label?: string;
   /** A disabled command hides its button unless this is set: a greyed primary looks broken. */
   showIfDisabled?: boolean;
+  /** Where the tooltip opens; the top unless the button sits on an edge, as the sidebar's do. */
+  tooltipSide?: HotkeyTooltipProps["side"];
 }
 
 /** A destructive command draws as one; an icon-only button is ghost; any other is the default. */
@@ -28,6 +30,7 @@ export function CommandButton({
   size,
   variant,
   showIfDisabled = false,
+  tooltipSide,
   ...rest
 }: CommandButtonProps) {
   const view = useCommand(commandId);
@@ -36,7 +39,7 @@ export function CommandButton({
   const shown = label ?? view.label;
   const Icon = view.command.icon;
   return (
-    <HotkeyTooltip commandId={commandId} label={shown}>
+    <HotkeyTooltip commandId={commandId} label={shown} side={tooltipSide}>
       <Button
         {...rest}
         aria-label={onlyIcon ? shown : undefined}
