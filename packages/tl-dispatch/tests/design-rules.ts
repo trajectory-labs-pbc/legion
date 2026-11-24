@@ -4,12 +4,7 @@ import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import ts from "typescript";
 
-import {
-  CHECK_SIZES,
-  CONTROL_HEIGHTS,
-  GLYPH_SIZES,
-  TOUCH_MIN_HEIGHT,
-} from "../src/ui/control-scale";
+import { CHECK_SIZES, CONTROL_HEIGHTS, GLYPH_SIZES, TOUCH_MIN_HEIGHT } from "./control-scale";
 import { type CssDeclaration, importedPath, lineAt, parseCss } from "./css";
 import { CONTROL_FILES, EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache, UPSTREAM_WEB } from "./imports";
@@ -493,6 +488,9 @@ function scriptViolations(
 
 const UPSTREAM_THEME = join(UPSTREAM_WEB, "theme") + sep;
 
+/** The registry's components, as `shadcn add` wrote them: the registry lints and tests them. */
+export const REGISTRY_FOLDER = "src/ui/";
+
 export interface DesignOptions {
   /** The files left out, by path; the config's list unless a test passes another. */
   exempt?: Readonly<Record<string, string>>;
@@ -505,9 +503,11 @@ export async function designViolations(
 ): Promise<DesignViolation[]> {
   const tokens = themeTokens(
     readFileSync(join(PACKAGE_ROOT, "src/ui/theme.css"), "utf8"),
-    readFileSync(join(PACKAGE_ROOT, "src/ui/tokens.css"), "utf8")
+    readFileSync(join(PACKAGE_ROOT, "src/tokens.css"), "utf8")
   );
-  const checked = files.filter((file) => exempt[file.path] === undefined);
+  const checked = files.filter(
+    (file) => !file.path.startsWith(REGISTRY_FOLDER) && exempt[file.path] === undefined
+  );
   const stylesheets = checked.filter((file) => file.path.endsWith(".css"));
   const scripts = checked.filter((file) => /\.(tsx?|[cm]?jsx?|html)$/.test(file.path));
   const disk = filesWith(ownFiles(files));

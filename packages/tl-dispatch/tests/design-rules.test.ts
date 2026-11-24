@@ -8,7 +8,7 @@ import { type DesignViolation, designViolations } from "./design-rules";
 import { PACKAGE_ROOT, sourceFiles } from "./source";
 
 const theme = readFileSync(join(PACKAGE_ROOT, "src/ui/theme.css"), "utf8");
-const tokens = readFileSync(join(PACKAGE_ROOT, "src/ui/tokens.css"), "utf8");
+const tokens = readFileSync(join(PACKAGE_ROOT, "src/tokens.css"), "utf8");
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
 const REFUSED: readonly [string, string, string][] = [
@@ -79,7 +79,7 @@ const ALLOWED: readonly [string, string][] = [
 ];
 
 const controlPath = (index: number, extension: string) =>
-  `src/${extension === "css" ? "ui" : "pages"}/control-${index}.${extension}`;
+  `src/${extension === "css" ? "shell" : "pages"}/control-${index}.${extension}`;
 
 let found: DesignViolation[] = [];
 const rulesOf = (path: string) =>
@@ -114,6 +114,13 @@ describe("design rules", () => {
     const text = 'export const page = { server: "upstream" };\n<p className="text-sky-700" />;';
     const violations = await designViolations([{ path: "src/pages/x.tsx", text }]);
     expect(violations.map((violation) => violation.rule).join()).toContain("raw colour");
+  });
+
+  test("leaves src/ui to the registry, which lints and tests it; the same file elsewhere is refused", async () => {
+    const text = '<p className="text-sky-700" />;';
+    expect(await designViolations([{ path: "src/ui/x.tsx", text }])).toEqual([]);
+    const elsewhere = await designViolations([{ path: "src/shell/x.tsx", text }]);
+    expect(elsewhere.map((violation) => violation.rule).join()).toContain("raw colour");
   });
 
   test.each(

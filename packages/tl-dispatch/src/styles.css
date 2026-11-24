@@ -1,7 +1,7 @@
 /* Upstream's stylesheet brings Tailwind and the theme; these sources make one compile hold every class. */
 @import "../../dispatch/web/src/styles.css";
 @import "./ui/theme.css";
-@import "./ui/tokens.css";
+@import "./tokens.css";
 
 @source "./";
 @source "../../dispatch/web/src";

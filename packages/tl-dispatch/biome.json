@@ -17,22 +17,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/ui/button.tsx",
-        "src/ui/dialog.tsx",
-        "src/ui/heading.tsx",
-        "src/ui/input.tsx",
-        "src/ui/kbd.tsx",
-        "src/ui/lib/typography.ts",
-        "src/ui/lib/utils.ts",
-        "src/ui/modal-surface-context.tsx",
-        "src/ui/overlay-layer.tsx",
-        "src/ui/popover.tsx",
-        "src/ui/sheet.tsx",
-        "src/ui/spinner.tsx",
-        "src/ui/theme.css",
-        "src/ui/tooltip.tsx"
-      ],
+      "includes": ["src/ui/**"],
       "formatter": {
         "enabled": false
       },

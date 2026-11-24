@@ -7,7 +7,7 @@ replaces them one page at a time.
 
 | Folder | Holds | May import |
 | --- | --- | --- |
-| `src/ui` | Components and tokens: no data, no router | packages and `src/ui` only |
+| `src/ui` | The registry's components and theme, as `shadcn add` wrote them: no data, no router | packages and `src/ui` only |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom` |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
@@ -20,15 +20,15 @@ router imports.
 
 ## Registry components
 
-Every file in `src/ui` except `tokens.css` and `control-scale.ts` comes from the shared registry,
-written by `shadcn add`:
+Every file in `src/ui` comes from the shared registry, written by `shadcn add`:
 
 ```sh
 bunx --bun shadcn@4.23.0 add <path to the registry>/<item>.json
 ```
 
-`biome.json` leaves those files as the registry wrote them, and `tests/registry-files.test.ts`
-holds that list to the folder. Fix a registry component in the registry, then add it again.
+They stay as the registry wrote them: `biome.json` neither formats nor lints `src/ui`, and the
+design rules skip it. Their lint and tests live in the registry. Fix a registry component there,
+then add it again. This app's own tokens are in `src/tokens.css`.
 
 ## Theme
 
@@ -43,7 +43,7 @@ bunx --bun shadcn@4.23.0 add <path to the item>/theme-system.json
 The first line of `theme.css`, `@custom-variant dark (@media (prefers-color-scheme: dark));`, makes
 the dark scheme follow the operating system; keep it when the file is written again.
 
-`src/ui/tokens.css` holds this app's own tokens beside the theme:
+`src/tokens.css` holds this app's own tokens beside the theme:
 
 - `--focus` (`outline-focus`), the focus indicator: `--chart-5` in light, where `--ring` is below
   3:1 on the light surfaces, and `--ring` in dark.
