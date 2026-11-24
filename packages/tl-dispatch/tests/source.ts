@@ -9,13 +9,15 @@ export interface SourceFile {
 
 export const PACKAGE_ROOT = join(import.meta.dir, "..");
 
-const SOURCE = /\.(ts|tsx|css)$/;
+const SOURCE = /\.(tsx?|[cm]?jsx?|css)$/;
 
-/** Every source file under `src/`, tests left out. */
+/** Every script and stylesheet under `src/`, tests left out. */
 export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
   const files: SourceFile[] = [];
   for (const entry of readdirSync(join(root, "src"), { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile() || !SOURCE.test(entry.name) || /\.test\.tsx?$/.test(entry.name)) continue;
+    if (!entry.isFile() || !SOURCE.test(entry.name) || /\.test\.[cm]?[jt]sx?$/.test(entry.name)) {
+      continue;
+    }
     const absolute = join(entry.parentPath, entry.name);
     files.push({
       path: relative(root, absolute).split(sep).join("/"),
@@ -23,18 +25,4 @@ export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
     });
   }
   return files.sort((a, b) => a.path.localeCompare(b.path));
-}
-
-/** The text with comments blanked, line breaks kept, so a rule reads code and not prose. */
-export function withoutComments(text: string): string {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
-    .replace(
-      /(^|[^:"'`\\])\/\/[^\n]*/g,
-      (match, before: string) => before + " ".repeat(match.length - before.length)
-    );
-}
-
-export function lineOf(text: string, index: number): number {
-  return text.slice(0, index).split("\n").length;
 }

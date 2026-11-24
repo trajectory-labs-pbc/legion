@@ -1,103 +1,136 @@
-import { describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { contrastFailures, ratio, readSchemes, resolveColour } from "./contrast";
-import { COPIED_FROM_UPSTREAM, designViolations, radiusNames } from "./design-rules";
+import { contrastFailures, measure, ratio, readSchemes, resolveColour } from "./contrast";
+import { EXEMPT } from "./design-config";
+import { type DesignViolation, designViolations } from "./design-rules";
 import { PACKAGE_ROOT, sourceFiles } from "./source";
 
 const theme = readFileSync(join(PACKAGE_ROOT, "src/ui/theme.css"), "utf8");
 const tokens = readFileSync(join(PACKAGE_ROOT, "src/ui/tokens.css"), "utf8");
-const radii = radiusNames(theme);
 
-const check = (path: string, text: string) => designViolations([{ path, text }], radii);
+/** Each control is a file of its own; one compile checks them all, and each test reads its file. */
+const REFUSED: readonly [string, string, string][] = [
+  ["tsx", '<p className="bg-[red]">', "raw colour"],
+  ["tsx", '<p className="bg-[color:#123456]">', "raw colour"],
+  ["tsx", '<p className="shadow-[0_0_0_1px_#123456]">', "raw colour"],
+  ["tsx", '<p className="text-sky-700">', "raw colour"],
+  ["tsx", '<p className="hover:bg-slate-100/50">', "raw colour"],
+  ["tsx", '<p className="text-white">', "raw colour"],
+  ["tsx", '<p className="bg-page-paper">', "raw colour"],
+  ["tsx", '<p className="shadow-sm">', "raw colour"],
+  ["tsx", '<p className="bg-(--brand)">', "outside the theme"],
+  ["tsx", '<p className="text-muted-foreground/40">', "reduced opacity"],
+  ["tsx", '<a className="focus-visible:ring-ring/50">', "focus"],
+  ["tsx", '<a className="focus-visible:outline-chart-5">', "focus"],
+  ["tsx", '<a className="ring-chart-3">', "focus"],
+  ["tsx", '<a className="outline-focus/60">', "focus"],
+  ["tsx", '<p className="rounded-(--x)">', "radius"],
+  ["tsx", '<p className="rounded-[6px]">', "radius"],
+  ["tsx", '<p className="rounded-xs">', "radius"],
+  ["tsx", '<div className="transition-all">', "motion"],
+  ["tsx", '<div className="translate-x-1">', "motion"],
+  ["tsx", '<div className="hover:scale-105">', "motion"],
+  ["tsx", '<div className="animate-spin">', "motion"],
+  ["tsx", '<input accept="image/*" />;\n<p className="text-sky-700" />; // */', "raw colour"],
+  ["tsx", "<p style={{ borderRadius: 3 }} />", "a radius set in a style"],
+  ["tsx", '<p style={{ color: "var(--card)" }} />', "a colour set in a style"],
+  ["tsx", '<p style={{ "--background": "#fff" }} />', "a custom property"],
+  ["tsx", "<p style={{ transition: 'all 1s' }} />", "motion set in a style"],
+  ["tsx", "<p style={{ minHeight: 30 }} />", "a height set in a style"],
+  ["tsx", "<p style={styles} />", "object literal"],
+  ["tsx", "const panelStyle = { backgroundColor: 'red' };", "a colour set in a style"],
+  ["tsx", "element.style.borderRadius = '4px';", "a radius set in a style"],
+  ["tsx", "element.style.setProperty('--card', 'red');", "a custom property"],
+  ["tsx", "<style>{'.x { color: red }'}</style>", "inline stylesheet"],
+  ["tsx", 'import { card } from "@upstream-dispatch/theme/classes";', "upstream's theme roles"],
+  ["tsx", '<button className="h-10">', "control height"],
+  ["tsx", '<button className="md:h-[30px]">', "control height"],
+  ["tsx", '<input type="checkbox" className="size-5" />', "control height"],
+  ["tsx", '<Button className="h-8">', "control height"],
+  ["jsx", '<p className="text-sky-700">', "raw colour"],
+  ["css", ".x { color: #123456; }", "raw colour"],
+  ["css", ".x { color: rebeccapurple; }", "raw colour"],
+  ["css", ".x { border-radius: 6px; }", "radius"],
+  ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
+  ["css", ".x { animation: spin 1s; }", "motion"],
+  ["css", ".x { @apply bg-sky-700; }", "@apply"],
+];
+
+const ALLOWED: readonly [string, string][] = [
+  ["tsx", '<p className="text-foreground bg-card border-border bg-card/50 hover:bg-muted">'],
+  ["tsx", '<p className="rounded-md rounded-t-lg rounded-full rounded-none">'],
+  ["tsx", '<button className="h-8 px-3">'],
+  ["tsx", '<button className="min-h-11">'],
+  ["tsx", '<input type="checkbox" className="size-4" />'],
+  [
+    "tsx",
+    '<a className="outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">',
+  ],
+  [
+    "tsx",
+    '<div className="motion-safe:animate-spin motion-safe:hover:scale-105 motion-safe:transition-colors">',
+  ],
+  ["tsx", '<a href="#b-r1">'],
+  ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
+  ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],
+  ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
+];
+
+const controlPath = (index: number, extension: string) =>
+  `src/${extension === "css" ? "ui" : "pages"}/control-${index}.${extension}`;
+
+let found: DesignViolation[] = [];
+const rulesOf = (path: string) =>
+  found.filter((violation) => violation.file === path).map((violation) => violation.rule);
+
+beforeAll(async () => {
+  const controls = [...REFUSED, ...ALLOWED].map(([extension, text], index) => ({
+    path: controlPath(index, extension),
+    text,
+  }));
+  found = await designViolations(controls);
+});
 
 describe("design rules", () => {
-  test("the app's own files keep them, the files copied from upstream aside", () => {
-    const violations = designViolations(sourceFiles(), radii).filter(
-      (violation) => COPIED_FROM_UPSTREAM[violation.file] === undefined
-    );
-    expect(violations).toEqual([]);
+  test("the app's own files keep them, the exempt files aside", async () => {
+    expect(await designViolations(sourceFiles())).toEqual([]);
   });
 
-  test("each file copied from upstream still breaks a rule, so a rebuilt one leaves the list", () => {
+  test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {
     const files = sourceFiles();
-    for (const path of Object.keys(COPIED_FROM_UPSTREAM)) {
+    for (const path of Object.keys(EXEMPT)) {
       const file = files.find((candidate) => candidate.path === path);
-      expect(file === undefined ? [] : designViolations([file], radii)).not.toEqual([]);
+      expect(file).toBeDefined();
+      if (file === undefined) continue;
+      expect((await designViolations([file], { exempt: {} })).length).toBeGreaterThan(0);
     }
   });
 
-  test.each([
-    ['<p className="text-sky-700">', "raw colour"],
-    ['<p className="hover:bg-slate-100/50">', "raw colour"],
-    ['<p className="text-white">', "raw colour"],
-    ['<p style={{ color: "#1e40af" }}>', "raw colour"],
-    ['<p className="bg-[#fff]">', "raw colour"],
-    ['<p style={{ color: "oklch(0.5 0.1 200)" }}>', "raw colour"],
-    ['import { card } from "@upstream-dispatch/theme/classes";', "raw colour"],
-    ['<p className="rounded">', "radius"],
-    ['<p className="rounded-xs">', "radius"],
-    ['<p className="rounded-[6px]">', "radius"],
-    ['<button className="h-10">', "control height"],
-    ['<button className="h-[30px]">', "control height"],
-    ['<button onClick={() => go()} className="min-h-9">', "control height"],
-    ['<input type="checkbox" className="size-5" />', "control height"],
-    ['<Button className="h-8">', "control height"],
-    ['<a className="focus-visible:outline-chart-5">', "focus"],
-    ['<a className="ring-chart-3">', "focus"],
-    ['<div className="scale-95">', "motion"],
-    ['<div className="hover:scale-105">', "motion"],
-    ['<div className="animate-spin">', "motion"],
-    ['<div className="transition-transform">', "motion"],
-  ])("refuses %s", (text, rule) => {
-    const violations = check("src/pages/rebuilt.tsx", text);
-    expect(violations.map((violation) => violation.rule).join()).toContain(rule);
+  test("a file is exempt only by the list: a file that says it maps upstream is checked", async () => {
+    const text = 'export const page = { server: "upstream" };\n<p className="text-sky-700" />;';
+    const violations = await designViolations([{ path: "src/pages/x.tsx", text }]);
+    expect(violations.map((violation) => violation.rule).join()).toContain("raw colour");
   });
 
-  test.each([
-    ["src/ui/x.css", ".x { color: #123456; }", "raw colour"],
-    ["src/ui/x.css", ".x { border-radius: 6px; }", "radius"],
-    ["src/ui/x.css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
-    ["src/ui/x.css", ".x { animation: spin 1s; }", "motion"],
-    ["src/ui/button.tsx", 'const sizes = { md: "h-10" };', "control height"],
-  ])("refuses in %s: %s", (path, text, rule) => {
-    expect(
-      check(path, text)
-        .map((violation) => violation.rule)
-        .join()
-    ).toContain(rule);
+  test.each(
+    REFUSED.map((control, index) => [index, ...control] as const)
+  )("refuses control %d (%s): %s", (index, extension, _text, rule) => {
+    expect(rulesOf(controlPath(index, extension)).join("\n")).toContain(rule);
   });
 
-  test.each([
-    '<p className="text-foreground bg-card border-border">',
-    '<p className="rounded-md rounded-t-lg rounded-full rounded-none">',
-    '<button className="h-8 px-3">',
-    '<button className="min-h-11">',
-    '<input type="checkbox" className="size-4" />',
-    '<a className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">',
-    '<div className="motion-safe:animate-spin motion-safe:hover:scale-105">',
-    '<a href="#b-r1">',
-  ])("allows %s", (text) => {
-    expect(check("src/pages/rebuilt.tsx", text)).toEqual([]);
-  });
-
-  test("allows motion inside a reduced-motion guard in a stylesheet", () => {
-    const css = "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }";
-    expect(check("src/ui/x.css", css)).toEqual([]);
-  });
-
-  test("leaves out a page file that only maps upstream's page", () => {
-    expect(check("src/pages/x.tsx", 'server: "upstream", <p className="text-sky-700">')).toEqual(
-      []
-    );
+  test.each(
+    ALLOWED.map((control, index) => [REFUSED.length + index, ...control] as const)
+  )("allows control %d (%s): %s", (index, extension) => {
+    expect(rulesOf(controlPath(index, extension))).toEqual([]);
   });
 });
 
 describe("contrast", () => {
   const schemes = readSchemes(theme, tokens);
 
-  test("every text pair the theme declares, and focus on every surface, in light and dark", () => {
+  test("every text pair, focus on every surface, and light control borders", () => {
     expect(contrastFailures(schemes)).toEqual([]);
   });
 
@@ -110,13 +143,33 @@ describe("contrast", () => {
     ).toContain("light --muted-foreground on --background");
   });
 
-  test("the platform's own light ring is below 3:1 on the page, which is why focus has its own token", () => {
+  test("the theme's light ring is below 3:1 on the page, which is why focus has its own token", () => {
     const light = schemes.light;
     expect(
       ratio(resolveColour(light, "--ring"), resolveColour(light, "--background"))
     ).toBeLessThan(3);
+    expect(measure(light, "--focus", "--background")).toBeGreaterThanOrEqual(3);
+  });
+
+  test("the theme's light --input is below 3:1, which is why tokens.css mixes a stronger one", () => {
+    const themeOnly = readSchemes(theme).light;
+    for (const on of ["--background", "--card", "--muted"]) {
+      expect(measure(themeOnly, "--input", on)).toBeLessThan(3);
+      expect(measure(schemes.light, "--input", on)).toBeGreaterThanOrEqual(3);
+    }
+    const reverted = readSchemes(
+      theme,
+      tokens,
+      "@media (prefers-color-scheme: light) { :root { --input: #e1e2e3; } }"
+    );
     expect(
-      ratio(resolveColour(light, "--focus"), resolveColour(light, "--background"))
-    ).toBeGreaterThanOrEqual(3);
+      contrastFailures(reverted).map(
+        (failure) => `${failure.scheme} ${failure.text} on ${failure.on}`
+      )
+    ).toEqual([
+      "light --input on --background",
+      "light --input on --card",
+      "light --input on --muted",
+    ]);
   });
 });

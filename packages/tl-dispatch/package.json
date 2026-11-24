@@ -21,6 +21,10 @@
     "lucide-react": "1.70.0",
     "tailwind-merge": "3.7.0"
   },
+  "devDependencies": {
+    "@tailwindcss/node": "4.3.3",
+    "@tailwindcss/oxide": "4.3.3"
+  },
   "rootPackages": [
     "@biomejs/biome",
     "@happy-dom/global-registrator",
