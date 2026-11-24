@@ -1,5 +1,13 @@
 import { type QueryKey, useQueryClient } from "@tanstack/react-query";
-import { type ComponentProps, type FocusEvent, type PointerEvent, useEffect, useRef } from "react";
+import {
+  type ComponentProps,
+  type FocusEvent,
+  type MouseEvent,
+  type PointerEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import {
@@ -18,33 +26,44 @@ export interface PrefetchIntent {
   onPointerLeave: () => void;
   onFocus: () => void;
   onBlur: () => void;
+  onClick: () => void;
 }
 
 /**
  * Starts a page's reads while the reader shows intent: the pointer rests, or focus arrives.
- * Leaving stops the wait, and stops a read nothing else watches.
+ * The pointer leaving with no click stops the wait, and stops a read nothing else watches.
+ * Losing focus and a click cancel nothing: after a click the shell moves focus to the page,
+ * whose lazy code may not read yet.
  */
 export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): PrefetchIntent {
   const client = useQueryClient();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const started = useRef<readonly QueryKey[]>([]);
+  const clicked = useRef(false);
   const latest = useRef(reads);
-  latest.current = reads;
-  const start = () => {
+  useLayoutEffect(() => {
+    latest.current = reads;
+  });
+  const stopWaiting = () => {
     clearTimeout(timer.current);
     timer.current = undefined;
+  };
+  const start = () => {
+    stopWaiting();
+    clicked.current = false;
     started.current = (latest.current?.() ?? []).map((prefetch) => {
       void prefetch.start(client);
       return prefetch.queryKey;
     });
   };
   const leave = () => {
-    clearTimeout(timer.current);
-    timer.current = undefined;
-    for (const queryKey of started.current) {
-      const query = client.getQueryCache().find({ queryKey, exact: true });
-      if (query?.state.fetchStatus === "fetching" && query.getObserversCount() === 0) {
-        void client.cancelQueries({ queryKey, exact: true });
+    stopWaiting();
+    if (!clicked.current) {
+      for (const queryKey of started.current) {
+        const query = client.getQueryCache().find({ queryKey, exact: true });
+        if (query?.state.fetchStatus === "fetching" && query.getObserversCount() === 0) {
+          void client.cancelQueries({ queryKey, exact: true });
+        }
       }
     }
     started.current = [];
@@ -58,7 +77,10 @@ export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined
     },
     onPointerLeave: leave,
     onFocus: start,
-    onBlur: leave,
+    onBlur: stopWaiting,
+    onClick: () => {
+      clicked.current = true;
+    },
   };
 }
 
@@ -82,6 +104,7 @@ export function PageLink<Path extends string, Search extends string>({
   onPointerLeave,
   onFocus,
   onBlur,
+  onClick,
   ...rest
 }: PageLinkProps<Path, Search>) {
   const intent = usePrefetchIntent(
@@ -90,6 +113,10 @@ export function PageLink<Path extends string, Search extends string>({
   return (
     <Link
       {...rest}
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        onClick?.(event);
+        intent.onClick();
+      }}
       onBlur={(event: FocusEvent<HTMLAnchorElement>) => {
         onBlur?.(event);
         intent.onBlur();

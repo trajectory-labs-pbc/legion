@@ -98,7 +98,7 @@ describe("PageLink", () => {
     expect(read.log).toEqual([]);
   });
 
-  test("focus starts the read at once; leaving stops a read nothing else watches", async () => {
+  test("focus starts the read at once, and losing focus keeps it", async () => {
     const { read, page, client } = setup();
     const link = mount(
       client,
@@ -109,10 +109,74 @@ describe("PageLink", () => {
     fire(link, "focusin");
     await wait(0);
     expect(read.log).toEqual(["start"]);
+    // The shell moves focus to the page after a click, before a lazy page reads.
     fire(link, "focusout");
+    await wait(0);
+    expect(read.log).toEqual(["start"]);
+    read.answer();
+    await wait(0);
+    expect(client.getQueryState(read.options.queryKey)?.status).toBe("success");
+  });
+
+  test("the pointer leaving after a click keeps the read the click uses", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    await wait(PREFETCH_INTENT_MS + 50);
+    fire(link, "click");
+    fire(link, "pointerout");
+    await wait(0);
+    expect(read.log).toEqual(["start"]);
+  });
+
+  test("control: the pointer leaving with no click stops a read nothing else watches", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    await wait(PREFETCH_INTENT_MS + 50);
+    fire(link, "pointerout");
     await wait(0);
     expect(read.log).toEqual(["start", "abort"]);
     expect(client.getQueryState(read.options.queryKey)?.fetchStatus).toBe("idle");
+  });
+
+  test("the pointer must rest the whole wait: half of it starts nothing", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    await wait(PREFETCH_INTENT_MS / 2);
+    expect(read.log).toEqual([]);
+    await wait(PREFETCH_INTENT_MS);
+    expect(read.log).toEqual(["start"]);
+  });
+
+  test("a link unmounted during the wait starts nothing", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    for (const view of mounted.splice(0)) view.unmount();
+    await wait(PREFETCH_INTENT_MS + 50);
+    expect(read.log).toEqual([]);
   });
 
   test("leaving keeps a read the page already watches", async () => {
@@ -130,8 +194,9 @@ describe("PageLink", () => {
         </PageLink>
       </>
     );
-    fire(link, "focusin");
-    fire(link, "focusout");
+    fire(link, "pointerover");
+    await wait(PREFETCH_INTENT_MS + 50);
+    fire(link, "pointerout");
     await wait(0);
     expect(read.log).toEqual(["start"]);
   });
