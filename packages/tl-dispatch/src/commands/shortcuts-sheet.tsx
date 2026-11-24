@@ -1,5 +1,5 @@
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { Heading } from "@/ui/heading";
 import { Input } from "@/ui/input";
@@ -106,17 +106,17 @@ function ShortcutsList({ sections }: { sections: readonly ShortcutSection[] }) {
                     )}
                     key={row.id}
                   >
-                    <span className="truncate">{row.label}</span>
-                    <span className="inline-flex shrink-0 items-center gap-1">
+                    <span className="min-w-0 truncate">{row.label}</span>
+                    <span className="flex max-w-1/2 shrink-0 flex-wrap justify-end gap-1">
                       {row.keys.map((keys, index) => (
-                        <Fragment key={keys}>
+                        <span className="inline-flex items-center gap-1" key={keys}>
                           {index > 0 ? (
                             <span className={textVariants({ size: "caption", tone: "muted" })}>
                               or
                             </span>
                           ) : null}
                           <KbdSequence chips={chipsOf(keys)} />
-                        </Fragment>
+                        </span>
                       ))}
                     </span>
                   </li>
