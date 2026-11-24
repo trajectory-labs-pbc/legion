@@ -1,0 +1,122 @@
+name: Fork envoy image
+
+# This repository is a fork, and this file, which upstream does not have, publishes the envoy image
+# its deployments run: upstream's envoy image, which release-envoy-listener.yaml builds unchanged,
+# with the fork's web app beside upstream's (packages/tl-dispatch/docker/Dockerfile). It pushes
+# `envoy:<sha>-tl` to the same package and attests it, signed as
+# `<this repository>/.github/workflows/fork-envoy-image.yaml@refs/heads/main`.
+#
+# Every commit on main gets one. A commit that changed upstream's envoy inputs waits for
+# release-envoy-listener.yaml's run of it; any other commit derives from the newest ancestor's
+# upstream image (.github/scripts/fork-envoy-base.sh). A dispatch builds the dispatched ref, from
+# `envoy_image` when it is given.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      envoy_image:
+        description: "Upstream's envoy image to derive from, by digest (ghcr.io/<owner>/legion/envoy@sha256:...); empty finds it"
+        type: string
+        default: ""
+
+concurrency:
+  group: fork-envoy-image-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    # Up to 30 minutes of it waiting for release-envoy-listener.yaml's run.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    outputs:
+      image: ${{ steps.names.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    env:
+      COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 100
+          persist-credentials: false
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVOY_IMAGE: ${{ inputs.envoy_image }}
+        run: |
+          image=$(.github/scripts/repo-paths.sh envoy_image)
+          base=$ENVOY_IMAGE
+          if [ -z "$base" ]; then
+            base=$(.github/scripts/fork-envoy-base.sh "$COMMIT" "$image")
+          fi
+          bun=$(awk '$1 == "FROM" && $3 == "AS" && $4 == "web" { print $2; exit }' packages/envoy/docker/Dockerfile)
+          if [ -z "$bun" ]; then
+            echo "::error::packages/envoy/docker/Dockerfile has no 'FROM <image> AS web' line"
+            exit 1
+          fi
+          {
+            echo "image=$image"
+            echo "base=$base"
+            echo "bun=$bun"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          driver-opts: |
+            provenance-add-gha=false
+            image=ghcr.io/cybermonklabs/legion/ci@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          BUILDX_METADATA_PROVENANCE: disabled
+          DOCKER_BUILD_SUMMARY: "false"
+        with:
+          context: .
+          file: packages/tl-dispatch/docker/Dockerfile
+          # The base is an index of both; every stage that runs a command runs on the build platform.
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=min
+          tags: ${{ steps.names.outputs.image }}:${{ env.COMMIT }}-tl
+          push: true
+          build-args: |
+            ENVOY_IMAGE=${{ steps.names.outputs.base }}
+            BUN_IMAGE=${{ steps.names.outputs.bun }}
+            LEGION_COMMIT=${{ env.COMMIT }}
+      # The pushed image serves both apps, and its envoy-dispatch refuses a folder with no build.
+      - name: Smoke check
+        env:
+          IMAGE: ${{ steps.names.outputs.image }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker pull --platform linux/amd64 "$IMAGE"
+          docker run --rm --entrypoint sh "$IMAGE" -c \
+            'test -s /srv/tl-dispatch/index.html && test -s /srv/dispatch-web/index.html && grep -q "the fork.s web app, /srv/tl-dispatch" /usr/share/doc/legion/THIRD_PARTY_NOTICES'
+          status=0
+          docker run --rm -e DISPATCH_WEB_DIST=/srv --entrypoint /usr/local/bin/envoy-dispatch "$IMAGE" || status=$?
+          if [ "$status" -ne 78 ]; then
+            echo "::error::envoy-dispatch on a folder with no build exited $status, not 78"
+            exit 1
+          fi
+
+  attest:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      attestations: write
+    cache-mode: none
+    steps:
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ needs.build.outputs.image }}
+          subject-digest: ${{ needs.build.outputs.digest }}
