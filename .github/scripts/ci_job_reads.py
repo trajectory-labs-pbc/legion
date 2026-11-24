@@ -3673,7 +3673,6 @@ GATES = [
         ("docs/site/package.json", "packages/envoy/docker/Dockerfile:45; :62 RUN bun install --frozen-lockfile reads every manifest above"),
         ("packages/contracts/**", "packages/envoy/docker/Dockerfile:31 and :68 COPY packages/contracts packages/contracts, which :78 runs gen:go in"),
         ("packages/dispatch/**", "packages/envoy/docker/Dockerfile:38 and :69 COPY packages/dispatch packages/dispatch, which :80 runs build:web in"),
-        ("packages/tl-dispatch/**", "packages/envoy/docker/Dockerfile:44 and :73 COPY packages/tl-dispatch packages/tl-dispatch, which :86 runs build in"),
         ("packages/proof-editor/**", "packages/envoy/docker/Dockerfile:39, :42 and :70 COPY packages/proof-editor packages/proof-editor, which the SPA build aliases"),
         ("scripts/third-party-notices.ts", "packages/envoy/docker/Dockerfile:74 COPY scripts/third-party-notices.ts, which the SPA build writes its notices with"),
         ("scripts/go-third-party-notices.sh", "packages/envoy/docker/Dockerfile:97 COPY, run by :98 and :118"),

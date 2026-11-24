@@ -11,8 +11,9 @@
     "types": ["bun", "vite/client"],
     "paths": {
       "@upstream-dispatch/*": ["../dispatch/web/src/*"],
+      "@legion/contracts": ["../contracts/src/index.ts"],
       "proof-sdk-upstream/src/*": ["../proof-editor/upstream/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "vite.config.ts"]
 }

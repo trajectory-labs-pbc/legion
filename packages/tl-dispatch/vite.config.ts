@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
@@ -65,10 +66,46 @@ function thirdPartyNoticesFile(): { page: Plugin; worker: () => Plugin } {
 
 const notices = thirdPartyNoticesFile();
 
+// The libraries both apps' code reaches come from the root install (scripts/link-root-packages.ts).
+const { rootPackages } = JSON.parse(readFileSync(at("package.json"), "utf8")) as {
+  rootPackages: string[];
+};
+
+// Fails the build when the bundle holds two copies of a root package, or this app's own copy.
+function oneCopyEach(): Plugin {
+  const ownInstall = `${at("node_modules")}/`;
+  return {
+    name: "one-copy-each",
+    apply: "build",
+    generateBundle() {
+      const copies = new Map<string, Set<string>>();
+      for (const module of this.getModuleIds()) {
+        // A plugin's virtual module wraps a file's id in \0 and a query.
+        const id = module.replace(/^\0/, "").replace(/\?.*$/, "");
+        for (const name of rootPackages) {
+          const index = id.lastIndexOf(`/node_modules/${name}/`);
+          if (index < 0) continue;
+          const dir = id.slice(0, index + `/node_modules/${name}`.length);
+          copies.set(name, (copies.get(name) ?? new Set()).add(dir));
+        }
+      }
+      const wrong = [...copies].filter(
+        ([, dirs]) => dirs.size > 1 || [...dirs].some((dir) => dir.startsWith(ownInstall))
+      );
+      if (wrong.length > 0) {
+        this.error(
+          `not one root-install copy each: ${wrong.map(([name, dirs]) => `${name} (${[...dirs].join(", ")})`).join("; ")}`
+        );
+      }
+      console.log(`one-copy-each: ${copies.size} root packages bundled, one copy each`);
+    },
+  };
+}
+
 export default defineConfig({
   root: at("."),
   publicDir: at("../dispatch/web/public"),
-  plugins: [react(), tailwindcss(), notices.page],
+  plugins: [react(), tailwindcss(), notices.page, oneCopyEach()],
   worker: { format: "es", plugins: () => [notices.worker()] },
   define: {
     __DISPATCH_BUILD__: JSON.stringify(
