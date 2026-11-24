@@ -42,5 +42,6 @@ export const inbox: Page = {
       element: <Navigate replace to={buildInboxPath({ filters: { type: ["reply"] } })} />,
     },
   ],
-  views: ["features/inbox/**", "features/answers/**"],
+  // The rest of the Inbox is shared with the shell's drawer (views.ts, sharedViews.inbox).
+  views: ["features/answers/**"],
 };

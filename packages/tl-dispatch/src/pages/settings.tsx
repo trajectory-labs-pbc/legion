@@ -12,5 +12,11 @@ export const settings: Page = {
   id: "settings",
   server: "upstream",
   routes: [{ path: "/settings", element: <SettingsPage /> }],
-  views: ["features/settings/**"],
+  views: [
+    "features/settings/**",
+    // Files of other folders only Settings renders.
+    "features/credentials/GrantsSection.tsx",
+    "features/credentials/SignInsSection.tsx",
+    "features/issue-page/IssuePagePreference.tsx",
+  ],
 };

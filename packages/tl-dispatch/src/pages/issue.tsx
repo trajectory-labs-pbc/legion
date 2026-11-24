@@ -19,5 +19,7 @@ export const issue: Page = {
     "features/plan/**",
     "features/steps/**",
     "features/threads/**",
+    // Files of other folders only the issue page renders.
+    "features/priorities/IssuePriorityLine.tsx",
   ],
 };

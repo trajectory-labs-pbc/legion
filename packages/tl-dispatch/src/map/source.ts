@@ -267,6 +267,67 @@ export function routeMapFiles(dir = pagesDir): string[] {
     .sort();
 }
 
+export const forkSrc = join(packageRoot, "src");
+
+function sourceFiles(root: string, skip: readonly string[]): string[] {
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!skip.includes(entry.name)) walk(path);
+      } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+        found.push(path);
+      }
+    }
+  };
+  walk(root);
+  return found;
+}
+
+function importTarget(from: string, specifier: string, webSrc: string): string | undefined {
+  let base: string;
+  if (specifier.startsWith(UPSTREAM_ALIAS)) {
+    base = join(webSrc, specifier.slice(UPSTREAM_ALIAS.length));
+  } else if (specifier.startsWith(".")) {
+    base = resolve(dirname(from), specifier);
+  } else {
+    return undefined;
+  }
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, "index.ts"),
+    join(base, "index.tsx"),
+  ];
+  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+}
+
+/**
+ * For each view file under upstream's `features/`, the files that import it, statically or
+ * lazily: upstream's own feature files and this app's sources.
+ */
+export function viewImporters(webSrc = upstreamWebSrc): Map<string, string[]> {
+  const importers = new Map<string, string[]>();
+  const files = [
+    ...sourceFiles(join(webSrc, "features"), ["__tests__", "__fixtures__"]),
+    ...sourceFiles(forkSrc, ["map"]),
+  ];
+  for (const file of files) {
+    const text = readFileSync(file, "utf8");
+    for (const reference of ts.preProcessFile(text, true, true).importedFiles) {
+      const target = importTarget(file, reference.fileName, webSrc);
+      if (!target) continue;
+      const view = relative(webSrc, target);
+      if (view.startsWith("features/") && view.endsWith(".tsx")) {
+        importers.set(view, [...(importers.get(view) ?? []), file]);
+      }
+    }
+  }
+  return importers;
+}
+
 /** Every view file under upstream's `features/`: each `.tsx` that is not a test or a fixture. */
 export function featureViews(webSrc = upstreamWebSrc): string[] {
   const found: string[] = [];
