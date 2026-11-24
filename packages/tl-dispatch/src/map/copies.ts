@@ -4,17 +4,18 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 
-import { packageRoot } from "./source";
+import { packageRoot, routeTargets, upstreamAppFile } from "./source";
 
 export const repoRoot = join(packageRoot, "../..");
 const pinsFile = join(import.meta.dir, "copies.json");
+const appFile = relative(repoRoot, upstreamAppFile);
 
 export interface Copy {
   /** Upstream's file, from the repository root. */
   file: string;
   /**
    * `*` for the whole file, `script` for an HTML file's inline scripts, `default.<key>` for a key of
-   * the object the default export passes, else a top-level declaration's name.
+   * the object the default export passes, else a top-level declaration's or import's name.
    */
   part: string;
   /** This app's file holding the copy. */
@@ -68,6 +69,25 @@ function parse(file: string, text: string): ts.SourceFile {
   return ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind);
 }
 
+/** Where an import binds `name`: its module and the name it takes from it. */
+function importBinding(source: ts.SourceFile, name: string): string | undefined {
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) continue;
+    const from = JSON.stringify((statement.moduleSpecifier as ts.StringLiteral).text);
+    const clause = statement.importClause;
+    if (clause.name?.text === name) return `import default from ${from}`;
+    const bindings = clause.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings) && bindings.name.text === name) {
+      return `import * from ${from}`;
+    }
+    if (bindings && ts.isNamedImports(bindings)) {
+      const element = bindings.elements.find((entry) => entry.name.text === name);
+      if (element) return `import ${(element.propertyName ?? element.name).text} from ${from}`;
+    }
+  }
+  return undefined;
+}
+
 function declarationText(source: ts.SourceFile, part: string): string | undefined {
   for (const statement of source.statements) {
     if (part.startsWith("default.") && ts.isExportAssignment(statement)) {
@@ -94,7 +114,7 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
       return canonical(statement, source);
     }
   }
-  return undefined;
+  return importBinding(source, part);
 }
 
 /** One part of a file with its formatting removed, or undefined when the file no longer has it. */
@@ -133,6 +153,20 @@ export function copyProblems(pins: readonly Copy[] = readPins(), read = partText
       `${pin.file} ${change} ${pin.part} since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun src/map/copies.ts --update\``,
     ];
   });
+}
+
+/** Each name a route element of app.tsx refers to that no pin covers. */
+export function unpinnedRouteTargets(
+  pins: readonly Copy[] = readPins(),
+  targets: readonly string[] = routeTargets()
+): string[] {
+  const pinned = new Set(pins.filter((pin) => pin.file === appFile).map((pin) => pin.part));
+  return targets
+    .filter((name) => !pinned.has(name))
+    .map(
+      (name) =>
+        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun src/map/copies.ts --update\``
+    );
 }
 
 function lastCommit(file: string): string {

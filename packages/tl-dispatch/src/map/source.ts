@@ -171,6 +171,68 @@ export function upstreamRoutes(file = upstreamAppFile, text?: string): RouteEntr
   return routes;
 }
 
+/** A name that is the identifier itself, not a property or attribute name beside it. */
+function isReference(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  return !(
+    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+    (ts.isJsxAttribute(parent) && parent.name === node) ||
+    (ts.isPropertyAssignment(parent) && parent.name === node)
+  );
+}
+
+/** The names a file declares or imports at the top level. */
+export function topLevelNames(source: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+  for (const statement of source.statements) {
+    if (ts.isImportDeclaration(statement) && statement.importClause) {
+      const clause = statement.importClause;
+      if (clause.name) names.add(clause.name.text);
+      const bindings = clause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) names.add(bindings.name.text);
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const element of bindings.elements) names.add(element.name.text);
+      }
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) names.add(declaration.name.text);
+      }
+    } else if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name
+    ) {
+      names.add(statement.name.text);
+    }
+  }
+  return names;
+}
+
+/** Each top-level name of app.tsx that a `<Route>`'s element refers to, such as a page's lazy. */
+export function routeTargets(file = upstreamAppFile, text?: string): string[] {
+  const source = parse(file, text);
+  const declared = topLevelNames(source);
+  const found = new Set<string>();
+  const collect = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && declared.has(node.text) && isReference(node)) found.add(node.text);
+    ts.forEachChild(node, collect);
+  };
+  const visit = (node: ts.Node): void => {
+    if (tagName(source, node) === "Route") {
+      const opening = ts.isJsxElement(node)
+        ? node.openingElement
+        : (node as ts.JsxSelfClosingElement);
+      for (const attribute of opening.attributes.properties) {
+        if (ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "element") {
+          collect(attribute);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return [...found].sort();
+}
+
 /** Whitespace, or a JSX comment. */
 const isBlank = (child: ts.JsxChild): boolean =>
   (ts.isJsxText(child) && child.text.trim() === "") ||

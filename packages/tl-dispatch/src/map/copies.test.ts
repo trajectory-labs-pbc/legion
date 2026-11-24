@@ -2,10 +2,24 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { copyProblems, partText, readPins, repoRoot, upstreamDiff } from "./copies";
+import {
+  copyProblems,
+  partText,
+  readPins,
+  repoRoot,
+  unpinnedRouteTargets,
+  upstreamDiff,
+} from "./copies";
 
 const APP = "packages/dispatch/web/src/app.tsx";
 const appText = () => readFileSync(join(repoRoot, APP), "utf8");
+const pin = (part: string) => {
+  const found = readPins().find((entry) => entry.file === APP && entry.part === part);
+  if (!found) throw new Error(`no pin for ${part}`);
+  return found;
+};
+const problemsWith = (text: string, part: string) =>
+  copyProblems([pin(part)], (file, name) => partText(file, name, text));
 
 describe("copied upstream code", () => {
   test("upstream has not changed a part this app copies", () => {
@@ -45,5 +59,33 @@ describe("copied upstream code", () => {
     expect(reformatted).not.toEqual(appText());
     const pins = readPins().filter((entry) => entry.file === APP);
     expect(copyProblems(pins, (file, part) => partText(file, part, reformatted))).toEqual([]);
+  });
+
+  test("pins every name a route element of app.tsx refers to", () => {
+    expect(unpinnedRouteTargets()).toEqual([]);
+  });
+
+  test("names a route target no pin covers", () => {
+    expect(unpinnedRouteTargets([], ["IssuePage"])).toEqual([
+      `${APP}: a route element refers to IssuePage, which copies.json does not pin: add {"file": "${APP}", "part": "IssuePage", "copy": <the page file that draws it>} and run \`bun src/map/copies.ts --update\``,
+    ]);
+  });
+
+  test("a page's lazy that loads another module trips its pin", () => {
+    const moved = appText().replace(
+      '"./features/issue-page/IssuePage"',
+      '"./features/issue-page/IssuePageV2"'
+    );
+    expect(moved).not.toEqual(appText());
+    expect(problemsWith(moved, "IssuePage")).toHaveLength(1);
+  });
+
+  test("a route import from another module trips its pin", () => {
+    const moved = appText().replace(
+      'import { NotFoundPage } from "./features/shell/NotFoundPage"',
+      'import { NotFoundPage } from "./features/shell/Missing"'
+    );
+    expect(moved).not.toEqual(appText());
+    expect(problemsWith(moved, "NotFoundPage")).toHaveLength(1);
   });
 });
