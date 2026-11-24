@@ -9,15 +9,10 @@ ARG BUN_IMAGE
 
 FROM ${ENVOY_IMAGE} AS envoy
 
-# Upstream's files, without this app.
-FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS context
-COPY . /context
-RUN rm -rf /context/packages/tl-dispatch
-
 FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS web
 WORKDIR /repo
-# What a frozen install reads, as upstream's web stage copies it: every root workspace's manifest
-# (.github/scripts/check-bun-workspace-manifests.sh), the patches and the editor's tarball.
+# Upstream's lint (.github/scripts/check-bun-workspace-manifests.sh) wants each root workspace's
+# manifest copied by name before a frozen install, so the tree is copied after it.
 COPY package.json bun.lock .bun-version ./
 COPY patches patches
 COPY packages/cipher-client/package.json packages/cipher-client/package.json
@@ -39,13 +34,9 @@ RUN bun install --frozen-lockfile --ignore-scripts \
     --filter './packages/dispatch' \
     --filter './packages/contracts' \
     --filter './packages/proof-editor'
-COPY --from=context /context/ ./
-# This app last, so an edit to it reruns only what follows.
+COPY . ./
 WORKDIR /repo/packages/tl-dispatch
-COPY packages/tl-dispatch/package.json packages/tl-dispatch/bun.lock packages/tl-dispatch/bunfig.toml ./
-COPY packages/tl-dispatch/scripts scripts
 RUN bun install --frozen-lockfile --ignore-scripts && bun scripts/link-root-packages.ts
-COPY packages/tl-dispatch ./
 ARG LEGION_COMMIT=
 RUN DISPATCH_BUILD="$LEGION_COMMIT" bun run build \
     && test -s dist/index.html \
@@ -71,8 +62,8 @@ COPY packages/tl-dispatch/docker/envoy-dispatch.sh /usr/local/bin/envoy-dispatch
 ARG LEGION_COMMIT=
 LABEL org.opencontainers.image.revision=${LEGION_COMMIT}
 
-# Built by the workflow before the push, never pushed: fails when either app is missing or
-# envoy-dispatch starts on a folder with no build.
+# Built by the workflow on every pull request and before each push, never pushed: fails when
+# either app is missing or envoy-dispatch starts on a folder with no build.
 FROM image AS smoke
 RUN test -s /srv/tl-dispatch/index.html \
  && test -s /srv/dispatch-web/index.html \
