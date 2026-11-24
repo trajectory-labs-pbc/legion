@@ -1,10 +1,13 @@
+import { inboxQuery } from "@upstream-dispatch/api/queries";
 import { Inbox } from "@upstream-dispatch/features/inbox/Inbox";
-import { ANSWERS_PATH, buildInboxPath } from "@upstream-dispatch/features/refs/routes";
+import { ANSWERS_PATH } from "@upstream-dispatch/features/refs/routes";
 import { READING_PANE_QUERY, useMediaQuery } from "@upstream-dispatch/features/shell/useDialog";
 import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 import { linkHoverText, linkText } from "@upstream-dispatch/theme/classes";
 import { lazy, type ReactNode } from "react";
-import { Link, Navigate } from "react-router-dom";
+
+import { PageLink, Redirect } from "@/navigation/page-link";
+import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
@@ -21,26 +24,36 @@ export function InboxPage(): ReactNode {
     <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col" : undefined}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h1 className="text-[22px] font-semibold tracking-tight">Inbox</h1>
-        <Link className={`text-sm ${linkText} ${linkHoverText}`} to={ANSWERS_PATH}>
+        <PageLink className={`text-sm ${linkText} ${linkHoverText}`} page={answers} params={{}}>
           Answered by you
-        </Link>
+        </PageLink>
       </div>
       <Inbox />
     </section>
   );
 }
 
-export const inbox: Page = {
+const home = pageRoute({
+  path: "/",
+  element: <InboxPage />,
+  // The key the old Replies address sets; the Inbox reads its other keys itself.
+  search: ["type"],
+  prefetch: () => [prefetchOf(inboxQuery())],
+});
+
+const answers = pageRoute({ path: ANSWERS_PATH, element: <AnswersPage /> });
+
+export const inbox = {
   id: "inbox",
   server: "upstream",
-  routes: [
-    { path: "/", element: <InboxPage /> },
-    { path: ANSWERS_PATH, element: <AnswersPage /> },
+  routes: {
+    home,
+    answers,
     // The old Replies page is the Inbox's reply rows.
-    {
+    replies: pageRoute({
       path: "/replies",
-      element: <Navigate replace to={buildInboxPath({ filters: { type: ["reply"] } })} />,
-    },
-  ],
+      element: <Redirect page={home} params={{}} search={{ type: "reply" }} />,
+    }),
+  },
   views: ["features/inbox/**", "features/answers/**"],
-};
+} satisfies Page;

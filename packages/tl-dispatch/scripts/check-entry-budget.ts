@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 /**
- * The entry chunk's limit in bytes: 1,142,944 measured on 2026-11-24, plus 5%. Raise it in the
- * change that needs it, saying why; a page belongs in its own lazy chunk.
+ * The entry chunk's limit in bytes: 1,322,017 measured on 2026-11-24, plus 5%. It rose from
+ * 1,142,944 when the shell moved onto the registry's components: Base UI's tooltip and dialog
+ * layers draw the rail's buttons and the shortcuts sheet. Raise it in the change that needs it,
+ * saying why; a page belongs in its own lazy chunk.
  */
-export const ENTRY_BUDGET_BYTES = 1_200_092;
+export const ENTRY_BUDGET_BYTES = 1_388_118;
 
 /** The entry chunk, read as the server reads it: the first script of `/assets/index-*.js`. */
 export function entryChunk(indexHtml: string): string {

@@ -1,5 +1,7 @@
 import { lazy } from "react";
 
+import { pageRoute } from "@/navigation/page-route";
+
 import type { Page } from "./page";
 
 const MachinesPage = lazy(() =>
@@ -13,12 +15,12 @@ const MachinePage = lazy(() =>
   }))
 );
 
-export const machines: Page = {
+export const machines = {
   id: "machines",
   server: "upstream",
-  routes: [
-    { path: "/machines", element: <MachinesPage /> },
-    { path: "/machines/:machine", element: <MachinePage /> },
-  ],
+  routes: {
+    list: pageRoute({ path: "/machines", element: <MachinesPage /> }),
+    machine: pageRoute({ path: "/machines/:machine", element: <MachinePage /> }),
+  },
   views: ["features/machines/**"],
-};
+} satisfies Page;

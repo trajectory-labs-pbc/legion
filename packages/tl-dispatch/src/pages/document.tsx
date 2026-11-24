@@ -1,5 +1,7 @@
 import { lazy } from "react";
 
+import { pageRoute } from "@/navigation/page-route";
+
 import type { Page } from "./page";
 
 const DocumentPage = lazy(() =>
@@ -8,9 +10,11 @@ const DocumentPage = lazy(() =>
   }))
 );
 
-export const projectDocument: Page = {
+export const projectDocument = {
   id: "document",
   server: "upstream",
-  routes: [{ path: "/projects/:key/documents/:slug", element: <DocumentPage /> }],
+  routes: {
+    document: pageRoute({ path: "/projects/:key/documents/:slug", element: <DocumentPage /> }),
+  },
   views: ["features/document/**"],
-};
+} satisfies Page;

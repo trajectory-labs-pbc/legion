@@ -1,4 +1,7 @@
+import { issueQuery } from "@upstream-dispatch/api/queries";
 import { lazy } from "react";
+
+import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
@@ -8,10 +11,16 @@ const IssuePage = lazy(() =>
   }))
 );
 
-export const issue: Page = {
+export const issue = {
   id: "issue",
   server: "upstream",
-  routes: [{ path: "/issues/:key/*", element: <IssuePage /> }],
+  routes: {
+    issue: pageRoute({
+      path: "/issues/:key/*",
+      element: <IssuePage />,
+      prefetch: ({ key }) => [prefetchOf(issueQuery(key))],
+    }),
+  },
   views: [
     "features/issue/**",
     "features/issue-page/**",
@@ -22,4 +31,4 @@ export const issue: Page = {
     // Files of other folders only the issue page renders.
     "features/priorities/IssuePriorityLine.tsx",
   ],
-};
+} satisfies Page;

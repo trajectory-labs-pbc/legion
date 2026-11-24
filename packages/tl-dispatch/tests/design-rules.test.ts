@@ -100,12 +100,14 @@ describe("design rules", () => {
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {
     const files = sourceFiles();
+    const clean: string[] = [];
     for (const path of Object.keys(EXEMPT)) {
       const file = files.find((candidate) => candidate.path === path);
-      expect(file).toBeDefined();
-      if (file === undefined) continue;
-      expect((await designViolations([file], { exempt: {} })).length).toBeGreaterThan(0);
+      if (file === undefined || (await designViolations([file], { exempt: {} })).length === 0) {
+        clean.push(path);
+      }
     }
+    expect(clean).toEqual([]);
   });
 
   test("a file is exempt only by the list: a file that says it maps upstream is checked", async () => {

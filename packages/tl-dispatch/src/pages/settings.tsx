@@ -1,5 +1,7 @@
 import { lazy } from "react";
 
+import { pageRoute } from "@/navigation/page-route";
+
 import type { Page } from "./page";
 
 const SettingsPage = lazy(() =>
@@ -8,10 +10,12 @@ const SettingsPage = lazy(() =>
   }))
 );
 
-export const settings: Page = {
+export const settings = {
   id: "settings",
   server: "upstream",
-  routes: [{ path: "/settings", element: <SettingsPage /> }],
+  routes: {
+    settings: pageRoute({ path: "/settings", element: <SettingsPage /> }),
+  },
   views: [
     "features/settings/**",
     // Files of other folders only Settings renders.
@@ -19,4 +23,4 @@ export const settings: Page = {
     "features/credentials/SignInsSection.tsx",
     "features/issue-page/IssuePagePreference.tsx",
   ],
-};
+} satisfies Page;

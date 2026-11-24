@@ -57,6 +57,9 @@ describe("layers", () => {
       "never imports navigation",
     ],
     ["src/commands/x.ts", 'import { AppShell } from "../shell/AppShell";', "below the shell"],
+    ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
+    ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
+    ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],
   ])("refuses %s: %s", (path, text, rule) => {
     expect(rulesOf([{ path, text }]).join("\n")).toContain(rule);
   });
@@ -85,6 +88,7 @@ describe("layers", () => {
   test.each([
     ["src/ui/x.tsx", 'import { y } from "./y";', ["src/ui/y.ts", "export const y = 1;"]],
     ["src/ui/x.tsx", 'import { useState } from "react";', undefined],
+    ["src/navigation/x.tsx", 'import { Link } from "react-router-dom";', undefined],
     [
       "src/shell/x.tsx",
       'import { Sidebar } from "@upstream-dispatch/features/sidebar/Sidebar";',

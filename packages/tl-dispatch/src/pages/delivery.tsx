@@ -1,5 +1,7 @@
 import { lazy } from "react";
 
+import { pageRoute } from "@/navigation/page-route";
+
 import type { Page } from "./page";
 
 const DeliveryPage = lazy(() =>
@@ -13,12 +15,12 @@ const PipelinePage = lazy(() =>
   }))
 );
 
-export const delivery: Page = {
+export const delivery = {
   id: "delivery",
   server: "upstream",
-  routes: [
-    { path: "/delivery", element: <DeliveryPage /> },
-    { path: "/pipeline", element: <PipelinePage /> },
-  ],
+  routes: {
+    delivery: pageRoute({ path: "/delivery", element: <DeliveryPage /> }),
+    pipeline: pageRoute({ path: "/pipeline", element: <PipelinePage /> }),
+  },
   views: ["features/delivery/**"],
-};
+} satisfies Page;

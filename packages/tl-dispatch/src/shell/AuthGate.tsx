@@ -1,7 +1,6 @@
 import { isUnauthorized } from "@upstream-dispatch/api/client";
 import { useEventFeed } from "@upstream-dispatch/api/event-feed";
 import { whoAmIQuery } from "@upstream-dispatch/api/queries";
-import { askSignInAgain } from "@upstream-dispatch/api/query-client";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import {
   draftStoresSignedIn,
@@ -17,8 +16,9 @@ import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { AppShell } from "./AppShell";
-import { heldWritesOfGoneHolder, signIns, unsentChanges } from "./sign-ins";
+import { signIns } from "./sign-ins";
 import { ConnectionErrorPage, ShellSkeleton, SignInPage } from "./states";
+import { useSignInChannel } from "./use-sign-in-channel";
 
 function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
   const queryClient = useQueryClient();
@@ -62,17 +62,7 @@ export function AuthGate(): ReactNode {
     signIns.signedIn(login ?? null);
     if (login !== undefined) setShellFor(login);
   }, [known, login, queryClient]);
-  useEffect(() => {
-    const writes = writesOf(queryClient);
-    return signIns.listen({
-      changed: () => void askSignInAgain(queryClient),
-      holderGone: (gone) => void heldWritesOfGoneHolder(queryClient, gone),
-      signedOut: (signedOut) => writes.dropLogin(signedOut),
-      signingOut: (signingOut) => writes.holdFor(signingOut),
-      stillSignedIn: (still) => writes.release(still),
-      unsent: (of) => unsentChanges(writes.rows(), of),
-    });
-  }, [queryClient]);
+  useSignInChannel();
 
   if (whoAmI.isPending) {
     return <ShellSkeleton />;

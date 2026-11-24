@@ -6,7 +6,6 @@
 export const EXEMPT: Readonly<Record<string, string>> = {
   "src/ui/theme.css":
     "the registry's theme item, written by `shadcn add`: it holds the colour values",
-  "src/shell/AppShell.tsx": "copied from upstream; the shell phase rebuilds the layout",
   "src/shell/states.tsx":
     "copied from upstream; the shell phase rebuilds the loading and sign-in screens",
   "src/pages/inbox.tsx": "maps upstream's Inbox with its link colours; the Inbox phase rebuilds it",
