@@ -1,0 +1,31 @@
+{
+  "name": "tl-dispatch",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "bunx tsc --noEmit",
+    "lint": "bunx biome check ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5",
+    "prosemirror-model": "^1.25.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^6",
+    "yjs": "^13.6.32"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.14",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5",
+    "vite": "^5"
+  }
+}
