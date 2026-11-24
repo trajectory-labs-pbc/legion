@@ -57,6 +57,7 @@ import { useLiveViewPins, usePinsMigration } from "./use-agent-pins";
 import { useDetailsDrawer } from "./use-details-drawer";
 import { useFocusMainOnPageChange } from "./use-focus-main";
 import { mainLayoutClass, useShellPreferences } from "./use-shell-layout";
+import { useSignOut } from "./use-sign-out";
 
 const SIDEBAR = "border-sidebar-border bg-sidebar text-sidebar-foreground";
 
@@ -99,6 +100,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
   useRecordRecents();
   useLiveViewPins();
   usePinsMigration(user.login, useAgentPinWrite());
+  const signOut = useSignOut(user.login);
 
   const [issuePageChoice] = useIssuePageChoice();
   const issueFrame =
@@ -166,6 +168,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
       closeButtonRef={closeButtonRef}
       compact={inDrawer}
       onClose={() => setNavigationOpen(false)}
+      signOut={signOut}
       user={user}
     />
   );

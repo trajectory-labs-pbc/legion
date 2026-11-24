@@ -6,22 +6,24 @@ import { PageLink } from "@/navigation/page-link";
 import { inbox } from "@/pages/inbox";
 import { Button } from "@/ui/button";
 import { Sidebar } from "./sidebar";
-import { useSignOut } from "./use-sign-out";
+import type { SignOut } from "./use-sign-out";
 
 /** The sidebar's contents: the name, search and new issue, the destinations, and the account. */
 export function NavigationPanel({
   closeButtonRef,
   compact,
   onClose,
+  signOut,
   user,
 }: {
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   /** Drawn in a drawer, which a Close button ends. */
   compact: boolean;
   onClose: () => void;
+  /** Held by the shell, so a refusal outlives the narrow screen's menu. */
+  signOut: SignOut;
   user: AuthenticatedUser;
 }) {
-  const signOut = useSignOut(user.login);
   return (
     <>
       <div className="flex items-center justify-between gap-2">
