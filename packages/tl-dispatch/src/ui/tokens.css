@@ -1,0 +1,16 @@
+/* tl-dispatch's own tokens, read beside the registry theme in theme.css, which is never edited by hand. */
+
+/* Focus: the darker orange in light, where --ring is below 3:1 on the light surfaces; --ring in dark. */
+:root {
+  --focus: var(--chart-5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --focus: var(--ring);
+  }
+}
+
+@theme inline {
+  --color-focus: var(--focus);
+}

@@ -1,3 +1,8 @@
 [install]
 # React and the other shared libraries come from the root install (scripts/link-root-packages.ts).
 peer = false
+
+# Bun reads this file only when `bun test` starts in this directory (`bun run test` does).
+[test]
+preload = ["./tests/register-dom.ts"]
+randomize = true
