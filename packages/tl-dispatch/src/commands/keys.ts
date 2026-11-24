@@ -1,55 +1,4 @@
-/** One press of a key sequence, as the key engine reads tinykeys syntax (`$mod+k`, `Shift+P`, `?`). */
-export interface Combo {
-  alt: boolean;
-  control: boolean;
-  key: string;
-  meta: boolean;
-  mod: boolean;
-  shift: boolean;
-}
-
-const MODIFIERS = new Set(["$mod", "Control", "Ctrl", "Meta", "Alt", "Shift"]);
-
-export function parseCombo(text: string): Combo {
-  const parts = text.split("+");
-  const key = parts.pop();
-  if (key === undefined || key === "") throw new Error(`"${text}" has no key`);
-  const combo: Combo = { alt: false, control: false, key, meta: false, mod: false, shift: false };
-  for (const part of parts) {
-    if (!MODIFIERS.has(part)) throw new Error(`"${text}" has an unknown modifier "${part}"`);
-    if (part === "$mod") combo.mod = true;
-    else if (part === "Control" || part === "Ctrl") combo.control = true;
-    else if (part === "Meta") combo.meta = true;
-    else if (part === "Alt") combo.alt = true;
-    else combo.shift = true;
-  }
-  return combo;
-}
-
-export function parseSequence(keys: string): Combo[] {
-  return keys.trim().split(/\s+/).map(parseCombo);
-}
-
-/** Whether one key press can match both combos, as the engine matches them. */
-export function sameCombo(a: Combo, b: Combo): boolean {
-  if (a.key.toLowerCase() !== b.key.toLowerCase() || a.alt !== b.alt) return false;
-  // A non-letter character already says whether Shift was held.
-  const shiftInKey = a.key.length === 1 && a.key.toLowerCase() === a.key.toUpperCase();
-  if (!shiftInKey && a.shift !== b.shift) return false;
-  if (a.mod || b.mod) return (a.mod || a.control || a.meta) && (b.mod || b.control || b.meta);
-  return a.control === b.control && a.meta === b.meta;
-}
-
-export function sameSequence(a: readonly Combo[], b: readonly Combo[]): boolean {
-  return a.length === b.length && a.every((combo, index) => sameCombo(combo, b[index] as Combo));
-}
-
-export function isStrictPrefix(shorter: readonly Combo[], longer: readonly Combo[]): boolean {
-  return (
-    shorter.length < longer.length &&
-    shorter.every((combo, index) => sameCombo(combo, longer[index] as Combo))
-  );
-}
+import { createKeymap, type Keymap } from "@upstream-dispatch/features/shell/keymap";
 
 /** The first step of every chord: G jumps, O opens a picker, N opens a create form. */
 export const CHORD_PREFIXES = ["g", "o", "n"] as const;
@@ -64,14 +13,68 @@ export const BROWSER_KEYS = [
   "$mod+d",
   "$mod+Shift+r",
   "$mod+Shift+c",
-].map(parseSequence);
+] as const;
 
-/** Keys the palette takes for itself, so no palette row shows them. */
-export const PALETTE_KEYS = ["$mod+k", "/", "j", "k", "Escape"].map(parseSequence);
+const NOTHING = () => {};
 
-/** Keys every reader knows, so neither the palette nor the shortcuts sheet lists them. */
-export const KNOWN_KEYS = ["Escape"].map(parseSequence);
+/** A key engine that only takes registrations, in strict mode, so a conflict throws. */
+export function keyChecker(held: readonly string[] = []): Keymap {
+  const keymap = createKeymap({
+    strict: true,
+    isMac: false,
+    setTimeout: () => 0,
+    clearTimeout: NOTHING,
+  });
+  for (const [index, keys] of held.entries()) {
+    keymap.register("global", [{ id: `held-${index}`, keys, label: keys, run: NOTHING }]);
+  }
+  return keymap;
+}
 
-export function holdsAny(keys: readonly string[], set: readonly (readonly Combo[])[]): boolean {
-  return keys.some((key) => set.some((known) => sameSequence(parseSequence(key), known)));
+/** Why the engine cannot read `keys`, or undefined when it can. */
+export function malformed(keys: string): string | undefined {
+  try {
+    keyChecker([keys]);
+    return undefined;
+  } catch (error) {
+    return (error as Error).message;
+  }
+}
+
+function refuses(checker: Keymap, keys: string): boolean {
+  try {
+    checker.register("global", [{ id: "probe", keys, label: keys, run: NOTHING }])();
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** Whether `keys` starts a key the checker holds, or a held key starts `keys`. */
+export function startsOrExtends(checker: Keymap, keys: string): boolean {
+  return refuses(checker, keys);
+}
+
+/** Whether `keys` and a key the checker holds match one press sequence, or one starts the other. */
+export function clashes(checker: Keymap, keys: string): boolean {
+  // The engine refuses only a strict prefix, so `keys` equals a held key exactly when that key
+  // is a strict prefix of `keys` followed by a key nothing binds.
+  return refuses(checker, keys) || refuses(checker, `${keys} F24`);
+}
+
+function steps(keys: string): string[] {
+  return keys.trim().split(/\s+/);
+}
+
+/** Whether a sequence of more than one press starts with a plain G, O or N. */
+export function chordStartsRight(keys: string): boolean {
+  const [first, ...rest] = steps(keys);
+  return rest.length === 0 || CHORD_PREFIXES.some((prefix) => prefix === first?.toLowerCase());
+}
+
+const BROWSER = keyChecker(BROWSER_KEYS);
+
+/** Whether `keys` is one press the browser keeps. */
+export function browserKeeps(keys: string): boolean {
+  return steps(keys).length === 1 && clashes(BROWSER, keys);
 }

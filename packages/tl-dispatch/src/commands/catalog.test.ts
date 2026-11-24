@@ -23,17 +23,51 @@ function problemsOf(contexts: CommandContext[]): readonly string[] {
   return [];
 }
 
-const go = (name: string, keys: string[]): CommandDefinition => ({
-  name,
-  label: name,
-  keys,
-  group: "other",
-});
+const go = (name: string, keys: string[]): CommandDefinition => ({ name, label: name, keys });
+
+const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
+  `"${a}" (${aKeys}) and "${b}" (${bKeys}) are live together and one press sequence matches both, or one starts the other`;
+
+/** The keys the shell binds today (`src/shell/AppShell.tsx`), as the engine sees them. */
+const LIVE_KEYS: readonly CommandDefinition[] = [
+  { name: "search", keys: ["$mod+k"], label: "Search and actions", inEditable: true },
+  { name: "search-only", keys: ["/"], label: "Search", palette: false },
+  { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
+  { name: "create", keys: ["c"], label: "Create issue" },
+  { name: "go-inbox", keys: ["g i"], label: "Go to Inbox" },
+  { name: "go-agents", keys: ["g a"], label: "Go to Agents" },
+  { name: "go-settings", keys: ["g s"], label: "Go to Settings" },
+  { name: "go-documents", keys: ["g d"], label: "Go to Documents" },
+  { name: "go-project", keys: ["g p"], label: "Go to project…", palette: false },
+  { name: "inbox-drawer", keys: ["i"], label: "Open the inbox" },
+  { name: "toggle-sidebar", keys: ["Shift+S"], label: "Toggle sidebar" },
+  { name: "toggle-margin", keys: ["Shift+M"], label: "Toggle margin" },
+];
 
 describe("the app's catalog", () => {
-  test("loads, with ids derived from context and name", () => {
-    expect(appCatalog.command("global.search")?.keys).toEqual(["$mod+k", "/"]);
-    expect(appCatalog.command("global.go-inbox")?.keys).toEqual(["g i"]);
+  test("holds every key the shell binds today, with the same keys, typing and palette rows", () => {
+    for (const live of LIVE_KEYS) {
+      const command = appCatalog.command(`global.${live.name}`);
+      const catalogued: Partial<CommandDefinition> = {
+        name: command?.name,
+        keys: command?.keys,
+        label: command?.label,
+        inEditable: command?.inEditable,
+        palette: command?.palette,
+      };
+      expect(catalogued).toEqual(live);
+    }
+  });
+
+  test("adds only commands the shell lacks: G M and the pages with no letter", () => {
+    const live = new Set(LIVE_KEYS.map((key) => `global.${key.name}`));
+    const added = appCatalog.commandsOf("global").filter((command) => !live.has(command.id));
+    expect(added.map((command) => `${command.id} ${command.keys?.join() ?? ""}`)).toEqual([
+      "global.go-priorities ",
+      "global.go-delivery ",
+      "global.go-pipeline ",
+      "global.go-machines g m",
+    ]);
   });
 
   test("gives each sidebar destination one command, with its chord when it has a key", () => {
@@ -50,19 +84,37 @@ describe("the catalog refuses, when it loads", () => {
       global([go("a", ["x"])]),
       { name: "page", parent: "global", scope: "project", commands: [go("b", ["x"])] },
     ]);
-    expect(problems).toEqual([
-      `"page.b" (x) and "global.a" (x) on the chain of "page" have the same key`,
-    ]);
+    expect(problems).toEqual([clash("global.a", "x", "page.b", "x")]);
   });
 
-  test("$mod overlapping Control on a chain", () => {
+  test("two keys the engine reads as one press: $mod and Control, a letter's case", () => {
     expect(problemsOf([global([go("a", ["$mod+j"]), go("b", ["Control+j"])])])).toHaveLength(1);
+    expect(problemsOf([global([go("a", ["x"]), go("b", ["X"])])])).toHaveLength(1);
   });
 
   test("a single key that starts a chord", () => {
     expect(problemsOf([global([go("a", ["g"]), go("b", ["g i"])])])).toEqual([
-      `"global.a" (g) and "global.b" (g i) on the chain of "global" have a key that starts the other's chord`,
+      clash("global.a", "g", "global.b", "g i"),
     ]);
+  });
+
+  test("one key in two contexts on different chains that share an engine scope", () => {
+    const problems = problemsOf([
+      global([]),
+      { name: "tree", parent: "global", scope: "issue", commands: [go("open", ["o"])] },
+      { name: "header", parent: "global", scope: "issue", commands: [go("pick", ["o p"])] },
+    ]);
+    expect(problems).toEqual([clash("tree.open", "o", "header.pick", "o p")]);
+  });
+
+  test("but lets two pages that are never live together use one key", () => {
+    expect(
+      problemsOf([
+        global([]),
+        { name: "inbox", parent: "global", scope: "inbox", commands: [go("next", ["j"])] },
+        { name: "agents", parent: "global", scope: "agents", commands: [go("next", ["j"])] },
+      ])
+    ).toEqual([]);
   });
 
   test("two commands with one name", () => {
@@ -101,29 +153,13 @@ describe("the catalog refuses, when it loads", () => {
     ]);
   });
 
-  test("a destructive command outside the destructive section", () => {
-    const remove: CommandDefinition = {
-      name: "delete",
-      label: "Delete",
-      group: "change",
-      destructive: true,
-    };
-    expect(problemsOf([global([remove])])).toEqual([
-      `"global.delete" is destructive but sits in the "change" section`,
+  test("a key the engine cannot read", () => {
+    expect(problemsOf([global([go("a", ["Hyper+x"])])])).toEqual([
+      `"global.a": Keymap: unknown modifier "Hyper" in "Hyper+x"`,
     ]);
   });
 
   test("every problem at once", () => {
     expect(problemsOf([global([go("a", ["t s"]), go("a", ["$mod+w"])])])).toHaveLength(3);
-  });
-
-  test("but lets two pages that are never live together use one key", () => {
-    expect(
-      problemsOf([
-        global([]),
-        { name: "inbox", parent: "global", scope: "inbox", commands: [go("next", ["j"])] },
-        { name: "agents", parent: "global", scope: "agents", commands: [go("next", ["j"])] },
-      ])
-    ).toEqual([]);
   });
 });

@@ -9,34 +9,41 @@ export type OverlayKind =
   | "popover"
   | "select";
 
+/** One open overlay. */
+export interface OverlayLayer {
+  readonly kind: OverlayKind;
+  /** Removes this layer; a second call does nothing. */
+  close(): void;
+}
+
 export interface OverlayLayers {
-  /** Adds a layer of `kind`; the returned function removes that layer. */
-  open(kind: OverlayKind): () => void;
-  top(): OverlayKind | undefined;
-  depth(): number;
+  open(kind: OverlayKind): OverlayLayer;
+  /** The open layers, bottom first. */
+  list(): readonly OverlayLayer[];
   subscribe(listener: () => void): () => void;
 }
 
 export function createOverlayLayers(): OverlayLayers {
-  const layers: { kind: OverlayKind }[] = [];
+  let layers: readonly OverlayLayer[] = [];
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) listener();
   };
   return {
     open(kind) {
-      const layer = { kind };
-      layers.push(layer);
-      notify();
-      return () => {
-        const index = layers.indexOf(layer);
-        if (index === -1) return;
-        layers.splice(index, 1);
-        notify();
+      const layer: OverlayLayer = {
+        kind,
+        close() {
+          if (!layers.includes(layer)) return;
+          layers = layers.filter((open) => open !== layer);
+          notify();
+        },
       };
+      layers = [...layers, layer];
+      notify();
+      return layer;
     },
-    top: () => layers.at(-1)?.kind,
-    depth: () => layers.length,
+    list: () => layers,
     subscribe(listener) {
       listeners.add(listener);
       return () => {

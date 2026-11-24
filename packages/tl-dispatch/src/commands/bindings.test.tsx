@@ -1,0 +1,240 @@
+import { describe, expect, test } from "bun:test";
+import {
+  appKeymap,
+  createKeymap,
+  DIALOG_SCOPE,
+  type Keymap,
+  useKeymap,
+  useKeymapScope,
+} from "@upstream-dispatch/features/shell/keymap";
+
+import { render, settle } from "../../tests/react";
+import { createOverlayLayers, type OverlayLayers, overlayLayers } from "../ui/overlay-layer";
+import { appCatalog } from "./app-catalog";
+import { contextBindings, toBindings, useCommandKeys } from "./bindings";
+import { createCatalog } from "./catalog";
+import { type EngineDialogs, trackEngineDialogs } from "./engine-dialogs";
+import { type CommandSpecs, defineActions } from "./specs";
+
+const catalog = createCatalog([
+  {
+    name: "global",
+    parent: null,
+    scope: "global",
+    commands: [
+      { name: "search", label: "Search", keys: ["$mod+k"], inEditable: true },
+      { name: "create", label: "Create issue", keys: ["c"] },
+      { name: "go-inbox", label: "Go to Inbox", keys: ["g i"] },
+    ],
+  },
+  {
+    name: "sheet",
+    parent: "global",
+    scope: DIALOG_SCOPE,
+    commands: [{ name: "next", label: "Next", keys: ["j"] }],
+  },
+]);
+
+function recorder(context: string, fired: string[], enabled = true): CommandSpecs {
+  const states: Record<string, { run: () => void; enabled: boolean }> = {};
+  for (const command of catalog.commandsOf(context)) {
+    states[command.name] = { run: () => fired.push(command.id), enabled };
+  }
+  return defineActions(catalog, context, () => states)(null, null);
+}
+
+interface Setup {
+  keymap: Keymap;
+  layers: OverlayLayers;
+  dialogs: EngineDialogs;
+  fired: string[];
+}
+
+/** A key engine with the global context registered as the shell will, and the sheet's helpers. */
+function setup(enabled = true): Setup {
+  const keymap = createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {} });
+  const layers = createOverlayLayers();
+  const dialogs = trackEngineDialogs(keymap, layers);
+  const fired: string[] = [];
+  const global = contextBindings(catalog, "global", recorder("global", fired, enabled), dialogs);
+  keymap.register(global.scope, global.own);
+  keymap.register(DIALOG_SCOPE, global.underOverlays);
+  return { keymap, layers, dialogs, fired };
+}
+
+function press(keymap: Keymap, key: string, init: KeyboardEventInit = {}): void {
+  keymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+}
+
+/** What upstream's palette does when it opens: push a dialog, then bind `$mod+k` to close. */
+function openUpstreamPalette(keymap: Keymap, fired: string[]): () => void {
+  const pop = keymap.pushScope(DIALOG_SCOPE);
+  const off = keymap.register(DIALOG_SCOPE, [
+    {
+      id: "search-close",
+      keys: "$mod+k",
+      label: "Close",
+      inEditable: true,
+      run: () => fired.push("palette.close"),
+    },
+  ]);
+  return () => {
+    off();
+    pop();
+  };
+}
+
+describe("bindings", () => {
+  test("carry the catalog's typing and palette fields, and read the gate on every press", () => {
+    const fired: string[] = [];
+    let open = true;
+    const [search, create] = toBindings(recorder("global", fired), () => open);
+    expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
+    expect(create?.when?.()).toBe(true);
+    open = false;
+    expect(create?.when?.()).toBe(false);
+  });
+
+  test("a shut command neither fires nor shadows", () => {
+    const { keymap, fired } = setup(false);
+    press(keymap, "c");
+    expect(fired).toEqual([]);
+  });
+});
+
+describe("global commands under overlays", () => {
+  test("run with nothing open", () => {
+    const { keymap, fired } = setup();
+    press(keymap, "c");
+    press(keymap, "g");
+    press(keymap, "i");
+    expect(fired).toEqual(["global.create", "global.go-inbox"]);
+  });
+
+  test("run under a sheet or a drawer of ours, and stop under a dialog or a menu", () => {
+    const { keymap, layers, fired } = setup();
+    for (const kind of ["sheet", "drawer", "dialog", "menu", "alert-dialog"] as const) {
+      const layer = layers.open(kind);
+      press(keymap, "c");
+      layer.close();
+    }
+    expect(fired).toEqual(["global.create", "global.create"]);
+  });
+
+  test("stop under a sheet once one of upstream's dialogs is open, above it or below", () => {
+    const { keymap, layers, fired } = setup();
+    const sheet = layers.open("sheet");
+    const closeAbove = keymap.pushScope(DIALOG_SCOPE);
+    press(keymap, "c");
+    closeAbove();
+    sheet.close();
+    const closeBelow = keymap.pushScope(DIALOG_SCOPE);
+    const above = layers.open("sheet");
+    press(keymap, "c");
+    above.close();
+    closeBelow();
+    press(keymap, "c");
+    expect(fired).toEqual(["global.create"]);
+  });
+
+  test("leave `$mod+k` to upstream's palette when it opens above a sheet of ours", () => {
+    const { keymap, layers, fired } = setup();
+    const sheet = layers.open("sheet");
+    press(keymap, "k", { ctrlKey: true });
+    const closePalette = openUpstreamPalette(keymap, fired);
+    press(keymap, "k", { ctrlKey: true });
+    closePalette();
+    sheet.close();
+    expect(fired).toEqual(["global.search", "palette.close"]);
+  });
+});
+
+describe("an overlay's own commands", () => {
+  test("run only while its layer is on top of every dialog of ours", () => {
+    const { keymap, layers, dialogs, fired } = setup();
+    const sheet = layers.open("sheet");
+    const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
+    keymap.register(own.scope, own.own);
+    press(keymap, "j");
+    const menu = layers.open("menu");
+    press(keymap, "j");
+    menu.close();
+    press(keymap, "j");
+    sheet.close();
+    expect(fired).toEqual(["sheet.next", "sheet.next"]);
+  });
+
+  test("stop while one of upstream's dialogs is above the layer", () => {
+    const { keymap, layers, dialogs, fired } = setup();
+    const sheet = layers.open("sheet");
+    const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
+    keymap.register(own.scope, own.own);
+    const close = keymap.pushScope(DIALOG_SCOPE);
+    press(keymap, "j");
+    close();
+    press(keymap, "j");
+    sheet.close();
+    expect(fired).toEqual(["sheet.next"]);
+  });
+
+  test("an overlay's context takes its layer, and a page's takes none", () => {
+    const { layers, dialogs } = setup();
+    expect(() => contextBindings(catalog, "sheet", recorder("sheet", []), dialogs)).toThrow(
+      "takes its layer"
+    );
+    const layer = layers.open("sheet");
+    expect(() =>
+      contextBindings(catalog, "global", recorder("global", []), dialogs, layer)
+    ).toThrow("takes its layer");
+  });
+});
+
+describe("useCommandKeys on the app's engine", () => {
+  const appSpecs = (fired: string[]) => {
+    const states: Record<string, { run: () => void }> = {};
+    for (const command of appCatalog.commandsOf("global")) {
+      states[command.name] = { run: () => fired.push(command.id) };
+    }
+    return defineActions(appCatalog, "global", () => states)(null, null);
+  };
+
+  function Shell({ fired }: { fired: string[] }) {
+    useCommandKeys(appCatalog, "global", appSpecs(fired));
+    return null;
+  }
+
+  function UpstreamPalette({ fired }: { fired: string[] }) {
+    useKeymapScope(DIALOG_SCOPE);
+    useKeymap(DIALOG_SCOPE, [
+      {
+        id: "search-close",
+        inEditable: true,
+        keys: "$mod+k",
+        label: "Close",
+        run: () => fired.push("palette.close"),
+      },
+    ]);
+    return null;
+  }
+
+  test("registers the shell's keys, passes them under a sheet, and yields to the palette", () => {
+    const fired: string[] = [];
+    const shell = render(<Shell fired={fired} />);
+    const tap = (key: string, init: KeyboardEventInit = {}) =>
+      appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+    tap("c");
+    let sheet: ReturnType<typeof overlayLayers.open> | undefined;
+    settle(() => {
+      sheet = overlayLayers.open("sheet");
+    });
+    tap("?", { shiftKey: true });
+    const palette = render(<UpstreamPalette fired={fired} />);
+    tap("k", { ctrlKey: true });
+    tap("c");
+    palette.unmount();
+    settle(() => sheet?.close());
+    shell.unmount();
+    tap("c");
+    expect(fired).toEqual(["global.create", "global.help", "palette.close"]);
+  });
+});
