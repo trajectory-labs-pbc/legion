@@ -1,0 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
+import { credentialCapabilitiesQuery } from "@upstream-dispatch/features/credentials/capabilities";
+import { NotFoundPage } from "@upstream-dispatch/features/shell/NotFoundPage";
+import { lazy, type ReactNode } from "react";
+
+const MachineLoginPage = lazy(() =>
+  import("./MachineLoginPage").then((module) => ({ default: module.MachineLoginPage }))
+);
+
+/** Served only while the broker still serves the device grant; blank while that answer is out. */
+export function MachineLoginRoute(): ReactNode {
+  const capabilities = useQuery(credentialCapabilitiesQuery());
+  if (capabilities.isPending) return null;
+  return capabilities.data?.machine_code_page === true ? <MachineLoginPage /> : <NotFoundPage />;
+}
