@@ -5,9 +5,10 @@ import {
   effectiveOwners,
   importGraph,
   messages,
+  notes,
   type Owner,
   owners,
-  viewMapMessages,
+  viewMap,
 } from "./coverage";
 import { featureViews, runtimeImports } from "./source";
 
@@ -28,9 +29,12 @@ function pageFileAndOtherPage(): { file: string; owner: string; other: string } 
 
 describe("the view map", () => {
   // It reads every upstream file: about 2.4 s, and past bun's 5 s default on a loaded machine.
-  test("gives each upstream view file one owner, which alone loads it", () => {
+  test("leaves nothing to port on a page this app serves", () => {
     expect(files.length).toBeGreaterThan(200);
-    expect(viewMapMessages()).toEqual([]);
+    const map = viewMap();
+    const tidy = notes(map);
+    if (tidy.length > 0) console.info(`view map notes, nothing to port:\n${tidy.join("\n")}`);
+    expect(messages(map)).toEqual([]);
   }, 30_000);
 
   test("names a view file no owner maps", () => {
@@ -106,7 +110,7 @@ describe("the view map", () => {
         ? { ...entry, globs: [...entry.globs, "features/gone/Old.tsx"] }
         : entry
     );
-    expect(messages(coverage(files, renamed, graph))).toContain(
+    expect(notes(coverage(files, renamed, graph))).toContain(
       "src/views.ts sharedViews.pages names features/gone/Old.tsx, which matches no upstream view: upstream renamed or removed it; name the file that replaced it, or drop the entry"
     );
   });
@@ -130,5 +134,74 @@ describe("the view map", () => {
       'const G = lazy(() => import("./g"));',
     ].join("\n");
     expect(runtimeImports("x.tsx", text)).toEqual(["./c", "./f", "./g"]);
+  });
+});
+
+describe("the view map on ordinary upstream churn", () => {
+  // Page a is upstream's and page b is this app's; each loads its own folder.
+  const map: Owner[] = [
+    { name: "page:a", globs: ["features/a/**"], list: "src/pages/a.tsx views", server: "upstream" },
+    { name: "page:b", globs: ["features/b/B.tsx"], list: "src/pages/b.tsx views", server: "fork" },
+    { name: "shell", globs: ["features/shell/**"], list: "src/views.ts shellViews" },
+  ];
+  const views = ["features/a/A.tsx", "features/b/B.tsx", "features/shell/Shell.tsx"];
+  const loads = new Map([
+    ["features/a/A.tsx", ["page:a"]],
+    ["features/b/B.tsx", ["page:b"]],
+    ["features/shell/Shell.tsx", ["shell"]],
+  ]);
+  const failing = (more: string[], graph: [string, string[]][], owners = map) =>
+    messages(coverage([...views, ...more], owners, new Map([...loads, ...graph])));
+
+  test("a new folder that only an upstream page loads fails nothing", () => {
+    expect(
+      failing(["features/new/New.tsx"], [["features/new/New.tsx", ["features/a/A.tsx"]]])
+    ).toEqual([]);
+  });
+
+  test("a new file two owners load is shared", () => {
+    const owner = effectiveOwners(
+      [...views, "features/new/New.tsx"],
+      map,
+      new Map([
+        ...loads,
+        ["features/new/New.tsx", ["features/a/A.tsx", "features/shell/Shell.tsx"]],
+      ])
+    ).owner.get("features/new/New.tsx");
+    expect(owner).toBe("shared:inferred");
+  });
+
+  test("a cross-page import between upstream pages fails nothing", () => {
+    expect(failing([], [["features/a/A.tsx", ["page:a", "features/shell/Shell.tsx"]]])).toEqual([]);
+  });
+
+  test("a renamed entry of an upstream page fails nothing", () => {
+    const renamed = map.map((entry) =>
+      entry.name === "page:a" ? { ...entry, globs: [...entry.globs, "features/a/Old.tsx"] } : entry
+    );
+    expect(failing([], [], renamed)).toEqual([]);
+  });
+
+  test("a file upstream adds to a page this app serves is named", () => {
+    expect(
+      failing(["features/b/Added.tsx"], [["features/b/Added.tsx", ["features/b/B.tsx"]]])
+    ).toEqual([
+      "features/b/Added.tsx is new upstream, and only page:b loads it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+    ]);
+  });
+
+  test("a renamed file of a page this app serves is named", () => {
+    const renamed = map.map((entry) =>
+      entry.name === "page:b" ? { ...entry, globs: [...entry.globs, "features/b/Old.tsx"] } : entry
+    );
+    expect(failing([], [], renamed)).toEqual([
+      "src/pages/b.tsx views names features/b/Old.tsx, which matches no upstream view: upstream renamed or removed it; name the file that replaced it, or drop the entry",
+    ]);
+  });
+
+  test("another owner loading a file of a page this app serves is named", () => {
+    expect(failing([], [["features/b/B.tsx", ["page:b", "features/shell/Shell.tsx"]]])).toEqual([
+      "features/b/B.tsx is page:b's, and shell also load it: name it in src/views.ts sharedViews.pages, or in the list of the one owner that loads it",
+    ]);
   });
 });
