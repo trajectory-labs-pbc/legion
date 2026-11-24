@@ -1,5 +1,12 @@
 /* tl-dispatch's own tokens, read beside the registry theme in theme.css, which is never edited by hand. */
 
+/* The theme's typeface. Upstream's stylesheet sets Inter on :root outside any layer, which beats
+   every layered font rule; this rule is unlayered too and loads after it. The issue page's own
+   `html:has([data-issue-page])` rule outranks both and keeps its Dispatch Inter. */
+:root {
+  font-family: var(--font-sans);
+}
+
 /* Focus: the darker orange in light, where --ring is below 3:1 on the light surfaces; --ring in dark. */
 :root {
   --focus: var(--chart-5);
