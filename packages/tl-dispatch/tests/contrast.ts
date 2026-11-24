@@ -82,13 +82,11 @@ export interface Pair {
   on: string;
   min: number;
   why: string;
-  /** The one scheme the pair is held in; both when unset. */
-  scheme?: "light" | "dark";
 }
 
 const SURFACES = ["--background", "--card", "--popover", "--muted", "--secondary", "--accent"];
 
-/** The pairs the theme declares, focus on every surface, and control borders in light. */
+/** The pairs the theme declares, focus on every surface, and control borders. */
 export function declaredPairs(tokens: Tokens): Pair[] {
   const pairs: Pair[] = [];
   for (const name of tokens.keys()) {
@@ -109,7 +107,7 @@ export function declaredPairs(tokens: Tokens): Pair[] {
     pairs.push({ text: "--focus", on, min: 3, why: "focus indicator" });
   }
   for (const on of ["--background", "--card", "--muted"]) {
-    pairs.push({ text: "--input", on, min: 3, why: "control border", scheme: "light" });
+    pairs.push({ text: "--input", on, min: 3, why: "control border" });
   }
   return pairs;
 }
@@ -128,7 +126,6 @@ export function contrastFailures(schemes: Schemes): Failure[] {
   for (const scheme of ["light", "dark"] as const) {
     const tokens = schemes[scheme];
     for (const pair of declaredPairs(tokens)) {
-      if (pair.scheme !== undefined && pair.scheme !== scheme) continue;
       const measured = measure(tokens, pair.text, pair.on);
       if (measured < pair.min) failures.push({ ...pair, scheme, measured });
     }

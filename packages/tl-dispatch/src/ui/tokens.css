@@ -11,10 +11,16 @@
   }
 }
 
-/* The theme's light --input is below 3:1 on the page: mix in the ink until it reaches 3:1. */
+/* The theme's --input is below 3:1 in both schemes: mix in the least ink that reaches 3:1. */
 @media (prefers-color-scheme: light) {
   :root {
-    --input: color-mix(in srgb, var(--foreground) 48%, var(--background));
+    --input: color-mix(in srgb, var(--foreground) 47%, var(--background));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --input: color-mix(in srgb, var(--foreground) 43%, var(--background));
   }
 }
 

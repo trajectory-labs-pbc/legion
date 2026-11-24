@@ -33,8 +33,8 @@ the dark scheme follow the operating system; keep it when the file is written ag
 
 - `--focus` (`outline-focus`), the focus indicator: `--chart-5` in light, where `--ring` is below
   3:1 on the light surfaces, and `--ring` in dark.
-- `--input` in light, the control border: the ink mixed into the page until it reaches 3:1 on the
-  page, a card and a muted surface. Dark and `--border` keep the theme's values.
+- `--input`, the control border: in each scheme, the least ink mixed into the page that reaches
+  3:1 on the page, a card and a muted surface. `--border` keeps the theme's value.
 
 ## Commands
 
@@ -46,7 +46,7 @@ one starts the other, as upstream's key engine compares them.
 ## Checks
 
 - `bun run test`: the layers, the design rules, the contrast of every text pair, of focus and of
-  light control borders, the catalog, and the key engine's behaviour the catalog relies on.
+  control borders, the catalog, and the key engine's behaviour the catalog relies on.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   `tests/design-config.ts` lists the only files they leave out.
 - `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget.

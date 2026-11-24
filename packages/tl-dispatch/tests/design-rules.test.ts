@@ -130,7 +130,7 @@ describe("design rules", () => {
 describe("contrast", () => {
   const schemes = readSchemes(theme, tokens);
 
-  test("every text pair, focus on every surface, and light control borders", () => {
+  test("every text pair, focus on every surface, and control borders", () => {
     expect(contrastFailures(schemes)).toEqual([]);
   });
 
@@ -151,25 +151,35 @@ describe("contrast", () => {
     expect(measure(light, "--focus", "--background")).toBeGreaterThanOrEqual(3);
   });
 
-  test("the theme's light --input is below 3:1, which is why tokens.css mixes a stronger one", () => {
-    const themeOnly = readSchemes(theme).light;
-    for (const on of ["--background", "--card", "--muted"]) {
-      expect(measure(themeOnly, "--input", on)).toBeLessThan(3);
-      expect(measure(schemes.light, "--input", on)).toBeGreaterThanOrEqual(3);
-    }
-    const reverted = readSchemes(
-      theme,
-      tokens,
-      "@media (prefers-color-scheme: light) { :root { --input: #e1e2e3; } }"
+  const inputFailures = (extra: string) =>
+    contrastFailures(readSchemes(theme, tokens, extra)).map(
+      (failure) => `${failure.scheme} ${failure.text} on ${failure.on}`
     );
+  const mix = (scheme: string, percent: number) =>
+    `@media (prefers-color-scheme: ${scheme}) { :root { --input: color-mix(in srgb, var(--foreground) ${percent}%, var(--background)); } }`;
+
+  test("the theme's --input is below 3:1, which is why tokens.css mixes a stronger one", () => {
+    const themeOnly = readSchemes(theme);
+    for (const on of ["--background", "--card", "--muted"]) {
+      expect(measure(themeOnly.light, "--input", on)).toBeLessThan(3);
+      expect(measure(schemes.light, "--input", on)).toBeGreaterThanOrEqual(3);
+      expect(measure(schemes.dark, "--input", on)).toBeGreaterThanOrEqual(3);
+    }
+    expect(measure(themeOnly.dark, "--input", "--muted")).toBeLessThan(3);
     expect(
-      contrastFailures(reverted).map(
-        (failure) => `${failure.scheme} ${failure.text} on ${failure.on}`
+      inputFailures(
+        "@media (prefers-color-scheme: light) { :root { --input: #e1e2e3; } } @media (prefers-color-scheme: dark) { :root { --input: #716d66; } }"
       )
     ).toEqual([
       "light --input on --background",
       "light --input on --card",
       "light --input on --muted",
+      "dark --input on --muted",
     ]);
+  });
+
+  test("each scheme's mix is the least ink that reaches 3:1", () => {
+    expect(inputFailures(mix("light", 46))).toContain("light --input on --background");
+    expect(inputFailures(mix("dark", 42))).toEqual(["dark --input on --muted"]);
   });
 });
