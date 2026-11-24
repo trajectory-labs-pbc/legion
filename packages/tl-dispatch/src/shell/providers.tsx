@@ -3,11 +3,9 @@ import { DeploymentResilience } from "@upstream-dispatch/features/shell/Deployme
 import type { ReactNode } from "react";
 
 import { NavigationProvider } from "@/navigation/provider";
-import { useStaleChunkReload } from "./use-stale-chunk-reload";
 
 /** What every screen of the app sits in: its reads, its router and the deploy watch. */
 export function AppProviders({ client, children }: { client: QueryClient; children: ReactNode }) {
-  useStaleChunkReload();
   return (
     <QueryClientProvider client={client}>
       <NavigationProvider>

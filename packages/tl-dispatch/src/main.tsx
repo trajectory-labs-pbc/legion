@@ -3,6 +3,7 @@ import {
   queryRetry,
   queryRetryDelay,
 } from "@upstream-dispatch/api/query-client";
+import { installChunkFailureRecovery } from "@upstream-dispatch/features/shell/DeploymentResilience";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -27,6 +28,9 @@ const root = document.getElementById("root");
 if (root === null) {
   throw new Error("Dispatch could not find its root element.");
 }
+
+// Before the first render, so a chunk a deploy removed reloads the page even on first paint.
+installChunkFailureRecovery();
 
 createRoot(root).render(
   <StrictMode>
