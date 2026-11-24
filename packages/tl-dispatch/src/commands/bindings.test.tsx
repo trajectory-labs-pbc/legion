@@ -11,9 +11,10 @@ import {
 import { createLayerSource, openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { appCatalog } from "./app-catalog";
-import { contextBindings, toBindings, useRegisterCommands } from "./bindings";
+import { contextBindings, toBindings, UNDER_OVERLAY, useRegisterCommands } from "./bindings";
 import { createCatalog } from "./catalog";
 import { type EngineStack, trackEngineStack } from "./engine-stack";
+import { commandStore } from "./registry";
 import { type CommandSpecs, defineActions } from "./specs";
 
 const catalog = createCatalog([
@@ -287,6 +288,56 @@ describe("useRegisterCommands on the app's engine", () => {
     expect(createLabel()).toBe("Create issue");
     view.rerender(<Labelled label="Create a sub-issue" />);
     expect(createLabel()).toBe("Create a sub-issue");
+    view.unmount();
+  });
+
+  test("registers the under-overlay copies only while they can fire, so no chord waits under upstream's dialogs", () => {
+    const view = render(<Shell fired={[]} />);
+    const copies = () =>
+      appKeymap
+        .describe()
+        .filter((binding) => binding.id.endsWith(UNDER_OVERLAY))
+        .map((binding) => binding.id);
+    expect(copies()).toEqual([]);
+    let close = () => {};
+    settle(() => {
+      close = appKeymap.pushScope(DIALOG_SCOPE);
+    });
+    expect(copies()).toEqual([]);
+    settle(() => close());
+    // Control: under a drawer of ours the copies are there.
+    let drawer: ReturnType<typeof openAppLayer> | undefined;
+    settle(() => {
+      drawer = openAppLayer("drawer");
+    });
+    expect(copies()).toContain(`global.go-inbox${UNDER_OVERLAY}`);
+    settle(() => drawer?.close());
+    view.unmount();
+  });
+
+  test("the command store takes each commit's gate, label and run", () => {
+    const fired: string[] = [];
+    const specs = (enabled: boolean, label: string, tag: string) => {
+      const states: Record<string, { run: () => void; enabled?: boolean; label?: string }> = {};
+      for (const command of appCatalog.commandsOf("global")) {
+        states[command.name] = { run: () => {} };
+      }
+      states.create = { enabled, label, run: () => fired.push(tag) };
+      return defineActions(appCatalog, "global", () => states)(null, null);
+    };
+    function Live(props: { enabled: boolean; label: string; tag: string }) {
+      useRegisterCommands(appCatalog, "global", specs(props.enabled, props.label, props.tag));
+      return null;
+    }
+    const view = render(<Live enabled={false} label="Create issue" tag="first" />);
+    expect(commandStore.view("global.create")?.enabled).toBe(false);
+    view.rerender(<Live enabled label="Create a sub-issue" tag="second" />);
+    expect(commandStore.view("global.create")).toMatchObject({
+      enabled: true,
+      label: "Create a sub-issue",
+    });
+    commandStore.run("global.create");
+    expect(fired).toEqual(["second"]);
     view.unmount();
   });
 });

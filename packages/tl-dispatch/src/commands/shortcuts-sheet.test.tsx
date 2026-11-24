@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { act } from "react";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
+import { act } from "react";
 
 import { openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";

@@ -45,4 +45,20 @@ describe("usePinsMigration", () => {
     expect(written).toEqual(["s1"]);
     expect(window.localStorage.getItem(key)).not.toBeNull();
   });
+
+  test("a new write function during the move starts no second move", async () => {
+    window.localStorage.setItem(legacyPinnedAgentsKey("reader"), JSON.stringify(["s1", "s2"]));
+    const written: string[] = [];
+    const writer =
+      (tag: string): PinWrite =>
+      (sessionId) => {
+        written.push(`${tag} ${sessionId}`);
+        return new Promise<boolean>(() => {});
+      };
+    const view = render(<Probe login="reader" write={writer("a")} />);
+    mounted.push(view);
+    view.rerender(<Probe login="reader" write={writer("b")} />);
+    await settleWrites();
+    expect(written).toEqual(["a s1"]);
+  });
 });

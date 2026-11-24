@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useNavigationType } from "react-router-dom";
 
 import { render, settle } from "../../tests/react";
 import { useAddress, usePageNavigate, usePageParams, usePageSearch } from "./hooks";
@@ -74,5 +75,35 @@ describe("the page hooks", () => {
     );
     mounted.push(view);
     expect(view.container.textContent).toContain("not found");
+  });
+
+  test("usePageNavigate replaces the address when asked, and pushes otherwise", () => {
+    let go: ReturnType<typeof usePageNavigate> = () => {};
+    const kind = probe("/", () => {
+      go = usePageNavigate();
+      return useNavigationType();
+    });
+    settle(() => go(machine, { machine: "m" }, { replace: true }));
+    expect(kind.value()).toBe("REPLACE");
+    settle(() => go(machine, { machine: "n" }));
+    expect(kind.value()).toBe("PUSH");
+  });
+
+  test("usePageSearch off the page throws", () => {
+    expect(String(probe("/agents?tab=logs", () => usePageSearch(machine)).value())).toContain(
+      "not on /machines/:machine"
+    );
+  });
+
+  test("useCurrentPage names the route and its params, and follows a move", () => {
+    let go: ReturnType<typeof usePageNavigate> = () => {};
+    const current = probe("/issues/AB-1/plan", () => {
+      go = usePageNavigate();
+      const found = useCurrentPage();
+      return `${found?.page.id}.${found?.route.path} ${JSON.stringify(found?.params)}`;
+    });
+    expect(current.value()).toBe('issue./issues/:key/* {"key":"AB-1","*":"plan"}');
+    settle(() => go(machine, { machine: "m" }));
+    expect(current.value()).toBe("machines./machines/:machine {\"machine\":\"m\"}");
   });
 });

@@ -34,4 +34,36 @@ describe("useSignInChannel", () => {
     view.unmount();
     expect(stopped).toBe(1);
   });
+
+  test("a tab gone mid sign-out sends Dispatch a whoami, to settle the writes it held", async () => {
+    let heard: Handlers | undefined;
+    const channel = {
+      listen: (handlers: Handlers) => {
+        heard = handlers;
+        return () => {};
+      },
+    };
+    const asked: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = Object.assign(
+      (input: RequestInfo | URL) => {
+        asked.push(String(input));
+        return new Promise<Response>(() => {});
+      },
+      { preconnect: realFetch.preconnect }
+    );
+    try {
+      const view = render(
+        <QueryClientProvider client={new QueryClient()}>
+          <Probe channel={channel} />
+        </QueryClientProvider>
+      );
+      heard?.holderGone("reader");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(asked.some((url) => url.endsWith("/auth/whoami"))).toBe(true);
+      view.unmount();
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
 });
