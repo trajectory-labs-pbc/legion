@@ -41,6 +41,7 @@ COPY packages/proof-editor/package.json packages/proof-editor/package.json
 # registry fetch: the upstream editor sources, which the install below reads from the context.
 COPY packages/proof-editor/proof-sdk-*.tgz packages/proof-editor/
 COPY packages/test-fixtures/package.json packages/test-fixtures/package.json
+COPY packages/tl-dispatch/package.json packages/tl-dispatch/package.json
 COPY packages/envoy/internal/dispatch/pmdoc/gen/package.json packages/envoy/internal/dispatch/pmdoc/gen/package.json
 COPY docs/site/package.json docs/site/package.json
 # What this stage installs, because the SPA build and the contract codegen that follow read no
@@ -63,11 +64,13 @@ RUN bun install --frozen-lockfile --ignore-scripts \
     --filter './' \
     --filter './packages/dispatch' \
     --filter './packages/contracts' \
-    --filter './packages/proof-editor'
+    --filter './packages/proof-editor' \
+    --filter './packages/tl-dispatch'
 
 COPY packages/contracts packages/contracts
 COPY packages/dispatch packages/dispatch
 COPY packages/proof-editor packages/proof-editor
+COPY packages/tl-dispatch packages/tl-dispatch
 # The SPA compiles in the document schema manifest the server embeds (web/src/features/doc/schema.ts).
 COPY packages/envoy/internal/dispatch/pmdoc/schema/blocks.json packages/envoy/internal/dispatch/pmdoc/schema/blocks.json
 # The SPA build writes dist/THIRD_PARTY_NOTICES.txt with this (packages/dispatch/web/vite.config.ts).
@@ -78,6 +81,9 @@ WORKDIR /repo/packages/contracts
 RUN bun run gen:go
 WORKDIR /repo/packages/dispatch
 RUN bun run build:web
+# The fork's web app, beside upstream's; DISPATCH_WEB_DIST chooses which one the server serves.
+WORKDIR /repo/packages/tl-dispatch
+RUN bun run build
 
 # Go version must match go.mod.
 # ghcr.io/cybermonklabs/legion/ci, the copy of golang:1.27.3-alpine (.github/ci-images.yaml)
@@ -114,13 +120,15 @@ COPY --from=web /repo/packages/envoy/listenerwire/envelope_generated.go ./listen
 # own GOARCH, which decide them) and of the npm packages the SPA inlines and the typeface it ships. Fails the build when a
 # module's or a package's license cannot be determined.
 COPY --from=web /repo/packages/dispatch/web/dist/THIRD_PARTY_NOTICES.txt /tmp/dispatch-web-notices
+COPY --from=web /repo/packages/tl-dispatch/dist/THIRD_PARTY_NOTICES.txt /tmp/tl-dispatch-web-notices
 RUN mkdir -p /out \
     && CGO_ENABLED=0 go-third-party-notices.sh /tmp/go-notices \
       ./cmd/listener ./cmd/dispatch ./cmd/cipherd ./cmd/cipher \
     && assemble-third-party-notices.sh /out/THIRD_PARTY_NOTICES \
       "Third-party software in the Legion Envoy image, with the license of each piece. Legion's own code is under the Apache License 2.0. The Debian packages the image installs carry their terms in /usr/share/doc/<package>/copyright." \
       "Go modules compiled into /usr/local/bin/envoy-listener, envoy-dispatch, envoy-broker and agent-secrets" /tmp/go-notices \
-      "npm packages inlined into, and the typeface shipped with, the Dispatch web app, /srv/dispatch-web (served as /THIRD_PARTY_NOTICES.txt)" /tmp/dispatch-web-notices
+      "npm packages inlined into, and the typeface shipped with, the Dispatch web app, /srv/dispatch-web (served as /THIRD_PARTY_NOTICES.txt)" /tmp/dispatch-web-notices \
+      "npm packages inlined into, and the typeface shipped with, the fork's web app, /srv/tl-dispatch (served as /THIRD_PARTY_NOTICES.txt)" /tmp/tl-dispatch-web-notices
 
 # The legion commit this image is built from, which envoy-dispatch's /healthz reports as
 # `commit`. The release workflow passes its own github.sha, for the image it publishes and for
@@ -158,6 +166,7 @@ COPY --from=build /out/envoy-broker /usr/local/bin/envoy-broker
 COPY --from=build /out/agent-secrets /usr/local/bin/agent-secrets
 COPY --from=build /out/THIRD_PARTY_NOTICES /usr/share/doc/legion/THIRD_PARTY_NOTICES
 COPY --from=web --chown=envoy:envoy /repo/packages/dispatch/web/dist /srv/dispatch-web
+COPY --from=web --chown=envoy:envoy /repo/packages/tl-dispatch/dist /srv/tl-dispatch
 # The Amazon RDS CA bundle, for a secrets broker that signs in to an RDS database by IAM token to
 # name as BROKER_DATABASE_URL's sslrootcert. It sits outside every file and directory Go's
 # crypto/x509 reads the system roots from (/etc/ssl/certs among them), so no binary here trusts an

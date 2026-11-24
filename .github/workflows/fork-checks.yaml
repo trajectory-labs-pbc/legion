@@ -1,0 +1,65 @@
+name: Fork checks
+
+# This repository is a fork, and this file, which upstream does not have, checks what the fork
+# adds: its whole diff against upstream's main stays on .github/fork-allowlist.txt, and its own web
+# app, packages/tl-dispatch, type-checks, lints, passes its tests, maps every upstream view and
+# builds. Upstream's own jobs in ci.yaml run beside it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  allowlist:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      # The parent is read from the API, so no file of this fork names it.
+      - name: Fetch upstream's main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          upstream=$(gh api "repos/$REPOSITORY" --jq '.parent.full_name // empty')
+          if [ -z "$upstream" ]; then
+            echo "::error::this repository has no parent to compare with"
+            exit 1
+          fi
+          git fetch --no-tags --filter=blob:none "https://github.com/$upstream.git" main
+
+      - name: Check the fork's diff against the allowlist
+        run: .github/scripts/check-fork-allowlist.sh FETCH_HEAD
+
+  tl-dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/tl-dispatch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - name: Type-check
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Test (links, view map)
+        run: bun run test
+      - name: Check the view map
+        run: bun run check:map
+      - name: Build
+        run: bun run build
