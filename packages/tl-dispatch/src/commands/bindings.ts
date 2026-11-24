@@ -1,8 +1,8 @@
 import {
+  appKeymap,
   DIALOG_SCOPE,
   type KeyBinding,
   type KeymapScope,
-  useKeymap,
 } from "@upstream-dispatch/features/shell/keymap";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
@@ -77,6 +77,28 @@ function passing(stack: EngineStack): string {
   return (["under-most", "under-all"] as const).filter((reach) => stack.passes(reach)).join(" ");
 }
 
+/**
+ * Registers bindings with the app's key engine while mounted. The engine copies a binding's
+ * label when it registers, so a new label registers the bindings again; runs and gates are read
+ * live, as upstream's `useKeymap` reads them.
+ */
+function useEngineBindings(scope: KeymapScope, bindings: readonly KeyBinding[]): void {
+  const latest = useRef(bindings);
+  latest.current = bindings;
+  const signature = bindings
+    .map((binding) => `${binding.id}=${[binding.keys].flat().join(",")}=${binding.label}`)
+    .join("\n");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `signature` stands in for the bindings, read through `latest`
+  useLayoutEffect(() => {
+    const proxies = latest.current.map((binding, index) => ({
+      ...binding,
+      run: (event: KeyboardEvent) => latest.current[index]?.run(event),
+      when: () => latest.current[index]?.when?.() !== false,
+    }));
+    return appKeymap.register(scope, proxies);
+  }, [scope, signature]);
+}
+
 /** Holds the specs in the store while mounted, with the last commit's state. */
 function useStoredSpecs(store: CommandStore, specs: CommandSpecs): void {
   const list = Object.values(specs);
@@ -107,9 +129,9 @@ export function useRegisterCommands(
 ): void {
   const { scope, own, underOverlays } = contextBindings(catalog, context, specs, appStack, layer);
   const passes = useSyncExternalStore(appStack.subscribe, () => passing(appStack));
-  useKeymap(scope, own);
+  useEngineBindings(scope, own);
   // Registered only while it can fire, so its chords never swallow a key under another dialog.
-  useKeymap(
+  useEngineBindings(
     DIALOG_SCOPE,
     underOverlays.filter(({ reach }) => passes.split(" ").includes(reach)).map((u) => u.binding)
   );

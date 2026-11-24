@@ -268,4 +268,25 @@ describe("useRegisterCommands on the app's engine", () => {
     tap("c");
     expect(fired).toEqual(["global.create", "global.help", "palette.close"]);
   });
+  test("a new label reaches the engine's list, which copies a label when it registers", () => {
+    const labelled = (label: string) => {
+      const states: Record<string, { run: () => void; label?: string }> = {};
+      for (const command of appCatalog.commandsOf("global")) {
+        states[command.name] = { run: () => {} };
+      }
+      states.create = { run: () => {}, label };
+      return defineActions(appCatalog, "global", () => states)(null, null);
+    };
+    function Labelled({ label }: { label: string }) {
+      useRegisterCommands(appCatalog, "global", labelled(label));
+      return null;
+    }
+    const createLabel = () =>
+      appKeymap.describe().find((binding) => binding.id === "global.create")?.label;
+    const view = render(<Labelled label="Create issue" />);
+    expect(createLabel()).toBe("Create issue");
+    view.rerender(<Labelled label="Create a sub-issue" />);
+    expect(createLabel()).toBe("Create a sub-issue");
+    view.unmount();
+  });
 });
