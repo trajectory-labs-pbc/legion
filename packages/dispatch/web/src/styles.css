@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./ui/index.css";
 @plugin "@tailwindcss/typography";
 
 /* A screen too narrow or too short for a wide sticky panel: a phone in either orientation, or a
@@ -631,13 +632,13 @@ html:has([data-issue-page]) {
 
 .dispatch-doc .dispatch-mark-active,
 .dispatch-doc .dispatch-block-active {
-  box-shadow: inset 0 -2px 0 #0084d1; /* sky-600 */
+  box-shadow: inset 0 -2px 0 var(--color-sky-600);
 }
 
 @media (prefers-color-scheme: dark) {
   .dispatch-doc .dispatch-mark-active,
   .dispatch-doc .dispatch-block-active {
-    box-shadow: inset 0 -2px 0 #00bcff; /* sky-400 */
+    box-shadow: inset 0 -2px 0 var(--color-sky-400);
   }
 }
 
@@ -797,17 +798,17 @@ html:has([data-issue-page]) {
 /* The library paints a document's links in a blue of its own (`.milkdown a`,
    `@legion/proof-editor`'s `lib.css`), which is 3.9:1 on the light document surface - under
    WCAG AA's 4.5:1 for body text, and a serious finding of `e2e/accessibility.e2e.ts`. A
-   document's links take the app's own link blue instead, the pair `theme/classes.ts` registers
+   document's links take the app's own link colour instead, the pair `theme/classes.ts` registers
    as AA on every surface and the one a comment's Markdown already uses below. The selector
    outranks `.milkdown a` (0,1,1) and stays under the ask slots' rollback further down, so a
    card the app draws inside a block keeps the colours its own utilities give it. */
 .dispatch-doc .milkdown a {
-  color: #0069a8; /* sky-700 */
+  color: var(--color-sky-700);
 }
 
 @media (prefers-color-scheme: dark) {
   .dispatch-doc .milkdown a {
-    color: #00bcff; /* sky-400 */
+    color: var(--color-sky-400);
   }
 }
 
@@ -999,7 +1000,7 @@ html:has([data-issue-page]) {
    `text-xs` metadata line like a resolution reason), so `.dispatch-markdown` overrides
    body/heading/bold/quote/lead/caption text and font size to inherit from the surrounding
    element and caps headings to a bold version of that inherited size; code keeps its own
-   accent color and links keep the app's link blue (sky-700, sky-400 in dark) rather than
+   accent color and links keep the app's link colour (sky-700, sky-400 in dark) rather than
    prose's own near-black default. */
 .dispatch-markdown {
   font-size: inherit;
@@ -1010,14 +1011,14 @@ html:has([data-issue-page]) {
   --tw-prose-bold: inherit;
   --tw-prose-quotes: inherit;
   --tw-prose-captions: inherit;
-  --tw-prose-links: #0069a8; /* sky-700 */
+  --tw-prose-links: var(--color-sky-700);
   --tw-prose-invert-body: inherit;
   --tw-prose-invert-headings: inherit;
   --tw-prose-invert-lead: inherit;
   --tw-prose-invert-bold: inherit;
   --tw-prose-invert-quotes: inherit;
   --tw-prose-invert-captions: inherit;
-  --tw-prose-invert-links: #00bcff; /* sky-400 */
+  --tw-prose-invert-links: var(--color-sky-400);
 }
 
 /* `dark:prose-invert` would flip links by setting `--tw-prose-links` to the invert value, but it
@@ -1190,7 +1191,7 @@ html:has([data-issue-page]) {
    The box is drawn here (`appearance: none`) rather than by the browser, which paints a disabled
    native box pale grey, its tick hard to see on a light card. It stays a native disabled
    checkbox (role, checked state, no tab stop); only its look changes. An unticked box is an empty
-   outline in a muted mix of the text colour; a ticked one is filled in the app's link blue
+   outline in a muted mix of the text colour; a ticked one is filled in the app's link colour
    (`--tw-prose-links`, so it follows the scheme as the links do: sky-700 in light, sky-400 in
    dark) with the tick cut out of the fill by a mask. The tick is a hole showing the card behind
    the box, so it contrasts with the fill in either scheme with no colour of its own (the mask's

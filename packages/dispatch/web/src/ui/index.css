@@ -1,0 +1,6 @@
+/* The fork's look. `theme.css` is the shared theme item as `shadcn add` writes it (the
+   `theme-system` item, into the file `components.json` names), then formatted with
+   `bunx biome check --write web/src/ui/theme.css`; take a new version the same way, never by
+   hand. `repaint.css` maps Dispatch's Tailwind shades onto its tokens. */
+@import "./theme.css";
+@import "./repaint.css";

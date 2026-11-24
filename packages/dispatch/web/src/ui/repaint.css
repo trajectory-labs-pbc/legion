@@ -1,0 +1,145 @@
+/* Paints Dispatch with the shared theme in `theme.css` without editing a page: every slate and
+   sky utility reads one of these variables, and each variable is a theme token or a mix of two.
+
+   Each slate shade names the theme token for the role that shade plays in `theme/classes.ts` in
+   that scheme, so a light shade and a dark shade of the same name can hold unrelated tokens.
+   Sky, the app's own accent, becomes a neutral scale: the theme is monochrome, so colour marks
+   meaning only. Sky stays one light-to-dark scale in each scheme, because the issue status scale
+   reads it as one. The one exception is sky-600 in light, which every light-scheme control state
+   (focus, switch, progress, the current tab) and nothing in that scale reads: it is `--primary`.
+   The issue page's blue kinds (question, check, decision, in progress) become neutral too. The
+   theme's one accent, `--ring`, marks the icon rail.
+
+   `ui/contrast.test.ts` resolves these values and holds every registered text pair to its
+   minimum ratio. Write each value as a `var()` of a token or a `color-mix(in oklab, ...)` of two
+   such values, white or black, the only forms that test reads.
+
+   `html:root` outranks the `:root` rules `styles.css` declares after this file is imported, and
+   ties with its issue-page font rule, which comes later and so keeps that page's face. */
+
+html:root {
+  --color-slate-50: color-mix(in oklab, var(--background) 60%, var(--card));
+  --color-slate-100: var(--muted);
+  --color-slate-200: var(--border);
+  --color-slate-300: color-mix(in oklab, var(--border) 65%, var(--muted-foreground));
+  --color-slate-400: color-mix(in oklab, var(--muted-foreground) 55%, var(--border));
+  --color-slate-500: var(--muted-foreground);
+  --color-slate-600: color-mix(in oklab, var(--muted-foreground) 80%, var(--foreground));
+  --color-slate-700: color-mix(in oklab, var(--foreground) 75%, var(--muted-foreground));
+  --color-slate-800: color-mix(in oklab, var(--foreground) 90%, var(--muted-foreground));
+  --color-slate-900: var(--foreground);
+  --color-slate-950: var(--foreground);
+
+  --color-sky-50: var(--accent);
+  --color-sky-100: var(--muted);
+  --color-sky-200: var(--border);
+  --color-sky-300: color-mix(in oklab, var(--border) 75%, var(--muted-foreground));
+  --color-sky-400: color-mix(in oklab, var(--border) 50%, var(--muted-foreground));
+  --color-sky-500: color-mix(in oklab, var(--border) 25%, var(--muted-foreground));
+  --color-sky-600: var(--primary);
+  --color-sky-700: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+  --color-sky-800: color-mix(in oklab, var(--foreground) 70%, var(--muted-foreground));
+  --color-sky-900: color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground));
+  --color-sky-950: var(--foreground);
+
+  /* The issue page's greys and its icon rail, as the shades above. */
+  --color-page-ink: var(--color-slate-900);
+  --color-page-words: var(--color-slate-800);
+  --color-page-muted: var(--color-slate-600);
+  --color-page-quiet: var(--color-slate-500);
+  --color-page-line: var(--color-slate-100);
+  --color-page-hair: var(--color-slate-200);
+  --color-page-pane: var(--accent);
+  --color-page-mark: var(--color-slate-100);
+  --color-page-guide: var(--color-slate-200);
+  --color-page-bullet: var(--color-slate-400);
+  --color-page-person: var(--color-slate-900);
+  --color-page-agent: var(--color-slate-500);
+  --color-page-issue: var(--color-slate-700);
+  --color-page-question: var(--foreground);
+  --color-page-question-tint: var(--muted);
+  --color-page-check: var(--muted-foreground);
+  --color-page-check-tint: var(--accent);
+  --color-page-decision: color-mix(in oklab, var(--foreground) 65%, var(--muted-foreground));
+  --color-page-decision-tint: var(--accent);
+  --color-page-in-progress: var(--foreground);
+  --color-icon-rail: var(--foreground);
+  --color-icon-rail-text: var(--border);
+  --color-icon-rail-accent: var(--ring);
+  --color-icon-rail-active: color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground));
+}
+
+@media (prefers-color-scheme: dark) {
+  html:root {
+    --color-slate-50: var(--foreground);
+    --color-slate-100: var(--foreground);
+    --color-slate-200: color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground));
+    --color-slate-300: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+    --color-slate-400: var(--muted-foreground);
+    --color-slate-500: var(--input);
+    --color-slate-600: color-mix(in oklab, var(--input) 70%, var(--muted-foreground));
+    --color-slate-700: var(--border);
+    --color-slate-800: var(--muted);
+    --color-slate-900: var(--card);
+    --color-slate-950: var(--background);
+
+    --color-sky-50: var(--foreground);
+    --color-sky-100: color-mix(in oklab, var(--foreground) 80%, var(--muted-foreground));
+    --color-sky-200: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+    --color-sky-300: color-mix(in oklab, var(--foreground) 25%, var(--muted-foreground));
+    --color-sky-400: var(--muted-foreground);
+    --color-sky-500: color-mix(in oklab, var(--muted-foreground) 65%, var(--input));
+    --color-sky-600: var(--input);
+    --color-sky-700: color-mix(in oklab, var(--input) 55%, var(--border));
+    --color-sky-800: var(--border);
+    --color-sky-900: var(--accent);
+    --color-sky-950: var(--secondary);
+
+    /* The shades `PAGE_COLORS` names the issue page's blue kinds by in dark. No component writes
+       these families, so they are free to hold neutral tokens. */
+    --color-blue-400: var(--foreground);
+    --color-blue-950: var(--accent);
+    --color-indigo-400: var(--muted-foreground);
+    --color-indigo-950: var(--muted);
+    --color-violet-400: color-mix(in oklab, var(--foreground) 65%, var(--muted-foreground));
+    --color-violet-950: var(--muted);
+
+    /* Each issue-page grey takes the shade `theme/classes.ts`'s `PAGE_COLORS` names for it. The
+       icon rail stays dark in both schemes, as the white of its current entry needs. */
+    --color-page-paper: var(--color-slate-950);
+    --color-page-ink: var(--color-slate-100);
+    --color-page-words: var(--color-slate-200);
+    --color-page-muted: var(--color-slate-300);
+    --color-page-quiet: var(--color-slate-400);
+    --color-page-line: var(--color-slate-800);
+    --color-page-hair: var(--color-slate-700);
+    --color-page-pane: var(--color-slate-900);
+    --color-page-mark: var(--color-slate-800);
+    --color-page-guide: var(--color-slate-800);
+    --color-page-bullet: var(--color-slate-500);
+    --color-page-person: var(--color-slate-100);
+    --color-page-agent: var(--color-slate-400);
+    --color-page-question: var(--color-blue-400);
+    --color-page-question-tint: var(--color-blue-950);
+    --color-page-check: var(--color-indigo-400);
+    --color-page-check-tint: var(--color-indigo-950);
+    --color-page-decision: var(--color-violet-400);
+    --color-page-decision-tint: var(--color-violet-950);
+    --color-page-in-progress: var(--color-blue-400);
+    --color-icon-rail: var(--card);
+    --color-icon-rail-text: var(--color-slate-300);
+    --color-icon-rail-active: var(--accent);
+  }
+}
+
+/* Tailwind's bare `rounded` reads `--radius` only once the theme declares the key; the value
+   here is a placeholder that `theme.css`'s own `--radius` replaces. */
+@theme {
+  --radius: 0;
+}
+
+html:root {
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  background: var(--background);
+}

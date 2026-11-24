@@ -682,55 +682,55 @@ export function inputClasses(recessed: boolean): string {
 export const secondaryButtonCompact = `min-h-11 shrink-0 rounded-lg border px-3 py-1 text-xs font-medium whitespace-nowrap sm:min-h-7 sm:px-2 ${secondaryButtonBorder} ${secondaryButtonText} ${secondaryButtonHoverBorder} ${secondaryButtonDisabledText}`;
 
 // ---------------------------------------------------------------------------------------------
-// The navigation rail: a deliberately constant-dark surface (unlike everything else in this
-// file, it does not vary with `prefers-color-scheme` — it is a fixed brand rail, the same
-// design GitHub/Linear/Notion use for their sidebars). Each export below is a single Tailwind
-// class, not a light/dark pair; contrast is still registered so a future rail color change
-// can't silently drop below AA.
+// The navigation rail: the canvas colour in light and the surface colour in dark, so it follows
+// `prefers-color-scheme` like everything else in this file.
 // ---------------------------------------------------------------------------------------------
 
-const RAIL_BG_SWATCH = P.SLATE_950;
+const RAIL_BG = pair(P.SLATE_50, P.SLATE_900);
 const railFixed = (swatch: Swatch): ColorPair => ({ dark: swatch, light: swatch });
 
-export const railBg = "bg-slate-950";
-export const railBorder = "border-slate-800";
-export const railHoverBg = "hover:bg-slate-800";
-export const railText = "text-slate-100";
-export const railSecondaryText = "text-slate-300";
-export const railMutedText = "text-slate-400";
-export const railAccentText = "text-sky-300";
-export const railAccentHoverText = "hover:text-sky-200";
-export const railHoverText = "hover:text-slate-100";
-export const railActiveBg = "bg-slate-800";
-export const railFocusOverlayBg = "focus:bg-slate-950";
-export const railFocusOverlayText = "focus:text-slate-100";
-export const railDangerText = "text-rose-300";
-export const railBadgeBg = "bg-sky-500";
-export const railBadgeText = "text-slate-950";
+export const railBg = "bg-slate-50 dark:bg-slate-900";
+export const railBorder = "border-slate-200 dark:border-slate-800";
+export const railHoverBg = "hover:bg-slate-100 dark:hover:bg-slate-800";
+export const railText = "text-slate-900 dark:text-slate-100";
+export const railSecondaryText = "text-slate-700 dark:text-slate-300";
+export const railMutedText = "text-slate-500 dark:text-slate-400";
+export const railAccentText = "text-sky-700 dark:text-sky-300";
+export const railAccentHoverText = "hover:text-sky-900 dark:hover:text-sky-300";
+export const railHoverText = "hover:text-slate-900 dark:hover:text-slate-100";
+export const railActiveBg = "bg-white dark:bg-slate-800";
+export const railFocusOverlayBg = "focus:bg-slate-50 dark:focus:bg-slate-900";
+export const railFocusOverlayText = "focus:text-slate-900 dark:focus:text-slate-100";
+export const railDangerText = "text-rose-700 dark:text-rose-300";
+export const railBadgeBg = "bg-sky-700 dark:bg-sky-400";
+export const railBadgeText = "text-white dark:text-slate-950";
 /** The Inbox count uses amber because it means the viewer, not merely any agent, must act. */
 export const railNeedsYouBadgeBg = "bg-amber-500";
 export const railNeedsYouBadgeText = "text-slate-950";
 
-registerText("rail primary text", railFixed(P.SLATE_100), railFixed(RAIL_BG_SWATCH));
-registerText("rail secondary text", railFixed(P.SLATE_300), railFixed(RAIL_BG_SWATCH));
-registerText("rail muted text", railFixed(P.SLATE_400), railFixed(RAIL_BG_SWATCH));
-registerText("rail link text", railFixed(P.SKY_300), railFixed(RAIL_BG_SWATCH));
-registerText("rail error text", railFixed(P.ROSE_300), railFixed(RAIL_BG_SWATCH));
-registerText("rail unread-count badge text", railFixed(P.SLATE_950), railFixed(P.SKY_500));
+registerText("rail primary text", pair(P.SLATE_900, P.SLATE_100), RAIL_BG);
+registerText("rail secondary text", pair(P.SLATE_700, P.SLATE_300), RAIL_BG);
+registerText("rail muted text", pair(P.SLATE_500, P.SLATE_400), RAIL_BG);
+registerText("rail link text", pair(P.SKY_700, P.SKY_300), RAIL_BG);
+registerText("rail error text", pair(P.ROSE_700, P.ROSE_300), RAIL_BG);
+registerText(
+  "rail unread-count badge text",
+  pair(P.WHITE, P.SLATE_950),
+  pair(P.SKY_700, P.SKY_400)
+);
 registerText("rail needs-you badge text", railFixed(P.SLATE_950), railFixed(P.AMBER_500));
-/** `railActiveBg` (a nav item's selected/hover state) is a lighter shade than the base rail —
- * secondary/accent rail text sitting on it needs its own check, since it's a different
- * background from `RAIL_BG_SWATCH` above. */
-const RAIL_ACTIVE_BG_SWATCH = P.SLATE_800;
+/** `railActiveBg` (a nav item's selected/hover state) differs from the base rail, so secondary
+ * and accent rail text on it need their own checks. */
+const RAIL_ACTIVE_BG = pair(P.WHITE, P.SLATE_800);
 registerText(
   "rail accent text on rail active background",
-  railFixed(P.SKY_300),
-  railFixed(RAIL_ACTIVE_BG_SWATCH)
+  pair(P.SKY_700, P.SKY_300),
+  RAIL_ACTIVE_BG
 );
 registerText(
   "rail secondary text on rail active background",
-  railFixed(P.SLATE_300),
-  railFixed(RAIL_ACTIVE_BG_SWATCH)
+  pair(P.SLATE_700, P.SLATE_300),
+  RAIL_ACTIVE_BG
 );
 
 // ---------------------------------------------------------------------------------------------
