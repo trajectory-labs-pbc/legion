@@ -17,11 +17,14 @@ const useGlobalActions = defineActions(
         command.name,
         {
           enabled: !disabled.includes(command.name),
-          run: command.name === "help" ? toggle : () => {},
+          run: command.name === "help" ? toggle : () => ran.push(command.name),
         },
       ])
     )
 );
+
+/** The commands other than help that ran. */
+const ran: string[] = [];
 
 function Harness({ disabled = [] }: { disabled?: readonly string[] }) {
   const sheet = useShortcutsSheet();
@@ -38,6 +41,7 @@ function Harness({ disabled = [] }: { disabled?: readonly string[] }) {
 const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) settle(cleanup);
+  ran.length = 0;
 });
 
 function mount(disabled?: readonly string[]) {
@@ -104,11 +108,32 @@ describe("ShortcutsSheet", () => {
     expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
   });
 
-  test("under a sheet of ours it lists the globals that still run there", () => {
+  test("while it is open, no global key but ? runs: $mod+k opens no palette", () => {
+    mount();
+    press("?", { shiftKey: true });
+    for (const [key, init] of [
+      ["k", { ctrlKey: true }],
+      ["/", {}],
+      ["c", {}],
+      ["i", {}],
+      ["g", {}],
+      ["a", {}],
+    ] as const) {
+      press(key, init);
+    }
+    expect(ran).toEqual([]);
+    expect(sheet()?.hasAttribute("data-closed")).toBe(false);
+    // Control: with the sheet closed, the same key runs.
+    press("?", { shiftKey: true });
+    press("k", { ctrlKey: true });
+    expect(ran).toEqual(["search"]);
+  });
+
+  test("under a sheet of ours only ? is listed, as only ? runs there", () => {
     mount();
     openLayer("sheet");
     press("?", { shiftKey: true });
-    expect(rows()).toContain("Create issue: C");
+    expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
   });
 
   test("control: under an alert dialog ? does nothing", () => {

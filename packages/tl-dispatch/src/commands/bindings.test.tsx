@@ -115,14 +115,14 @@ describe("global commands under overlays", () => {
     expect(fired).toEqual(["global.create", "global.go-inbox"]);
   });
 
-  test("run under a sheet or a drawer of ours, and stop under a dialog or a menu", () => {
+  test("run under a drawer of ours, and stop under a sheet, a dialog or a menu", () => {
     const { keymap, layers, fired } = setup();
     for (const kind of ["sheet", "drawer", "dialog", "menu", "alert-dialog"] as const) {
       const layer = layers.open(kind);
       press(keymap, "c");
       layer.close();
     }
-    expect(fired).toEqual(["global.create", "global.create"]);
+    expect(fired).toEqual(["global.create"]);
   });
 
   test("the help key reaches under every overlay of ours but an alert dialog, and not upstream's", () => {
@@ -152,15 +152,15 @@ describe("global commands under overlays", () => {
     ).toThrow('"page.x": only a global command reaches under overlays');
   });
 
-  test("stop under a sheet once one of upstream's dialogs is open, above it or below", () => {
+  test("stop under a drawer once one of upstream's dialogs is open, above it or below", () => {
     const { keymap, layers, fired } = setup();
-    const sheet = layers.open("sheet");
+    const sheet = layers.open("drawer");
     const closeAbove = keymap.pushScope(DIALOG_SCOPE);
     press(keymap, "c");
     closeAbove();
     sheet.close();
     const closeBelow = keymap.pushScope(DIALOG_SCOPE);
-    const above = layers.open("sheet");
+    const above = layers.open("drawer");
     press(keymap, "c");
     above.close();
     closeBelow();
@@ -168,9 +168,9 @@ describe("global commands under overlays", () => {
     expect(fired).toEqual(["global.create"]);
   });
 
-  test("leave `$mod+k` to upstream's palette when it opens above a sheet of ours", () => {
+  test("leave `$mod+k` to upstream's palette when it opens above a drawer of ours", () => {
     const { keymap, layers, fired } = setup();
-    const sheet = layers.open("sheet");
+    const sheet = layers.open("drawer");
     press(keymap, "k", { ctrlKey: true });
     const closePalette = openUpstreamPalette(keymap, fired);
     press(keymap, "k", { ctrlKey: true });
@@ -248,7 +248,7 @@ describe("useRegisterCommands on the app's engine", () => {
     return null;
   }
 
-  test("registers the shell's keys, passes them under a sheet, and yields to the palette", () => {
+  test("registers the shell's keys, passes them under a drawer, and yields to the palette", () => {
     const fired: string[] = [];
     const shell = render(<Shell fired={fired} />);
     const tap = (key: string, init: KeyboardEventInit = {}) =>
@@ -256,7 +256,7 @@ describe("useRegisterCommands on the app's engine", () => {
     tap("c");
     let sheet: ReturnType<typeof openAppLayer> | undefined;
     settle(() => {
-      sheet = openAppLayer("sheet");
+      sheet = openAppLayer("drawer");
     });
     tap("?", { shiftKey: true });
     const palette = render(<UpstreamPalette fired={fired} />);

@@ -7,11 +7,11 @@ import {
 
 import { type OverlayKind, type OverlayLayer, overlayStack } from "@/ui/overlay-layer";
 
-/** The overlay kinds a global command still runs under; any other open dialog stops it. */
+/** The overlay kinds a global command still runs under. Under the shortcuts sheet only `?` acts. */
 export const GLOBAL_COMMANDS_RUN_UNDER: Readonly<Record<OverlayKind, boolean>> = {
   dialog: false,
   "alert-dialog": false,
-  sheet: true,
+  sheet: false,
   drawer: true,
   menu: false,
   popover: false,
