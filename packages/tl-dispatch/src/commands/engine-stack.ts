@@ -45,16 +45,22 @@ export interface EngineStack {
   subscribe(listener: () => void): () => void;
 }
 
-const tracked = new WeakSet<Keymap>();
+declare global {
+  /** Each key engine's tracker, kept on the window so a hot reload of this module finds it. */
+  var __tlDispatchEngineStacks: WeakMap<Keymap, EngineStack> | undefined;
+}
+
+globalThis.__tlDispatchEngineStacks ??= new WeakMap();
+const trackers = globalThis.__tlDispatchEngineStacks;
 
 /**
  * Follows the key engine's scope stack, in order. Each of our layers pushes one dialog scope;
  * every other push is upstream's, seen by wrapping the engine's `pushScope`, which upstream's
- * hooks call.
+ * hooks call. The wrap happens once per engine: a second call returns the first tracker.
  */
 export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineStack {
-  if (tracked.has(keymap)) throw new Error("this key engine's stack is already tracked");
-  tracked.add(keymap);
+  const existing = trackers.get(keymap);
+  if (existing !== undefined) return existing;
   const stack: { scope: KeymapScope; owner: DialogOwner | null }[] = [];
   const listeners = new Set<() => void>();
   const notify = () => {
@@ -93,7 +99,7 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   layers.subscribe(sync);
 
   const dialogs = () => stack.flatMap(({ owner }) => (owner === null ? [] : [owner]));
-  return {
+  const tracker: EngineStack = {
     top: () => dialogs().at(-1),
     passes(reach) {
       const open = dialogs();
@@ -119,6 +125,8 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
       };
     },
   };
+  trackers.set(keymap, tracker);
+  return tracker;
 }
 
 /** The app's key engine, followed from the first import of the commands, before any dialog opens. */
