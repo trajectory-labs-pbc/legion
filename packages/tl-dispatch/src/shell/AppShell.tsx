@@ -39,7 +39,7 @@ import {
   useMediaQuery,
 } from "@upstream-dispatch/features/shell/useDialog";
 import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
-import { type ReactNode, Suspense, useMemo, useRef, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 import { CommandButton } from "@/commands/command-button";
 import { ShortcutsSheet, useShortcutsSheet } from "@/commands/shortcuts-sheet";
@@ -97,6 +97,9 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const shortcuts = useShortcutsSheet();
+  const { setOpen: setShortcutsOpen } = shortcuts;
+  // A context value: a new function each render would redraw every reader.
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), [setShortcutsOpen]);
   useRecordRecents();
   useLiveViewPins();
   usePinsMigration(user.login, useAgentPinWrite());
@@ -177,7 +180,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
     <ShellProviders
       drawer={detailsDrawer}
       navigation={shellNavigation}
-      openShortcuts={() => shortcuts.setOpen(true)}
+      openShortcuts={openShortcuts}
     >
       <div
         className={cn(

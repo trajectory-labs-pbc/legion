@@ -11,11 +11,6 @@ export function useCommand(id: CommandId): CommandView | undefined {
   return useSyncExternalStore(commandStore.subscribe, () => commandStore.view(id));
 }
 
-/** Runs a mounted command as its key does: through its gate. */
-export function useRunCommand(): (id: CommandId) => boolean {
-  return commandStore.run;
-}
-
 /** Whether the command's keys run under the overlays open now. */
 export function useKeysReach(id: CommandId): boolean {
   return useSyncExternalStore(appStack.subscribe, () =>

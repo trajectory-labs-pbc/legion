@@ -36,17 +36,15 @@ export function useShortcutsSheet(
     open: false,
     sections: [],
   });
-  // Every change goes through setOpen, so the ref always holds the state's open.
-  const isOpen = useRef(false);
   const setOpen = useCallback(
     (open: boolean) => {
-      isOpen.current = open;
       if (open) setState({ open, sections: read() });
       else setState((current) => ({ ...current, open }));
     },
     [read]
   );
-  const toggle = useCallback(() => setOpen(!isOpen.current), [setOpen]);
+  // The key reads the last commit's toggle, so this open is the one on screen.
+  const toggle = useCallback(() => setOpen(!state.open), [setOpen, state.open]);
   return { ...state, setOpen, toggle };
 }
 

@@ -9,7 +9,7 @@ import {
 } from "../../tests/key-registrations";
 import { APP_CONTEXTS } from "./app-catalog";
 import type { CommandContext } from "./catalog";
-import { clashes, keyChecker, startsOrExtends } from "./keys";
+import { clashes, keyChecker, refuses } from "./keys";
 
 const upstream = upstreamKeyRegistrations();
 
@@ -29,10 +29,7 @@ function clashesWithUpstream(
         const checker = keyChecker([keys]);
         for (const theirs of registrations) {
           const sameScope = theirs.scope === context.scope && theirs.scope !== "dialog";
-          if (
-            startsOrExtends(checker, theirs.keys) ||
-            (sameScope && clashes(checker, theirs.keys))
-          ) {
+          if (refuses(checker, theirs.keys) || (sameScope && clashes(checker, theirs.keys))) {
             found.push(
               `${context.name}.${command.name} (${keys}) and ${theirs.file}:${theirs.line} (${theirs.keys})`
             );

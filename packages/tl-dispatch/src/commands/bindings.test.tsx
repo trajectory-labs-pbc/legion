@@ -15,7 +15,7 @@ import { contextBindings, toBindings, UNDER_OVERLAY, useRegisterCommands } from 
 import { createCatalog } from "./catalog";
 import { type EngineStack, trackEngineStack } from "./engine-stack";
 import { commandStore } from "./registry";
-import { type CommandSpecs, defineActions } from "./specs";
+import { type CommandSpecs, specsFor } from "./specs";
 
 const catalog = createCatalog([
   {
@@ -38,11 +38,7 @@ const catalog = createCatalog([
 ]);
 
 function recorder(context: string, fired: string[], enabled = true): CommandSpecs {
-  const states: Record<string, { run: () => void; enabled: boolean }> = {};
-  for (const command of catalog.commandsOf(context)) {
-    states[command.name] = { run: () => fired.push(command.id), enabled };
-  }
-  return defineActions(catalog, context, () => states)(null, null);
+  return specsFor(catalog, context, (command) => ({ run: () => fired.push(command.id), enabled }));
 }
 
 interface Setup {
@@ -223,11 +219,7 @@ describe("an overlay's own commands", () => {
 
 describe("useRegisterCommands on the app's engine", () => {
   const appSpecs = (fired: string[]) => {
-    const states: Record<string, { run: () => void }> = {};
-    for (const command of appCatalog.commandsOf("global")) {
-      states[command.name] = { run: () => fired.push(command.id) };
-    }
-    return defineActions(appCatalog, "global", () => states)(null, null);
+    return specsFor(appCatalog, "global", (command) => ({ run: () => fired.push(command.id) }));
   };
 
   function Shell({ fired }: { fired: string[] }) {
@@ -271,12 +263,10 @@ describe("useRegisterCommands on the app's engine", () => {
   });
   test("a new label reaches the engine's list, which copies a label when it registers", () => {
     const labelled = (label: string) => {
-      const states: Record<string, { run: () => void; label?: string }> = {};
-      for (const command of appCatalog.commandsOf("global")) {
-        states[command.name] = { run: () => {} };
-      }
-      states.create = { run: () => {}, label };
-      return defineActions(appCatalog, "global", () => states)(null, null);
+      return specsFor(appCatalog, "global", (command) => ({
+        run: () => {},
+        label: command.name === "create" ? label : undefined,
+      }));
     };
     function Labelled({ label }: { label: string }) {
       useRegisterCommands(appCatalog, "global", labelled(label));
@@ -318,12 +308,11 @@ describe("useRegisterCommands on the app's engine", () => {
   test("the command store takes each commit's gate, label and run", () => {
     const fired: string[] = [];
     const specs = (enabled: boolean, label: string, tag: string) => {
-      const states: Record<string, { run: () => void; enabled?: boolean; label?: string }> = {};
-      for (const command of appCatalog.commandsOf("global")) {
-        states[command.name] = { run: () => {} };
-      }
-      states.create = { enabled, label, run: () => fired.push(tag) };
-      return defineActions(appCatalog, "global", () => states)(null, null);
+      return specsFor(appCatalog, "global", (command) =>
+        command.name === "create"
+          ? { enabled, label, run: () => fired.push(tag) }
+          : { run: () => {} }
+      );
     };
     function Live(props: { enabled: boolean; label: string; tag: string }) {
       useRegisterCommands(appCatalog, "global", specs(props.enabled, props.label, props.tag));

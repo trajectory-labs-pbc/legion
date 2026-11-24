@@ -37,22 +37,18 @@ export function malformed(keys: string): string | undefined {
     keyChecker([keys]);
     return undefined;
   } catch (error) {
-    return (error as Error).message;
+    return error instanceof Error ? error.message : String(error);
   }
 }
 
-function refuses(checker: Keymap, keys: string): boolean {
+/** Whether the checker refuses `keys`: one of them starts the other. */
+export function refuses(checker: Keymap, keys: string): boolean {
   try {
     checker.register("global", [{ id: "probe", keys, label: keys, run: NOTHING }])();
     return false;
   } catch {
     return true;
   }
-}
-
-/** Whether `keys` starts a key the checker holds, or a held key starts `keys`. */
-export function startsOrExtends(checker: Keymap, keys: string): boolean {
-  return refuses(checker, keys);
 }
 
 /** Whether `keys` and a key the checker holds match one press sequence, or one starts the other. */

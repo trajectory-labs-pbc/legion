@@ -17,17 +17,58 @@ export interface CommandSpec {
   run: () => void;
 }
 
-export type CommandSpecs<Name extends string = string> = Readonly<Record<Name, CommandSpec>>;
+/** A context's specs: each of its commands once, in the catalog's order. */
+export interface CommandSpecs<Name extends string = string> {
+  readonly list: readonly CommandSpec[];
+  /** One command's spec, by its name in the context. */
+  get(name: Name): CommandSpec;
+}
+
+/** The names of a context's commands, read from the catalog's ids. */
+export type CommandNamesIn<
+  Id extends string,
+  Context extends string,
+> = Id extends `${Context}.${infer Name}` ? Name : never;
+
+function specsOf(
+  context: string,
+  commands: readonly CatalogCommand[],
+  stateOf: (command: CatalogCommand) => CommandState | undefined
+): CommandSpecs {
+  const list = commands.map((command): CommandSpec => {
+    const state = stateOf(command);
+    if (state === undefined) throw new Error(`actions of "${context}" lost "${command.name}"`);
+    return {
+      command,
+      label: state.label ?? command.label,
+      enabled: state.enabled ?? true,
+      run: state.run,
+    };
+  });
+  const byName = new Map(list.map((spec) => [spec.command.name, spec]));
+  return {
+    list,
+    get(name) {
+      const spec = byName.get(name);
+      if (spec === undefined) throw new Error(`"${context}" has no command "${name}"`);
+      return spec;
+    },
+  };
+}
 
 /**
  * Declares a feature's actions hook for one context, `useXActions(record, opts)`. `build` returns
- * a state for every command of the context, so every surface gets the same list, of one length.
+ * a state for every command of the context, by name: the type check refuses a missing or an
+ * unknown name, and the first call checks again for a catalog the type check cannot see.
  */
-export function defineActions<Record_, Options, Name extends string = string>(
-  catalog: Catalog,
-  context: string,
-  build: (record: Record_, options: Options) => { readonly [N in Name]: CommandState }
-): (record: Record_, options: Options) => CommandSpecs<Name> {
+export function defineActions<Id extends string, const Context extends string, Record_, Options>(
+  catalog: Catalog<Id>,
+  context: Context,
+  build: (
+    record: Record_,
+    options: Options
+  ) => { readonly [Name in CommandNamesIn<Id, Context>]: CommandState }
+): (record: Record_, options: Options) => CommandSpecs<CommandNamesIn<Id, Context>> {
   const commands = catalog.commandsOf(context);
   const names = new Set(commands.map((command) => command.name));
   let checked = false;
@@ -43,19 +84,17 @@ export function defineActions<Record_, Options, Name extends string = string>(
       }
       checked = true;
     }
-    const specs: Record<string, CommandSpec> = {};
-    for (const command of commands) {
-      const state = states[command.name];
-      if (state === undefined) throw new Error(`actions of "${context}" lost "${command.name}"`);
-      specs[command.name] = {
-        command,
-        label: state.label ?? command.label,
-        enabled: state.enabled ?? true,
-        run: state.run,
-      };
-    }
-    return specs as CommandSpecs<Name>;
+    return specsOf(context, commands, (command) => states[command.name]);
   };
+}
+
+/** A context's specs from one function of the command, for states that follow a rule. */
+export function specsFor(
+  catalog: Catalog,
+  context: string,
+  stateOf: (command: CatalogCommand) => CommandState
+): CommandSpecs {
+  return specsOf(context, catalog.commandsOf(context), stateOf);
 }
 
 /** Runs the command unless its gate is shut. Every surface runs a command through this. */

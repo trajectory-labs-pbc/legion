@@ -1,8 +1,8 @@
 import { Button, type ButtonProps } from "@/ui/button";
 import type { CommandId } from "./app-catalog";
-import { useCommand, useRunCommand } from "./hooks";
+import { useCommand } from "./hooks";
 import { HotkeyTooltip } from "./hotkey-tooltip";
-import type { CommandView } from "./registry";
+import { type CommandView, commandStore } from "./registry";
 
 export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "children" | "render"> {
   commandId: CommandId;
@@ -31,7 +31,6 @@ export function CommandButton({
   ...rest
 }: CommandButtonProps) {
   const view = useCommand(commandId);
-  const run = useRunCommand();
   if (view === undefined || (!view.enabled && !showIfDisabled)) return null;
   const onlyIcon = iconOnly ?? size?.startsWith("icon") ?? false;
   const shown = label ?? view.label;
@@ -42,7 +41,7 @@ export function CommandButton({
         {...rest}
         aria-label={onlyIcon ? shown : undefined}
         disabled={!view.enabled}
-        onClick={() => run(commandId)}
+        onClick={() => commandStore.run(commandId)}
         size={size}
         variant={variant ?? commandButtonVariant(view, onlyIcon)}
       >

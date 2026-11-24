@@ -7,21 +7,13 @@ import { useRegisterCommands } from "./bindings";
 import { CommandButton, commandButtonVariant } from "./command-button";
 import { useCommandShortcut } from "./hooks";
 import { HotkeyTooltip } from "./hotkey-tooltip";
-import { defineActions } from "./specs";
+import { specsFor } from "./specs";
 
-const useGlobalActions = defineActions(
-  appCatalog,
-  "global",
-  ({ fired, enabled }: { fired: string[]; enabled: boolean }, _options: null) =>
-    Object.fromEntries(
-      appCatalog
-        .commandsOf("global")
-        .map((command) => [command.name, { enabled, run: () => fired.push(command.id) }])
-    )
-);
+const globalSpecs = (fired: string[], enabled: boolean) =>
+  specsFor(appCatalog, "global", (command) => ({ enabled, run: () => fired.push(command.id) }));
 
 function Shell({ fired, enabled = true }: { fired: string[]; enabled?: boolean }) {
-  useRegisterCommands(appCatalog, "global", useGlobalActions({ fired, enabled }, null));
+  useRegisterCommands(appCatalog, "global", globalSpecs(fired, enabled));
   return null;
 }
 

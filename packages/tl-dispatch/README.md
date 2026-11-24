@@ -59,17 +59,18 @@ when it loads, two keys live together that one press sequence matches or where o
 other, as upstream's key engine compares them. `CommandId` is typed from it, so a misspelt id
 fails `tsc`.
 
-A feature gives each command of a context its live state with `defineActions`, and
-`useRegisterCommands` registers them with the key engine and the command store. Everything else
-reads the store:
+A feature gives each command of a context its live state with `defineActions`, whose type check
+refuses a missing or unknown command name, and `useRegisterCommands` registers them with the key
+engine and the command store. Everything else reads the store:
 
-- `useCommand(id)`, `useRunCommand()` and `useCommandShortcut(id)`: the command, a run through its
-  gate, and its key as display chips (`⌘K` on a Mac, `Ctrl+K` elsewhere).
+- `useCommand(id)` and `useCommandShortcut(id)`: the command, and its key as display chips (`⌘K`
+  on a Mac, `Ctrl+K` elsewhere). No chip shows while the command is off or an open overlay stops
+  its key. `commandStore.run(id)` runs a mounted command through its gate, as its key does.
 - `CommandButton` and `HotkeyTooltip`: the label, icon, style and key come from the catalog, and a
   click runs what the key runs. A disabled command hides its button unless `showIfDisabled`.
 - `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog. It lists each key live where
   `?` was pressed, grouped, each command once with all its keys, without `Escape` or disabled
-  commands.
+  commands. While it is open, only `?` and Escape act: they close it.
 
 ## Navigation
 

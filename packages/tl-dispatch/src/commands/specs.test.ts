@@ -30,14 +30,15 @@ const useIssueActions = defineActions(catalog, "issue", (issue: Issue, _options:
 
 describe("actions", () => {
   test("every member is always present, gated or not", () => {
-    expect(Object.keys(useIssueActions({ closed: true }, null))).toEqual([
+    expect(useIssueActions({ closed: true }, null).list.map((spec) => spec.command.name)).toEqual([
       "open",
       "pin",
       "copy-ref",
     ]);
   });
 
-  test("a hook that leaves a command out, or adds one the catalog lacks, throws on its first call", () => {
+  test("a hook that leaves a command out, or adds one the catalog lacks, fails the type check and throws on its first call", () => {
+    // @ts-expect-error: `pin` and `copy-ref` are missing, and `archive` is not in the catalog.
     const wrong = defineActions(catalog, "issue", (_r: null, _o: null) => ({
       open: { run: () => {} },
       archive: { run: () => {} },
@@ -50,8 +51,8 @@ describe("actions", () => {
   test("a shut gate stops the run on every surface", () => {
     ran.length = 0;
     const specs = useIssueActions({ closed: true }, null);
-    expect(runCommand(specs.pin)).toBe(false);
-    expect(runCommand(specs.open)).toBe(true);
+    expect(runCommand(specs.get("pin"))).toBe(false);
+    expect(runCommand(specs.get("open"))).toBe(true);
     expect(ran).toEqual(["open"]);
   });
 });

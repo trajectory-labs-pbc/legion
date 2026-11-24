@@ -7,33 +7,20 @@ import { render, settle } from "../../tests/react";
 import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
 import { ShortcutsSheet, useShortcutsSheet } from "./shortcuts-sheet";
-import { defineActions } from "./specs";
+import { specsFor } from "./specs";
 
-const useGlobalActions = defineActions(
-  appCatalog,
-  "global",
-  ({ toggle, disabled }: { toggle: () => void; disabled: readonly string[] }, _options: null) =>
-    Object.fromEntries(
-      appCatalog.commandsOf("global").map((command) => [
-        command.name,
-        {
-          enabled: !disabled.includes(command.name),
-          run: command.name === "help" ? toggle : () => ran.push(command.name),
-        },
-      ])
-    )
-);
+const globalSpecs = (toggle: () => void, disabled: readonly string[]) =>
+  specsFor(appCatalog, "global", (command) => ({
+    enabled: !disabled.includes(command.name),
+    run: command.name === "help" ? toggle : () => ran.push(command.name),
+  }));
 
 /** The commands other than help that ran. */
 const ran: string[] = [];
 
 function Harness({ disabled = [] }: { disabled?: readonly string[] }) {
   const sheet = useShortcutsSheet();
-  useRegisterCommands(
-    appCatalog,
-    "global",
-    useGlobalActions({ toggle: sheet.toggle, disabled }, null)
-  );
+  useRegisterCommands(appCatalog, "global", globalSpecs(sheet.toggle, disabled));
   return (
     <ShortcutsSheet onOpenChange={sheet.setOpen} open={sheet.open} sections={sheet.sections} />
   );
