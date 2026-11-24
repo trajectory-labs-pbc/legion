@@ -1,30 +1,49 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-import { copyProblems, readPins, upstreamDiff } from "./copies";
+import { copyProblems, partText, readPins, repoRoot, upstreamDiff } from "./copies";
+
+const APP = "packages/dispatch/web/src/app.tsx";
+const appText = () => readFileSync(join(repoRoot, APP), "utf8");
 
 describe("copied upstream code", () => {
   test("upstream has not changed a part this app copies", () => {
     const pins = readPins();
     expect(pins.length).toBeGreaterThan(20);
     const problems = copyProblems(pins);
-    for (const pin of pins) {
+    for (const entry of pins) {
       if (
-        problems.some((line) => line.startsWith(`${pin.file} `) && line.includes(` ${pin.part} `))
+        problems.some(
+          (line) => line.startsWith(`${entry.file} `) && line.includes(` ${entry.part} `)
+        )
       ) {
-        console.error(upstreamDiff(pin));
+        console.error(upstreamDiff(entry));
       }
     }
     expect(problems).toEqual([]);
   });
 
   test("names a part upstream changed, and one it removed", () => {
-    const [pin] = readPins();
-    if (!pin) throw new Error("no pins");
-    const changed = { ...pin, sha256: "0".repeat(64) };
-    const removed = { ...pin, part: "NoSuchPart" };
+    const [first] = readPins();
+    if (!first) throw new Error("no pins");
+    const changed = { ...first, sha256: "0".repeat(64) };
+    const removed = { ...first, part: "NoSuchPart" };
     expect(copyProblems([changed, removed])).toEqual([
-      `${pin.file} changed ${pin.part} since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun src/map/copies.ts --update\``,
-      `${pin.file} no longer has NoSuchPart since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun src/map/copies.ts --update\``,
+      `${first.file} changed ${first.part} since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun src/map/copies.ts --update\``,
+      `${first.file} no longer has NoSuchPart since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun src/map/copies.ts --update\``,
     ]);
+  });
+
+  test("a reformat of upstream's file trips no pin", () => {
+    const reformatted = appText()
+      .replace(/from "([^"]+)"/g, "from '$1'")
+      .replace(/\n(const|function|export) /g, "\n// moved\n$1 ")
+      .replace(/;\n/g, "\n")
+      .replace(/\n/g, "\n  ")
+      .replace(/\(\) =>\n\s*import/g, "() => import");
+    expect(reformatted).not.toEqual(appText());
+    const pins = readPins().filter((entry) => entry.file === APP);
+    expect(copyProblems(pins, (file, part) => partText(file, part, reformatted))).toEqual([]);
   });
 });

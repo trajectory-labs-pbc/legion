@@ -27,10 +27,11 @@ function pageFileAndOtherPage(): { file: string; owner: string; other: string } 
 }
 
 describe("the view map", () => {
+  // It reads every upstream file: about 2.4 s, and past bun's 5 s default on a loaded machine.
   test("gives each upstream view file one owner, which alone loads it", () => {
     expect(files.length).toBeGreaterThan(200);
     expect(viewMapMessages()).toEqual([]);
-  });
+  }, 30_000);
 
   test("names a view file no owner maps", () => {
     expect(coverage([...files, "features/new-folder/NewView.tsx"], all).unmapped).toContain(

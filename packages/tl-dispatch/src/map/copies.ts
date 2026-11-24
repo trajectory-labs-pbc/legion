@@ -24,6 +24,50 @@ export interface Copy {
   sha256: string;
 }
 
+/**
+ * A node's tokens, without what a formatter changes: spacing, comments, semicolons, trailing
+ * commas, quote style and the parentheses around JSX.
+ */
+export function canonical(node: ts.Node, source: ts.SourceFile): string {
+  const tokens: string[] = [];
+  const visit = (current: ts.Node): void => {
+    if (ts.isParenthesizedExpression(current) && isJsx(current.expression)) {
+      visit(current.expression);
+      return;
+    }
+    const children = current.getChildren(source);
+    if (children.length === 0) {
+      tokens.push(tokenText(current, source));
+      return;
+    }
+    children.forEach((child, index) => {
+      if (child.kind >= ts.SyntaxKind.FirstJSDocNode && child.kind <= ts.SyntaxKind.LastJSDocNode) {
+        return;
+      }
+      if (child.kind === ts.SyntaxKind.SemicolonToken) return;
+      if (child.kind === ts.SyntaxKind.CommaToken && index === children.length - 1) return;
+      visit(child);
+    });
+  };
+  visit(node);
+  return tokens.filter((token) => token !== "").join(" ");
+}
+
+const isJsx = (node: ts.Node): boolean =>
+  ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node);
+
+function tokenText(node: ts.Node, source: ts.SourceFile): string {
+  if (ts.isStringLiteral(node)) return JSON.stringify(node.text);
+  if (ts.isJsxText(node)) return node.text.replace(/\s+/g, " ").trim();
+  if (node.kind === ts.SyntaxKind.EndOfFileToken) return "";
+  return node.getText(source);
+}
+
+function parse(file: string, text: string): ts.SourceFile {
+  const kind = file.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.TSX;
+  return ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind);
+}
+
 function declarationText(source: ts.SourceFile, part: string): string | undefined {
   for (const statement of source.statements) {
     if (part.startsWith("default.") && ts.isExportAssignment(statement)) {
@@ -33,13 +77,13 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
       const entry = value.properties.find(
         (property) => property.name?.getText(source) === part.slice("default.".length)
       );
-      return entry?.getText(source);
+      return entry && canonical(entry, source);
     }
     if (
       (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
       statement.name?.text === part
     ) {
-      return statement.getText(source);
+      return canonical(statement, source);
     }
     if (
       ts.isVariableStatement(statement) &&
@@ -47,25 +91,30 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
         (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === part
       )
     ) {
-      return statement.getText(source);
+      return canonical(statement, source);
     }
   }
   return undefined;
 }
 
-/** The text of one part of a file, or undefined when the file no longer has it. */
+/** One part of a file with its formatting removed, or undefined when the file no longer has it. */
 export function partText(
   file: string,
   part: string,
   text = readFileSync(join(repoRoot, file), "utf8")
 ): string | undefined {
-  if (part === "*") return text;
   if (part === "script") {
     const scripts = [...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
-    return scripts.length > 0 ? scripts.map((match) => match[1]).join("\n") : undefined;
+    if (scripts.length === 0) return undefined;
+    return scripts
+      .map((match) => {
+        const source = parse("script.ts", match[1] ?? "");
+        return canonical(source, source);
+      })
+      .join("\n");
   }
-  const kind = file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  return declarationText(ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind), part);
+  const source = parse(file, text);
+  return part === "*" ? canonical(source, source) : declarationText(source, part);
 }
 
 export const hash = (text: string) => createHash("sha256").update(text).digest("hex");
