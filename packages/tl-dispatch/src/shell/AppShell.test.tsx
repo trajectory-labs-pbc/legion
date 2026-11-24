@@ -65,4 +65,15 @@ describe("AppShell", () => {
     click("Open navigation");
     expect(alert()).toContain("did not go through");
   });
+
+  test("? anywhere on the shell opens the shortcuts sheet", () => {
+    mount();
+    settle(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true, cancelable: true })
+      );
+    });
+    const sheet = document.body.querySelector('[data-slot="sheet-content"]');
+    expect(sheet?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
+  });
 });

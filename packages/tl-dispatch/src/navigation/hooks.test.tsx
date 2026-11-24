@@ -84,9 +84,9 @@ describe("the page hooks", () => {
       return useNavigationType();
     });
     settle(() => go(machine, { machine: "m" }, { replace: true }));
-    expect(kind.value()).toBe("REPLACE");
+    expect(String(kind.value())).toBe("REPLACE");
     settle(() => go(machine, { machine: "n" }));
-    expect(kind.value()).toBe("PUSH");
+    expect(String(kind.value())).toBe("PUSH");
   });
 
   test("usePageSearch off the page throws", () => {
@@ -104,6 +104,6 @@ describe("the page hooks", () => {
     });
     expect(current.value()).toBe('issue./issues/:key/* {"key":"AB-1","*":"plan"}');
     settle(() => go(machine, { machine: "m" }));
-    expect(current.value()).toBe("machines./machines/:machine {\"machine\":\"m\"}");
+    expect(current.value()).toBe('machines./machines/:machine {"machine":"m"}');
   });
 });
