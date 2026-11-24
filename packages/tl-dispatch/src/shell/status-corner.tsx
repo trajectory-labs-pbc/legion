@@ -7,7 +7,7 @@ import { useRef } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/lib/utils";
 
-const PILL = "flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium";
+const PILL = "flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium";
 
 /** The corner that reports writes on their way and a live feed that stopped. */
 export function StatusCorner() {

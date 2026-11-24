@@ -23,6 +23,7 @@ export const RULES = {
   focus: "focus is drawn in the focus token alone (`outline-focus`), at full strength",
   textOpacity: "text at reduced opacity loses its contrast; use a text token",
   radius: "radius outside the theme: 0, a theme radius, or `rounded-full` for a circle",
+  round: "only a dot or an avatar is round: `rounded-full` goes with a `size-*`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
   styleProp: "a style prop must be an object literal, so the rule can read it",
@@ -390,6 +391,15 @@ function scriptViolations(
   };
 
   const visit = (node: ts.Node) => {
+    if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
+      const utilities = node.text.split(/\s+/).map(utilityOf);
+      if (
+        utilities.includes("rounded-full") &&
+        !utilities.some((utility) => utility.startsWith("size-"))
+      ) {
+        refuse(node, node.text, RULES.round);
+      }
+    }
     if (ts.isObjectLiteralExpression(node) && isStyleObject(node)) {
       for (const member of node.properties) {
         if (

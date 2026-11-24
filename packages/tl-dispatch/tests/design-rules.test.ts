@@ -29,6 +29,8 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="rounded-(--x)">', "radius"],
   ["tsx", '<p className="rounded-[6px]">', "radius"],
   ["tsx", '<p className="rounded-xs">', "radius"],
+  ["tsx", '<span className="rounded-full px-2">', "only a dot or an avatar is round"],
+  ["tsx", 'const BADGE = "md:rounded-full bg-card";', "only a dot or an avatar is round"],
   ["tsx", '<div className="transition-all">', "motion"],
   ["tsx", '<div className="translate-x-1">', "motion"],
   ["tsx", '<div className="hover:scale-105">', "motion"],
@@ -60,7 +62,8 @@ const REFUSED: readonly [string, string, string][] = [
 
 const ALLOWED: readonly [string, string][] = [
   ["tsx", '<p className="text-foreground bg-card border-border bg-card/50 hover:bg-muted">'],
-  ["tsx", '<p className="rounded-md rounded-t-lg rounded-full rounded-none">'],
+  ["tsx", '<p className="rounded-md rounded-t-lg rounded-none">'],
+  ["tsx", '<span className="size-2 rounded-full bg-primary">'],
   ["tsx", '<button className="h-8 px-3">'],
   ["tsx", '<button className="min-h-11">'],
   ["tsx", '<input type="checkbox" className="size-4" />'],

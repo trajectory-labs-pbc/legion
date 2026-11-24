@@ -34,7 +34,7 @@ const ROW =
   "flex h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground";
 
 const BADGE =
-  "shrink-0 rounded-full bg-sidebar-primary px-1.5 text-xs text-sidebar-primary-foreground";
+  "shrink-0 rounded-sm bg-sidebar-primary px-1.5 text-xs text-sidebar-primary-foreground";
 
 function Badge({ count, label }: { count: number | undefined; label?: string }) {
   if (count === undefined || count === 0) return null;

@@ -10,7 +10,7 @@ import { inbox } from "@/pages/inbox";
 import { Button } from "@/ui/button";
 
 const CHIP =
-  "rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-focus";
+  "rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-focus";
 
 /** The narrow screen's top bar: the name, the counts that need the reader, and the menu. */
 export function CompactHeader({
