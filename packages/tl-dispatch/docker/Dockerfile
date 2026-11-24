@@ -62,11 +62,19 @@ COPY packages/tl-dispatch/docker/envoy-dispatch.sh /usr/local/bin/envoy-dispatch
 ARG LEGION_COMMIT=
 LABEL org.opencontainers.image.revision=${LEGION_COMMIT}
 
-# Built by the workflow on every pull request and before each push, never pushed: fails when
-# either app is missing or envoy-dispatch starts on a folder with no build.
+# Built by the workflow on every pull request and before each push, never pushed. Fails when either
+# app is missing, the default is not upstream's app, or envoy-dispatch mishandles the folder.
 FROM image AS smoke
-RUN test -s /srv/tl-dispatch/index.html \
- && test -s /srv/dispatch-web/index.html \
- && grep -q "the fork's web app, /srv/tl-dispatch" /usr/share/doc/legion/THIRD_PARTY_NOTICES \
- && status=0 && { DISPATCH_WEB_DIST=/srv /usr/local/bin/envoy-dispatch || status=$?; } \
- && if [ "$status" -ne 78 ]; then echo "envoy-dispatch on a folder with no build exited $status, not 78" >&2; exit 1; fi
+SHELL ["/bin/sh", "-euc"]
+RUN test -s /srv/tl-dispatch/index.html; \
+    test -s /srv/dispatch-web/index.html; \
+    grep -q "the fork's web app, /srv/tl-dispatch" /usr/share/doc/legion/THIRD_PARTY_NOTICES; \
+    test "$DISPATCH_WEB_DIST" = /srv/dispatch-web
+# The server on a folder with no build exits 78, before the binary runs.
+RUN status=0; DISPATCH_WEB_DIST=/srv /usr/local/bin/envoy-dispatch 2>/tmp/err || status=$?; \
+    if [ "$status" -ne 78 ]; then echo "envoy-dispatch on a folder with no build exited $status, not 78" >&2; exit 1; fi
+# The server on a built folder reaches the binary, which stops at the missing database.
+RUN status=0; DISPATCH_WEB_DIST=/srv/tl-dispatch /usr/local/bin/envoy-dispatch 2>/tmp/err || status=$?; \
+    if [ "$status" -eq 78 ] || ! grep -q "DATABASE_URL required" /tmp/err; then cat /tmp/err >&2; exit 1; fi
+# A subcommand reaches the binary whatever the folder.
+RUN DISPATCH_WEB_DIST=/srv /usr/local/bin/envoy-dispatch settings | grep -q DISPATCH_WEB_DIST
