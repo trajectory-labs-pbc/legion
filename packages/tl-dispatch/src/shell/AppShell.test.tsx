@@ -79,4 +79,18 @@ describe("AppShell", () => {
     }
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
+
+  test("$mod+k opens the search palette, whose code loads with the shell", async () => {
+    mount();
+    settle(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "k", code: "KeyK", ctrlKey: true, bubbles: true })
+      );
+    });
+    const field = () => document.body.querySelector('input[placeholder="Search Dispatch"]');
+    for (let tries = 0; tries < 20 && field() === null; tries += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    }
+    expect(field()).not.toBeNull();
+  });
 });

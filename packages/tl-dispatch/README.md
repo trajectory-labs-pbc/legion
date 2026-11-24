@@ -67,10 +67,11 @@ engine and the command store. Everything else reads the store:
   on a Mac, `Ctrl+K` elsewhere). No chip shows while the command is off or an open overlay stops
   its key. `commandStore.run(id)` runs a mounted command through its gate, as its key does.
 - `CommandButton` and `HotkeyTooltip`: the label, icon, style and key come from the catalog, and a
-  click runs what the key runs. A disabled command hides its button unless `showIfDisabled`.
-- `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog. It lists each key live where
-  `?` was pressed, grouped, each command once with all its keys, without `Escape` or disabled
-  commands. While it is open, only `?` and Escape act: they close it.
+  click runs what the key runs. A disabled command hides its button unless `showIfDisabled`. The
+  tooltip's code loads after the first paint; until then the control carries its keys alone.
+- `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog, and its code loads then. It
+  lists each key live where `?` was pressed, grouped, each command once with all its keys, without
+  `Escape` or disabled commands. While it is open, only `?` and Escape act: they close it.
 
 ## Navigation
 
@@ -117,7 +118,8 @@ React Router context around them. Before then, a swap means running both routers
   engine's behaviour the catalog relies on.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   `tests/design-config.ts` lists the only files they leave out.
-- `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget.
+- `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget. The
+  shortcuts sheet, the tooltips and the search palette are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.
 
 `.github/workflows/tl-dispatch.yaml` runs all of them.
