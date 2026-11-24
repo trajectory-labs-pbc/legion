@@ -54,7 +54,7 @@ the dark scheme follow the operating system; keep it when the file is written ag
 
 `src/commands/app-catalog.ts` declares every command once: its label, keys, icon, group, whether
 it is destructive and the lists it stays out of. Its global context holds the keys upstream's shell
-binds, with the same behaviour, and adds `G M` and the pages with no letter. The catalog refuses,
+binds, with the same behaviour, and adds the pages with no letter as palette commands. The catalog refuses,
 when it loads, two keys live together that one press sequence matches or where one starts the
 other, as upstream's key engine compares them. `CommandId` is typed from it, so a misspelt id
 fails `tsc`.

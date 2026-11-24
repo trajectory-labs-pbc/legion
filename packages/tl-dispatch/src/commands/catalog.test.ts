@@ -59,14 +59,14 @@ describe("the app's catalog", () => {
     }
   });
 
-  test("adds only commands the shell lacks: G M and the pages with no letter", () => {
+  test("adds only the pages with no letter, as palette commands", () => {
     const live = new Set(LIVE_KEYS.map((key) => `global.${key.name}`));
     const added = appCatalog.commandsOf("global").filter((command) => !live.has(command.id));
     expect(added.map((command) => `${command.id} ${command.keys?.join() ?? ""}`)).toEqual([
       "global.go-priorities ",
       "global.go-delivery ",
       "global.go-pipeline ",
-      "global.go-machines g m",
+      "global.go-machines ",
     ]);
   });
 

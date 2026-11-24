@@ -71,7 +71,7 @@ describe("the sidebar", () => {
     expect(rows.map((row) => row.href)).toEqual(
       NAV_DESTINATIONS.map((d) => NAV_PAGES[d.name].path)
     );
-    expect(rows.map((row) => row.hint)).toEqual(["G I", "G A", "", "", "", "G M", "G S"]);
+    expect(rows.map((row) => row.hint)).toEqual(["G I", "G A", "", "", "", "", "G S"]);
   });
 
   test("control: with no command mounted, no row claims a key", () => {

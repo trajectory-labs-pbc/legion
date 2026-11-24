@@ -27,7 +27,7 @@ export const NAV_DESTINATIONS = [
   { name: "priorities", label: "Priorities", path: "/priorities", icon: ListOrderedIcon },
   { name: "delivery", label: "Delivery", path: "/delivery", icon: PackageCheckIcon },
   { name: "pipeline", label: "Pipeline", path: "/pipeline", icon: WorkflowIcon },
-  { name: "machines", label: "Machines", path: "/machines", icon: ServerIcon, key: "m" },
+  { name: "machines", label: "Machines", path: "/machines", icon: ServerIcon },
   { name: "settings", label: "Settings", path: "/settings", icon: SettingsIcon, key: "s" },
 ] as const satisfies readonly NavDestination[];
 

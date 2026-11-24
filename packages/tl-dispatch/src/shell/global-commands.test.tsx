@@ -51,13 +51,13 @@ const globalBindings = () =>
     .filter((binding) => binding.scope === "global" && !binding.id.endsWith(UNDER_OVERLAY));
 
 describe("the shell's global commands", () => {
-  test("bind upstream's shell keys, and G M besides, so moving the shell onto the catalog changes no key", () => {
+  test("bind upstream's shell keys and no other, so moving the shell onto the catalog changes no key", () => {
     setup();
     const ours = globalBindings().flatMap((binding) => binding.keys);
     const upstream = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
-    expect(ours.filter((keys) => !upstream.includes(keys))).toEqual(["g m"]);
+    expect(ours.filter((keys) => !upstream.includes(keys))).toEqual([]);
     expect(upstream.filter((keys) => !ours.includes(keys))).toEqual([]);
   });
 
@@ -67,7 +67,7 @@ describe("the shell's global commands", () => {
     press("/");
     press("?", { shiftKey: true });
     press("c");
-    for (const letter of ["i", "a", "m", "s"]) {
+    for (const letter of ["i", "a", "s"]) {
       press("g");
       press(letter);
     }
@@ -81,7 +81,6 @@ describe("the shell's global commands", () => {
       "create",
       "go inbox",
       "go agents",
-      "go machines",
       "go settings",
       "inbox drawer",
       "sidebar",

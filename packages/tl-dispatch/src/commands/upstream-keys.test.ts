@@ -104,7 +104,7 @@ describe("upstream's shell keys", () => {
       .map((registration) => registration.keys);
     const global = APP_CONTEXTS.find((context) => context.name === "global");
     const catalog = (global?.commands ?? []).flatMap((command) => command.keys ?? []);
-    expect(catalog.filter((keys) => !live.includes(keys))).toEqual(["g m"]);
+    expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
     expect(live.filter((keys) => !catalog.includes(keys))).toEqual([]);
   });
 });

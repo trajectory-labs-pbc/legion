@@ -14,8 +14,9 @@ import { COMMAND_GROUPS } from "./groups";
 import { navCommandDefinitions } from "./nav";
 
 /**
- * Every command of the app, declared once. The global context holds every key the shell binds
- * today, with the same behaviour; page contexts join as their pages are rebuilt.
+ * Every command of the app, declared once. The global context holds every key upstream's shell
+ * binds and no other, with the same behaviour; the pages with no letter are palette commands only.
+ * Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [
   {
