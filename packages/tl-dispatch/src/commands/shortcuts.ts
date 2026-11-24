@@ -21,6 +21,9 @@ export interface ShortcutSection {
   rows: readonly ShortcutRow[];
 }
 
+/** Our labels for upstream's bindings, by `scope:id`, where theirs do not fit the sheet. */
+export type UpstreamLabels = Readonly<Partial<Record<`${KeymapScope}:${string}`, string>>>;
+
 /** Keys every reader knows; the sheet leaves them out, and they still run. */
 export const UNIVERSAL_KEYS = ["Escape"] as const;
 
@@ -53,7 +56,8 @@ function scopeGroup(scope: KeymapScope): CommandGroup {
 export function liveShortcuts(
   described: readonly KeyBindingDescription[],
   liveScopes: readonly KeymapScope[],
-  catalog: Catalog
+  catalog: Catalog,
+  upstreamLabels: UpstreamLabels = {}
 ): ShortcutSection[] {
   const clash = clashChecker();
   const taken: string[] = [];
@@ -68,13 +72,14 @@ export function liveShortcuts(
       const own = catalog.find(binding.id.replace(UNDER_OVERLAY, ""));
       if (shown.length === 0 || own?.hideFrom?.includes("sheet") === true) continue;
       const group = own === undefined ? scopeGroup(scope) : (own.group ?? DEFAULT_GROUP);
-      const rowId = own?.id ?? `${scope}:${binding.label}`;
+      const label = upstreamLabels[`${scope}:${binding.id}`] ?? binding.label;
+      const rowId = own?.id ?? `${scope}:${label}`;
       const section = sections.get(group.id) ?? { group, rows: new Map<string, ShortcutRow>() };
       sections.set(group.id, section);
       const row = section.rows.get(rowId);
       section.rows.set(rowId, {
         id: rowId,
-        label: row?.label ?? binding.label,
+        label: row?.label ?? label,
         keys: [...new Set([...(row?.keys ?? []), ...shown])],
       });
     }

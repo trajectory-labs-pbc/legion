@@ -56,7 +56,9 @@ function setup() {
     global.underOverlays.map(({ binding }) => binding)
   );
   const sheet = () =>
-    liveShortcuts(keymap.describe(), stack.liveScopes(), catalog).map(({ group, rows }) => [
+    liveShortcuts(keymap.describe(), stack.liveScopes(), catalog, {
+      "inbox:snooze": "Snooze",
+    }).map(({ group, rows }) => [
       group.label,
       rows.map((row) => `${row.label}: ${row.keys.join(" | ")}`),
     ]);
@@ -108,6 +110,21 @@ describe("the shortcuts sheet's rows", () => {
     ]);
     keymap.pushScope("inbox");
     expect(sheet()[0]).toEqual(["Inbox", ["Next item: j | ArrowDown"]]);
+  });
+
+  test("name an upstream binding by our short label for its scope and id, where we give one", () => {
+    const { keymap, sheet } = setup();
+    keymap.register("inbox", [
+      page("snooze", "h", "Snooze the focused ask, or every selected ask"),
+      page("archive", "e", "Archive"),
+    ]);
+    keymap.register("board", [page("snooze", "z", "Snooze the card")]);
+    keymap.pushScope("board");
+    keymap.pushScope("inbox");
+    expect(sheet().slice(0, 2)).toEqual([
+      ["Inbox", ["Snooze: h", "Archive: e"]],
+      ["Board", ["Snooze the card: z"]],
+    ]);
   });
 
   test("under a dialog, list the dialog's keys and our global copies once, under their group", () => {

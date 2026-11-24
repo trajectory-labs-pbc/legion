@@ -54,6 +54,27 @@ export function chipsOf(keys: string, mac: boolean = IS_MAC): ShortcutChips {
     });
 }
 
+/** A row's keys as chip sequences; a run of three or more consecutive digits is one chip, `1–9`. */
+export function rowChips(keys: readonly string[], mac: boolean = IS_MAC): readonly ShortcutChips[] {
+  const chips: ShortcutChips[] = [];
+  let index = 0;
+  while (index < keys.length) {
+    const first = keys[index] ?? "";
+    let last = index;
+    while (/^[0-8]$/.test(keys[last] ?? "") && keys[last + 1] === String(Number(keys[last]) + 1)) {
+      last += 1;
+    }
+    if (last - index >= 2) {
+      chips.push([`${first}–${keys[last] ?? ""}`]);
+    } else {
+      chips.push(chipsOf(first, mac));
+      last = index;
+    }
+    index = last + 1;
+  }
+  return chips;
+}
+
 /** The `aria-keyshortcuts` value of the single-press keys; a chord has no syntax there. */
 export function ariaKeyShortcuts(
   keys: readonly string[],

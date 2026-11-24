@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ariaKeyShortcuts, chipsOf } from "./chips";
+import { ariaKeyShortcuts, chipsOf, rowChips } from "./chips";
 
 describe("chips", () => {
   test.each([
@@ -26,5 +26,25 @@ describe("chips", () => {
     expect(ariaKeyShortcuts(["$mod+k", "g i", "Shift+S"], true)).toBe("Meta+K Shift+S");
     expect(ariaKeyShortcuts(["$mod+k"], false)).toBe("Control+K");
     expect(ariaKeyShortcuts(["g i"], false)).toBeUndefined();
+  });
+});
+
+describe("a row's chips", () => {
+  test.each([
+    [["1", "2", "3", "4", "5", "6", "7", "8", "9"], [["1–9"]]],
+    [
+      ["1", "2", "3", "5"],
+      [["1–3"], ["5"]],
+    ],
+    [
+      ["1", "2"],
+      [["1"], ["2"]],
+    ],
+    [
+      ["j", "ArrowDown", "g i"],
+      [["J"], ["↓"], ["G", "I"]],
+    ],
+  ] as const)("%p: %p", (keys, chips) => {
+    expect(rowChips(keys, false)).toEqual(chips);
   });
 });

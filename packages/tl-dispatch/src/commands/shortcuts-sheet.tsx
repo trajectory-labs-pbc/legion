@@ -1,14 +1,14 @@
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 import { lazy, Suspense, useCallback, useState } from "react";
 
-import { appCatalog } from "./app-catalog";
+import { appCatalog, UPSTREAM_LABELS } from "./app-catalog";
 import { appStack } from "./engine-stack";
 import { liveShortcuts, type ShortcutSection } from "./shortcuts";
 import type { ShortcutsSheetProps } from "./shortcuts-sheet-view";
 
 /** The keys that run now, below anything the sheet itself opens. */
 export function readLiveShortcuts(): ShortcutSection[] {
-  return liveShortcuts(appKeymap.describe(), appStack.liveScopes(), appCatalog);
+  return liveShortcuts(appKeymap.describe(), appStack.liveScopes(), appCatalog, UPSTREAM_LABELS);
 }
 
 export interface ShortcutsSheetState {

@@ -10,6 +10,8 @@ export interface KeyRegistration {
   line: number;
   /** The engine scope of the `useKeymap` or `register` call it is passed to, when that is a literal. */
   scope: string | undefined;
+  /** The binding's `id`, when it is a literal. */
+  id: string | undefined;
   keys: string;
 }
 
@@ -74,8 +76,10 @@ export function keyRegistrations(
             ? keys.elements.map((element) => literalText(element as ts.Expression))
             : [literalText(keys)];
       const line = source.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+      const idNode = property(node, "id");
+      const id = idNode === undefined ? undefined : literalText(idNode);
       for (const text of texts) {
-        if (text !== undefined) found.push({ file, line, scope: scopeOf(node), keys: text });
+        if (text !== undefined) found.push({ file, line, scope: scopeOf(node), id, keys: text });
       }
     }
     ts.forEachChild(node, visit);

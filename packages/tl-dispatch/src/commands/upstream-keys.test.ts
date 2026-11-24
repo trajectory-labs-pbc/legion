@@ -7,7 +7,7 @@ import {
   UPSTREAM_WEB,
   upstreamKeyRegistrations,
 } from "../../tests/key-registrations";
-import { APP_CONTEXTS } from "./app-catalog";
+import { APP_CONTEXTS, UPSTREAM_LABELS } from "./app-catalog";
 import type { CommandContext } from "./catalog";
 import { clashes, keyChecker, refuses } from "./keys";
 
@@ -80,7 +80,9 @@ describe("upstream's key registrations", () => {
   });
 
   test("a key equal to one an upstream page binds in the same scope clashes; in another scope it does not", () => {
-    const theirs: KeyRegistration[] = [{ file: "page.tsx", line: 1, scope: "issue", keys: "x" }];
+    const theirs: KeyRegistration[] = [
+      { file: "page.tsx", line: 1, scope: "issue", id: "x", keys: "x" },
+    ];
     const ours = (scope: CommandContext["scope"]): CommandContext[] => [
       {
         name: "page",
@@ -103,5 +105,18 @@ describe("upstream's shell keys", () => {
     const catalog = (global?.commands ?? []).flatMap((command) => command.keys ?? []);
     expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
     expect(live.filter((keys) => !catalog.includes(keys))).toEqual([]);
+  });
+});
+
+describe("our labels for upstream's bindings", () => {
+  test("each names a binding upstream registers, by its scope and id", () => {
+    const named = (key: string) => {
+      const [scope, id] = key.split(":");
+      // A scope passed as a variable reads as undefined; the inbox's defaults to "inbox".
+      return upstream.some(
+        (binding) => binding.id === id && (binding.scope === scope || binding.scope === undefined)
+      );
+    };
+    expect(Object.keys(UPSTREAM_LABELS).filter((key) => !named(key))).toEqual([]);
   });
 });

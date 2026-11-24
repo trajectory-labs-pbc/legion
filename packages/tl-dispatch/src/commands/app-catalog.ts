@@ -12,6 +12,7 @@ import {
 import { type CommandContext, type CommandIdOf, createCatalog } from "./catalog";
 import { COMMAND_GROUPS } from "./groups";
 import { navCommandDefinitions } from "./nav";
+import type { UpstreamLabels } from "./shortcuts";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
@@ -93,3 +94,17 @@ export type CommandId = CommandIdOf<typeof APP_CONTEXTS>;
 
 /** Loading this module checks the whole catalog, so a clash fails every test that imports it. */
 export const appCatalog = createCatalog(APP_CONTEXTS);
+
+/** The sheet's labels for upstream's bindings whose own do not fit it, by `scope:id`. */
+export const UPSTREAM_LABELS: UpstreamLabels = {
+  "inbox:arrows": "Next / previous row",
+  "inbox:option": "Select an option",
+  "inbox:snooze": "Snooze the ask or the selection",
+  "architecture:arrows": "Next / previous component",
+  "architecture:open": "Open the focused component",
+  "board:arrows-horizontal": "Next / previous column",
+  "board:arrows-vertical": "Next / previous card",
+  "issue:request-changes": "Request changes",
+  "issue:tree-decision": "Move into the row's decision",
+  "issue:tree-fold": "Fold the row, or go to its parent",
+};

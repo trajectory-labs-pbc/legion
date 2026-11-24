@@ -6,7 +6,7 @@ import { KbdSequence } from "@/ui/kbd";
 import { textVariants } from "@/ui/lib/typography";
 import { cn } from "@/ui/lib/utils";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/ui/sheet";
-import { chipsOf } from "./chips";
+import { rowChips } from "./chips";
 import { filterShortcuts, type ShortcutSection } from "./shortcuts";
 
 export interface ShortcutsSheetProps {
@@ -69,14 +69,14 @@ function ShortcutsList({ sections }: { sections: readonly ShortcutSection[] }) {
                   >
                     <span className="min-w-0 truncate">{row.label}</span>
                     <span className="flex max-w-1/2 shrink-0 flex-wrap justify-end gap-1">
-                      {row.keys.map((keys, index) => (
-                        <span className="inline-flex items-center gap-1" key={keys}>
+                      {rowChips(row.keys).map((chips, index) => (
+                        <span className="inline-flex items-center gap-1" key={chips.join(" ")}>
                           {index > 0 ? (
                             <span className={textVariants({ size: "caption", tone: "muted" })}>
                               or
                             </span>
                           ) : null}
-                          <KbdSequence chips={chipsOf(keys)} />
+                          <KbdSequence chips={chips} />
                         </span>
                       ))}
                     </span>
