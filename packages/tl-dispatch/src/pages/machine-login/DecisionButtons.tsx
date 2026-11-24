@@ -1,11 +1,15 @@
-import type { UseMutationResult } from "@tanstack/react-query";
-import { apiErrorMessage } from "@upstream-dispatch/api/client";
-import type { DecisionResponse, StateResponse } from "@upstream-dispatch/api/types";
-import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
-import type { SubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import type { ReactNode } from "react";
 
 import { Button } from "../../ui/button";
+import {
+  apiErrorMessage,
+  type DecisionResponse,
+  type KeyedWrite,
+  SendStoppedError,
+  type StateResponse,
+  type SubmitGuard,
+  stoppedWriteNote,
+} from "./upstream";
 
 /** Approve and Deny for a pending machine login; with no `approve`, only Deny shows. */
 export function DecisionButtons({
@@ -13,8 +17,8 @@ export function DecisionButtons({
   deny,
   submitGuard,
 }: {
-  approve?: UseMutationResult<DecisionResponse | null, Error, void>;
-  deny: UseMutationResult<StateResponse | null, Error, void>;
+  approve?: KeyedWrite<DecisionResponse>;
+  deny: KeyedWrite<StateResponse>;
   submitGuard: SubmitGuard;
 }): ReactNode {
   const deciding = approve?.isPending === true || deny.isPending;

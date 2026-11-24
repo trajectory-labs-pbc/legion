@@ -1,15 +1,16 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { WriteBounds } from "@upstream-dispatch/api/client";
-import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
-import {
-  refusedNote,
-  useKeyedWrite,
-  useRefusalOfSubject,
-} from "@upstream-dispatch/features/writes/useKeyedWrite";
-import { useSubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import type { ReactNode } from "react";
 
 import { Button } from "../../ui/button";
+import {
+  refusedNote,
+  SendStoppedError,
+  stoppedWriteNote,
+  useKeyedWrite,
+  useRefusalOfSubject,
+  useSubmitGuard,
+  type WriteBounds,
+} from "./upstream";
 
 export interface RevocableColumn<Row> {
   cell: (row: Row) => ReactNode;
@@ -80,7 +81,10 @@ export function RevocableTable<Row>({
 
       {query.isPending ? <p className="text-sm text-muted-foreground">Loading {noun}…</p> : null}
       {query.isError ? (
-        <div className="flex items-center gap-3 border border-border bg-card p-3 text-sm">
+        <div
+          className="flex items-center gap-3 border border-border bg-card p-3 text-sm"
+          role="alert"
+        >
           <span className="text-destructive">Couldn't load {noun}.</span>
           <Button disabled={query.isFetching} onClick={() => void query.refetch()}>
             Retry
@@ -134,6 +138,7 @@ export function RevocableTable<Row>({
                         </span>
                       ) : (
                         <Button
+                          aria-label={`Revoke ${rowName(row)}`}
                           disabled={mutation.isPending}
                           onClick={() => press(row)}
                           variant="danger"

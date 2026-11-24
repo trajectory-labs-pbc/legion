@@ -1,14 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { api, apiErrorMessage } from "@upstream-dispatch/api/client";
-import type { DecisionResponse, StateResponse } from "@upstream-dispatch/api/types";
-import {
-  machineLoginsQuery,
-  machineName,
-} from "@upstream-dispatch/features/credentials/machineLogins";
-import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
-import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
-import { useKeyedWrite } from "@upstream-dispatch/features/writes/useKeyedWrite";
-import { useSubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import { type FormEvent, type ReactNode, useState } from "react";
 
 import { Button } from "../../ui/button";
@@ -16,6 +6,20 @@ import { Input } from "../../ui/input";
 import { DecisionButtons } from "./DecisionButtons";
 import { MachineLogins } from "./MachineLogins";
 import { RecordFacts } from "./RecordFacts";
+import {
+  api,
+  apiErrorMessage,
+  credentialPendingQuery,
+  type DecisionResponse,
+  machineLoginsQuery,
+  machineName,
+  SendStoppedError,
+  type StateResponse,
+  stoppedWriteNote,
+  useDocumentTitle,
+  useKeyedWrite,
+  useSubmitGuard,
+} from "./upstream";
 
 /** The login's decision, in place of the buttons that decide it. */
 function Decision({
@@ -74,7 +78,7 @@ export function MachineLoginPage(): ReactNode {
     label: () => "Approval of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
-      void queryClient.invalidateQueries({ queryKey: ["credential-pending"] });
+      void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
       void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
       if (decided === null) lookup.mutate(lookedUpCode);
     },
@@ -87,7 +91,7 @@ export function MachineLoginPage(): ReactNode {
     label: () => "Denial of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
-      void queryClient.invalidateQueries({ queryKey: ["credential-pending"] });
+      void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
       if (decided === null) lookup.mutate(lookedUpCode);
     },
   });

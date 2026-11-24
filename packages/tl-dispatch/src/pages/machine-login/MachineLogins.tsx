@@ -1,15 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@upstream-dispatch/api/client";
-import type { LauncherCredentialResp } from "@upstream-dispatch/api/types";
-import { credentialGrantsQuery } from "@upstream-dispatch/features/credentials/grants";
-import {
-  machineLoginsQuery,
-  machineName,
-} from "@upstream-dispatch/features/credentials/machineLogins";
-import { Timestamp } from "@upstream-dispatch/features/refs/Timestamp";
 import type { ReactNode } from "react";
 
 import { type RevocableColumn, RevocableTable } from "./RevocableTable";
+import {
+  api,
+  credentialGrantsQuery,
+  type LauncherCredentialResp,
+  machineLoginsQuery,
+  machineName,
+  Timestamp,
+} from "./upstream";
 
 // A pod login (`person` set) and a service's token login have no approver.
 function approvedBy(login: LauncherCredentialResp): string {

@@ -1,7 +1,6 @@
-import type { RecordResponse } from "@upstream-dispatch/api/types";
-import { machineName } from "@upstream-dispatch/features/credentials/machineLogins";
-import { Timestamp } from "@upstream-dispatch/features/refs/Timestamp";
 import type { ReactNode } from "react";
+
+import { machineName, type RecordResponse, Timestamp } from "./upstream";
 
 const LIFETIME_UNITS: ReadonlyArray<{ seconds: number; unit: string }> = [
   { seconds: 86400, unit: "day" },
