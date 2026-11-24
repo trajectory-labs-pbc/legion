@@ -1,6 +1,11 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { apiErrorMessage, type WriteBounds } from "@upstream-dispatch/api/client";
-import { useKeyedWrite } from "@upstream-dispatch/features/writes/useKeyedWrite";
+import type { WriteBounds } from "@upstream-dispatch/api/client";
+import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
+import {
+  refusedNote,
+  useKeyedWrite,
+  useRefusalOfSubject,
+} from "@upstream-dispatch/features/writes/useKeyedWrite";
 import { useSubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import type { ReactNode } from "react";
 
@@ -23,8 +28,8 @@ export function RevocableTable<Row>({
   onRevoked,
   query,
   revoke,
-  revokeError,
   rowKey,
+  rowName,
   unrevocable,
 }: {
   columns: readonly RevocableColumn<Row>[];
@@ -37,8 +42,9 @@ export function RevocableTable<Row>({
   onRevoked: () => void;
   query: UseQueryResult<readonly Row[]>;
   revoke: (row: Row, bounds: WriteBounds) => Promise<void>;
-  revokeError: string;
   rowKey: (row: Row) => string;
+  /** `row` as the refusal line names it: `the machine login for devbox`. */
+  rowName: (row: Row) => string;
   unrevocable?: (row: Row) => string | null;
 }): ReactNode {
   const submitGuard = useSubmitGuard();
@@ -50,6 +56,13 @@ export function RevocableTable<Row>({
     onSuccess: onRevoked,
     write: revoke,
   });
+  // The refusal line goes once its row leaves the list.
+  const refused = useRefusalOfSubject(
+    mutation,
+    (row) => query.data?.some((listed) => rowKey(listed) === rowKey(row)) === true
+  )
+    ? mutation.variables
+    : undefined;
   const press = (row: Row) => {
     if (confirm === undefined || window.confirm(confirm(row))) {
       submitGuard.guard(() => mutation.mutate(row));
@@ -136,9 +149,15 @@ export function RevocableTable<Row>({
           </table>
         </div>
       ) : null}
-      {mutation.isError ? (
-        <p className="text-sm text-destructive">{apiErrorMessage(mutation.error, revokeError)}</p>
-      ) : null}
+      {refused === undefined ? null : (
+        <p className="text-sm text-destructive">
+          {mutation.error instanceof SendStoppedError
+            ? stoppedWriteNote(`the revoke of ${rowName(refused)}`, "made", {
+                anew: "Pressing Revoke again sends a new revoke.",
+              })
+            : refusedNote(`revoke ${rowName(refused)}`, mutation.error)}
+        </p>
+      )}
     </section>
   );
 }

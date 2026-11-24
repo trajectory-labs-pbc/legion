@@ -1,6 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { apiErrorMessage } from "@upstream-dispatch/api/client";
 import type { DecisionResponse, StateResponse } from "@upstream-dispatch/api/types";
+import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
 import type { SubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import type { ReactNode } from "react";
 
@@ -33,14 +34,23 @@ export function DecisionButtons({
           Deny
         </Button>
       </div>
+      {/* A stopped decision may have been made; pressing again sends a new one. */}
       {approve?.isError ? (
         <p className="text-sm text-destructive">
-          {apiErrorMessage(approve.error, "Could not approve this request.")}
+          {approve.error instanceof SendStoppedError
+            ? stoppedWriteNote("the approval", "made", {
+                anew: "Pressing Approve again sends a new approval.",
+              })
+            : apiErrorMessage(approve.error, "Could not approve this request.")}
         </p>
       ) : null}
       {deny.isError ? (
         <p className="text-sm text-destructive">
-          {apiErrorMessage(deny.error, "Could not deny this request.")}
+          {deny.error instanceof SendStoppedError
+            ? stoppedWriteNote("the denial", "made", {
+                anew: "Pressing Deny again sends a new denial.",
+              })
+            : apiErrorMessage(deny.error, "Could not deny this request.")}
         </p>
       ) : null}
     </div>

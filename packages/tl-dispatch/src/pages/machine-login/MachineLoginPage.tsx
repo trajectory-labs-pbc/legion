@@ -6,6 +6,7 @@ import {
   machineName,
 } from "@upstream-dispatch/features/credentials/machineLogins";
 import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
+import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
 import { useKeyedWrite } from "@upstream-dispatch/features/writes/useKeyedWrite";
 import { useSubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
 import { type FormEvent, type ReactNode, useState } from "react";
@@ -154,7 +155,11 @@ export function MachineLoginPage(): ReactNode {
         </form>
         {lookup.isError ? (
           <p className="text-sm text-destructive">
-            {apiErrorMessage(lookup.error, "Could not look up that code.")}
+            {lookup.error instanceof SendStoppedError
+              ? stoppedWriteNote("the lookup of that code", "made", {
+                  anew: "Look up sends the code in the field as a new lookup.",
+                })
+              : apiErrorMessage(lookup.error, "Could not look up that code.")}
           </p>
         ) : null}
         {view === undefined ? null : (
