@@ -160,20 +160,24 @@ export function MachineLoginPage(): ReactNode {
         {view === undefined ? null : (
           <div className="space-y-4 border border-border bg-card p-4">
             <RecordFacts record={view.record} />
-            {view.decided === null ? (
-              <DecisionButtons
-                approve={view.record.service === null ? approve : undefined}
-                deny={deny}
-                submitGuard={submitGuard}
-              />
-            ) : (
+            {view.record.state === "expired" ? (
+              <p className="text-sm font-medium text-foreground">
+                This login expired before anyone decided it.
+              </p>
+            ) : view.decided !== null ? (
               <Decision
                 credentialId={view.decided.credential_id}
                 event={view.decided.event}
                 host={view.record.identifiers?.[0] ?? ""}
                 service={view.record.service}
               />
-            )}
+            ) : view.record.state === "pending" ? (
+              <DecisionButtons
+                approve={view.record.service === null ? approve : undefined}
+                deny={deny}
+                submitGuard={submitGuard}
+              />
+            ) : null}
           </div>
         )}
       </div>
