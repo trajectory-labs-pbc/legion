@@ -36,5 +36,8 @@ jobs:
           fi
           git fetch --no-tags --filter=blob:none "https://github.com/$upstream.git" main
 
+      - name: Test the allowlist script
+        run: .github/scripts/check-fork-allowlist.test.sh
+
       - name: Check the fork's diff against the allowlist
         run: .github/scripts/check-fork-allowlist.sh FETCH_HEAD
