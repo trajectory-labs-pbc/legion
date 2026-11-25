@@ -130,6 +130,7 @@
 
   /* A state's scale: its tint and border are the grounds, its own token the text, a dot or a
      bar. The theme swaps each token with the scheme, so the scale runs the other way in dark.
+     Text under the pointer (900 in light, 300 in dark) is the token a step toward the foreground.
      The warning tint is made for a badge. A card takes amber-50 in light and amber-950 in dark,
      so each is the tint mixed into the page's ground. */
   --color-amber-50: color-mix(
@@ -183,7 +184,11 @@
   --color-rose-50: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
   --color-rose-100: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
   --color-rose-200: color-mix(in oklab, var(--danger-border) var(--repaint-light), var(--danger));
-  --color-rose-300: color-mix(in oklab, var(--danger-border) var(--repaint-light), var(--danger));
+  --color-rose-300: color-mix(
+    in oklab,
+    var(--danger-border) var(--repaint-light),
+    color-mix(in oklab, var(--danger) 65%, var(--foreground))
+  );
   --color-rose-400: color-mix(
     in oklab,
     color-mix(in oklab, var(--danger) 50%, var(--danger-border)) var(--repaint-light),
@@ -199,7 +204,7 @@
   --color-rose-800: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
   --color-rose-900: color-mix(
     in oklab,
-    var(--danger) var(--repaint-light),
+    color-mix(in oklab, var(--danger) 65%, var(--foreground)) var(--repaint-light),
     color-mix(in oklab, var(--danger-border) 50%, var(--danger-tint))
   );
   --color-rose-950: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-tint));
@@ -230,7 +235,7 @@
   --color-emerald-300: color-mix(
     in oklab,
     var(--success-border) var(--repaint-light),
-    var(--success)
+    color-mix(in oklab, var(--success) 65%, var(--foreground))
   );
   --color-emerald-400: color-mix(
     in oklab,
@@ -255,7 +260,7 @@
   );
   --color-emerald-900: color-mix(
     in oklab,
-    var(--success) var(--repaint-light),
+    color-mix(in oklab, var(--success) 65%, var(--foreground)) var(--repaint-light),
     color-mix(in oklab, var(--success-border) 50%, var(--success-tint))
   );
   --color-emerald-950: color-mix(
@@ -346,9 +351,15 @@
   --color-icon-rail-accent: var(--ring);
   --color-icon-rail-active: color-mix(
     in oklab,
-    var(--color-slate-800) var(--repaint-light),
+    var(--color-slate-700) var(--repaint-light),
     var(--accent)
   );
+}
+
+/* A rail is dark in both schemes. In light its ground is the foreground, which slate-800 is one
+   faint step from, so an entry under the pointer takes slate-700 there. */
+.bg-slate-950 {
+  --color-slate-800: color-mix(in oklab, var(--color-slate-700) var(--repaint-light), var(--muted));
 }
 
 /* The rules below repeat a selector of upstream's stylesheet that sets a blue literal. Each has
