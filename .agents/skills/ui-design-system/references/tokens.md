@@ -14,7 +14,8 @@ The theme is a shadcn theme on CSS variables. Never edit the theme file by hand,
 
 | Token | Use |
 | --- | --- |
-| `background`, `sidebar` | The frame: the window behind the content panel, the sidebar and its header. They are one colour. |
+| `background` | The frame: the window behind the content panel, the sidebar and its header. |
+| `sidebar` | In light, the same colour as `background`. In dark it is `card`'s colour, so the frame draws the sidebar on `background` (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
