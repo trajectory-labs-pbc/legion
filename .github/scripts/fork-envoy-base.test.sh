@@ -189,6 +189,12 @@ go pull_request
 check "a pull request that changes upstream's image inputs fails" \
   '[ "$status" = 1 ] && [ -z "$out" ] && grep -q "^::error::.*cannot test the pull request.s own upstream change.*packages/envoy/cmd/dispatch/main.go" <<<"$err" && ! grep -q "tl-dispatch/src" <<<"$err"'
 
+pull_request_of pr-listener packages/tl-dispatch/src/a.ts "$listener"
+run pr-listener "$work/pr-listener" "$head" "[{\"id\":21,$ok}]"
+go pull_request
+check "a pull request that changes only the listener among upstream's inputs gets a notice and no smoke build" \
+  '[ "$status" = 3 ] && [ -z "$out" ] && grep -q "^::notice::No smoke build: this pull request changes $listener" <<<"$err" && grep -q "The push run on main tests it" "$GITHUB_STEP_SUMMARY" && ! grep -q "^docker " "$STUB/calls"'
+
 mkdir "$work/no-paths" && git -C "$work/no-paths" init -q
 commit "$work/no-paths" c1
 mkdir -p "$work/no-paths/.github/workflows" && echo "on: push" >"$work/no-paths/$listener"
