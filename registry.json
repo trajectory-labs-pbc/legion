@@ -1014,18 +1014,6 @@
       ]
     },
     {
-      "name": "status-pill",
-      "type": "registry:ui",
-      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
-      "files": [
-        {
-          "path": "packages/ui/src/components/status-pill.tsx",
-          "type": "registry:ui",
-          "target": "@ui/status-pill.tsx"
-        }
-      ]
-    },
-    {
       "name": "switch",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],

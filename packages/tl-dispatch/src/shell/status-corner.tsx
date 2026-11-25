@@ -1,5 +1,5 @@
+import { Badge } from "@legion/ui/components/badge";
 import { Button } from "@legion/ui/components/button";
-import { StatusPill } from "@legion/ui/components/status-pill";
 import { useLiveSocketPill } from "@upstream-dispatch/api/live-socket";
 import { DraftsNotKept } from "@upstream-dispatch/features/inbox/DraftsNotKept";
 import { PendingWritesIndicator } from "@upstream-dispatch/features/writes/PendingWritesIndicator";
@@ -18,18 +18,21 @@ export function StatusCorner() {
     >
       <PendingWritesIndicator />
       <DraftsNotKept />
-      {connection === "stuck" ? (
-        <StatusPill data-testid="connection-pill" tone="danger">
-          Live updates are not reaching this page
-          <Button onClick={() => window.location.reload()} size="xs" variant="link">
-            Reload
-          </Button>
-        </StatusPill>
-      ) : connection === "reconnecting" ? (
-        <StatusPill data-testid="connection-pill" tone="warning">
-          Reconnecting…
-        </StatusPill>
-      ) : null}
+      {/* Always in the page, so a screen reader announces the line when it appears in it. */}
+      <div className="empty:hidden" data-testid="connection-status" role="status">
+        {connection === "stuck" ? (
+          <Badge className="gap-2 px-3 py-1" data-testid="connection-pill" variant="danger">
+            Live updates are not reaching this page
+            <Button onClick={() => window.location.reload()} size="xs" variant="link">
+              Reload
+            </Button>
+          </Badge>
+        ) : connection === "reconnecting" ? (
+          <Badge className="px-3 py-1" data-testid="connection-pill" variant="warning">
+            Reconnecting…
+          </Badge>
+        ) : null}
+      </div>
     </div>
   );
 }
