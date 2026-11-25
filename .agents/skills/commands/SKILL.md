@@ -44,7 +44,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 2. In the feature, declare its actions hook with `defineActions(appCatalog, "<context>", build)`. `build` returns a `CommandState` (`run`, and optional `enabled` and `label`) for each command of the context. The type check refuses a missing or an unknown name.
 3. Call the hook once where the record is in view, and pass its result to `useRegisterCommands(appCatalog, "<context>", specs)`. 
 4. Show it with `CommandButton`, or wrap a control in `HotkeyTooltip`. Read its key with `useCommandShortcut`.
-5. Run `bun test src/commands` and `bun run typecheck` in `packages/tl-dispatch`.
+5. Run `bun run test src/commands` and `bun run typecheck` in `packages/tl-dispatch`.
 
 `src/shell/global-commands.ts` is the example: the shell passes its actions, and an absent action shuts its command's gate.
 

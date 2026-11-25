@@ -54,7 +54,7 @@ A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
 2. Add the page to `pages` in `src/pages/index.ts`, the route map. `src/navigation` imports no page: `tests/layering.test.ts` refuses it.
 3. If the sidebar lists the page, add a row to `NAV_DESTINATIONS` (`src/commands/nav.ts`), its route to `NAV_PAGES` (`src/shell/nav-pages.ts`), and the action of its `go-<name>` command to `src/shell/global-commands.ts`. All three are typed by the destination's name, so a missing one fails `tsc`.
 4. If upstream serves the same address, keep upstream's path. Run the link test.
-5. Run `bun test src/navigation tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
+5. Run `bun run test src/navigation tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
 
 ## Links and moves
 
