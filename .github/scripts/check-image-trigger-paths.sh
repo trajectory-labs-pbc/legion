@@ -579,9 +579,10 @@ PINNED_IMAGE_GATES: list[tuple[str, str, str, str]] = [
         "build",
         "steps.names.outputs.base != ''",
         "that job's names step asks .github/scripts/fork-envoy-base.sh for the image "
-        "release-envoy-listener.yaml built for this same commit, and the term is false only "
-        "where that workflow built none: it has no run for the commit on main, or a later push "
-        "replaced its run. The fork's image is that image plus the fork's app, so where the "
+        "release-envoy-listener.yaml built for this same commit, and on a push the term is "
+        "false only where that workflow built none: it has no run for the commit on main, or a "
+        "later push replaced its run. On a pull request, which pushes no image, it is also "
+        "false where the pull request changes an input of that image. The fork's image is that image plus the fork's app, so where the "
         "term is false there is nothing to build on, and the commit has no upstream image for "
         "a pin to name either. What the trigger exists to guarantee, that a change to a build "
         "input produces an image, therefore holds through release-envoy-listener.yaml's own "
