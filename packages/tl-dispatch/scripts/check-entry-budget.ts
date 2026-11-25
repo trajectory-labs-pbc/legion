@@ -19,16 +19,32 @@ export function entryChunk(indexHtml: string): string {
   throw new Error("the build's index.html names no /assets/index-*.js script");
 }
 
+/** The chunks the entry imports statically: the page preloads each beside it. */
+export function preloadedChunks(indexHtml: string): string[] {
+  return [...indexHtml.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*>/g)].flatMap((link) => {
+    const href = /\bhref="([^"]+)"/.exec(link[0])?.[1];
+    return href === undefined ? [] : [href];
+  });
+}
+
 export interface EntrySize {
   path: string;
+  /** The entry chunk and the chunks preloaded with it, together. */
   bytes: number;
   gzipBytes: number;
 }
 
 export function measureEntry(dist: string): EntrySize {
-  const path = entryChunk(readFileSync(join(dist, "index.html"), "utf8"));
-  const file = join(dist, path);
-  return { path, bytes: statSync(file).size, gzipBytes: gzipSync(readFileSync(file)).length };
+  const indexHtml = readFileSync(join(dist, "index.html"), "utf8");
+  const path = entryChunk(indexHtml);
+  const size = { path, bytes: 0, gzipBytes: 0 };
+  // A chunk split out of the entry still loads before first paint, so it counts.
+  for (const chunk of [path, ...preloadedChunks(indexHtml)]) {
+    const file = join(dist, chunk);
+    size.bytes += statSync(file).size;
+    size.gzipBytes += gzipSync(readFileSync(file)).length;
+  }
+  return size;
 }
 
 if (import.meta.main) {
