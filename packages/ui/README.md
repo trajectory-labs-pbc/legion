@@ -19,6 +19,11 @@ its own copy of each. An app that imports the package from source must dedupe th
 @import "@legion/ui/globals.css";
 ```
 
+`globals.css` is the whole entry: Tailwind, the theme, the dark variant and the base rules. An
+app that already has a Tailwind entry and base rules of its own imports `theme.css` alone: the
+fonts, the tokens and the components' sources. Dark then follows the OS setting, and the app
+gives the components their edge and focus colours, which the base rules set on every element.
+
 ```tsx
 import { Button } from "@legion/ui/components/button";
 import { ShortcutsSheet } from "@legion/ui/blocks/shortcuts-sheet";
@@ -47,7 +52,7 @@ installs from the default branch, not from the ref you asked for.
 - After you change a component's imports or the stylesheet, run `bun run registry` to rewrite
   `registry.json`. A test fails while the file differs from what the script writes.
 - `bun run registry:validate` runs `shadcn registry validate` on it.
-- The colours are in `src/styles/globals.css`: light in `:root`, dark in `.dark` and in the
+- The colours are in `src/styles/theme.css`: light in `:root`, dark in `.dark` and in the
   `prefers-color-scheme: dark` block, which must match. A `.light` class on the root keeps light
   when the OS is dark.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and

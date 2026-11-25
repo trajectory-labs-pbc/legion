@@ -11,7 +11,11 @@ import ts from "typescript";
 
 const src = join(import.meta.dirname, "..");
 const globals = join(src, "styles/globals.css");
-const globalsText = readFileSync(globals, "utf8");
+// The entry with the theme it imports written in its place, so a test can change either.
+const globalsText = readFileSync(globals, "utf8").replace(
+  '@import "./theme.css";',
+  readFileSync(join(src, "styles/theme.css"), "utf8")
+);
 
 type Mutation = { css?: string; extra?: readonly string[] };
 
@@ -216,7 +220,10 @@ describe("the generated CSS", () => {
       .filter((entry) => entry.isDirectory() && !["styles", "test"].includes(entry.name))
       .map((entry) => entry.name);
     expect(sourced.sort()).toEqual(directories.sort());
-    expect([...new Glob("**/*.css").scanSync(src)]).toEqual(["styles/globals.css"]);
+    expect([...new Glob("**/*.css").scanSync(src)].sort()).toEqual([
+      "styles/globals.css",
+      "styles/theme.css",
+    ]);
     expect(generated.toString()).toContain(".motion-safe\\:duration-150");
     expect(generated.toString()).toContain(".data-highlighted\\:inset-ring");
   });

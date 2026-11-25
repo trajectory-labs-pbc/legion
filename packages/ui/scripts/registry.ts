@@ -77,13 +77,13 @@ function atRule(css: Root, name: string, params: string): AtRule {
   const found = css.nodes.find(
     (node) => node instanceof AtRule && node.name === name && node.params === params
   );
-  if (!(found instanceof AtRule)) throw new Error(`globals.css has no @${name} ${params}`);
+  if (!(found instanceof AtRule)) throw new Error(`the stylesheet has no @${name} ${params}`);
   return found;
 }
 
 function rule(css: Root, selector: string): Rule {
   const found = css.nodes.find((node) => node instanceof Rule && node.selector === selector);
-  if (!(found instanceof Rule)) throw new Error(`globals.css has no ${selector} rule`);
+  if (!(found instanceof Rule)) throw new Error(`the stylesheet has no ${selector} rule`);
   return found;
 }
 
@@ -127,17 +127,19 @@ const fontItems = (): RegistryItem[] => [
 ];
 
 function themeItem(): RegistryItem {
+  // theme.css holds the tokens; globals.css adds the dark variant and the base rules.
+  const tokens = postcss.parse(readFileSync(join(pkg, "src/styles/theme.css"), "utf8"));
   const css = postcss.parse(readFileSync(join(pkg, "src/styles/globals.css"), "utf8"));
   const theme = Object.fromEntries(
-    (atRule(css, "theme", "inline").nodes ?? []).flatMap((node) =>
+    (atRule(tokens, "theme", "inline").nodes ?? []).flatMap((node) =>
       node.type === "decl" && !node.prop.startsWith("--font-")
         ? [[node.prop.slice(2), node.value]]
         : []
     )
   );
   const base = atRule(css, "layer", "base");
-  const light = rule(css, ":root");
-  const dark = rule(css, ".dark");
+  const light = rule(tokens, ":root");
+  const dark = rule(tokens, ".dark");
   return {
     name: "theme",
     type: "registry:theme",
@@ -149,7 +151,7 @@ function themeItem(): RegistryItem {
       atRule(css, "custom-variant", "dark"),
       withoutVariables(light),
       withoutVariables(dark),
-      atRule(css, "media", "(prefers-color-scheme: dark)"),
+      atRule(tokens, "media", "(prefers-color-scheme: dark)"),
       base.clone({ nodes: (base.nodes ?? []).filter((node) => !appliesFont(node)) }),
     ]),
   };

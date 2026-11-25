@@ -31,7 +31,9 @@ import { cn } from "@legion/ui/lib/utils";
 
 - `tsconfig.json` and `vite.config.ts` point `@legion/ui/components`, `@legion/ui/blocks` and
   `@legion/ui/lib` at `packages/ui/src`. A block is a part with words of its own, such as the
-  shortcuts sheet. `src/styles.css` imports the package's stylesheet after upstream's.
+  shortcuts sheet. `src/styles.css` imports the package's `theme.css` after upstream's stylesheet: the tokens
+  and the typeface, and not the package's Tailwind entry, dark variant or base rules, which
+  would recompile or recolour upstream's pages.
 - The package's components import `@base-ui/react`, `class-variance-authority`, `cn` and
   `lucide-react` (`uiPackages` in `package.json`). Both packages install them, so the build takes
   this app's copy of each (`resolve.dedupe`), and `scripts/one-copy-each.ts` fails a build that
@@ -39,7 +41,8 @@ import { cn } from "@legion/ui/lib/utils";
 - A component the app needs and the package lacks is added to the package, with its test and
   its registry entry. Never copy one here.
 - `src/tokens.css` holds the two rules the app adds: the theme's typeface on `:root`, which
-  upstream's stylesheet would otherwise set, and upstream's canvas under upstream's pages.
+  upstream's stylesheet would otherwise set, and the package's edge and focus colours on its
+  parts (`[data-slot]`), which its base rules would otherwise give.
 
 ## Commands
 

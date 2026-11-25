@@ -9,8 +9,8 @@ export interface SourceFile {
 
 export const PACKAGE_ROOT = join(import.meta.dir, "..");
 export const REPO_ROOT = join(PACKAGE_ROOT, "../..");
-/** The UI package's stylesheet, which holds every token the app's classes may name. */
-export const UI_STYLESHEET = join(PACKAGE_ROOT, "../ui/src/styles/globals.css");
+/** The UI package's theme, which holds every token the app's classes may name. */
+export const UI_STYLESHEET = join(PACKAGE_ROOT, "../ui/src/styles/theme.css");
 /** Upstream's web app, whose pages this app shows and whose code the checks read. */
 export const UPSTREAM_WEB = join(PACKAGE_ROOT, "../dispatch/web/src");
 
