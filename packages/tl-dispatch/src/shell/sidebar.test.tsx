@@ -31,7 +31,21 @@ const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeou
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
   for (const view of mounted.splice(0)) view.unmount();
+  window.localStorage.clear();
 });
+
+/** The section headings' fold buttons, by their words. */
+const foldsOf = (container: HTMLElement) => [
+  ...container.querySelectorAll<HTMLButtonElement>("section button[aria-controls]"),
+];
+const headingsOf = (container: HTMLElement) => foldsOf(container).map((fold) => fold.textContent);
+const openOf = (container: HTMLElement) =>
+  foldsOf(container).map((fold) => fold.getAttribute("aria-expanded") === "true");
+function foldOf(container: HTMLElement, heading: string): HTMLButtonElement {
+  const fold = foldsOf(container).find((candidate) => candidate.textContent === heading);
+  if (fold === undefined) throw new Error(`no ${heading} fold`);
+  return fold;
+}
 
 const user = { kind: "user", login: "reader" } as const satisfies Pick<
   AuthenticatedUser,
@@ -274,27 +288,89 @@ describe("the sidebar", () => {
       ],
       pinnedAgents: { status: "error", retry: failed("pinned agents") },
       inLiveView: false,
-      pinnedIssues: { status: "pending" },
+      pinnedIssues: { status: "error", retry: failed("pinned issues") },
       projects: { status: "error", retry: failed("projects") },
     });
     const lines = () => [...container.querySelectorAll("p")];
-    expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned issues…");
+    expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned agents…");
     await sleep(250);
     expect(lines().map((line) => line.textContent)).toEqual([
       "Could not load the Inbox count.Retry",
       "Could not load the Agents count.Retry",
       "Could not load the Priorities count.Retry",
       "Could not load pinned agents.Retry",
-      "Loading pinned issues…",
+      "Could not load pinned issues.Retry",
       "Could not load projects.Retry",
     ]);
-    const loading = lines()[4];
-    expect(loading?.className).toContain("text-muted-foreground");
-    for (const line of lines().filter((candidate) => candidate !== loading)) {
+    for (const line of lines()) {
       expect(line.className).toContain("text-danger");
       settle(() => line.querySelector("button")?.click());
     }
-    expect(asked).toEqual(["inbox", "agents", "priorities", "pinned agents", "projects"]);
+    expect(asked).toEqual([
+      "inbox",
+      "agents",
+      "priorities",
+      "pinned agents",
+      "pinned issues",
+      "projects",
+    ]);
+  });
+
+  test("pinned issues draw nothing while their read is out, so they never show and then leave", async () => {
+    const container = mountView({
+      destinations: [],
+      pinnedAgents: { status: "success", rows: [] },
+      inLiveView: false,
+      pinnedIssues: { status: "pending" },
+      projects: { status: "pending" },
+    });
+    await sleep(250);
+    expect(headingsOf(container)).toEqual(["Pinned agents", "Projects"]);
+    expect(container.textContent).not.toContain("pinned issues");
+    expect(container.textContent).toContain("Loading projects…");
+  });
+
+  test("every section's heading folds it, and this browser keeps the fold", () => {
+    const data: SidebarData = {
+      destinations: [],
+      pinnedAgents: { status: "success", rows: [] },
+      inLiveView: false,
+      pinnedIssues: {
+        status: "success",
+        rows: [{ key: "CORE-1", text: "One", openAsks: 0, current: false }],
+      },
+      projects: { status: "success", rows: [] },
+    };
+    const first = mountView(data);
+    expect(headingsOf(first)).toEqual(["Pinned agents", "Pinned", "Projects"]);
+    for (const heading of ["Pinned", "Projects"]) settle(() => foldOf(first, heading).click());
+    expect(openOf(first)).toEqual([true, false, false]);
+    for (const view of mounted.splice(0)) view.unmount();
+    expect(openOf(mountView(data))).toEqual([true, false, false]);
+  });
+
+  test("a browser that refuses storage still folds a section", () => {
+    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("refused", "SecurityError");
+      },
+    });
+    try {
+      const container = mountView({
+        destinations: [],
+        pinnedAgents: { status: "success", rows: [] },
+        inLiveView: false,
+        pinnedIssues: { status: "success", rows: [] },
+        projects: { status: "success", rows: [] },
+      });
+      settle(() => foldOf(container, "Projects").click());
+      expect(openOf(container)).toEqual([true, false]);
+    } finally {
+      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
+      else Object.defineProperty(window, "localStorage", kept);
+    }
   });
 
   test("while Retry asks again, the section shows its loading line, not the failure", async () => {

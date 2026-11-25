@@ -1,12 +1,10 @@
 import { Button } from "@legion/ui/components/button";
 import { Count } from "@legion/ui/components/count";
-import { Heading } from "@legion/ui/components/heading";
 import { NavRow } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
-import { ChevronDownIcon, ChevronRightIcon, PinIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { PinIcon } from "lucide-react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
@@ -14,6 +12,7 @@ import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
+import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
 import { ReadLine } from "./read-line";
 
@@ -30,14 +29,6 @@ import {
 const KEYED: ReadonlySet<NavName> = new Set(
   NAV_DESTINATIONS.flatMap((destination) => ("key" in destination ? [destination.name] : []))
 );
-
-function SectionHeading({ children }: { children: ReactNode }) {
-  return (
-    <Heading className="px-2 pb-1" size="label" tone="muted">
-      {children}
-    </Heading>
-  );
-}
 
 function PinnedAgentRow({
   agent,
@@ -101,7 +92,7 @@ function ItemRows({
   );
 }
 
-/** The pinned agents under a heading that folds them, or the hint that says how to pin one. */
+/** The pinned agents, or the hint that says how to pin one. */
 function PinnedAgents({
   read,
   onNavigate,
@@ -111,73 +102,59 @@ function PinnedAgents({
   onNavigate: (() => void) | undefined;
   replace: boolean;
 }) {
-  const [open, setOpen] = useState(true);
-  const listId = useId();
   return (
-    <section>
-      <Heading className="pb-1" size="label" tone="muted">
-        <Button
-          aria-controls={listId}
-          aria-expanded={open}
-          className="has-[>svg]:px-2"
-          onClick={() => setOpen(!open)}
-          size="xs"
-          variant="ghost"
-        >
-          Pinned agents
-          {open ? <ChevronDownIcon aria-hidden /> : <ChevronRightIcon aria-hidden />}
-        </Button>
-      </Heading>
-      <div hidden={!open} id={listId}>
-        {read.status !== "success" ? (
-          <ReadLine noun="pinned agents" retry={read.status === "error" ? read.retry : undefined} />
-        ) : read.rows.length === 0 ? (
-          <p className="px-2 text-xs text-pretty text-muted-foreground">
-            Pin an agent on the Agents page, or in its live view, to keep it here.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-0.5">
-            {read.rows.map((agent) => (
-              <PinnedAgentRow
-                agent={agent}
-                key={agent.sessionId}
-                onNavigate={onNavigate}
-                replace={replace}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
+    <FoldSection heading="Pinned agents">
+      {read.status !== "success" ? (
+        <ReadLine noun="pinned agents" retry={read.status === "error" ? read.retry : undefined} />
+      ) : read.rows.length === 0 ? (
+        <p className="px-2 text-xs text-pretty text-muted-foreground">
+          Pin an agent on the Agents page, or in its live view, to keep it here.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-0.5">
+          {read.rows.map((agent) => (
+            <PinnedAgentRow
+              agent={agent}
+              key={agent.sessionId}
+              onNavigate={onNavigate}
+              replace={replace}
+            />
+          ))}
+        </ul>
+      )}
+    </FoldSection>
   );
 }
 
-/** Issues or projects under a heading, or the read's line; none when `hideEmpty` and empty. */
+/**
+ * Issues or projects, or the read's line. With `optional`, nothing until the read has rows, so
+ * the section never shows and then leaves; a failed read still says so.
+ */
 function ItemSection({
   heading,
-  hideEmpty = false,
+  optional = false,
   noun,
   onNavigate,
   page,
   read,
 }: {
   heading: string;
-  hideEmpty?: boolean;
+  optional?: boolean;
   noun: string;
   onNavigate: (() => void) | undefined;
   page: typeof issue.routes.issue | typeof project.routes.overview;
   read: SectionRead<SidebarItem>;
 }) {
-  if (hideEmpty && read.status === "success" && read.rows.length === 0) return null;
+  const empty = read.status === "pending" || (read.status === "success" && read.rows.length === 0);
+  if (optional && empty) return null;
   return (
-    <section>
-      <SectionHeading>{heading}</SectionHeading>
+    <FoldSection heading={heading}>
       {read.status === "success" ? (
         <ItemRows items={read.rows} onNavigate={onNavigate} page={page} />
       ) : (
         <ReadLine noun={noun} retry={read.status === "error" ? read.retry : undefined} />
       )}
-    </section>
+    </FoldSection>
   );
 }
 
@@ -240,8 +217,8 @@ export function SidebarView({
       <PinnedAgents read={data.pinnedAgents} onNavigate={onNavigate} replace={data.inLiveView} />
       <ItemSection
         heading="Pinned"
-        hideEmpty
         noun="pinned issues"
+        optional
         onNavigate={onNavigate}
         page={issue.routes.issue}
         read={data.pinnedIssues}
