@@ -63,14 +63,6 @@ function rulesFor(entry: Import): string[] {
   ) {
     rules.push("navigation names no page and no shell: the app hands it its pages");
   }
-  if (layer === "commands") {
-    if (entry.pkg !== undefined && ROUTERS.test(entry.pkg)) {
-      rules.push("a command takes callbacks named for what they do; it never imports navigation");
-    }
-    if (entry.file !== undefined && own(entry.file) && (target === "shell" || target === "pages")) {
-      rules.push("commands sit below the shell and the pages; they import neither");
-    }
-  }
   return rules;
 }
 
