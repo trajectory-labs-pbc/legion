@@ -18,9 +18,11 @@ describe("the skills and AGENTS.md", () => {
     const text = [
       "`src/commands/no-such-file.ts`, `no-such-file.ts`, `packages/tl-dispatch/src/nowhere`,",
       "`@upstream-dispatch/features/shell/no-such-module` and `.agents/skills/none/SKILL.md`.",
+      "A command: `bun tests/map/no-such.ts --update`, `bun run test src/commands tests/map`.",
       "These exist: `src/pages`, `page-link.tsx`, `packages/ui`, `features/refs/routes.ts`,",
       "`@upstream-dispatch/features/shell/keymap`, `app.tsx`, `commands/SKILL.md`.",
-      "These name no path: `g d`, `$mod+k`, `max-w-1/2`, `@legion/ui`, `<context>.<name>`.",
+      "These name no path: `g d`, `$mod+k`, `max-w-1/2`, `@legion/ui`, `<context>.<name>`, `3 / 84`,",
+      "`git show <sha> -- <file>`, `src/pages/<page>/upstream.ts`.",
       "```sh\nbun test src/no-such-folder\n```",
     ].join("\n");
     expect(missingPaths([{ file, text }]).map((line) => line.split(" names ")[1])).toEqual([
@@ -29,6 +31,7 @@ describe("the skills and AGENTS.md", () => {
       "packages/tl-dispatch/src/nowhere, which does not exist",
       "@upstream-dispatch/features/shell/no-such-module, which does not exist",
       ".agents/skills/none/SKILL.md, which does not exist",
+      "tests/map/no-such.ts, which does not exist",
     ]);
   });
 });
