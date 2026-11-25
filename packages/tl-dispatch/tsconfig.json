@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["bun", "vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@legion/ui/blocks/*": ["../ui/src/blocks/*.tsx"],
+      "@legion/ui/components/*": ["../ui/src/components/*.tsx"],
+      "@legion/ui/lib/*": ["../ui/src/lib/*.ts"],
+      "@upstream-dispatch/*": ["../dispatch/web/src/*"],
+      "@legion/contracts": ["../contracts/src/index.ts"],
+      "proof-sdk-upstream/src/*": ["../proof-editor/upstream/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "scripts/**/*.ts", "vite.config.ts"]
+}

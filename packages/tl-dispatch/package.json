@@ -1,0 +1,56 @@
+{
+  "name": "tl-dispatch",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "bun test --timeout 60000",
+    "typecheck": "bunx tsc --noEmit",
+    "lint": "bunx biome check .",
+    "check:entry-budget": "bun scripts/check-entry-budget.ts",
+    "postinstall": "bun ../ui/scripts/link-root-packages.ts ."
+  },
+  "dependencies": {
+    "@base-ui/react": "1.9.0",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.2.6",
+    "lucide-react": "1.70.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/node": "4.3.3",
+    "@tailwindcss/oxide": "4.3.3"
+  },
+  "rootPackages": [
+    "@biomejs/biome",
+    "@happy-dom/global-registrator",
+    "@tailwindcss/vite",
+    "@tanstack/react-query",
+    "@testing-library/react",
+    "@testing-library/user-event",
+    "@types/react",
+    "@types/react-dom",
+    "@vitejs/plugin-react",
+    "clsx",
+    "prosemirror-model",
+    "react",
+    "react-dom",
+    "react-router-dom",
+    "tailwindcss",
+    "typescript",
+    "vite",
+    "yjs"
+  ],
+  "uiPackages": [
+    "@base-ui/react",
+    "class-variance-authority",
+    "cn",
+    "lucide-react"
+  ],
+  "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}
