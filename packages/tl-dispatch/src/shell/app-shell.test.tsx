@@ -80,6 +80,39 @@ describe("AppShell", () => {
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
 
+  test("Shift+S folds the sidebar to its rail and gives main the full width, and again unfolds it", () => {
+    // A wide viewport, where the sidebar is a column and can fold.
+    const browser = (
+      window as unknown as { happyDOM: { setViewport(size: { width: number }): void } }
+    ).happyDOM;
+    const narrow = window.innerWidth;
+    browser.setViewport({ width: 1440 });
+    const view = mount();
+    // After the shell is gone, so no media query redraws it.
+    mounted.push({ unmount: () => browser.setViewport({ width: narrow }) });
+    const main = () => view.container.querySelector('[data-testid="main-content"]');
+    const rail = () => view.container.querySelector('[data-testid="sidebar-rail"]');
+    const fold = () =>
+      settle(() => {
+        document.body.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "S",
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          })
+        );
+      });
+    expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
+    expect(rail()).toBeNull();
+    fold();
+    expect(main()?.getAttribute("data-shell-layout")).toBe("full-width");
+    expect(rail()).not.toBeNull();
+    fold();
+    expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
+    expect(rail()).toBeNull();
+  });
+
   test("$mod+k opens the search palette at once: a key typed next is the palette's", () => {
     mount();
     const press = (init: KeyboardEventInit) =>
