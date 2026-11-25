@@ -59,16 +59,15 @@ const press = (key: string, init: KeyboardEventInit = {}) =>
 
 const sheet = () => document.body.querySelector<HTMLElement>('[data-slot="sheet-content"]');
 
-/** Each row as `label: chips`, chips joined by `+` within a key and `|` between keys. */
+/** Each row as `label: keys`: caps joined by `+` in a step, `then` between steps, `|` between keys. */
 const rows = () =>
   [...(sheet()?.querySelectorAll("li") ?? [])].map((row) => {
-    const keys = [...row.querySelectorAll(":scope > span:last-child > *")]
-      .filter((part) => part.textContent !== "or")
-      .map((part) =>
-        [...(part.matches("kbd") ? [part] : part.querySelectorAll("kbd"))]
-          .map((kbd) => kbd.textContent)
-          .join("+")
-      );
+    const keys = [...row.querySelectorAll('[data-slot="kbd-sequence"]')].map((key) =>
+      [...key.children]
+        .map((part) => part.textContent)
+        .join("+")
+        .replaceAll("+then+", " then ")
+    );
     return `${row.firstElementChild?.textContent}: ${keys.join(" | ")}`;
   });
 
@@ -82,7 +81,7 @@ describe("ShortcutsSheet", () => {
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
     expect(headings()).toEqual(["General", "Help", "Navigation", "Layout"]);
     expect(rows()).toContain("Create issue: C");
-    expect(rows()).toContain("Go to Inbox: G+I");
+    expect(rows()).toContain("Go to Inbox: G then I");
     expect(rows()).toContain("Show keyboard shortcuts: ?");
   });
 

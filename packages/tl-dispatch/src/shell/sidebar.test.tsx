@@ -176,7 +176,7 @@ describe("the sidebar", () => {
     if (inboxRow === undefined) throw new Error("no Inbox row");
     const tooltip = await tooltipOf(inboxRow);
     expect(tooltip.side).toBe("right");
-    expect(tooltip.text).toStartWith("Go to Inbox");
+    expect(tooltip.text).toBe("Go to InboxGthenI");
     expect(tooltip.keys).toEqual(["G", "I"]);
   });
 

@@ -14,15 +14,33 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   );
 }
 
-/** One chip per key: `["⌘", "K"]` for a key press, `["G", "I"]` for a two-key sequence. */
-function KbdSequence({ chips, className }: { chips: readonly string[]; className?: string }) {
-  if (chips.length === 0) return null;
-  if (chips.length === 1) return <Kbd className={className}>{chips[0]}</Kbd>;
+/** A cap, or the muted "then" between a sequence's steps where `cap` is null. */
+function KbdPart({ cap }: { cap: string | null }) {
+  return cap === null ? (
+    <span className="px-0.5 text-xs text-muted-foreground">then</span>
+  ) : (
+    <Kbd>{cap}</Kbd>
+  );
+}
+
+/** A key in steps, one cap per key: a combination's caps sit together (`[["⌘", "K"]]`), and a
+ *  sequence puts a muted "then" between its steps (`[["G"], ["I"]]`). */
+function KbdSequence({
+  className,
+  steps,
+}: {
+  className?: string;
+  steps: readonly (readonly string[])[];
+}) {
+  const parts = steps.flatMap((step, index): (string | null)[] =>
+    index === 0 ? [...step] : [null, ...step]
+  );
+  if (parts.length === 0) return null;
   return (
     <span data-slot="kbd-sequence" className={cn("inline-flex items-center gap-0.5", className)}>
-      {chips.map((chip, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a chip can repeat, so its place is its identity
-        <Kbd key={index}>{chip}</Kbd>
+      {parts.map((cap, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a cap can repeat, so its place is its identity
+        <KbdPart cap={cap} key={index} />
       ))}
     </span>
   );

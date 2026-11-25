@@ -166,16 +166,16 @@ describe("the sheet's filter", () => {
         id: "general",
         label: "General",
         rows: [
-          { id: "a", label: "Create issue", keys: [["C"]] },
-          { id: "b", label: "Search", keys: [["/"]] },
+          { id: "a", label: "Create issue", keys: [[["C"]]] },
+          { id: "b", label: "Search", keys: [[["/"]]] },
         ],
       },
       {
         id: "layout",
         label: "Layout",
-        rows: [{ id: "c", label: "Toggle sidebar", keys: [["Shift", "S"]] }],
+        rows: [{ id: "c", label: "Toggle sidebar", keys: [[["Shift", "S"]]] }],
       },
     ]);
-    expect(shownSections(sections, true)[1]?.rows[0]?.keys).toEqual([["⇧", "S"]]);
+    expect(shownSections(sections, true)[1]?.rows[0]?.keys).toEqual([[["⇧", "S"]]]);
   });
 });
