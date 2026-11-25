@@ -56,8 +56,14 @@ function fileNames(root: string): Set<string> {
   return names;
 }
 
-/** What a span names in the repository, or undefined when it names no path: a key, a class, a command. */
-function named(span: string): { path: string; bare: boolean } | undefined {
+/** A path a document names; `bare` when it is a file name alone. */
+interface Named {
+  path: string;
+  bare: boolean;
+}
+
+/** What a span names in the repository, or undefined when it names no path: a key, a class. */
+function named(span: string): Named | undefined {
   if (/[*<>$\s]|\.\.\./.test(span)) return undefined;
   if (span.startsWith(UPSTREAM_ALIAS)) return { path: span, bare: false };
   if (span.startsWith("@")) return undefined;
@@ -71,7 +77,7 @@ function named(span: string): { path: string; bare: boolean } | undefined {
 }
 
 /** The paths a span names: the span itself, or each path among the words of a command. */
-function namedIn(span: string): { path: string; bare: boolean }[] {
+function namedIn(span: string): Named[] {
   const words = /\s/.test(span) ? span.split(/\s+/).filter((word) => word.includes("/")) : [span];
   return words.flatMap((word) => named(word) ?? []);
 }
