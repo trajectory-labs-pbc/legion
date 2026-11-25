@@ -18,8 +18,8 @@ export function StatusCorner() {
     >
       <PendingWritesIndicator />
       <DraftsNotKept />
-      {/* Always in the page, so a screen reader announces the line when it appears in it. */}
-      <div className="empty:hidden" data-testid="connection-status" role="status">
+      {/* Never hidden, so a screen reader announces the line when it appears; empty, it takes no room. */}
+      <div className="empty:-mt-2" data-testid="connection-status" role="status">
         {connection === "stuck" ? (
           <Badge className="gap-2 px-3 py-1" data-testid="connection-pill" variant="danger">
             Live updates are not reaching this page
