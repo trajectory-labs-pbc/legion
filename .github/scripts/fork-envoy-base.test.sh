@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tests .github/scripts/fork-envoy-base.sh against stub gh and docker commands and a real git history.
+# Tests .github/scripts/fork-envoy-base.sh against stub gh and docker commands and a real git
+# history, and that release-envoy-listener.yaml runs for every input of the fork's envoy image.
 #   bash .github/scripts/fork-envoy-base.test.sh
 set -euo pipefail
 script=$(cd "$(dirname "$0")" && pwd)/fork-envoy-base.sh
@@ -200,6 +201,45 @@ run shallow "$work/shallow"
 go pull_request
 check "stops at the shallow boundary with an error line" \
   '[ "$status" = 1 ] && grep -q "::error::.*history" <<<"$err" && ! grep -q "^fatal:" <<<"$err"'
+
+# The fork image is built only for a commit the listener ran for, so the listener's path list must
+# hold every file the fork image's build reads: the app, the UI package, what the app's build takes
+# from upstream's packages, the files the Dockerfile copies by name, and the workflow's own inputs.
+name=inputs repo=$(cd "$(dirname "$script")/../.." && pwd)
+mapfile -t patterns < <(awk '
+  /^    paths:/ { on = 1; next }
+  on && !/^      / { exit }
+  on && $1 == "-" { gsub(/"/, "", $2); print $2 }' "$repo/$listener")
+# shellcheck disable=SC2053 # the right side is a glob
+covered() {
+  local pattern hit=1
+  for pattern in "${patterns[@]}"; do
+    if [[ $pattern == '!'* ]]; then
+      if [[ $1 == ${pattern#!} ]]; then return 1; fi
+    elif [[ $1 == $pattern ]]; then
+      hit=0
+    fi
+  done
+  return "$hit"
+}
+inputs=(
+  packages/tl-dispatch/src/main.tsx packages/ui/package.json
+  .github/workflows/fork-envoy-image.yaml .github/scripts/fork-envoy-base.sh
+  packages/envoy/docker/Dockerfile scripts/third-party-notices.ts .dockerignore
+  packages/dispatch/web/src/main.tsx packages/contracts/src/index.ts packages/proof-editor/src/lib-headless.ts
+)
+while read -r source; do
+  if [ -d "$repo/$source" ]; then source=$source/file; fi
+  inputs+=("$source")
+done < <(awk '$1 == "COPY" && $2 !~ /^--from/ { for (i = 2; i < NF; i++) if ($i !~ /^--/ && $i != ".") print $i }' \
+  "$repo/packages/tl-dispatch/docker/Dockerfile")
+status=0 err="" out=""
+for input in "${inputs[@]}"; do
+  if ! covered "$input"; then out+="$input "; fi
+done
+check "the listener's path list holds every input of the fork image (stdout names those it lacks)" '[ -z "$out" ]'
+check "and the check reads that list" \
+  '[ "${#inputs[@]}" -gt 20 ] && covered packages/envoy/go.mod && ! covered packages/envoy/infra/go.mod && ! covered packages/daemon/go.mod'
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures check(s) failed"

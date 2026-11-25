@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Test how the envoy image finds its base
+      - name: Test how the envoy image finds its base, and that upstream's build runs for its inputs
         run: bash .github/scripts/fork-envoy-base.test.sh
 
   tl-dispatch:
