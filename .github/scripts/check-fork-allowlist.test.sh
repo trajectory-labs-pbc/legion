@@ -137,4 +137,20 @@ list "$root" "$accented"
 run_check "$root"
 check "matches its line as written" "$(is "$status" 0)"
 
+echo "case: a list with no lines, and a fork that changes a file"
+root=$(fixture empty-list)
+change "$root" fork packages/app/index.ts
+list "$root" "# Only a comment." ""
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "names the file" "$(contains "$out" "^::error file=packages/app/index.ts::")"
+check "counts no line" "$(contains "$out" "^1 changed files, 0 allowlist entries$")"
+
+echo "case: a fork that changes nothing"
+root=$(fixture empty-diff)
+list "$root" "# Only a comment."
+run_check "$root"
+check "passes" "$(is "$status" 0)"
+check "counts no file" "$(is "$out" "0 changed files, 0 allowlist entries")"
+
 summary "check-fork-allowlist.sh"
