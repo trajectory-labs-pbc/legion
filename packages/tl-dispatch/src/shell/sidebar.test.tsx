@@ -11,7 +11,7 @@ import { render, settle, sleep } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
 import { Sidebar, SidebarView } from "./sidebar";
-import type { SidebarData } from "./sidebar-data";
+import type { SectionRead, SidebarData } from "./sidebar-data";
 
 const realFetch = globalThis.fetch;
 beforeAll(() => {
@@ -129,6 +129,15 @@ function rowsOf(container: HTMLElement) {
   }));
 }
 
+const readOf = <T,>(rows: readonly T[]): SectionRead<T> => ({
+  rows,
+  failed: false,
+  retry: undefined,
+});
+const OUT = { rows: undefined, failed: false, retry: undefined } as const;
+const failedRead = (retry: () => void) => ({ rows: undefined, failed: true, retry });
+const PROJECT = { key: "CORE", text: "Core", openAsks: 0, current: false };
+
 const destination = (name: string, count?: SidebarData["destinations"][number]["count"]) => {
   const found = NAV_DESTINATIONS.find((d) => d.name === name);
   if (found === undefined) throw new Error(`no ${name}`);
@@ -236,10 +245,10 @@ describe("the sidebar", () => {
   test("a pinned agent's unpin control fits its 28 px row", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { rows: [{ sessionId: "s-1", selected: false, unread: 0 }], retry: undefined },
+      pinnedAgents: readOf([{ sessionId: "s-1", selected: false, unread: 0 }]),
       inLiveView: false,
-      pinnedIssues: { rows: [], retry: undefined },
-      projects: { rows: [], retry: undefined },
+      pinnedIssues: readOf([]),
+      projects: readOf([]),
     });
     const unpin = [...container.querySelectorAll("button")].find((button) =>
       /^Unpin .+ from the sidebar$/.test(button.getAttribute("aria-label") ?? "")
@@ -252,10 +261,10 @@ describe("the sidebar", () => {
   test("pinned agents fold under their heading, and with none it says how to pin one", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { rows: [], retry: undefined },
+      pinnedAgents: readOf([]),
       inLiveView: false,
-      pinnedIssues: { rows: [], retry: undefined },
-      projects: { rows: [], retry: undefined },
+      pinnedIssues: readOf([]),
+      projects: readOf([]),
     });
     const fold = foldOf(container, "Pinned agents");
     const hint = "Pin an agent on the Agents page, or in its live view, to keep it here.";
@@ -278,10 +287,10 @@ describe("the sidebar", () => {
         destination("agents", { count: 0, retry: failed("agents") }),
         destination("priorities", { count: undefined, retry: failed("priorities") }),
       ],
-      pinnedAgents: { rows: undefined, retry: failed("pinned agents") },
+      pinnedAgents: failedRead(failed("pinned agents")),
       inLiveView: false,
-      pinnedIssues: { rows: undefined, retry: failed("pinned issues") },
-      projects: { rows: undefined, retry: failed("projects") },
+      pinnedIssues: failedRead(failed("pinned issues")),
+      projects: failedRead(failed("projects")),
     });
     const lines = () => [...container.querySelectorAll("p")];
     expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned agents…");
@@ -308,30 +317,36 @@ describe("the sidebar", () => {
     ]);
   });
 
-  test("pinned issues draw nothing while their read is out, so they never show and then leave", async () => {
+  test("pinned issues and projects draw nothing while out or empty; pinned agents say how to pin", async () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { rows: [], retry: undefined },
+      pinnedAgents: OUT,
       inLiveView: false,
-      pinnedIssues: { rows: undefined, retry: undefined },
-      projects: { rows: undefined, retry: undefined },
+      pinnedIssues: OUT,
+      projects: OUT,
     });
     await sleep(250);
-    expect(headingsOf(container)).toEqual(["Pinned agents", "Projects"]);
-    expect(container.textContent).not.toContain("pinned issues");
-    expect(container.textContent).toContain("Loading projects…");
+    expect(headingsOf(container)).toEqual(["Pinned agents"]);
+    expect(container.textContent).toContain("Loading pinned agents…");
+    for (const view of mounted.splice(0)) view.unmount();
+    const empty = mountView({
+      destinations: [],
+      pinnedAgents: readOf([]),
+      inLiveView: false,
+      pinnedIssues: readOf([]),
+      projects: readOf([]),
+    });
+    expect(headingsOf(empty)).toEqual(["Pinned agents"]);
+    expect(empty.textContent).toContain("Pin an agent on the Agents page");
   });
 
   test("every section's heading folds it, and this browser keeps the fold", () => {
     const data: SidebarData = {
       destinations: [],
-      pinnedAgents: { rows: [], retry: undefined },
+      pinnedAgents: readOf([]),
       inLiveView: false,
-      pinnedIssues: {
-        rows: [{ key: "CORE-1", text: "One", openAsks: 0, current: false }],
-        retry: undefined,
-      },
-      projects: { rows: [], retry: undefined },
+      pinnedIssues: readOf([{ key: "CORE-1", text: "One", openAsks: 0, current: false }]),
+      projects: readOf([PROJECT]),
     };
     const first = mountView(data);
     expect(headingsOf(first)).toEqual(["Pinned agents", "Pinned", "Projects"]);
@@ -352,10 +367,10 @@ describe("the sidebar", () => {
     try {
       const container = mountView({
         destinations: [],
-        pinnedAgents: { rows: [], retry: undefined },
+        pinnedAgents: readOf([]),
         inLiveView: false,
-        pinnedIssues: { rows: [], retry: undefined },
-        projects: { rows: [], retry: undefined },
+        pinnedIssues: readOf([]),
+        projects: readOf([PROJECT]),
       });
       settle(() => foldOf(container, "Projects").click());
       expect(openOf(container)).toEqual([true, false]);
@@ -486,13 +501,10 @@ describe("the sidebar", () => {
         destination("agents", { count: 2 }),
         destination("priorities", { count: 3 }),
       ],
-      pinnedAgents: { rows: [], retry: undefined },
+      pinnedAgents: readOf([]),
       inLiveView: false,
-      pinnedIssues: { rows: [], retry: undefined },
-      projects: {
-        rows: [{ key: "CORE", text: "Core", openAsks: 4, current: false }],
-        retry: undefined,
-      },
+      pinnedIssues: readOf([]),
+      projects: readOf([{ key: "CORE", text: "Core", openAsks: 4, current: false }]),
     };
     const container = mountView(data);
     const edges = [...container.querySelectorAll("a")].map((row) => row.lastElementChild);

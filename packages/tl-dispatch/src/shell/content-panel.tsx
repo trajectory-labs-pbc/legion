@@ -23,10 +23,11 @@ export function ContentPanel({
         issueFrame
           ? "contents"
           : cn(
-              "min-w-0 flex-1 border-border bg-card max-md:border-t md:order-2 md:my-2 md:mr-2 md:border",
+              // The inset is a variable, so the margin sheet inside keeps it too (frame.css).
+              "min-w-0 flex-1 border-border bg-card [--panel-inset:--spacing(2)] max-md:border-t md:order-2 md:my-(--panel-inset) md:mr-(--panel-inset) md:border",
               fillsViewport
                 ? "flex min-h-0 flex-col xl:flex-row"
-                : "md:min-h-[calc(100dvh-1rem)] xl:flex",
+                : "md:min-h-[calc(100dvh-2*var(--panel-inset))] xl:flex",
               sidebarFolded ? "md:ml-14" : null,
               marginRail ? "xl:mr-16" : null
             )

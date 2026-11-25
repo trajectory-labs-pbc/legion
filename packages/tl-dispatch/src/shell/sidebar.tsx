@@ -90,27 +90,34 @@ function ItemRows({
 }
 
 /**
- * A folded section of rows, or its read's line. With `optional`, nothing while the read is out or
- * has no rows, so the section never shows and then leaves; a failed read still says so.
+ * A folded section: its rows, its read's line, or `empty` when it has none. A null `empty` draws
+ * no section while the read is out or has no rows, so it never shows and then leaves; a failed
+ * read still says so, and its loading line shows while Retry runs.
  */
 function SidebarSection<T>({
   children,
+  empty,
   heading,
   noun,
-  optional = false,
   read,
 }: {
   children: (rows: readonly T[]) => ReactNode;
+  empty: ReactNode | null;
   heading: string;
   noun: string;
-  optional?: boolean;
   read: SectionRead<T>;
 }) {
-  const { rows, retry } = read;
-  if (optional && retry === undefined && (rows?.length ?? 0) === 0) return null;
+  const { rows, failed, retry } = read;
+  if (empty === null && !failed && (rows?.length ?? 0) === 0) return null;
   return (
     <FoldSection heading={heading}>
-      {rows === undefined ? <ReadLine noun={noun} retry={retry} /> : children(rows)}
+      {rows === undefined ? (
+        <ReadLine noun={noun} retry={retry} />
+      ) : rows.length === 0 ? (
+        empty
+      ) : (
+        children(rows)
+      )}
     </FoldSection>
   );
 }
@@ -166,30 +173,33 @@ export function SidebarView({
           );
         })}
       </ul>
-      <SidebarSection heading="Pinned agents" noun="pinned agents" read={data.pinnedAgents}>
-        {(agents) =>
-          agents.length === 0 ? (
-            <p className="px-2 text-xs text-pretty text-muted-foreground">
-              Pin an agent on the Agents page, or in its live view, to keep it here.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {agents.map((agent) => (
-                <PinnedAgentRow
-                  agent={agent}
-                  key={agent.sessionId}
-                  onNavigate={onNavigate}
-                  replace={data.inLiveView}
-                />
-              ))}
-            </ul>
-          )
+      <SidebarSection
+        empty={
+          <p className="px-2 text-xs text-pretty text-muted-foreground">
+            Pin an agent on the Agents page, or in its live view, to keep it here.
+          </p>
         }
+        heading="Pinned agents"
+        noun="pinned agents"
+        read={data.pinnedAgents}
+      >
+        {(agents) => (
+          <ul className="flex flex-col gap-0.5">
+            {agents.map((agent) => (
+              <PinnedAgentRow
+                agent={agent}
+                key={agent.sessionId}
+                onNavigate={onNavigate}
+                replace={data.inLiveView}
+              />
+            ))}
+          </ul>
+        )}
       </SidebarSection>
-      <SidebarSection heading="Pinned" noun="pinned issues" optional read={data.pinnedIssues}>
+      <SidebarSection empty={null} heading="Pinned" noun="pinned issues" read={data.pinnedIssues}>
         {(items) => <ItemRows items={items} onNavigate={onNavigate} page={issue.routes.issue} />}
       </SidebarSection>
-      <SidebarSection heading="Projects" noun="projects" read={data.projects}>
+      <SidebarSection empty={null} heading="Projects" noun="projects" read={data.projects}>
         {(items) => (
           <ItemRows items={items} onNavigate={onNavigate} page={project.routes.overview} />
         )}

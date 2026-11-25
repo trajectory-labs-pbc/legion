@@ -156,7 +156,7 @@ describe("AppShell", () => {
     expect(sidebar?.className).toContain("bg-background");
     expect(sidebar?.className).not.toContain("border-r");
     expect(panel?.contains(view.container.querySelector("main"))).toBe(true);
-    for (const name of ["bg-card", "md:border", "md:my-2", "md:mr-2"]) {
+    for (const name of ["bg-card", "md:border", "md:my-(--panel-inset)", "md:mr-(--panel-inset)"]) {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");

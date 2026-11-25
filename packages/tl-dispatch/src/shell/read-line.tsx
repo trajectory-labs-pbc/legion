@@ -5,10 +5,8 @@ import { useEffect, useState } from "react";
 /** How long a read may take before its loading line shows, so a quick one draws none. */
 const LOADING_DELAY_MS = 200;
 
-type Read = Pick<UseQueryResult<unknown>, "isFetching" | "isLoadingError" | "refetch">;
-
 /** Asks every read again; undefined unless one failed with nothing to show and none is asking. */
-export function retryOf(...reads: readonly Read[]): (() => void) | undefined {
+export function retryOf(...reads: readonly UseQueryResult<unknown>[]): (() => void) | undefined {
   if (!reads.some((read) => read.isLoadingError) || reads.some((read) => read.isFetching)) {
     return undefined;
   }

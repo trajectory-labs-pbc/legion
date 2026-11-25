@@ -33,7 +33,6 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
         <Button
           aria-controls={open ? bodyId : undefined}
           aria-expanded={open}
-          className="has-[>svg]:px-2"
           onClick={() => {
             const folding = open;
             setOpen(!folding);

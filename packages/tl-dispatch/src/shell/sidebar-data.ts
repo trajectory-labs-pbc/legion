@@ -34,14 +34,15 @@ interface SidebarDestination {
   count: RowCount | undefined;
 }
 
-/** A section's rows; none while its read is out, and `retry` once it failed with nothing to show. */
+/** A section's rows, none while its read is out; `failed` stays set while a Retry runs. */
 export interface SectionRead<T> {
   rows: readonly T[] | undefined;
+  failed: boolean;
   retry: (() => void) | undefined;
 }
 
 function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
-  return { rows: query.data?.map(row), retry: retryOf(query) };
+  return { rows: query.data?.map(row), failed: query.isLoadingError, retry: retryOf(query) };
 }
 
 /** The pinned agents, oldest pin first, with their unread replies. */
