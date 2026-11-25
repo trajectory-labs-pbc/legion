@@ -80,17 +80,17 @@ describe("AppShell", () => {
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
 
-  test("$mod+k opens the search palette, whose code loads with the shell", async () => {
+  test("$mod+k opens the search palette at once: a key typed next is the palette's", () => {
     mount();
-    settle(() => {
-      document.body.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", code: "KeyK", ctrlKey: true, bubbles: true })
-      );
-    });
-    const field = () => document.body.querySelector('input[placeholder="Search Dispatch"]');
-    for (let tries = 0; tries < 20 && field() === null; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-    }
-    expect(field()).not.toBeNull();
+    const press = (init: KeyboardEventInit) =>
+      settle(() => {
+        document.body.dispatchEvent(
+          new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init })
+        );
+      });
+    press({ key: "k", code: "KeyK", ctrlKey: true });
+    press({ key: "i", code: "KeyI" });
+    expect(document.body.querySelector('input[placeholder="Search Dispatch"]')).not.toBeNull();
+    expect(document.body.querySelector('[data-testid="inbox-drawer"]')).toBeNull();
   });
 });

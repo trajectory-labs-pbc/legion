@@ -29,6 +29,7 @@ import {
   routeProjectOf,
 } from "@upstream-dispatch/features/refs/routes";
 import { useRecordRecents } from "@upstream-dispatch/features/search/recents";
+import { SearchPalette } from "@upstream-dispatch/features/search/SearchPalette";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import {
   COMPACT_VIEWPORT_QUERY,
@@ -38,7 +39,7 @@ import {
   useMediaQuery,
 } from "@upstream-dispatch/features/shell/useDialog";
 import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
-import { lazy, type ReactNode, Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useMemo, useRef, useState } from "react";
 
 import { CommandButton } from "@/commands/command-button";
 import { ShortcutsSheet, useShortcutsSheet } from "@/commands/shortcuts-sheet";
@@ -57,13 +58,6 @@ import { useDetailsDrawer } from "./use-details-drawer";
 import { useFocusMainOnPageChange } from "./use-focus-main";
 import { mainLayoutClass, useShellPreferences } from "./use-shell-layout";
 import { useSignOut } from "./use-sign-out";
-
-// Its own chunk, which starts loading when the shell first renders.
-const SearchPalette = lazy(() =>
-  import("@upstream-dispatch/features/search/SearchPalette").then((module) => ({
-    default: module.SearchPalette,
-  }))
-);
 
 const SIDEBAR = "border-sidebar-border bg-sidebar text-sidebar-foreground";
 
@@ -300,9 +294,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
             width={preferences.marginWidth}
           />
         </ErrorBoundary>
-        <Suspense fallback={null}>
-          <SearchPalette onClose={() => setSearchOpen(false)} open={searchOpen} />
-        </Suspense>
+        <SearchPalette onClose={() => setSearchOpen(false)} open={searchOpen} />
         <InboxDrawer onClose={() => setInboxDrawerOpen(false)} open={inboxDrawerOpen} />
         <ShortcutsSheet
           onOpenChange={shortcuts.setOpen}

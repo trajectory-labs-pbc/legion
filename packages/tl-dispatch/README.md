@@ -119,7 +119,7 @@ React Router context around them. Before then, a swap means running both routers
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   `tests/design-config.ts` lists the only files they leave out.
 - `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget. The
-  shortcuts sheet, the tooltips and the search palette are their own chunks for it.
+  shortcuts sheet and the tooltips are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.
 
 `.github/workflows/tl-dispatch.yaml` runs all of them.
