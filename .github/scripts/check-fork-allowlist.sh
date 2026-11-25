@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Each file this fork changes against upstream's main is on .github/fork-allowlist.txt, and each
 # line there names a file the fork still changes. A line that ends in / names a directory the fork
-# owns. A change to upstream's tree that is not on the list is a change the weekly sync can
-# conflict on with no one having chosen it.
+# owns, where upstream has no file. A change to upstream's tree that is not on the list is a change
+# the weekly sync can conflict on with no one having chosen it.
 #
 #   .github/scripts/check-fork-allowlist.sh <upstream main's commit>
 #
-# .github/workflows/fork-checks.yaml runs it on every pull request and push to main.
+# .github/workflows/fork-checks.yaml runs it on every pull request and push to main, after its test,
+# check-fork-allowlist.test.sh.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
