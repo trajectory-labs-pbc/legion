@@ -104,16 +104,11 @@ function viewOf(
   approved: DecisionResponse | undefined,
   denied: StateResponse | undefined
 ): MachineLoginView {
-  const madeHere =
-    approved !== undefined
-      ? { credential_id: approved.credential_id, state: approved.state }
-      : denied === undefined
-        ? undefined
-        : { credential_id: null, state: denied.state };
-  return madeHere === undefined
+  const made = approved ?? denied;
+  return made === undefined
     ? { decided: record.decided, record }
     : {
-        decided: { credential_id: madeHere.credential_id, event: madeHere.state },
-        record: { ...record, state: madeHere.state },
+        decided: { credential_id: approved?.credential_id ?? null, event: made.state },
+        record: { ...record, state: made.state },
       };
 }
