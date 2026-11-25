@@ -13,7 +13,7 @@ tl-dispatch follows Linear's layout and interaction as closely as the theme allo
 - `references/frame-and-lists.md` when you build the frame, a list, a board or a group header (FR, LR).
 - `references/surfaces-and-type.md` when you choose a surface, a border, a height, a spacing or a type style (SU, TY).
 - `references/records-and-status.md` when you build a record's page, a peek, a property, a status or a priority (IV, SP, IE).
-- `references/keyboard-and-feedback.md` when you add a key, a menu, an empty state, a toast, motion or focus (KB, CX, ES, TO, MO, FO).
+- `references/keyboard-and-feedback.md` when you add a key, a menu, a cursor, an empty state, a toast, motion or focus (KB, CX, PT, ES, TO, MO, FO).
 - `.agents/skills/commands/SKILL.md` for how keys, buttons and menu rows read the command catalog.
 
 ## The rules that matter most

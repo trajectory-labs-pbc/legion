@@ -30,6 +30,10 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **CX4** A phone has no context menu. The `⋯` button opens the menu as a bottom sheet titled with the record's name. Check: reviewer on a phone.
 
+## The pointer (PT)
+
+**PT1** Controls and links to pages of the app keep the default cursor: no `cursor-pointer` on a button, a row, a menu item, a tab or an in-app link. Only a link that leaves the app shows the pointer. No preference turns pointers on. Linear: no pointer cursors except on links to other sites (Linear offers a preference; this app does not). Check: (new) a design-rule test fails on `cursor-pointer` outside the external-link component.
+
 ## Empty and loading states (ES)
 
 **ES1** An empty view shows, centred in the panel: a 32 px muted icon, a one-line title, one sentence that says why it is empty, and at most one action with its key. No illustration. Linear: empty views offer the create action (Linear draws an illustration; this theme uses an icon). Pages: every list. Check: a test renders each list with no rows.
