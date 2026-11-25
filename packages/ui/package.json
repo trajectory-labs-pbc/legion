@@ -50,6 +50,7 @@
   "rootPackages": [
     "@biomejs/biome",
     "@happy-dom/global-registrator",
+    "@legion/test-fixtures",
     "@testing-library/react",
     "@testing-library/user-event",
     "@types/react",
