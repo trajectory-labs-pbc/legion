@@ -56,7 +56,7 @@ describe("layers", () => {
       'import { useNavigate } from "react-router-dom";',
       "never imports navigation",
     ],
-    ["src/commands/x.ts", 'import { AppShell } from "../shell/AppShell";', "below the shell"],
+    ["src/commands/x.ts", 'import { AppShell } from "../shell/app-shell";', "below the shell"],
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
     ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
     ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],

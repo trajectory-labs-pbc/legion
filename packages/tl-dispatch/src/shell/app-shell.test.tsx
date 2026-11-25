@@ -5,7 +5,7 @@ import { act } from "react";
 
 import { MemoryNavigationProvider } from "@/navigation/provider";
 import { render, settle } from "../../tests/react";
-import { AppShell } from "./AppShell";
+import { AppShell } from "./app-shell";
 
 const realFetch = globalThis.fetch;
 const realConfirm = window.confirm;

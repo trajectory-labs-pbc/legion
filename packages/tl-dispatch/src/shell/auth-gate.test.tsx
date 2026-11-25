@@ -5,7 +5,7 @@ import { act } from "react";
 import { MemoryNavigationProvider } from "@/navigation/provider";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { render } from "../../tests/react";
-import { AuthGate } from "./AuthGate";
+import { AuthGate } from "./auth-gate";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {

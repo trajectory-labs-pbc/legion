@@ -8,7 +8,7 @@ import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { AuthGate } from "./shell/AuthGate";
+import { AuthGate } from "./shell/auth-gate";
 import { AppProviders } from "./shell/providers";
 import "./styles.css";
 

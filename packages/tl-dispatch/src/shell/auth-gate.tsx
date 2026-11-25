@@ -15,7 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { AppShell } from "./AppShell";
+import { AppShell } from "./app-shell";
 import { signIns } from "./sign-ins";
 import { ConnectionErrorPage, ShellSkeleton, SignInPage } from "./states";
 import { useSignInChannel } from "./use-sign-in-channel";

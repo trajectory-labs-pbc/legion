@@ -102,6 +102,12 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
   and a click stop nothing, since the page that opens reads it.
 - `route-tree.tsx` builds the route tree from the page files, through `routerPath`.
 
+A route also declares its `layout` (`PageLayout` in `page-route.ts`): whether the page fills the
+viewport, has the margin and frames itself as the outline issue page, and which issue, project and
+live view it shows. Where upstream's parsers decide, the layout is a function of the address.
+`useCurrentPage()` returns it with the page, and the shell reads the address only through it.
+`route-tree.test.ts` holds every declaration to upstream's route rules.
+
 ### Changing the router
 
 A move to another router (TanStack Router, say) changes these files of this package:
@@ -124,6 +130,20 @@ both routers) stay as they are.
 That holds for this package only. 111 of upstream's files import React Router, and every upstream
 page drawn here is one of them, so until the last of those pages is replaced the app must keep a
 React Router context around them. Before then, a swap means running both routers.
+
+## Shell
+
+`src/shell/app-shell.tsx` only composes the frame around every page. Its parts:
+
+- `use-shell-layout.ts`: `useShellLayout()`, the current page's layout on this viewport with the
+  reader's choices (the folded sidebar and margin, the issue page they draw).
+- `use-shell-overlays.ts`: `useShellOverlays()`, the navigation drawer, search, a new issue, the
+  inbox drawer and the shortcuts sheet, and the global commands that open them.
+- `shell-frame.tsx`: the regions: the providers upstream's pages read, the frame, the navigation
+  drawer, the sidebar region, main, the margin and the dialogs.
+- `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
+- `auth-gate.tsx`: the sign-in check before the shell: a skeleton, the sign-in page, a
+  connection error, or the shell for the person signed in.
 
 ## Checks
 
