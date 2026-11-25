@@ -29,6 +29,7 @@ export interface Import {
 /** A source file read from disk or given in memory, by absolute path. */
 export interface Files {
   text(path: string): string | undefined;
+  isFile(path: string): boolean;
   exists(path: string): boolean;
 }
 
@@ -50,6 +51,7 @@ export function filesWith(overlay: ReadonlyMap<string, string> = new Map()): Fil
   const dirs = new Set([...overlay.keys()].flatMap((path) => ancestors(path)));
   return {
     text: (path) => overlay.get(path) ?? (isFile(path) ? readFileSync(path, "utf8") : undefined),
+    isFile: (path) => overlay.has(path) || isFile(path),
     exists: (path) => overlay.has(path) || dirs.has(path) || exists(path),
   };
 }
@@ -93,7 +95,7 @@ function resolveSpecifier(
   const bare = specifier.replace(/\?.*$/, "");
   const alias = ALIASES.find(([name]) => bare === name || bare.startsWith(`${name}/`));
   const host: ts.ModuleResolutionHost = {
-    fileExists: (path) => files.text(path) !== undefined,
+    fileExists: (path) => files.isFile(path),
     readFile: (path) => files.text(path),
     directoryExists: (path) => files.exists(path),
     realpath: (path) => path,
@@ -110,7 +112,7 @@ function resolveSpecifier(
       ? undefined
       : join(alias[1], bare.slice(alias[0].length));
   if (direct !== undefined) {
-    const found = files.text(direct) !== undefined;
+    const found = files.isFile(direct);
     return { file: found ? direct : undefined, pkg: undefined, resolved: found };
   }
   const pkg = packageName(bare);
