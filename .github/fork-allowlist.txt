@@ -1,0 +1,23 @@
+# Every file this fork changes against upstream's main. .github/scripts/check-fork-allowlist.sh
+# fails on a changed file not listed here, and on a line the fork no longer changes. A line ending
+# in / is a directory the fork owns. Add a file here in the same change that first edits it.
+
+# The fork's checks.
+.github/fork-allowlist.txt
+.github/scripts/check-fork-allowlist.sh
+.github/workflows/fork-checks.yaml
+
+# The weekly sync from upstream.
+.github/scripts/fork-sync.sh
+.github/scripts/fork-sync.test.sh
+.github/workflows/fork-sync.yaml
+.github/workflows/fork-sync-test.yaml
+.github/scripts/check-image-trigger-paths.sh
+
+# The fork's own image line: no upstream release numbers.
+.github/workflows/fork-worker-image.yaml
+.github/workflows/release-envoy-listener.yaml
+
+# A fix not yet upstream.
+packages/daemon/internal/ghbranch/ghbranch.go
+packages/daemon/internal/ghbranch/ghbranch_test.go
