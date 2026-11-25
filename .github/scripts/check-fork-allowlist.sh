@@ -43,7 +43,8 @@ for file in "${changed[@]}"; do
     fi
   done
   if ! $listed; then
-    echo "::error file=$file::$file differs from upstream's main and is not on $list"
+    # The runner splits an annotation's properties on a comma and ends them at a colon.
+    echo "::error file=$(tr -d ',:' <<< "$file")::$file differs from upstream's main and is not on $list"
     fail=1
   fi
 done
