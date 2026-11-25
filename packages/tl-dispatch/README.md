@@ -9,7 +9,6 @@ replaces them one page at a time.
 | --- | --- | --- |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
-| `src/writes` | What a surface says of a failed write | upstream's write modules |
 
 `tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
 tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
