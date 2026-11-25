@@ -108,7 +108,9 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
     liveScopes() {
       read();
       if (upstreamDialog() || ours.length > 0) return [DIALOG_SCOPE];
-      return [...new Set<KeymapScope>(["global", ...upstream])];
+      // The engine reads a scope pushed twice at its last place, so keep that one.
+      const scopes: KeymapScope[] = ["global", ...upstream];
+      return scopes.filter((scope, index) => scopes.lastIndexOf(scope) === index);
     },
     subscribe(listener) {
       listeners.add(listener);

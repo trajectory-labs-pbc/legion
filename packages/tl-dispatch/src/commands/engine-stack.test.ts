@@ -45,6 +45,17 @@ describe("a scope's cleanup", () => {
   });
 });
 
+describe("the live scopes", () => {
+  test("list a scope pushed twice once, at its last place, where the engine reads it", () => {
+    const keymap = createKeymap();
+    const stack = trackEngineStack(keymap, { get: () => [], subscribe: () => () => {} });
+    keymap.pushScope("issue");
+    keymap.pushScope("document");
+    keymap.pushScope("issue");
+    expect(stack.liveScopes()).toEqual(["global", "document", "issue"]);
+  });
+});
+
 describe("the app's engine stack", () => {
   test("survives its module running again, as a hot reload runs it: one tracker, one wrap", async () => {
     // A query makes the loader run the module a second time, against the same key engine.
