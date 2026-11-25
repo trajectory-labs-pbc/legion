@@ -6,6 +6,7 @@ import { delivery } from "./delivery";
 import { projectDocument } from "./document";
 import { inbox } from "./inbox";
 import { issue } from "./issue";
+import { machineLogin } from "./machine-login";
 import { machines } from "./machines";
 import { notFound } from "./not-found";
 import type { Page, PageLayout } from "./page";
@@ -23,6 +24,7 @@ export const pages = [
   project,
   projectDocument,
   credentials,
+  machineLogin,
   settings,
   delivery,
   notFound,
