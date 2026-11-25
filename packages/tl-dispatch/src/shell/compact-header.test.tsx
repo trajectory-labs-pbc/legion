@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { stubFetch } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 function mount(children: ReactNode) {
-  const fetch = stubFetch(() => undefined);
+  holdShellReads();
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path="/agents">
@@ -22,7 +22,7 @@ function mount(children: ReactNode) {
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
-  cleanups.push(fetch.restore, () => view.unmount());
+  cleanups.push(() => view.unmount());
   return view.container;
 }
 

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act } from "react";
-import { json, stubFetch, waitFor } from "../../tests/fetch";
+import { waitFor } from "@testing-library/react";
+import { answerRequests } from "@upstream-dispatch/__tests__/network";
+import { http } from "msw";
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { holdReads, holdShellReads } from "../../tests/network";
 import { render } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AuthGate } from "./auth-gate";
@@ -12,8 +14,7 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-function mount(whoami: Response | undefined) {
-  const fetch = stubFetch((url) => (url.endsWith("/auth/whoami") ? whoami?.clone() : undefined));
+function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={client}>
@@ -23,30 +24,40 @@ function mount(whoami: Response | undefined) {
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
-  cleanups.push(fetch.restore, () => view.unmount());
+  cleanups.push(() => view.unmount());
   return view.container;
 }
 
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-
 describe("AuthGate", () => {
   test("draws the skeleton while Dispatch has not said who is here", () => {
-    const container = mount(undefined);
+    holdReads("/auth/whoami");
+    const container = mount();
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
   });
 
   test("a 401 draws the sign-in page", async () => {
-    const container = mount(json({ error: { code: "UNAUTHORIZED" } }, 401));
-    await waitFor(() => container.textContent?.includes("Sign in") === true, sleep);
-    expect(container.textContent).toContain("Sign in");
+    answerRequests(
+      http.get("/auth/whoami", () =>
+        Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 })
+      )
+    );
+    const container = mount();
+    await waitFor(() => expect(container.textContent).toContain("Sign in"));
   });
 
   test("a person draws the shell for them", async () => {
-    const container = mount(json({ kind: "user", login: "reader", event_head: "0" }));
-    const shell = () => container.querySelector('[data-testid="app-shell"]');
-    await waitFor(() => shell() !== null, sleep);
+    // The shell's own reads stay pending; only the sign-in check answers.
+    holdShellReads();
+    answerRequests(
+      http.get("/auth/whoami", () =>
+        Response.json({ kind: "user", login: "reader", event_head: "0" })
+      )
+    );
+    const container = mount();
+    await waitFor(() =>
+      expect(container.querySelector('[data-testid="app-shell"]')).not.toBeNull()
+    );
     await shellChunksArrive();
-    expect(shell()).not.toBeNull();
     // A narrow screen: the account is behind the menu.
     expect(container.querySelector('[aria-label="Open navigation"]')).not.toBeNull();
   });
