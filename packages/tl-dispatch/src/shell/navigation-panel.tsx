@@ -64,7 +64,7 @@ export function NavigationPanel({
           />
         )}
       </div>
-      <Sidebar onNavigate={compact ? onClose : undefined} user={user} />
+      <Sidebar onNavigate={compact ? onClose : undefined} peek={!compact} user={user} />
       <div className="mt-auto flex flex-col pt-4 text-xs">
         <div className="flex h-7 items-center gap-2 pl-2">
           <p className="min-w-0 flex-1 truncate text-muted-foreground">Signed in as {user.login}</p>

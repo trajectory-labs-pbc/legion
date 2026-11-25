@@ -5,11 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
-import { CommandButton } from "@/commands/command-button";
 import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
+import { PeekButton } from "./peek-button";
 
 /** The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu. */
 export function CompactHeader({
@@ -51,14 +51,7 @@ export function CompactHeader({
         </NavRow>
       )}
       <div className="ml-auto flex items-center gap-1">
-        {onInbox ? null : (
-          <CommandButton
-            aria-label="Peek at the inbox without leaving this page"
-            commandId="global.inbox-drawer"
-            label="Peek"
-            size="icon-sm"
-          />
-        )}
+        {onInbox ? null : <PeekButton />}
         <Button
           aria-expanded={navigationOpen}
           aria-label="Open navigation"

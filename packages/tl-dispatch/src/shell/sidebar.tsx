@@ -9,10 +9,12 @@ import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import type { ReactNode } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
+import { useCommand } from "@/commands/use-command";
 import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
+import { PeekButton } from "./peek-button";
 
 import {
   type SectionRead,
@@ -133,21 +135,33 @@ function ItemSection({
   );
 }
 
-/** The sidebar's rows as `data` holds them. */
+/** Room at the Inbox row's edge for Peek, while Peek shows. */
+const PEEK_ROOM = "group-hover/peek:pr-9 group-focus-within/peek:pr-9 pointer-coarse:pr-9";
+
+/** Peek shows on the row's hover or focus, and always on a touch screen, which has no hover. */
+const PEEK_SHOWN =
+  "absolute top-0 right-0 opacity-0 group-hover/peek:opacity-100 group-focus-within/peek:opacity-100 pointer-coarse:opacity-100";
+
+/** The sidebar's rows as `data` holds them; with `peek`, the Inbox row carries Peek. */
 export function SidebarView({
   data,
   onNavigate,
+  peek,
 }: {
   data: SidebarData;
   onNavigate: (() => void) | undefined;
+  peek: boolean;
 }) {
+  const peekable = useCommand("global.inbox-drawer")?.enabled === true && peek;
   return (
     <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
         {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => {
+          const peekHere = peekable && name === "inbox";
           const row = (
             <NavRow
               aria-current={current ? "page" : undefined}
+              className={peekHere ? PEEK_ROOM : undefined}
               render={<PageLink onClick={onNavigate} page={page} />}
             >
               <Icon aria-hidden className="size-4 shrink-0" />
@@ -160,7 +174,7 @@ export function SidebarView({
             </NavRow>
           );
           return (
-            <li key={name}>
+            <li className={peekHere ? "group/peek relative" : undefined} key={name}>
               {KEYED.has(name) ? (
                 <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
                   {row}
@@ -168,6 +182,7 @@ export function SidebarView({
               ) : (
                 row
               )}
+              {peekHere ? <PeekButton className={PEEK_SHOWN} tooltipSide="right" /> : null}
               {count?.retry === undefined ? null : (
                 <ReadLine noun={`the ${label} count`} retry={count.retry} />
               )}
@@ -212,10 +227,13 @@ export function SidebarView({
 /** The sidebar: the nav table's destinations with their counts, then the pins. */
 export function Sidebar({
   onNavigate,
+  peek = false,
   user,
 }: {
   onNavigate?: () => void;
+  /** Draws Peek on the Inbox row; the narrow screen's header has its own. */
+  peek?: boolean;
   user: AuthenticatedUser;
 }) {
-  return <SidebarView data={useSidebarData(user)} onNavigate={onNavigate} />;
+  return <SidebarView data={useSidebarData(user)} onNavigate={onNavigate} peek={peek} />;
 }

@@ -38,7 +38,7 @@ const user = { kind: "user", login: "reader" } as const satisfies Pick<
   "kind" | "login"
 >;
 
-function Commands({ enabled }: { enabled: boolean }) {
+function Commands({ enabled, onPeek }: { enabled: boolean; onPeek?: () => void }) {
   const run = () => {};
   useGlobalCommands({
     openSearch: run,
@@ -46,7 +46,7 @@ function Commands({ enabled }: { enabled: boolean }) {
     createIssue: run,
     goTo: enabled ? run : () => {},
     openDocuments: undefined,
-    toggleInboxDrawer: undefined,
+    toggleInboxDrawer: onPeek,
     toggleSidebar: undefined,
     toggleMargin: undefined,
   });
@@ -59,23 +59,55 @@ function mount(
     answer,
     client = new QueryClient(),
     commands = true,
+    onPeek,
+    peek = false,
   }: {
     answer?: (url: string) => Response | undefined;
     client?: QueryClient;
     commands?: boolean;
+    onPeek?: () => void;
+    peek?: boolean;
   } = {}
 ) {
   if (answer !== undefined) mounted.push({ unmount: stubFetch(answer).restore });
   const view = render(
     <QueryClientProvider client={client}>
       <MemoryNavigationProvider path={path}>
-        {commands ? <Commands enabled /> : null}
-        <Sidebar user={user as AuthenticatedUser} />
+        {commands ? <Commands enabled onPeek={onPeek} /> : null}
+        <Sidebar peek={peek} user={user as AuthenticatedUser} />
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
   mounted.push(view);
   return view.container;
+}
+
+const PEEK = "Peek at the inbox without leaving this page";
+
+/** Moves a mouse onto `element`, or off it with `leave`. */
+function hover(element: Element, leave = false) {
+  settle(() => {
+    const [pointer, mouse] = leave
+      ? ["pointerleave", "mouseleave"]
+      : ["pointerenter", "mouseenter"];
+    element.dispatchEvent(new PointerEvent(pointer, { bubbles: true, pointerType: "mouse" }));
+    element.dispatchEvent(new MouseEvent(mouse, { bubbles: true }));
+    if (!leave) element.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+  });
+}
+
+/** The open tooltip's text and its key chips. */
+async function tooltipOf(element: Element) {
+  hover(element);
+  await sleep(700);
+  const popup = document.querySelector('[data-slot="tooltip-content"]');
+  const shown = {
+    side: popup?.getAttribute("data-side"),
+    text: popup?.textContent,
+    keys: [...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent),
+  };
+  hover(element, true);
+  return shown;
 }
 
 function rowsOf(container: HTMLElement) {
@@ -104,7 +136,7 @@ function mountView(data: SidebarData) {
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path="/">
-        <SidebarView data={data} onNavigate={undefined} />
+        <SidebarView data={data} onNavigate={undefined} peek={false} />
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
@@ -128,27 +160,43 @@ describe("the sidebar", () => {
     expect(container.querySelectorAll("kbd")).toHaveLength(0);
     const inboxRow = rowsOf(container)[0]?.row;
     if (inboxRow === undefined) throw new Error("no Inbox row");
-    settle(() => {
-      inboxRow.dispatchEvent(
-        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
-      );
-      inboxRow.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-      inboxRow.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-    await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
-    const popup = document.querySelector('[data-slot="tooltip-content"]');
-    expect(popup?.getAttribute("data-side")).toBe("right");
-    expect(popup?.textContent).toStartWith("Go to Inbox");
-    expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
-      "G",
-      "I",
-    ]);
-    settle(() => {
-      inboxRow.dispatchEvent(
-        new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })
-      );
-      inboxRow.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-    });
+    const tooltip = await tooltipOf(inboxRow);
+    expect(tooltip.side).toBe("right");
+    expect(tooltip.text).toStartWith("Go to Inbox");
+    expect(tooltip.keys).toEqual(["G", "I"]);
+  });
+
+  test("Peek sits at the Inbox row's edge, shown on its hover or focus, named with its key", async () => {
+    await loadHotkeyTooltip();
+    const peeked: string[] = [];
+    const container = mount("/agents", { onPeek: () => peeked.push("peek"), peek: true });
+    const peek = container.querySelector<HTMLButtonElement>(`[aria-label="${PEEK}"]`);
+    if (peek === null) throw new Error("no Peek");
+    expect(peek.closest("li")?.querySelector("a")?.getAttribute("href")).toBe("/");
+    for (const shown of [
+      "opacity-0",
+      "group-hover/peek:opacity-100",
+      "focus-within/peek:opacity-100",
+    ]) {
+      expect(peek.className).toContain(shown);
+    }
+    expect(peek.closest("li")?.querySelector("a")?.className).toContain("group-hover/peek:pr-9");
+    const tooltip = await tooltipOf(peek);
+    expect(tooltip.text).toStartWith("Peek");
+    expect(tooltip.keys).toEqual(["I"]);
+    settle(() => peek.click());
+    expect(peeked).toEqual(["peek"]);
+  });
+
+  test("no Peek in the drawer, whose header has its own", () => {
+    const drawer = mount("/agents", { onPeek: () => {}, peek: false });
+    expect(drawer.querySelector(`[aria-label="${PEEK}"]`)).toBeNull();
+  });
+
+  test("no Peek, and no room for it, where the drawer cannot open", () => {
+    const inbox = mount("/", { peek: true });
+    expect(inbox.querySelector(`[aria-label="${PEEK}"]`)).toBeNull();
+    expect(inbox.querySelector("nav a")?.className).not.toContain("pr-9");
   });
 
   test("control: with no command mounted, no row has a tooltip to give", () => {
