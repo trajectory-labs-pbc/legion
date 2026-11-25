@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 import ts from "typescript";
 
-import { forkRoutes, linkFormProblems, routeParity, SERVER_HREFS } from "./links";
+import { forkRoutes, linkFormProblems, OWN_ELEMENTS, routeParity, SERVER_HREFS } from "./links";
 import {
   type PageEntry,
   pageFiles,
@@ -71,6 +71,16 @@ describe("links", () => {
     if (!first) throw new Error("no upstream route");
     const changed = [{ ...first, element: first.element.replace("/>", " changed/>") }];
     expect(routeParity(changed, fork).missing).toEqual([`${first.path} -> ${changed[0]?.element}`]);
+  });
+
+  test("names a redirect upstream changed, which this app writes with its own part", () => {
+    const changed = upstream.map((route) =>
+      route.path === "/replies" ? { ...route, element: "<Navigate to={elsewhere}/>" } : route
+    );
+    expect(routeParity(changed, fork)).toEqual({
+      missing: ["/replies -> <Navigate to={elsewhere}/>"],
+      extra: [OWN_ELEMENTS["/replies"]?.upstream].map((element) => `/replies -> ${element}`),
+    });
   });
 
   test("names routing the route map cannot read", () => {

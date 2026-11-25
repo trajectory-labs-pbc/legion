@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -36,6 +36,13 @@ describe("copied upstream code", () => {
       }
     }
     expect(problems).toEqual([]);
+  });
+
+  test("each pin names a file of this app that holds the copy", () => {
+    const missing = readPins()
+      .map((entry) => entry.copy)
+      .filter((copy) => !existsSync(join(repoRoot, "packages/tl-dispatch", copy)));
+    expect(missing).toEqual([]);
   });
 
   test("names a part upstream changed, and one it removed", () => {

@@ -6,9 +6,13 @@ import ts from "typescript";
 export const packageRoot = resolve(import.meta.dir, "../..");
 export const upstreamWebSrc = resolve(packageRoot, "../dispatch/web/src");
 export const upstreamAppFile = join(upstreamWebSrc, "app.tsx");
-export const pagesDir = join(packageRoot, "src/pages");
+export const forkSrc = join(packageRoot, "src");
+export const pagesDir = join(forkSrc, "pages");
+/** The route map: its `pages` list names every page file. */
+export const routeMapFile = join(forkSrc, "navigation/route-tree.tsx");
 
 const UPSTREAM_ALIAS = "@upstream-dispatch/";
+const OWN_ALIAS = "@/";
 
 export interface RouteEntry {
   path: string;
@@ -46,6 +50,8 @@ function resolveModule(from: string, specifier: string): string {
   let base: string;
   if (specifier.startsWith(UPSTREAM_ALIAS)) {
     base = join(upstreamWebSrc, specifier.slice(UPSTREAM_ALIAS.length));
+  } else if (specifier.startsWith(OWN_ALIAS)) {
+    base = join(forkSrc, specifier.slice(OWN_ALIAS.length));
   } else if (specifier.startsWith(".")) {
     base = resolve(dirname(from), specifier);
   } else {
@@ -323,6 +329,53 @@ function linkForms(
   return { query: list("query"), fragments: list("fragments") };
 }
 
+/** The initializer of a top-level `const <name>`. */
+function constant(source: ts.SourceFile, name: string): ts.Expression {
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === name &&
+        declaration.initializer
+      ) {
+        return declaration.initializer;
+      }
+    }
+  }
+  throw new Error(`${source.fileName}: no top-level const ${name}`);
+}
+
+/** A route: `pageRoute({ path, element, ... })`, written in place or as a top-level constant. */
+function readRoute(source: ts.SourceFile, node: ts.Expression): RouteEntry {
+  const call = ts.isIdentifier(node) ? constant(source, node.text) : node;
+  const [route] = ts.isCallExpression(call) ? call.arguments : [];
+  if (
+    !ts.isCallExpression(call) ||
+    call.expression.getText(source) !== "pageRoute" ||
+    route === undefined ||
+    !ts.isObjectLiteralExpression(route)
+  ) {
+    throw new Error(`${source.fileName}: a route is not pageRoute({...}): ${node.getText(source)}`);
+  }
+  return {
+    path: stringValue(source, property(source, route, "path")),
+    element: jsxText(source, property(source, route, "element")),
+  };
+}
+
+/** The routes of a page: an object literal of named routes. */
+function readRoutes(source: ts.SourceFile, node: ts.Expression): RouteEntry[] {
+  if (!ts.isObjectLiteralExpression(node)) {
+    throw new Error(`${source.fileName}: routes is not an object literal`);
+  }
+  return node.properties.map((entry) => {
+    if (ts.isShorthandPropertyAssignment(entry)) return readRoute(source, entry.name);
+    if (ts.isPropertyAssignment(entry)) return readRoute(source, entry.initializer);
+    throw new Error(`${source.fileName}: routes holds ${entry.getText(source)}`);
+  });
+}
+
 function readPage(file: string): PageEntry {
   const source = parse(file);
   for (const statement of source.statements) {
@@ -330,14 +383,16 @@ function readPage(file: string): PageEntry {
       continue;
     }
     for (const declaration of statement.declarationList.declarations) {
+      const value = declaration.initializer;
       if (
-        declaration.type?.getText(source) !== "Page" ||
-        !declaration.initializer ||
-        !ts.isObjectLiteralExpression(declaration.initializer)
+        !value ||
+        !ts.isSatisfiesExpression(value) ||
+        value.type.getText(source) !== "Page" ||
+        !ts.isObjectLiteralExpression(value.expression)
       ) {
         continue;
       }
-      const object = declaration.initializer;
+      const object = value.expression;
       const server = stringValue(source, property(source, object, "server"));
       if (server !== "upstream" && server !== "fork") {
         throw new Error(`${file}: server is ${server}`);
@@ -346,15 +401,7 @@ function readPage(file: string): PageEntry {
         file,
         id: stringValue(source, property(source, object, "id")),
         server,
-        routes: arrayOf(source, property(source, object, "routes")).map((route) => {
-          if (!ts.isObjectLiteralExpression(route)) {
-            throw new Error(`${file}: a route is not an object literal`);
-          }
-          return {
-            path: stringValue(source, property(source, route, "path")),
-            element: jsxText(source, property(source, route, "element")),
-          };
-        }),
+        routes: readRoutes(source, property(source, object, "routes")),
         views: arrayOf(source, property(source, object, "views")).map((view) =>
           stringValue(source, view)
         ),
@@ -362,14 +409,14 @@ function readPage(file: string): PageEntry {
       };
     }
   }
-  throw new Error(`${file}: no \`const <name>: Page = {...}\``);
+  throw new Error(`${file}: no \`const <name> = {...} satisfies Page\``);
 }
 
-/** Every page file: each file in `src/pages` but the route map and the `Page` type. */
+/** Every page file: each file in `src/pages` but the `Page` type. */
 export function pageFiles(dir = pagesDir): string[] {
   return readdirSync(dir)
     .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
-    .filter((name) => name !== "index.tsx" && name !== "page.ts")
+    .filter((name) => name !== "page.ts")
     .sort()
     .map((name) => join(dir, name));
 }
@@ -378,16 +425,22 @@ export function readPages(dir = pagesDir): PageEntry[] {
   return pageFiles(dir).map(readPage);
 }
 
-/** The page files the route map (`src/pages/index.tsx`) lists in `pages`. */
-export function routeMapFiles(dir = pagesDir): string[] {
-  const source = parse(join(dir, "index.tsx"));
+/** The list a `[...] as const satisfies ...` holds. */
+function listOf(source: ts.SourceFile, node: ts.Expression): ts.NodeArray<ts.Expression> {
+  return ts.isAsExpression(node) || ts.isSatisfiesExpression(node)
+    ? listOf(source, node.expression)
+    : arrayOf(source, node);
+}
+
+/** The page files the route map (`src/navigation/route-tree.tsx`) lists in `pages`. */
+export function routeMapFiles(file = routeMapFile): string[] {
+  const source = parse(file);
   const imports = new Map<string, string>();
-  let listed: string[] | undefined;
   for (const statement of source.statements) {
     if (
       ts.isImportDeclaration(statement) &&
       ts.isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text.startsWith("./") &&
+      statement.moduleSpecifier.text.startsWith(`${OWN_ALIAS}pages/`) &&
       statement.importClause?.namedBindings &&
       ts.isNamedImports(statement.importClause.namedBindings)
     ) {
@@ -398,33 +451,17 @@ export function routeMapFiles(dir = pagesDir): string[] {
         );
       }
     }
-    if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (
-          ts.isIdentifier(declaration.name) &&
-          declaration.name.text === "pages" &&
-          declaration.initializer
-        ) {
-          listed = arrayOf(source, declaration.initializer).map((entry) => entry.getText(source));
-        }
-      }
-    }
   }
-  if (!listed) {
-    throw new Error(`${source.fileName}: no pages list`);
-  }
-  return listed
-    .map((name) => {
-      const file = imports.get(name);
-      if (!file) {
-        throw new Error(`${source.fileName}: ${name} is not imported`);
+  return listOf(source, constant(source, "pages"))
+    .map((entry) => {
+      const found = imports.get(entry.getText(source));
+      if (!found) {
+        throw new Error(`${source.fileName}: ${entry.getText(source)} is not imported`);
       }
-      return file;
+      return found;
     })
     .sort();
 }
-
-export const forkSrc = join(packageRoot, "src");
 
 function sourceFiles(root: string, skip: readonly string[]): string[] {
   const found: string[] = [];

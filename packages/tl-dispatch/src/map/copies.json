@@ -72,42 +72,42 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthenticatedApp",
-    "copy": "src/shell/AuthGate.tsx",
+    "copy": "src/shell/auth-gate.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "8ad293a3407793cca7c2baff2ae50d57bf104536ce00eaffc20024971e3ef358"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthGate",
-    "copy": "src/shell/AuthGate.tsx",
+    "copy": "src/shell/auth-gate.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "069d636f08f925e5d5425b2546812c3accb960c6caaa4ab6d1f91a2b6d6bd3fe"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "signOutFailure",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/use-sign-out.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0a8a75641b50c80f07e6bdd657675009c2e1e88dfba8c45d7dbccb22440515e5"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "NavigationContents",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/navigation-panel.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "9c8abba2f1adf73bac87f7eaa1c94e010658dae5dcfd99052705080a753e05de"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ShellProviders",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/shell-frame.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0d6a413b4a5e84b17bc93aa1568cb9ea1672d6439f15b4cb7854d7cb6cc6a624"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AppShell",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/app-shell.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "5472681908a7b749ff0237b22662a717d8787fdf3213d7c9335a49d028a11412"
   },
