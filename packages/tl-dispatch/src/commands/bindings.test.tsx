@@ -278,32 +278,35 @@ describe("useRegisterCommands on the app's engine", () => {
       </>
     );
     const view = render(page(true));
-    const save = () =>
-      document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
-    for (let tries = 0; tries < 20 && save() === null; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    try {
+      const save = () =>
+        document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
+      for (let tries = 0; tries < 20 && save() === null; tries += 1) {
+        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      }
+      settle(() => save()?.focus());
+      expect(
+        save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)
+      ).toBe(true);
+      const tap = (key: string, init: KeyboardEventInit = {}) =>
+        settle(() => {
+          appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+        });
+      tap("c");
+      tap("g");
+      tap("i");
+      tap("?", { shiftKey: true });
+      expect(fired).toEqual(["global.help"]);
+      // Control: once the dialog has closed, the same key runs.
+      view.rerender(page(false));
+      for (let tries = 0; tries < 40 && save() !== null; tries += 1) {
+        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      }
+      tap("c");
+      expect(fired).toEqual(["global.help", "global.create"]);
+    } finally {
+      view.unmount();
     }
-    settle(() => save()?.focus());
-    expect(save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)).toBe(
-      true
-    );
-    const tap = (key: string, init: KeyboardEventInit = {}) =>
-      settle(() => {
-        appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
-      });
-    tap("c");
-    tap("g");
-    tap("i");
-    tap("?", { shiftKey: true });
-    expect(fired).toEqual(["global.help"]);
-    // Control: once the dialog has closed, the same key runs.
-    view.rerender(page(false));
-    for (let tries = 0; tries < 40 && save() !== null; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-    }
-    tap("c");
-    expect(fired).toEqual(["global.help", "global.create"]);
-    view.unmount();
   });
 
   test("a new label reaches the engine's list, which copies a label when it registers", () => {

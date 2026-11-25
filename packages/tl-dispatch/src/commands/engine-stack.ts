@@ -61,7 +61,10 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   if (existing !== undefined) return existing;
   const stack: { scope: KeymapScope; owner: DialogOwner | null }[] = [];
   const listeners = new Set<() => void>();
+  // A read brings the stack up to date without telling the listeners: it may run in a render.
+  let quiet = false;
   const notify = () => {
+    if (quiet) return;
     for (const listener of listeners) listener();
   };
   const push = keymap.pushScope;
@@ -81,30 +84,53 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   keymap.pushScope = (scope) => pushEntry(scope, scope === DIALOG_SCOPE ? UPSTREAM : null);
 
   const pops = new Map<OverlayLayer, () => void>();
+  // A listener may read the stack while it changes; that read waits for the change to end.
+  let syncing = false;
   const sync = () => {
+    if (syncing) return;
     const open = layers.get();
     if (open.length === pops.size && open.every((layer) => pops.has(layer))) return;
-    for (const [layer, pop] of pops) {
-      if (!open.includes(layer)) {
-        pops.delete(layer);
-        pop();
+    syncing = true;
+    const loud = !quiet;
+    quiet = true;
+    try {
+      for (const [layer, pop] of pops) {
+        if (!open.includes(layer)) {
+          pops.delete(layer);
+          pop();
+        }
       }
+      for (const layer of open) {
+        if (!pops.has(layer)) pops.set(layer, pushEntry(DIALOG_SCOPE, layer));
+      }
+    } finally {
+      syncing = false;
+      quiet = !loud;
     }
-    for (const layer of open) {
-      if (!pops.has(layer)) pops.set(layer, pushEntry(DIALOG_SCOPE, layer));
-    }
+    notify();
   };
   sync();
   layers.subscribe(sync);
-  // Removing the focused element fires no focus event, so each key press reads the focus again
-  // before the engine picks the scopes it consults.
+  // Removing an overlay with the focus in it fires no focus event. So each key press reads the
+  // overlays again before the engine picks the scopes it consults, and so does each read below.
   const handleKeyDown = keymap.handleKeyDown;
   keymap.handleKeyDown = (event) => {
     sync();
     return handleKeyDown(event);
   };
+  const refresh = () => {
+    quiet = true;
+    try {
+      sync();
+    } finally {
+      quiet = false;
+    }
+  };
 
-  const dialogs = () => stack.flatMap(({ owner }) => (owner === null ? [] : [owner]));
+  const dialogs = () => {
+    refresh();
+    return stack.flatMap(({ owner }) => (owner === null ? [] : [owner]));
+  };
   const tracker: EngineStack = {
     top: () => dialogs().at(-1),
     passes(reach) {
@@ -121,6 +147,7 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
       );
     },
     liveScopes() {
+      refresh();
       if (stack.some(({ scope }) => scope === DIALOG_SCOPE)) return [DIALOG_SCOPE];
       return [...new Set<KeymapScope>(["global", ...stack.map(({ scope }) => scope)])];
     },

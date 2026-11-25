@@ -42,7 +42,10 @@ const POPUPS = Object.keys(KIND_OF_SLOT)
 
 const layers = new WeakMap<Element, OverlayLayer>();
 
-/** The layer of an overlay's popup, or undefined for an element that is none. */
+/**
+ * The layer of an overlay's popup, or undefined for an element that is none. An overlay's own
+ * context passes it to `useRegisterCommands`.
+ */
 export function overlayLayerOf(popup: Element): OverlayLayer | undefined {
   const known = layers.get(popup);
   if (known !== undefined) return known;
@@ -56,11 +59,16 @@ export function overlayLayerOf(popup: Element): OverlayLayer | undefined {
 }
 
 /** The overlays `element` is inside, outermost first; none for an element of the page. */
-export function overlaysAround(element: Element | null): OverlayLayer[] {
+function overlaysAround(element: Element | null): OverlayLayer[] {
   const found: OverlayLayer[] = [];
-  for (let popup = element?.closest(POPUPS); popup; popup = popup.parentElement?.closest(POPUPS)) {
-    const layer = overlayLayerOf(popup);
+  // An element taken out of the page is inside no overlay, whatever still names it as focused.
+  if (element === null || !element.isConnected) return found;
+  let popup = element.closest(POPUPS);
+  while (popup !== null) {
+    // Base UI marks a popup that is closing, which keeps the focus until its exit ends.
+    const layer = popup.hasAttribute("data-closed") ? undefined : overlayLayerOf(popup);
     if (layer !== undefined) found.unshift(layer);
+    popup = popup.parentElement?.closest(POPUPS) ?? null;
   }
   return found;
 }
