@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, jest, spyOn, test } from "bun:test";
+import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 import { act, createRef } from "react";
 
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
-import type { HotkeyTooltip as HotkeyTooltipType } from "./hotkey-tooltip";
+import type {
+  HotkeyTooltip as HotkeyTooltipType,
+  LabelTooltip as LabelTooltipType,
+} from "./hotkey-tooltip";
 import { useRegisterCommands } from "./use-register-commands";
 
 function Shell() {
@@ -18,6 +22,7 @@ function Shell() {
 
 interface TooltipModule {
   HotkeyTooltip: typeof HotkeyTooltipType;
+  LabelTooltip: typeof LabelTooltipType;
   loadHotkeyTooltip(load?: () => Promise<never>): Promise<void>;
 }
 
@@ -112,5 +117,37 @@ describe("HotkeyTooltip, while its code arrives", () => {
     const control = view.container.querySelector("button");
     expect(control?.getAttribute("data-slot")).toBeNull();
     expect(control?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
+  });
+});
+
+describe("LabelTooltip", () => {
+  test("shows its label and no key on hover, once the tooltip's code arrives", async () => {
+    const { LabelTooltip, loadHotkeyTooltip } = await freshModule();
+    const view = render(
+      <LabelTooltip label="Unpin Ada from the sidebar">
+        <button aria-label="Unpin Ada from the sidebar" type="button" />
+      </LabelTooltip>
+    );
+    mounted.push(view);
+    await act(() => loadHotkeyTooltip());
+    const control = view.container.querySelector("button");
+    expect(control?.getAttribute("data-slot")).toBe("tooltip-trigger");
+    expect(control?.hasAttribute("title")).toBe(false);
+    jest.useFakeTimers();
+    try {
+      settle(() => {
+        control?.dispatchEvent(
+          new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+        );
+        control?.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+        control?.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+      });
+      await tick(600);
+      const popup = document.querySelector('[data-slot="tooltip-content"]');
+      expect(popup?.textContent).toBe("Unpin Ada from the sidebar");
+      expect(popup?.querySelector("kbd")).toBeNull();
+    } finally {
+      realClock();
+    }
   });
 });
