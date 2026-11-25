@@ -1,0 +1,469 @@
+/* Paints upstream's pages with the theme, without editing them. Upstream's classes read Tailwind's
+   palette variables (`text-sky-700` is `color: var(--color-sky-700)`), which Tailwind declares in
+   its theme layer. A rule outside every layer outranks that layer, so each shade here holds a
+   theme token, or a mix of two.
+
+   Colour marks state only. Slate, sky and blue are one neutral scale each; amber, rose and red,
+   emerald and green are the theme's warning, danger and success.
+
+   Upstream pairs a light shade with a dark one (`text-slate-900 dark:text-slate-100`), so a
+   shade holds one value in light and another in dark. `--repaint-light` is 100% in light and 0%
+   in dark, set where the theme sets its tokens, and a shade written
+   `color-mix(in oklab, A var(--repaint-light), B)` is A in light and B in dark.
+
+   `tests/repaint.test.ts` compiles the stylesheet, resolves these values and holds every text
+   pair upstream registers to its ratio. It reads `var()` and `color-mix()`. */
+
+:root {
+  --repaint-light: 100%;
+}
+
+.dark {
+  --repaint-light: 0%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --repaint-light: 0%;
+  }
+}
+
+:root,
+.dark {
+  --color-slate-50: color-mix(in oklab, var(--background) var(--repaint-light), var(--foreground));
+  --color-slate-100: color-mix(in oklab, var(--muted) var(--repaint-light), var(--foreground));
+  --color-slate-200: color-mix(
+    in oklab,
+    var(--border) var(--repaint-light),
+    color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground))
+  );
+  --color-slate-300: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--border) 65%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground))
+  );
+  --color-slate-400: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--muted-foreground) 55%, var(--border)) var(--repaint-light),
+    var(--muted-foreground)
+  );
+  --color-slate-500: color-mix(
+    in oklab,
+    var(--muted-foreground) var(--repaint-light),
+    var(--input)
+  );
+  --color-slate-600: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--muted-foreground) 80%, var(--foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--input) 70%, var(--muted-foreground))
+  );
+  --color-slate-700: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--foreground) 75%, var(--muted-foreground)) var(--repaint-light),
+    var(--border)
+  );
+  --color-slate-800: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--foreground) 90%, var(--muted-foreground)) var(--repaint-light),
+    var(--muted)
+  );
+  --color-slate-900: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--card));
+  --color-slate-950: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--background));
+
+  /* Sky is upstream's accent. In light, every control state (focus, a switch, the current tab)
+     reads sky-600, so it is `--primary`; the rest is one light-to-dark scale. */
+  --color-sky-50: color-mix(in oklab, var(--muted) var(--repaint-light), var(--foreground));
+  --color-sky-100: color-mix(
+    in oklab,
+    var(--muted) var(--repaint-light),
+    color-mix(in oklab, var(--foreground) 80%, var(--muted-foreground))
+  );
+  --color-sky-200: color-mix(
+    in oklab,
+    var(--border) var(--repaint-light),
+    color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground))
+  );
+  --color-sky-300: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--border) 75%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--foreground) 25%, var(--muted-foreground))
+  );
+  --color-sky-400: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--border) 50%, var(--muted-foreground)) var(--repaint-light),
+    var(--muted-foreground)
+  );
+  --color-sky-500: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--border) 25%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--muted-foreground) 65%, var(--input))
+  );
+  --color-sky-600: color-mix(in oklab, var(--primary) var(--repaint-light), var(--input));
+  --color-sky-700: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--input) 55%, var(--border))
+  );
+  --color-sky-800: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--foreground) 70%, var(--muted-foreground)) var(--repaint-light),
+    var(--border)
+  );
+  --color-sky-900: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground)) var(--repaint-light),
+    var(--accent)
+  );
+  --color-sky-950: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--secondary));
+
+  --color-blue-50: var(--color-sky-50);
+  --color-blue-100: var(--color-sky-100);
+  --color-blue-200: var(--color-sky-200);
+  --color-blue-300: var(--color-sky-300);
+  --color-blue-400: var(--color-sky-400);
+  --color-blue-500: var(--color-sky-500);
+  --color-blue-600: var(--color-sky-600);
+  --color-blue-700: var(--color-sky-700);
+  --color-blue-800: var(--color-sky-800);
+  --color-blue-900: var(--color-sky-900);
+  --color-blue-950: var(--color-sky-950);
+
+  /* A state's scale: its tint and border are the grounds, its own token the text, a dot or a
+     bar. The theme swaps each token with the scheme, so the scale runs the other way in dark. */
+  --color-amber-50: color-mix(in oklab, var(--warning-tint) var(--repaint-light), var(--warning));
+  --color-amber-100: color-mix(in oklab, var(--warning-tint) var(--repaint-light), var(--warning));
+  --color-amber-200: color-mix(
+    in oklab,
+    var(--warning-border) var(--repaint-light),
+    var(--warning)
+  );
+  --color-amber-300: color-mix(
+    in oklab,
+    var(--warning-border) var(--repaint-light),
+    var(--warning)
+  );
+  --color-amber-400: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--warning) 50%, var(--warning-border)) var(--repaint-light),
+    var(--warning)
+  );
+  --color-amber-500: color-mix(in oklab, var(--warning) 50%, var(--warning-border));
+  --color-amber-600: color-mix(
+    in oklab,
+    var(--warning) var(--repaint-light),
+    color-mix(in oklab, var(--warning) 50%, var(--warning-border))
+  );
+  --color-amber-700: color-mix(
+    in oklab,
+    var(--warning) var(--repaint-light),
+    var(--warning-border)
+  );
+  --color-amber-800: color-mix(
+    in oklab,
+    var(--warning) var(--repaint-light),
+    var(--warning-border)
+  );
+  --color-amber-900: color-mix(
+    in oklab,
+    var(--warning) var(--repaint-light),
+    color-mix(in oklab, var(--warning-border) 50%, var(--warning-tint))
+  );
+  --color-amber-950: color-mix(in oklab, var(--warning) var(--repaint-light), var(--warning-tint));
+
+  --color-rose-50: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
+  --color-rose-100: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
+  --color-rose-200: color-mix(in oklab, var(--danger-border) var(--repaint-light), var(--danger));
+  --color-rose-300: color-mix(in oklab, var(--danger-border) var(--repaint-light), var(--danger));
+  --color-rose-400: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--danger) 50%, var(--danger-border)) var(--repaint-light),
+    var(--danger)
+  );
+  --color-rose-500: color-mix(in oklab, var(--danger) 50%, var(--danger-border));
+  --color-rose-600: color-mix(
+    in oklab,
+    var(--danger) var(--repaint-light),
+    color-mix(in oklab, var(--danger) 50%, var(--danger-border))
+  );
+  --color-rose-700: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
+  --color-rose-800: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
+  --color-rose-900: color-mix(
+    in oklab,
+    var(--danger) var(--repaint-light),
+    color-mix(in oklab, var(--danger-border) 50%, var(--danger-tint))
+  );
+  --color-rose-950: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-tint));
+
+  --color-red-50: var(--color-rose-50);
+  --color-red-100: var(--color-rose-100);
+  --color-red-200: var(--color-rose-200);
+  --color-red-300: var(--color-rose-300);
+  --color-red-400: var(--color-rose-400);
+  --color-red-500: var(--color-rose-500);
+  --color-red-600: var(--color-rose-600);
+  --color-red-700: var(--color-rose-700);
+  --color-red-800: var(--color-rose-800);
+  --color-red-900: var(--color-rose-900);
+  --color-red-950: var(--color-rose-950);
+
+  --color-emerald-50: color-mix(in oklab, var(--success-tint) var(--repaint-light), var(--success));
+  --color-emerald-100: color-mix(
+    in oklab,
+    var(--success-tint) var(--repaint-light),
+    var(--success)
+  );
+  --color-emerald-200: color-mix(
+    in oklab,
+    var(--success-border) var(--repaint-light),
+    var(--success)
+  );
+  --color-emerald-300: color-mix(
+    in oklab,
+    var(--success-border) var(--repaint-light),
+    var(--success)
+  );
+  --color-emerald-400: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--success) 50%, var(--success-border)) var(--repaint-light),
+    var(--success)
+  );
+  --color-emerald-500: color-mix(in oklab, var(--success) 50%, var(--success-border));
+  --color-emerald-600: color-mix(
+    in oklab,
+    var(--success) var(--repaint-light),
+    color-mix(in oklab, var(--success) 50%, var(--success-border))
+  );
+  --color-emerald-700: color-mix(
+    in oklab,
+    var(--success) var(--repaint-light),
+    var(--success-border)
+  );
+  --color-emerald-800: color-mix(
+    in oklab,
+    var(--success) var(--repaint-light),
+    var(--success-border)
+  );
+  --color-emerald-900: color-mix(
+    in oklab,
+    var(--success) var(--repaint-light),
+    color-mix(in oklab, var(--success-border) 50%, var(--success-tint))
+  );
+  --color-emerald-950: color-mix(
+    in oklab,
+    var(--success) var(--repaint-light),
+    var(--success-tint)
+  );
+
+  --color-green-50: var(--color-emerald-50);
+  --color-green-100: var(--color-emerald-100);
+  --color-green-200: var(--color-emerald-200);
+  --color-green-300: var(--color-emerald-300);
+  --color-green-400: var(--color-emerald-400);
+  --color-green-500: var(--color-emerald-500);
+  --color-green-600: var(--color-emerald-600);
+  --color-green-700: var(--color-emerald-700);
+  --color-green-800: var(--color-emerald-800);
+  --color-green-900: var(--color-emerald-900);
+  --color-green-950: var(--color-emerald-950);
+
+  /* The issue page's own palette, which upstream's stylesheet declares as literals. Its greys are
+     the slate shades upstream names them by. A kind of node (question, decision, statement,
+     check, step, child, lens) is not a state, so its mark is a grey and its tint the muted
+     ground. Waiting, passed and failed are states. */
+  --color-page-paper: color-mix(in oklab, var(--card) var(--repaint-light), var(--background));
+  --color-page-ink: var(--foreground);
+  --color-page-words: color-mix(
+    in oklab,
+    var(--color-slate-800) var(--repaint-light),
+    var(--color-slate-200)
+  );
+  --color-page-muted: color-mix(
+    in oklab,
+    var(--color-slate-600) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --color-page-quiet: var(--muted-foreground);
+  --color-page-line: var(--muted);
+  --color-page-hair: var(--border);
+  --color-page-pane: color-mix(in oklab, var(--secondary) var(--repaint-light), var(--card));
+  --color-page-mark: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--accent) 50%, var(--muted)) var(--repaint-light),
+    var(--accent)
+  );
+  --color-page-guide: color-mix(in oklab, var(--border) var(--repaint-light), var(--muted));
+  --color-page-bullet: color-mix(
+    in oklab,
+    var(--color-slate-400) var(--repaint-light),
+    var(--color-slate-500)
+  );
+  --color-page-person: var(--foreground);
+  --color-page-person-tint: var(--muted);
+  --color-page-agent: var(--muted-foreground);
+  --color-page-issue: color-mix(
+    in oklab,
+    var(--color-slate-700) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --color-page-question: var(--foreground);
+  --color-page-question-tint: var(--muted);
+  --color-page-decision: var(--color-page-muted);
+  --color-page-decision-tint: var(--muted);
+  --color-page-statement: var(--color-page-muted);
+  --color-page-statement-tint: var(--muted);
+  --color-page-check: var(--muted-foreground);
+  --color-page-check-tint: var(--muted);
+  --color-page-step: var(--color-page-muted);
+  --color-page-step-tint: var(--muted);
+  --color-page-child: var(--muted-foreground);
+  --color-page-child-text: var(--color-page-muted);
+  --color-page-child-tint: var(--muted);
+  --color-page-lens: var(--muted-foreground);
+  --color-page-lens-tint: var(--muted);
+  --color-page-waiting: var(--warning);
+  --color-page-waiting-tint: var(--warning-tint);
+  --color-page-waiting-text: var(--warning);
+  --color-page-passed: var(--success);
+  --color-page-failed: var(--danger);
+  --color-page-not-run: var(--muted-foreground);
+  --color-page-in-progress: var(--foreground);
+  --color-icon-rail: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--card));
+  --color-icon-rail-text: color-mix(
+    in oklab,
+    var(--border) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --color-icon-rail-accent: var(--ring);
+  --color-icon-rail-active: color-mix(
+    in oklab,
+    var(--color-slate-800) var(--repaint-light),
+    var(--accent)
+  );
+}
+
+/* The rules below repeat a selector of upstream's stylesheet that sets a blue literal. Each has
+   upstream's specificity and comes later, so it wins in both schemes. */
+
+:root {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.dispatch-doc .proof-editor {
+  --code-bg: var(--muted);
+  --pre-bg: var(--color-slate-950);
+  --blockquote-border: color-mix(
+    in oklab,
+    var(--color-slate-300) var(--repaint-light),
+    var(--color-slate-600)
+  );
+  --blockquote-color: var(--muted-foreground);
+}
+
+.dispatch-doc .milkdown th,
+.dispatch-doc .milkdown td {
+  border-color: var(--border);
+}
+
+.dispatch-doc .milkdown th {
+  background-color: var(--muted);
+}
+
+.dispatch-doc .dispatch-mark-active,
+.dispatch-doc .dispatch-block-active {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+:is(.dispatch-doc, .dispatch-markdown) [data-proof-block-name],
+:is(.dispatch-doc, .dispatch-markdown) [data-proof-block-attributes] {
+  color: var(--muted-foreground);
+}
+
+:is(.dispatch-doc, .dispatch-markdown) [data-proof-block-badge] {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+:is(.dispatch-doc, .dispatch-markdown) [data-proof-block-title] {
+  color: var(--foreground);
+}
+
+.dispatch-doc .milkdown a {
+  color: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+}
+
+::highlight(dispatch-search) {
+  background-color: var(--warning-border);
+  color: var(--foreground);
+}
+
+.dispatch-markdown {
+  --tw-prose-links: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+  --tw-prose-invert-links: var(--tw-prose-links);
+}
+
+/* Tailwind Typography's greys are literal slate. `:where()` keeps this rule below upstream's own
+   `.dispatch-markdown`, and being outside a layer puts it above the plugin's, `prose-invert`
+   included: each `invert` name holds the value of its plain one, which follows the scheme. */
+:where(.prose, .prose-slate) {
+  --tw-prose-body: color-mix(
+    in oklab,
+    var(--color-slate-700) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: color-mix(
+    in oklab,
+    var(--color-slate-600) var(--repaint-light),
+    var(--color-slate-400)
+  );
+  --tw-prose-links: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: color-mix(
+    in oklab,
+    var(--color-slate-300) var(--repaint-light),
+    var(--color-slate-600)
+  );
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-kbd: var(--foreground);
+  --tw-prose-kbd-shadows: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: color-mix(
+    in oklab,
+    var(--color-slate-200) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --tw-prose-pre-bg: color-mix(
+    in oklab,
+    var(--color-slate-800) var(--repaint-light),
+    var(--color-slate-950)
+  );
+  --tw-prose-th-borders: color-mix(
+    in oklab,
+    var(--color-slate-300) var(--repaint-light),
+    var(--color-slate-600)
+  );
+  --tw-prose-td-borders: var(--border);
+  --tw-prose-invert-body: var(--tw-prose-body);
+  --tw-prose-invert-headings: var(--tw-prose-headings);
+  --tw-prose-invert-lead: var(--tw-prose-lead);
+  --tw-prose-invert-links: var(--tw-prose-links);
+  --tw-prose-invert-bold: var(--tw-prose-bold);
+  --tw-prose-invert-counters: var(--tw-prose-counters);
+  --tw-prose-invert-bullets: var(--tw-prose-bullets);
+  --tw-prose-invert-hr: var(--tw-prose-hr);
+  --tw-prose-invert-quotes: var(--tw-prose-quotes);
+  --tw-prose-invert-quote-borders: var(--tw-prose-quote-borders);
+  --tw-prose-invert-captions: var(--tw-prose-captions);
+  --tw-prose-invert-kbd: var(--tw-prose-kbd);
+  --tw-prose-invert-kbd-shadows: var(--tw-prose-kbd-shadows);
+  --tw-prose-invert-code: var(--tw-prose-code);
+  --tw-prose-invert-pre-code: var(--tw-prose-pre-code);
+  --tw-prose-invert-pre-bg: var(--tw-prose-pre-bg);
+  --tw-prose-invert-th-borders: var(--tw-prose-th-borders);
+  --tw-prose-invert-td-borders: var(--tw-prose-td-borders);
+}
