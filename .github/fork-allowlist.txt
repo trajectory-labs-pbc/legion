@@ -4,6 +4,10 @@
 # that first edits it. When the weekly sync pull request fails on a line the fork no longer changes,
 # because upstream took the change, remove the line with a commit on the sync branch.
 
+# The fork's UI package, outside the root workspaces, and the shadcn registry that serves it.
+packages/ui/
+registry.json
+
 # The fork's checks.
 .github/fork-allowlist.txt
 .github/scripts/check-fork-allowlist.sh
