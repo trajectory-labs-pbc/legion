@@ -12,6 +12,7 @@ const MODIFIERS: Readonly<Record<string, { mac: string; other: string; aria: str
   $mod: { mac: "⌘", other: "Ctrl", aria: "" },
   Meta: { mac: "⌘", other: "Meta", aria: "Meta" },
   Control: { mac: "⌃", other: "Ctrl", aria: "Control" },
+  Ctrl: { mac: "⌃", other: "Ctrl", aria: "Control" },
   Alt: { mac: "⌥", other: "Alt", aria: "Alt" },
   Shift: { mac: "⇧", other: "Shift", aria: "Shift" },
 };
