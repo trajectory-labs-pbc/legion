@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "legion",
-  "homepage": "https://github.com/trajectory-labs-pbc/legion",
+  "homepage": "https://github.com/<owner>/<repo>",
   "items": [
     {
       "name": "theme",

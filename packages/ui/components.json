@@ -13,7 +13,6 @@
   "aliases": {
     "components": "@legion/ui/components",
     "utils": "@legion/ui/lib/utils",
-    "hooks": "@legion/ui/hooks",
     "lib": "@legion/ui/lib",
     "ui": "@legion/ui/components"
   }

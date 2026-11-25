@@ -6,14 +6,12 @@
   "private": true,
   "imports": {
     "#registry/legion/ui/*": "./src/components/*.tsx",
-    "#registry/legion/lib/*": "./src/lib/*.ts",
-    "#registry/legion/hooks/*": "./src/hooks/*.ts"
+    "#registry/legion/lib/*": "./src/lib/*.ts"
   },
   "exports": {
     "./globals.css": "./src/styles/globals.css",
     "./components/*": "./src/components/*.tsx",
-    "./lib/*": "./src/lib/*.ts",
-    "./hooks/*": "./src/hooks/*.ts"
+    "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
     "test": "bun test",
