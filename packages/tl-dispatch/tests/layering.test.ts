@@ -52,6 +52,11 @@ describe("layers", () => {
       'import { Dialog } from "@base-ui/react/dialog";',
       "Base UI comes through packages/ui",
     ],
+    [
+      "src/commands/x.ts",
+      'import { useNavigate } from "react-router-dom";',
+      "never imports navigation",
+    ],
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
     ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
     ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],
