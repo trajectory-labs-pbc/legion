@@ -1,6 +1,6 @@
 import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
 
-import { keySteps } from "./keys";
+import { keySteps, splitStep } from "./keys";
 
 /** One display chip per step of a key: `["⌘K"]` for a press, `["G", "I"]` for a chord. */
 export type ShortcutChips = readonly string[];
@@ -26,14 +26,6 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   Escape: "Esc",
   " ": "Space",
 };
-
-/** A step's modifiers and key: `"$mod+k"` is `$mod` and `k`; `"$mod++"` ends in the `+` key. */
-function splitStep(step: string): { modifiers: string[]; key: string } {
-  const plusKey = step.length > 1 && step.endsWith("++");
-  const parts = (plusKey ? step.slice(0, -2) : step).split("+");
-  const key = plusKey ? "+" : (parts.pop() ?? "");
-  return { modifiers: plusKey ? parts.filter((part) => part !== "") : parts, key };
-}
 
 function keyName(key: string): string {
   return KEY_NAMES[key] ?? (key.length === 1 ? key.toUpperCase() : key);

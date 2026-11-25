@@ -22,6 +22,13 @@ export function keySteps(keys: string): string[] {
   return keys.trim().split(/\s+/);
 }
 
+/** A step's modifiers and key: `"$mod+k"` is `$mod` and `k`. The engine reads no `+` key. */
+export function splitStep(step: string): { modifiers: string[]; key: string } {
+  const modifiers = step.split("+");
+  const key = modifiers.pop() ?? "";
+  return { modifiers, key };
+}
+
 /**
  * `keys` as the engine matches a press: it ignores Shift on a symbol or a digit, which already
  * says whether Shift is held, but compares it when it registers, so `?` and `Shift+?` would pass.
@@ -29,10 +36,10 @@ export function keySteps(keys: string): string[] {
 function asMatched(keys: string): string {
   return keySteps(keys)
     .map((step) => {
-      const parts = step.split("+");
-      const key = parts.pop() ?? "";
+      const { modifiers, key } = splitStep(step);
       const shiftInKey = key.length === 1 && key.toLowerCase() === key.toUpperCase();
-      return [...(shiftInKey ? parts.filter((part) => part !== "Shift") : parts), key].join("+");
+      const kept = shiftInKey ? modifiers.filter((name) => name !== "Shift") : modifiers;
+      return [...kept, key].join("+");
     })
     .join(" ");
 }
