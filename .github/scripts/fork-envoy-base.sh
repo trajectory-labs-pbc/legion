@@ -5,8 +5,9 @@
 # the fork's image serves the commit it names. A commit that workflow has no run for on main, or
 # only cancelled ones, has no upstream image: the script says so in a notice and exits 3. On a pull
 # request, which that workflow does not run for, it is the image of the newest first-parent
-# ancestor that has one. The tag can move, so the digest is used only once its attestation shows
-# that workflow built it on main.
+# ancestor that has one, and the script fails when upstream's inputs of that image differ between
+# the ancestor and <commit>. The tag can move, so the digest is used only once its attestation
+# shows that workflow built it on main.
 set -euo pipefail
 event=$1
 commit=$2
@@ -36,7 +37,21 @@ settled_runs() {
 }
 succeeded() { jq -e 'any(.conclusion == "success")' <<<"$1" >/dev/null; }
 
+# The listener's on.push.paths as git pathspecs, up to the lines the fork added for its own image.
+upstream_inputs() {
+  awk '
+    /^    paths:/ { on = 1; next }
+    on && (/^      # The fork/ || !/^      /) { exit }
+    on && $1 == "-" {
+      path = $2
+      gsub(/"/, "", path)
+      print (sub(/^!/, "", path) ? ":(glob,exclude)" : ":(glob)") path
+    }
+  ' "$listener"
+}
+
 if [ "$event" = pull_request ]; then
+  built=$commit
   while :; do
     runs=$(settled_runs "$commit")
     if succeeded "$runs"; then break; fi
@@ -45,6 +60,16 @@ if [ "$event" = pull_request ]; then
       exit 1
     fi
   done
+  mapfile -t inputs < <(upstream_inputs)
+  if [ "${#inputs[@]}" -eq 0 ]; then
+    echo "::error::$listener has no on.push.paths list to compare $commit and $built with" >&2
+    exit 1
+  fi
+  changed=$(git diff --name-only "$commit" "$built" -- "${inputs[@]}")
+  if [ -n "$changed" ]; then
+    echo "::error::upstream's envoy image inputs differ between $commit, the newest commit on main with an upstream image, and this pull request's merge commit, so this smoke build cannot test the pull request's own upstream change; main builds that image after the merge. Changed: $(tr '\n' ' ' <<<"$changed")" >&2
+    exit 1
+  fi
 else
   runs=$(settled_runs "$commit")
   if ! succeeded "$runs"; then
