@@ -45,10 +45,11 @@ import { cn } from "@legion/ui/lib/utils";
 
 `src/commands/app-catalog.ts` declares every command once: its label, keys, icon, group, whether
 it is destructive and the lists it stays out of. Its global context holds the keys upstream's shell
-binds, with the same behaviour, and adds the pages with no letter as palette commands. The catalog refuses,
-when it loads, two keys live together that one press sequence matches or where one starts the
-other, as upstream's key engine compares them. `CommandId` is typed from it, so a misspelt id
-fails `tsc`.
+binds, and adds the pages with no letter as palette commands. Those keys run as upstream's do,
+with one difference: an open overlay of this app (a dialog, or a menu or popover that holds the
+focus) stops them, unless the overlay lets them through. The catalog refuses, when it loads, two
+keys live together that one press matches or where one starts the other, as upstream's key engine
+matches them. `CommandId` is typed from it, so a misspelt id fails `tsc`.
 
 A feature gives each command of a context its live state with `defineActions`, whose type check
 refuses a missing or unknown command name, and `useRegisterCommands` registers them with the key
@@ -60,9 +61,10 @@ engine and the command store. Everything else reads the store:
 - `CommandButton` and `HotkeyTooltip`: the label, icon, style and key come from the catalog, and a
   click runs what the key runs. A disabled command hides its button unless `showIfDisabled`. The
   tooltip's code loads after the first paint; until then the control carries its keys alone.
-- `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog, and its code loads then. It
-  lists each key live where `?` was pressed, grouped, each command once with all its keys, without
-  `Escape` or disabled commands. While it is open, only `?` and Escape act: they close it.
+- `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog or one of upstream's dialogs,
+  and its code loads then. It lists each key live where `?` was pressed, grouped, each command
+  once with all its keys, without `Escape` or disabled commands. While it is open, only `?` and
+  Escape act: they close it.
 
 The files of `src/commands`, one role each:
 
