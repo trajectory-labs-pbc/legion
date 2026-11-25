@@ -10,6 +10,7 @@ replaces them one page at a time.
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
+| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
 
 `tests/layering.test.ts` holds the router rules of `src/navigation` and the rules of
 `src/commands`; what `src/loading` imports is a convention. The test resolves every import as the build does (the tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
@@ -104,6 +105,39 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
   answer, since upstream's reads cannot be stopped and the page that opens uses it.
 - `route-tree.tsx` builds a route tree from the pages it is handed, through `routerPath`.
 
+A route also declares its `layout`, whose type is the app's: navigation carries it and reads none
+of it. `PageLayout` in `src/pages/page.ts` says whether the page fills the viewport, has the
+margin and frames itself as the outline issue page, and which issue, project and live view it
+shows. Where upstream's parsers decide, the layout is a function of the address.
+
+`src/pages/index.ts` lists the pages and hands them to `createRouteTree`, which gives the outlet
+(`PageRoutes`), `pageAt` and `useCurrentPage()`. The shell reads the address only through the
+layout `useCurrentPage()` returns. `src/pages/index.test.ts` holds every declaration to upstream's
+route rules.
+
+### Changing the router
+
+A move to another router (TanStack Router, say) changes these files of this package:
+
+- `src/navigation/router-path.ts`: the grammar written in the router's syntax (TanStack: `$name`
+  for `:name` and `$` for `*`).
+- `src/navigation/provider.tsx`: the router provider. `tests/navigation.tsx`: the one tests use.
+- `src/navigation/route-tree.tsx`: `createRouteTree`: the outlet, `pageAt` and `useCurrentPage`.
+  Each route's `element` becomes the new router's component there.
+- `src/navigation/page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
+- `src/navigation/hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
+- `package.json` and the lockfile: the dependency.
+- `vite.config.ts`: its `dedupe` list names `react-router-dom`.
+- The tests under `src/navigation` that call the router (`hooks.test.tsx` reads
+  `useNavigationType`).
+
+The page files, `page-route.ts`, `path.ts`, the shell and `tests/layering.ts` (whose rule names
+both routers) stay as they are.
+
+That holds for this package only. 111 of upstream's files import React Router, and every upstream
+page drawn here is one of them, so until the last of those pages is replaced the app must keep a
+React Router context around them. Before then, a swap means running both routers.
+
 ## Install
 
 The app is outside the root workspaces. It takes React and the other libraries upstream's web app
@@ -116,10 +150,23 @@ bun install            # in packages/ui
 bun install            # in this directory; packages/ui's script links the root packages
 ```
 
+## Route map, view map and copied code
+
+`tests/map` holds three checks on what upstream changes. They read the sources as text and
+load no page module:
+
+- `links.ts`: the app serves every route of upstream's `app.tsx`, drawing upstream's element as
+  written. `OWN_ELEMENTS` names each route written with this app's own part and upstream's
+  element it stands for. A page this app serves reads every query key and fragment Dispatch writes.
+- `coverage.ts`: every view file under upstream's `features/` has one owner: a page's `views`, or
+  a list in `src/views.ts`.
+- `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash. When
+  upstream changes one, port the change, then run `bun tests/map/copies.ts --update`.
+
 ## Checks
 
-- `bun run test`: the layers, the design rules, the catalog and its components, navigation and the key
-  engine's behaviour the catalog relies on.
+- `bun run test`: the layers, the design rules, the catalog and its components, navigation, the key
+  engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
   checked in `packages/ui`.
