@@ -6,10 +6,10 @@ import {
 } from "@upstream-dispatch/features/shell/keymap";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 
-import type { OverlayLayer } from "@/ui/overlay-layer";
 import { contextBindings } from "./bindings";
 import { type CommandStore, commandStore } from "./command-store";
 import { appStack, passing } from "./engine-stack";
+import type { OverlayLayer } from "./focused-overlay";
 import type { Catalog, CommandSpecs } from "./schema";
 
 /**

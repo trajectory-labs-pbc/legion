@@ -203,5 +203,7 @@ describe("ShortcutsSheet", () => {
       await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
     }
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
+    // The sheet takes the focus a moment after it opens.
+    await focusSettles();
   });
 });

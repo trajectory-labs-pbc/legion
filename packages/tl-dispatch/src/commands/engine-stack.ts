@@ -5,7 +5,12 @@ import {
   type KeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
 
-import { type OverlayKind, type OverlayLayer, overlayStack } from "@/ui/overlay-layer";
+import {
+  focusedOverlays,
+  type LayerSource,
+  type OverlayKind,
+  type OverlayLayer,
+} from "./focused-overlay";
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";
 
 /** The overlay kinds a global command still runs under. Under the shortcuts sheet only `?` acts. */
@@ -24,18 +29,12 @@ export const UPSTREAM = "upstream";
 
 type DialogOwner = OverlayLayer | typeof UPSTREAM;
 
-/** The open overlays, bottom first, as the registry's overlay stack holds them. */
-export interface LayerSource {
-  get(): readonly OverlayLayer[];
-  subscribe(listener: () => void): () => void;
-}
-
 export interface EngineStack {
   /** The dialog on top of the key engine's stack, or undefined when none is open. */
   top(): DialogOwner | undefined;
   /**
    * Whether global commands of this reach run now: dialogs are open, each ours, and each lets
-   * them through. `under-all` passes every kind but an alert dialog, which waits for a decision.
+   * them through. One of ours is open while it holds the focus. `under-all` passes every kind but an alert dialog, which waits for a decision.
    */
   passes(reach: OverlayReach): boolean;
   /** The scopes whose bindings can fire now, innermost last: `dialog` alone while one is open. */
@@ -52,7 +51,8 @@ globalThis.__tlDispatchEngineStacks ??= new WeakMap();
 const trackers = globalThis.__tlDispatchEngineStacks;
 
 /**
- * Follows the key engine's scope stack, in order. Each of our layers pushes one dialog scope;
+ * Follows the key engine's scope stack, in order. Each overlay of ours that holds the focus
+ * pushes one dialog scope, so the page's keys and the global ones stop under it;
  * every other push is upstream's, seen by wrapping the engine's `pushScope`, which upstream's
  * hooks call. The wrap happens once per engine: a second call returns the first tracker.
  */
@@ -83,6 +83,7 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   const pops = new Map<OverlayLayer, () => void>();
   const sync = () => {
     const open = layers.get();
+    if (open.length === pops.size && open.every((layer) => pops.has(layer))) return;
     for (const [layer, pop] of pops) {
       if (!open.includes(layer)) {
         pops.delete(layer);
@@ -95,6 +96,13 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   };
   sync();
   layers.subscribe(sync);
+  // Removing the focused element fires no focus event, so each key press reads the focus again
+  // before the engine picks the scopes it consults.
+  const handleKeyDown = keymap.handleKeyDown;
+  keymap.handleKeyDown = (event) => {
+    sync();
+    return handleKeyDown(event);
+  };
 
   const dialogs = () => stack.flatMap(({ owner }) => (owner === null ? [] : [owner]));
   const tracker: EngineStack = {
@@ -128,7 +136,7 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
 }
 
 /** The app's key engine, followed from the first import of the commands, before any dialog opens. */
-export const appStack = trackEngineStack(appKeymap, overlayStack);
+export const appStack = trackEngineStack(appKeymap, focusedOverlays);
 
 /**
  * Whether a command's keys run with the overlays open now: its scope is live, or it is a global

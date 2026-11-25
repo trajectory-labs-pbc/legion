@@ -81,6 +81,8 @@ describe("AppShell", () => {
       await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
     }
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
+    // The sheet takes the focus a moment after it opens.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
   });
 
   test("Shift+S folds the sidebar to its rail and gives main the full width, and again unfolds it", async () => {

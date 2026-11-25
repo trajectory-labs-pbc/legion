@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { Dialog, DialogContent, DialogTitle } from "@legion/ui/components/dialog";
 import {
   appKeymap,
   createKeymap,
@@ -7,6 +8,7 @@ import {
   useKeymap,
   useKeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
+import { act } from "react";
 
 import { createLayerSource, openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
@@ -262,6 +264,48 @@ describe("useRegisterCommands on the app's engine", () => {
     tap("c");
     expect(fired).toEqual(["global.create", "global.help", "palette.close"]);
   });
+  test("stops the global keys while a Base UI dialog is open with the focus inside, and ? still runs", async () => {
+    const fired: string[] = [];
+    const page = (open: boolean) => (
+      <>
+        <Shell fired={fired} />
+        <Dialog open={open}>
+          <DialogContent>
+            <DialogTitle>Rename</DialogTitle>
+            <button type="button">Save</button>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+    const view = render(page(true));
+    const save = () =>
+      document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
+    for (let tries = 0; tries < 20 && save() === null; tries += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    }
+    settle(() => save()?.focus());
+    expect(save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)).toBe(
+      true
+    );
+    const tap = (key: string, init: KeyboardEventInit = {}) =>
+      settle(() => {
+        appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+      });
+    tap("c");
+    tap("g");
+    tap("i");
+    tap("?", { shiftKey: true });
+    expect(fired).toEqual(["global.help"]);
+    // Control: once the dialog has closed, the same key runs.
+    view.rerender(page(false));
+    for (let tries = 0; tries < 40 && save() !== null; tries += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+    }
+    tap("c");
+    expect(fired).toEqual(["global.help", "global.create"]);
+    view.unmount();
+  });
+
   test("a new label reaches the engine's list, which copies a label when it registers", () => {
     const labelled = (label: string) => {
       return specsFor(appCatalog, "global", (command) => ({

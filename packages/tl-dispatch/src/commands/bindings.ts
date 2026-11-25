@@ -4,8 +4,8 @@ import {
   type KeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
 
-import type { OverlayLayer } from "@/ui/overlay-layer";
 import type { EngineStack } from "./engine-stack";
+import type { OverlayLayer } from "./focused-overlay";
 import {
   type Catalog,
   type CommandSpec,
