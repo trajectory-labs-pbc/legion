@@ -81,16 +81,17 @@ const OPEN_MODALS = ["dialog-content", "alert-dialog-content", "sheet-content", 
 const EVENTS = ["focusin", "focusout"] as const;
 
 /**
- * The overlays over the page, read from the DOM: each open modal one, which takes the focus a
- * moment after it opens, then each one the focus is inside, such as a menu or a popover.
+ * The overlays over the page, read from the DOM, bottom first: each open modal one, in the order
+ * the page stacks them, then each other one the focus is inside, such as a menu or a popover. A
+ * modal one counts from the moment it opens, a moment before it takes the focus.
  */
 export const focusedOverlays: LayerSource = {
   get() {
-    const around = overlaysAround(document.activeElement);
     const modals = [...document.querySelectorAll(OPEN_MODALS)]
       .map(overlayLayerOf)
-      .filter((layer) => layer !== undefined && !around.includes(layer));
-    return [...(modals as OverlayLayer[]), ...around];
+      .filter((layer) => layer !== undefined);
+    const around = overlaysAround(document.activeElement);
+    return [...modals, ...around.filter((layer) => !modals.includes(layer))];
   },
   subscribe(listener) {
     for (const event of EVENTS) document.addEventListener(event, listener, true);
