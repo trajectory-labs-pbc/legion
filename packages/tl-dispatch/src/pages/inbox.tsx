@@ -33,9 +33,13 @@ export function InboxPage(): ReactNode {
   );
 }
 
+/** The Inbox fills the viewport while its reading pane shows. */
+export const INBOX_LAYOUT = { inbox: true, fillsViewport: "reading-pane" } as const;
+
 const home = pageRoute({
   path: "/",
   element: <InboxPage />,
+  layout: INBOX_LAYOUT,
   // The key the old Replies address sets; the Inbox reads its other keys itself.
   search: ["type"],
   prefetch: () => [prefetchOf(inboxQuery())],

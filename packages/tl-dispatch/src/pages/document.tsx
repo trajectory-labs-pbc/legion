@@ -1,3 +1,4 @@
+import { routeHasMargin, routeProjectOf } from "@upstream-dispatch/features/refs/routes";
 import { lazy } from "react";
 
 import { pageRoute } from "@/navigation/page-route";
@@ -14,7 +15,14 @@ export const projectDocument = {
   id: "document",
   server: "upstream",
   routes: {
-    document: pageRoute({ path: "/projects/:key/documents/:slug", element: <DocumentPage /> }),
+    document: pageRoute({
+      path: "/projects/:key/documents/:slug",
+      element: <DocumentPage />,
+      layout: ({ pathname, search }) => ({
+        margin: routeHasMargin(pathname, search),
+        project: routeProjectOf(pathname),
+      }),
+    }),
   },
   views: ["features/document/**"],
 } satisfies Page;

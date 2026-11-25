@@ -20,14 +20,6 @@ import { MarginColumn } from "@upstream-dispatch/features/margin/MarginColumn";
 import { MarginProvider } from "@upstream-dispatch/features/margin/margin-context";
 import { RefPreviewHost } from "@upstream-dispatch/features/refs/RefPreview";
 import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
-import {
-  liveViewSessionOf,
-  parseIssuePath,
-  routeFillsViewport,
-  routeHasMargin,
-  routeIsInbox,
-  routeProjectOf,
-} from "@upstream-dispatch/features/refs/routes";
 import { useRecordRecents } from "@upstream-dispatch/features/search/recents";
 import { SearchPalette } from "@upstream-dispatch/features/search/SearchPalette";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
@@ -44,7 +36,7 @@ import { type ReactNode, Suspense, useCallback, useMemo, useRef, useState } from
 import { CommandButton } from "@/commands/command-button";
 import { ShortcutsSheet, useShortcutsSheet } from "@/commands/shortcuts-sheet";
 import { useAddress, usePageNavigate } from "@/navigation/hooks";
-import { PageRoutes } from "@/navigation/route-tree";
+import { PageRoutes, useCurrentPage } from "@/navigation/route-tree";
 import { project } from "@/pages/project";
 import { cn } from "@/ui/lib/utils";
 import { CompactHeader } from "./compact-header";
@@ -89,7 +81,8 @@ function ShellProviders({
 
 /** The frame around every page: its providers, the layout's regions and the page outlet. */
 export function AppShell({ user }: { user: AuthenticatedUser }) {
-  const { pathname, search } = useAddress();
+  const { pathname } = useAddress();
+  const layout = useCurrentPage()?.layout ?? {};
   const navigate = usePageNavigate();
   const preferences = useShellPreferences();
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -106,16 +99,16 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
   const signOut = useSignOut(user.login);
 
   const [issuePageChoice] = useIssuePageChoice();
-  const issueFrame =
-    issuePageChoice === "outline" && parseIssuePath(pathname, search) !== undefined;
+  const issueFrame = issuePageChoice === "outline" && layout.outlineFrame === true;
   const railFits = useMediaQuery(MD_VIEWPORT_QUERY);
   const compact = useMediaQuery(COMPACT_VIEWPORT_QUERY);
   const readingPaneShown = useMediaQuery(READING_PANE_QUERY);
-  const detailsDrawer = useDetailsDrawer(issueFrame, parseIssuePath(pathname)?.key);
-  const hasMargin = routeHasMargin(pathname, search);
-  const onInbox = routeIsInbox(pathname);
-  const routeProject = routeProjectOf(pathname);
-  const fillsViewport = routeFillsViewport(pathname) || (onInbox && readingPaneShown);
+  const detailsDrawer = useDetailsDrawer(issueFrame, layout.issue);
+  const hasMargin = layout.margin === true;
+  const onInbox = layout.inbox === true;
+  const routeProject = layout.project;
+  const fillsViewport =
+    layout.fillsViewport === true || (layout.fillsViewport === "reading-pane" && readingPaneShown);
   // Narrow screens and the issue frame hold the navigation in a drawer.
   const inDrawer = compact || issueFrame;
 
@@ -284,7 +277,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
             </Suspense>
           </ErrorBoundary>
           {/* Live views outlive the route that opened them. */}
-          <MountedLiveViews front={liveViewSessionOf(pathname) ?? null} />
+          <MountedLiveViews front={layout.liveView ?? null} />
         </main>
         <ErrorBoundary region="the margin" resetKey={pathname}>
           <MarginColumn
