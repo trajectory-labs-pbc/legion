@@ -338,7 +338,7 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "MachineLoginRoute",
-    "copy": "src/pages/credentials.tsx",
+    "copy": "src/pages/machine-login.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "cbda06bd6251a915234c8f70f2251c7421724852f471444d6e9f77f9b96b6908"
   },
@@ -418,5 +418,54 @@
     "copy": "src/pages/people.tsx",
     "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
     "sha256": "476d4a15dbf62a778ab5b94ed35c3dcb038a8867f59c0077a3412ab36abe52ef"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/CredentialDecisionButtons.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/decision-buttons.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "36ccfe30d2c5ebadbd8661228dff4edca980bdf00385a25139a2f22e5b618fac"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/CredentialRecordFacts.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/record-facts.tsx",
+    "commit": "1ffc8dec7e789c9cb2374f10a8d69069edff73ed",
+    "sha256": "79463bd87d3e3f10b402756a9fcaf6798598b0aad1dadb46a42801e6ea9b827e"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginPage.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-login-page.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "1fa5bbd32573eb8b4d491a79379b44eb2f3156b83f54962c394b4d26892139e4"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginRoute.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-login-route.tsx",
+    "commit": "8f6f9bfb20146e853982a6cb518add0a8a7ccbf3",
+    "sha256": "2481de4bc5ee90d842b9288cc87b1337c0c27f642d1e72b07d72c24bfccfb2dd"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginsSection.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-logins.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "3f16f50689f118de206c3594b05dbd438b3f2356c4a17346a4b63a722255bdef"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/RevocableList.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/revocable-table.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "0ee3aa5cad6b6d25af2c57c3ce8d3b0a8d436a154d6f744363ea6a482221bd78"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/shell/NotFoundPage.tsx",
+    "part": "*",
+    "copy": "src/pages/not-found/not-found.tsx",
+    "commit": "8f3d55230c6b7af1cdb6c04b41bdb1697949d41e",
+    "sha256": "f058f5f2a86caab994efe5d57919e0598e126750e9418c93c42309e701a8bb32"
   }
 ]
