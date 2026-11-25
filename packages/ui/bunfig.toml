@@ -1,0 +1,8 @@
+[install]
+# React and the other shared libraries come from the root install (scripts/link-root-packages.ts).
+peer = false
+# Only releases at least two weeks old.
+minimumReleaseAge = 1209600
+
+[test]
+preload = ["./src/test/register-dom.ts", "./src/test/setup.ts"]
