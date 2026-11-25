@@ -15,6 +15,11 @@ export {
   machineName,
 } from "@upstream-dispatch/features/credentials/machineLogins";
 export { credentialPendingQuery } from "@upstream-dispatch/features/credentials/pending";
+export {
+  type FocusFallback,
+  useFocusKeeper,
+} from "@upstream-dispatch/features/issue-page/focus-keeper";
+export { firstUsable } from "@upstream-dispatch/features/issue-page/usable-control";
 export { Timestamp } from "@upstream-dispatch/features/refs/Timestamp";
 export { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 export { stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";

@@ -278,3 +278,46 @@ test("MLP-07 a denial the reader stopped says it may have been made", async () =
     deny.mockRestore();
   }
 });
+
+/** Each decision, the button pressed, the one that waits for it, and the call it sends. */
+const DECISIONS: readonly (readonly [
+  id: string,
+  pressed: string,
+  other: string,
+  call: "approveCredentialRecord" | "denyCredentialRecord",
+])[] = [
+  ["MLP-08", "Approve", "Deny", "approveCredentialRecord"],
+  ["MLP-10", "Deny", "Approve", "denyCredentialRecord"],
+];
+
+test.each(
+  DECISIONS
+)("%s %s keeps the focus while it is out, %s waits for it, and its refusal is announced", async (_id, pressed, other, call) => {
+  const user = userEvent.setup();
+  const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(machineRecord());
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const answer = Promise.withResolvers<never>();
+  const decide = spyOn(api, call).mockReturnValue(answer.promise);
+  try {
+    renderPage();
+    await user.click(screen.getByLabelText("Code shown on the machine"));
+    await user.paste("abcd1234");
+    await user.click(screen.getByRole("button", { name: "Look up" }));
+    const pressedButton = await screen.findByRole("button", { name: pressed });
+    await user.click(pressedButton);
+    await waitFor(() => expect(pressedButton).toHaveAttribute("aria-busy", "true"));
+    expect(pressedButton).toHaveFocus();
+    const otherButton = screen.getByRole("button", { name: other });
+    expect(otherButton).not.toHaveAttribute("aria-busy");
+    // The guard would drop a second decision, so the other button does not offer one.
+    expect(otherButton).toBeDisabled();
+    answer.reject(new ApiError(409, { code: "DECIDED", error: "Someone decided it first." }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Someone decided it first.");
+    expect(otherButton).toBeEnabled();
+  } finally {
+    cleanup();
+    lookup.mockRestore();
+    getMachineLogins.mockRestore();
+    decide.mockRestore();
+  }
+});
