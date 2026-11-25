@@ -1,15 +1,15 @@
-import { MachineLoginRoute } from "@upstream-dispatch/features/credentials/MachineLoginRoute";
+import { pageRoute } from "@/navigation/page-route";
+import { INBOX_LAYOUT, InboxPage } from "./inbox";
 
-import { InboxPage } from "./inbox";
 import type { Page } from "./page";
 
-export const credentials: Page = {
+export const credentials = {
   id: "credentials",
   server: "upstream",
-  routes: [
+  routes: {
     // A credential request opens over the Inbox.
-    { path: "/credentials/*", element: <InboxPage /> },
-    { path: "/credentials/machine", element: <MachineLoginRoute /> },
-  ],
+    request: pageRoute({ path: "/credentials/*", element: <InboxPage />, layout: INBOX_LAYOUT }),
+  },
+  // The machine login page (machine-login.tsx) names its own files.
   views: ["features/credentials/**"],
-};
+} satisfies Page;

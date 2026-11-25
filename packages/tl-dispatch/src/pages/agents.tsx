@@ -1,6 +1,13 @@
+import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { LiveViewRoute } from "@upstream-dispatch/features/agent-view/MountedLiveViews";
-import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH } from "@upstream-dispatch/features/refs/routes";
+import {
+  AGENT_ARTIFACT_PATH,
+  AGENT_LIVE_PATH,
+  liveViewSessionOf,
+} from "@upstream-dispatch/features/refs/routes";
 import { lazy } from "react";
+
+import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
@@ -25,16 +32,25 @@ const AgentArtifactPage = lazy(() =>
   }))
 );
 
-export const agents: Page = {
+export const agents = {
   id: "agents",
   server: "upstream",
-  routes: [
-    { path: "/agents", element: <AgentsPage /> },
-    { path: "/agents/broadcasts", element: <BroadcastsPage /> },
-    { path: "/agents/broadcasts/:id", element: <BroadcastPage /> },
+  routes: {
+    list: pageRoute({
+      path: "/agents",
+      element: <AgentsPage />,
+      prefetch: () => [prefetchOf(userAgentStateQuery())],
+    }),
+    broadcasts: pageRoute({ path: "/agents/broadcasts", element: <BroadcastsPage /> }),
+    broadcast: pageRoute({ path: "/agents/broadcasts/:id", element: <BroadcastPage /> }),
     // Draws nothing: the shell mounts live views outside the routes.
-    { path: AGENT_LIVE_PATH, element: <LiveViewRoute /> },
-    { path: AGENT_ARTIFACT_PATH, element: <AgentArtifactPage /> },
-  ],
+    live: pageRoute({
+      path: AGENT_LIVE_PATH,
+      element: <LiveViewRoute />,
+      // The thread scrolls while the header and composer stay put.
+      layout: ({ pathname }) => ({ fillsViewport: true, liveView: liveViewSessionOf(pathname) }),
+    }),
+    artifact: pageRoute({ path: AGENT_ARTIFACT_PATH, element: <AgentArtifactPage /> }),
+  },
   views: ["features/agents/**"],
-};
+} satisfies Page;

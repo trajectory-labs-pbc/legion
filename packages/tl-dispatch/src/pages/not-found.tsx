@@ -1,11 +1,15 @@
 import { NotFoundPage } from "@upstream-dispatch/features/shell/NotFoundPage";
 
+import { pageRoute } from "@/navigation/page-route";
+
 import type { Page } from "./page";
 
-export const notFound: Page = {
+export const notFound = {
   id: "not-found",
   server: "upstream",
-  routes: [{ path: "*", element: <NotFoundPage /> }],
+  routes: {
+    any: pageRoute({ path: "/*", element: <NotFoundPage /> }),
+  },
   // The shell owns NotFoundPage.tsx.
   views: [],
-};
+} satisfies Page;

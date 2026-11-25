@@ -98,6 +98,7 @@ export default defineConfig({
       "prosemirror-model",
     ],
     alias: {
+      "@": at("./src"),
       "@upstream-dispatch": at("../dispatch/web/src"),
       "decode-named-character-reference": characterReferenceDecoder,
       "@legion/contracts/repo": at("../contracts/src/repo.ts"),

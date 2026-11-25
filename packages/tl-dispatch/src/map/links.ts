@@ -1,5 +1,4 @@
-import { matchRoutes } from "react-router-dom";
-
+import { firstMatch } from "../navigation/router-path";
 import { type PageEntry, type RouteEntry, readPages, routeMapFiles } from "./source";
 
 export interface ForkRoute extends RouteEntry {
@@ -23,21 +22,40 @@ export function forkRoutes(pages: readonly PageEntry[] = readPages()): ForkRoute
     );
 }
 
-/** The route an href opens: the one react-router ranks first. */
+/** The route an href opens: the one the router ranks first. */
 export function resolveHref<T extends RouteEntry>(
   routes: readonly T[],
   href: string
 ): T | undefined {
   const url = new URL(href, "https://dispatch.invalid");
-  const matches = matchRoutes(
-    routes.map((route, index) => ({ path: route.path, id: String(index) })),
+  const index = firstMatch(
+    routes.map((route) => route.path),
     url.pathname
   );
-  const leaf = matches?.at(-1);
-  return leaf ? routes[Number(leaf.route.id)] : undefined;
+  return index === undefined ? undefined : routes[index];
 }
 
-const key = (route: RouteEntry) => `${route.path} -> ${route.element}`;
+/**
+ * Routes this app writes with its own typed parts, by upstream's path: the element this app
+ * writes, and upstream's element it stands for, as upstream writes it. A change to upstream's
+ * element reports the route.
+ */
+export const OWN_ELEMENTS: Readonly<Record<string, { own: string; upstream: string }>> = {
+  "/replies": {
+    own: '<Redirect page={home}search={{type:"reply"}}/>',
+    upstream: '<Navigate replace to={buildInboxPath({filters:{type:["reply"]}})}/>',
+  },
+};
+
+/** A path from the root: upstream writes its last route `*`, and navigation's grammar `/*`. */
+const rooted = (path: string) => (path.startsWith("/") ? path : `/${path}`);
+
+const key = (route: RouteEntry) => {
+  const path = rooted(route.path);
+  const translated = OWN_ELEMENTS[path];
+  const element = translated?.own === route.element ? translated.upstream : route.element;
+  return `${path} -> ${element}`;
+};
 
 /**
  * Upstream routes the fork does not serve, and fork routes upstream has not got. A page upstream's
@@ -49,18 +67,20 @@ export function routeParity(
   fork: readonly ForkRoute[]
 ): { missing: string[]; extra: string[] } {
   const served = new Set(
-    fork.filter((route) => route.server === "fork").map((route) => route.path)
+    fork.filter((route) => route.server === "fork").map((route) => rooted(route.path))
   );
   const forkKeys = new Set(fork.filter((route) => route.server === "upstream").map(key));
   const upstreamKeys = new Set(upstream.map(key));
-  const upstreamPaths = new Set(upstream.map((route) => route.path));
+  const upstreamPaths = new Set(upstream.map((route) => rooted(route.path)));
   return {
     missing: upstream
-      .filter((route) => !served.has(route.path) && !forkKeys.has(key(route)))
+      .filter((route) => !served.has(rooted(route.path)) && !forkKeys.has(key(route)))
       .map(key),
     extra: fork
       .filter((route) =>
-        route.server === "fork" ? !upstreamPaths.has(route.path) : !upstreamKeys.has(key(route))
+        route.server === "fork"
+          ? !upstreamPaths.has(rooted(route.path))
+          : !upstreamKeys.has(key(route))
       )
       .map(key),
   };

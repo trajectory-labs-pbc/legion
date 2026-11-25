@@ -2,10 +2,10 @@ name: Fork checks
 
 # This repository is a fork, and this file, which upstream does not have, checks what the fork
 # adds: its whole diff against upstream's main stays on .github/fork-allowlist.txt, its own web
-# app, packages/tl-dispatch, type-checks, lints, passes its tests (the route map, the view map and
-# the copied upstream code among them) and builds, and its UI package, packages/ui, type-checks,
-# lints, passes its tests and keeps a valid registry.json. Upstream's own jobs in ci.yaml run
-# beside it.
+# app, packages/tl-dispatch, type-checks, lints, passes its tests (the layers, the design rules,
+# the route map, the view map and the copied upstream code among them), builds and keeps its entry
+# chunk within its budget, and its UI package, packages/ui, type-checks, lints, passes its tests
+# and keeps a valid registry.json. Upstream's own jobs in ci.yaml run beside it.
 on:
   pull_request:
   push:
@@ -74,10 +74,12 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
-      - name: Test (route map, view map, copied upstream code)
+      - name: Test (layers, design rules, route map, view map, copied upstream code)
         run: bun run test
       - name: Build
         run: bun run build
+      - name: Check the entry chunk's size
+        run: bun run check:entry-budget
 
   ui:
     runs-on: ubuntu-24.04

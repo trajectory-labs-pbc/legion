@@ -1,4 +1,7 @@
+import { prioritiesQuery } from "@upstream-dispatch/api/queries";
 import { lazy } from "react";
+
+import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
@@ -13,12 +16,16 @@ const PriorityPage = lazy(() =>
   }))
 );
 
-export const priorities: Page = {
+export const priorities = {
   id: "priorities",
   server: "upstream",
-  routes: [
-    { path: "/priorities", element: <PrioritiesPage /> },
-    { path: "/priorities/:id", element: <PriorityPage /> },
-  ],
+  routes: {
+    list: pageRoute({
+      path: "/priorities",
+      element: <PrioritiesPage />,
+      prefetch: () => [prefetchOf(prioritiesQuery())],
+    }),
+    priority: pageRoute({ path: "/priorities/:id", element: <PriorityPage /> }),
+  },
   views: ["features/priorities/**"],
-};
+} satisfies Page;

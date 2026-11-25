@@ -72,42 +72,42 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthenticatedApp",
-    "copy": "src/shell/AuthGate.tsx",
+    "copy": "src/shell/auth-gate.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "8ad293a3407793cca7c2baff2ae50d57bf104536ce00eaffc20024971e3ef358"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthGate",
-    "copy": "src/shell/AuthGate.tsx",
+    "copy": "src/shell/auth-gate.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "069d636f08f925e5d5425b2546812c3accb960c6caaa4ab6d1f91a2b6d6bd3fe"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "signOutFailure",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/use-sign-out.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0a8a75641b50c80f07e6bdd657675009c2e1e88dfba8c45d7dbccb22440515e5"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "NavigationContents",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/navigation-panel.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "9c8abba2f1adf73bac87f7eaa1c94e010658dae5dcfd99052705080a753e05de"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ShellProviders",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/shell-frame.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0d6a413b4a5e84b17bc93aa1568cb9ea1672d6439f15b4cb7854d7cb6cc6a624"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AppShell",
-    "copy": "src/shell/AppShell.tsx",
+    "copy": "src/shell/app-shell.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "5472681908a7b749ff0237b22662a717d8787fdf3213d7c9335a49d028a11412"
   },
@@ -261,7 +261,7 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "MachineLoginRoute",
-    "copy": "src/pages/credentials.tsx",
+    "copy": "src/pages/machine-login.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "cbda06bd6251a915234c8f70f2251c7421724852f471444d6e9f77f9b96b6908"
   },
@@ -334,5 +334,47 @@
     "copy": "src/pages/inbox.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "551a13bc2c05904356062afe9fa88a9f9a50222570c75fdd240aa273f6727ae9"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/CredentialDecisionButtons.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/decision-buttons.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "36ccfe30d2c5ebadbd8661228dff4edca980bdf00385a25139a2f22e5b618fac"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/CredentialRecordFacts.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/record-facts.tsx",
+    "commit": "1ffc8dec7e789c9cb2374f10a8d69069edff73ed",
+    "sha256": "79463bd87d3e3f10b402756a9fcaf6798598b0aad1dadb46a42801e6ea9b827e"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginPage.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-login-page.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "1fa5bbd32573eb8b4d491a79379b44eb2f3156b83f54962c394b4d26892139e4"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginRoute.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-login-route.tsx",
+    "commit": "8f6f9bfb20146e853982a6cb518add0a8a7ccbf3",
+    "sha256": "2481de4bc5ee90d842b9288cc87b1337c0c27f642d1e72b07d72c24bfccfb2dd"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/MachineLoginsSection.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/machine-logins.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "3f16f50689f118de206c3594b05dbd438b3f2356c4a17346a4b63a722255bdef"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/credentials/RevocableList.tsx",
+    "part": "*",
+    "copy": "src/pages/machine-login/revocable-table.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "0ee3aa5cad6b6d25af2c57c3ce8d3b0a8d436a154d6f744363ea6a482221bd78"
   }
 ]
