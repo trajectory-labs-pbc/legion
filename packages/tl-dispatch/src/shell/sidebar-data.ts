@@ -9,7 +9,7 @@ import {
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
 import { pinnedAgentSessions, useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
-import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
+import { totalUnreadReplies } from "@upstream-dispatch/features/agents/unread";
 import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
@@ -22,10 +22,9 @@ import type { PageLayout } from "@/pages/page";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
 
-/** A count beside a row, with what it counts; none at zero. */
+/** A count beside a row; none at zero. Its row's key tooltip names the row. */
 interface SidebarCount {
   count: number | undefined;
-  label?: string;
   /** What it counts waits on the reader, so it takes the "needs you" mark. */
   needsYou?: boolean;
   /** Its read failed with nothing to show: asks again. */
@@ -124,10 +123,9 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
     summary === undefined || (summary.empty ?? "") !== ""
       ? undefined
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
-  const unread = totalUnreadReplies(agentState);
   const counts: Partial<Record<NavName, SidebarCount>> = {
-    inbox: { ...inboxCount, retry: retryOf(inbox) },
-    agents: { count: unread, label: unreadRepliesLabel(unread), retry: retryOf(agents) },
+    inbox: { count: inboxCount.count, needsYou: inboxCount.needsYou, retry: retryOf(inbox) },
+    agents: { count: totalUnreadReplies(agentState), retry: retryOf(agents) },
     priorities: { count: priorityFaults, retry: retryOf(summaryRead) },
   };
   return {

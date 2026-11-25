@@ -217,6 +217,8 @@ describe("the sidebar", () => {
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => mark() !== null, sleep);
     expect(mark()?.getAttribute("aria-label")).toBe("Needs you: 2");
+    // The row's key tooltip covers the mark: a native title would draw a second one.
+    expect(mark()?.hasAttribute("title")).toBe(false);
     expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
   });
 
@@ -344,7 +346,7 @@ describe("the sidebar", () => {
     expect(inboxRow?.querySelector('[data-slot="attention-mark"]')).toBeNull();
     const count = inboxRow?.querySelector('[data-slot="count"]');
     expect(count?.textContent).toBe("3");
-    expect(count?.getAttribute("title")).toBe("3 unread threads");
+    expect(count?.hasAttribute("title")).toBe(false);
     expect(count?.className).toContain("text-muted-foreground");
   });
 
@@ -368,7 +370,7 @@ describe("the sidebar", () => {
     const data: SidebarData = {
       destinations: [
         destination("inbox", { count: 7, needsYou: true }),
-        destination("agents", { count: 2, label: "2 unread replies" }),
+        destination("agents", { count: 2 }),
         destination("priorities", { count: 3 }),
       ],
       pinnedAgents: { status: "success", rows: [] },
@@ -391,6 +393,5 @@ describe("the sidebar", () => {
       expect(edge?.className).toContain("text-muted-foreground");
       expect(edge?.className).not.toContain("warning");
     }
-    expect(edges[1]?.getAttribute("title")).toBe("2 unread replies");
   });
 });

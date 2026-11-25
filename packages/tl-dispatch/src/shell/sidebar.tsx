@@ -232,10 +232,11 @@ export function SidebarView({
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
+              {/* Only the Inbox takes the mark; its key tooltip covers it, so no native title. */}
               {count?.needsYou ? (
-                <NeedsYouMark className="ml-auto" count={count.count ?? 0} />
+                <NeedsYouMark className="ml-auto" count={count.count ?? 0} title={undefined} />
               ) : (
-                <Count className="ml-auto" title={count?.label} value={count?.count ?? 0} />
+                <Count className="ml-auto" value={count?.count ?? 0} />
               )}
             </NavRow>
           );
