@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 
-import { addressOf, type PageRoute, type PageSearch } from "./page-route";
+import { type PageRoute, type PageSearch, pageHref } from "./page-route";
 import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from "./path";
 import { routerPath } from "./router-path";
 
@@ -24,7 +24,7 @@ export function usePageNavigate(): PageNavigate {
   return useMemo<PageNavigate>(
     () =>
       (page, ...[target]) =>
-        navigate(addressOf(page, target?.params, target?.search), { replace: target?.replace }),
+        navigate(pageHref(page, target?.params, target?.search), { replace: target?.replace }),
     [navigate]
   );
 }

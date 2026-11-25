@@ -1,7 +1,7 @@
 import type { FetchQueryOptions, QueryClient, QueryKey } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { fillPath, type ParamsArg, type PathParams } from "./path";
+import { fillPath, type PathParams } from "./path";
 
 /** The search keys a page reads, each optional. */
 export type PageSearch<Search extends string> = { readonly [Key in Search]?: string };
@@ -36,26 +36,21 @@ export function pageRoute<const Path extends string, const Search extends string
   return route;
 }
 
-/** The address of a route with these params and search, untyped; a missing param throws. */
-export function addressOf(
-  page: PageRoute,
-  params: Readonly<Record<string, string | undefined>> = {},
-  search: Readonly<Record<string, string | undefined>> = {}
+/**
+ * The address of a route: its params filled, encoded, and its search keys in the route's order.
+ * The keys are typed from the route; a param its path binds and the call leaves out throws.
+ */
+export function pageHref<Path extends string, Search extends string>(
+  page: PageRoute<Path, Search>,
+  params?: PathParams<Path>,
+  search?: PageSearch<Search>
 ): string {
-  const path = fillPath(page.path, params);
+  const path = fillPath(page.path, params ?? {});
   const query = new URLSearchParams();
   for (const key of page.search ?? []) {
-    const value = search[key];
+    const value = search?.[key];
     if (value !== undefined) query.set(key, value);
   }
   const text = query.toString();
   return text === "" ? path : `${path}?${text}`;
-}
-
-/** The address of a route, typed from it: params where its path binds any, and its search keys. */
-export function pageHref<Path extends string, Search extends string>(
-  page: PageRoute<Path, Search>,
-  ...[params, search]: [...ParamsArg<Path>, search?: PageSearch<Search>]
-): string {
-  return addressOf(page, params, search);
 }

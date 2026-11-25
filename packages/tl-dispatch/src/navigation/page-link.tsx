@@ -10,7 +10,7 @@ import {
 } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import { addressOf, type PageRoute, type PageSearch, type Prefetch } from "./page-route";
+import { type PageRoute, type PageSearch, type Prefetch, pageHref } from "./page-route";
 import { isParamsOf, type ParamsProp } from "./path";
 
 /** How long the pointer rests on a link before its page's reads start. */
@@ -141,7 +141,7 @@ export function PageLink<Path extends string, Search extends string>({
         intent.onPointerLeave();
       }}
       replace={replace}
-      to={addressOf(page, params, search)}
+      to={pageHref(page, params, search)}
     />
   );
 }
@@ -152,5 +152,5 @@ export function Redirect<Path extends string, Search extends string>({
   params,
   search,
 }: ParamsProp<Path> & { page: PageRoute<Path, Search>; search?: PageSearch<Search> }) {
-  return <Navigate replace to={addressOf(page, params, search)} />;
+  return <Navigate replace to={pageHref(page, params, search)} />;
 }

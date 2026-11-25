@@ -17,11 +17,6 @@ export type PathParams<Path extends string> = {
   readonly [Name in PathParamName<Path>]: string;
 } & (Path extends `${string}*` ? { readonly "*"?: string } : unknown);
 
-/** Params a caller passes: optional where the path binds no `:name`. */
-export type ParamsArg<Path extends string> = [PathParamName<Path>] extends [never]
-  ? [params?: PathParams<Path>]
-  : [params: PathParams<Path>];
-
 /** `params` as a prop: required only where the path binds a `:name`. */
 export type ParamsProp<Path extends string> = { params?: PathParams<Path> } & ([
   PathParamName<Path>,
