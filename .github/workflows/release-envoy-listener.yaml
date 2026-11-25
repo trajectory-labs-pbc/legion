@@ -38,6 +38,11 @@ on:
       - "scripts/assemble-third-party-notices.sh"
       - ".github/go-release-targets.json"
       - ".github/agent-secrets-client-targets.json"
+      # The fork's envoy image is built on this one, for the same commit, from these as well.
+      - "packages/tl-dispatch/**"
+      - "packages/ui/**"
+      - ".github/workflows/fork-envoy-image.yaml"
+      - ".github/scripts/fork-envoy-base.sh"
   workflow_dispatch:
     inputs:
       # "Confirm the version" in release_publish sets it when its run lost its version to another
