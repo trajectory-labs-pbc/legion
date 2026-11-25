@@ -34,5 +34,17 @@ describe("the entry chunk", () => {
       expect(size.bytes).toBe(1000);
       expect(size.gzipBytes).toBeLessThan(100);
     });
+
+    test("counts the chunks the page preloads with it, so a split hides no bytes", () => {
+      writeFileSync(
+        join(dist, "index.html"),
+        '<script type="module" src="/assets/index-x.js"></script>' +
+          '<link rel="modulepreload" crossorigin href="/assets/vendor-y.js">' +
+          '<link rel="stylesheet" href="/assets/index-z.css">'
+      );
+      writeFileSync(join(dist, "assets/vendor-y.js"), "y".repeat(500));
+      writeFileSync(join(dist, "assets/index-z.css"), "z".repeat(300));
+      expect(measureEntry(dist).bytes).toBe(1500);
+    });
   });
 });
