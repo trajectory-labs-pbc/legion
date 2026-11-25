@@ -1,6 +1,6 @@
 import type { KeyBindingDescription, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
 
-import { UNDER_OVERLAY } from "./bindings";
+import { commandIdOf } from "./bindings";
 import { DEFAULT_GROUP } from "./groups";
 import { clashChecker, keySteps } from "./keys";
 import type { Catalog, CommandGroup } from "./schema";
@@ -51,7 +51,7 @@ export function liveShortcuts(
       );
       claimed.push(...keys);
       const shown = keys.filter((keys) => !startsWithEscape(keys));
-      const own = catalog.find(binding.id.replace(UNDER_OVERLAY, ""));
+      const own = catalog.find(commandIdOf(binding.id));
       if (shown.length === 0 || own?.hideFrom?.includes("sheet") === true) continue;
       const group = own === undefined ? scopeGroup(scope) : (own.group ?? DEFAULT_GROUP);
       const label = upstreamLabels[`${scope}:${binding.id}`]?.label ?? binding.label;

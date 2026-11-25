@@ -13,14 +13,14 @@ const SECTIONS: readonly ShortcutSection[] = [
     id: "general",
     label: "General",
     rows: [
-      { id: "search", label: "Search and actions", keys: [["Ctrl+K"]] },
-      { id: "next", label: "Next row", keys: [["J"], ["↓"]] },
+      { id: "search", label: "Search and actions", keys: [[["Ctrl", "K"]]] },
+      { id: "next", label: "Next row", keys: [[["J"]], [["↓"]]] },
     ],
   },
   {
     id: "navigation",
     label: "Navigation",
-    rows: [{ id: "inbox", label: "Go to Inbox", keys: [["G", "I"]] }],
+    rows: [{ id: "inbox", label: "Go to Inbox", keys: [[["G"], ["I"]]] }],
   },
 ];
 
@@ -35,7 +35,7 @@ const sheet = (sections = SECTIONS) =>
   );
 
 describe("ShortcutsSheet", () => {
-  it("lists each section's rows with every key, a chord as one chip per step", async () => {
+  it("lists each section's rows with every key: a combination's caps together, then between steps", async () => {
     sheet();
     const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
     expect(within(dialog).getByText("The keys that work here")).toBeDefined();
@@ -45,9 +45,8 @@ describe("ShortcutsSheet", () => {
     expect(headings).toEqual(["General", "Navigation"]);
     const rows = within(dialog)
       .getAllByRole("listitem")
-      .map((row) => [...row.querySelectorAll("kbd")].map((chip) => chip.textContent).join(" "));
-    expect(rows).toEqual(["Ctrl+K", "J ↓", "G I"]);
-    expect(within(dialog).getByText("or")).toBeDefined();
+      .map((row) => row.lastElementChild?.textContent);
+    expect(rows).toEqual(["CtrlK", "Jor↓", "GthenI"]);
   });
 
   it("scrolls its list inside the sheet: the list can shrink below its content", async () => {

@@ -69,19 +69,37 @@ function shellBindings(): ShellBinding[] {
   });
 }
 
+/**
+ * The fork's deliberate differences from upstream's global bindings, by upstream's binding id:
+ * `/` joins Ctrl K as one search command, `[` also folds the sidebar, and two labels change.
+ */
+const OURS: Readonly<Record<string, Partial<ShellBinding>>> = {
+  "global.search": { keys: ["$mod+k", "/"], label: "Search or run commands" },
+  "global.search-only": {
+    id: "global.search",
+    keys: ["$mod+k", "/"],
+    label: "Search or run commands",
+    inEditable: true,
+    palette: false,
+  },
+  "global.help": { label: "Show keyboard shortcuts" },
+  "global.toggle-sidebar": { keys: ["Shift+S", "["] },
+};
+
 describe("the app's catalog", () => {
   test("holds every key the shell binds today, with the same label, typing and palette row", () => {
     const shell = shellBindings();
     expect(shell.length).toBeGreaterThan(5);
     for (const binding of shell) {
-      const command = appCatalog.find(binding.id);
+      const expected = { ...binding, ...OURS[binding.id] };
+      const command = appCatalog.find(expected.id);
       expect({
         id: command?.id,
         keys: command?.keys,
         label: command?.label,
         inEditable: command?.inEditable === true,
         palette: command?.hideFrom?.includes("palette") !== true,
-      }).toEqual(binding);
+      }).toEqual(expected);
     }
   });
 

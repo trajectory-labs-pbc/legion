@@ -1,9 +1,9 @@
 import { useIssuePageChoice } from "@upstream-dispatch/features/issue-page/choice";
 import type { MarginDrawer } from "@upstream-dispatch/features/issue-page/margin-slot";
 import {
-  COMPACT_VIEWPORT_QUERY,
   MD_VIEWPORT_QUERY,
   READING_PANE_QUERY,
+  COMPACT_VIEWPORT_QUERY as UNDER_1280_QUERY,
   useMediaQuery,
 } from "@upstream-dispatch/features/shell/useDialog";
 import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
@@ -18,10 +18,10 @@ import { type ShellPreferences, useShellPreferences } from "./use-shell-preferen
 export interface ShellLayout {
   pathname: string;
   preferences: ShellPreferences;
-  /** A narrow viewport: a top bar, and the navigation in a drawer. */
+  /** Below 768 px: a top bar, the navigation in a drawer, and no room for the issue frame's rail. */
   compact: boolean;
-  /** The issue frame's icon rail fits beside the page. */
-  railFits: boolean;
+  /** 1280 px and wider: the margin is a column beside main, as upstream draws it. */
+  marginBeside: boolean;
   /** The outline issue page frames itself. */
   issueFrame: boolean;
   /** The navigation is a drawer, not a sidebar. */
@@ -46,8 +46,8 @@ export function useShellLayout(): ShellLayout {
   const preferences = useShellPreferences();
   const [issuePageChoice] = useIssuePageChoice();
   const issueFrame = issuePageChoice === "outline" && layout.outlineFrame === true;
-  const railFits = useMediaQuery(MD_VIEWPORT_QUERY);
-  const compact = useMediaQuery(COMPACT_VIEWPORT_QUERY);
+  const compact = !useMediaQuery(MD_VIEWPORT_QUERY);
+  const marginBeside = !useMediaQuery(UNDER_1280_QUERY);
   const readingPaneShown = useMediaQuery(READING_PANE_QUERY);
   const detailsDrawer = useDetailsDrawer(issueFrame, layout.issue);
   const fillsViewport =
@@ -59,7 +59,7 @@ export function useShellLayout(): ShellLayout {
     pathname,
     preferences,
     compact,
-    railFits,
+    marginBeside,
     issueFrame,
     inDrawer: compact || issueFrame,
     fillsViewport,

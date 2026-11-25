@@ -1,5 +1,7 @@
 import { cn } from "cn";
-import type { ComponentProps } from "react";
+import { type ComponentProps, Fragment } from "react";
+
+import { textVariants } from "#registry/legion/lib/typography";
 
 function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   return (
@@ -14,15 +16,31 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   );
 }
 
-/** One chip per step: `["⌘K"]` for a key press, `["G", "I"]` for a two-key sequence. */
-function KbdSequence({ chips, className }: { chips: readonly string[]; className?: string }) {
-  if (chips.length === 0) return null;
-  if (chips.length === 1) return <Kbd className={className}>{chips[0]}</Kbd>;
+/** A key in steps, one cap per key: a combination's caps sit together (`[["⌘", "K"]]`), and a
+ *  sequence puts a muted "then" between its steps (`[["G"], ["I"]]`). */
+function KbdSequence({
+  className,
+  steps,
+}: {
+  className?: string;
+  steps: readonly (readonly string[])[];
+}) {
+  if (steps.length === 0) return null;
   return (
     <span data-slot="kbd-sequence" className={cn("inline-flex items-center gap-0.5", className)}>
-      {chips.map((chip, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a chip can repeat, so its place is its identity
-        <Kbd key={index}>{chip}</Kbd>
+      {steps.map((step, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a step can repeat, so its place is its identity
+        <Fragment key={index}>
+          {index === 0 ? null : (
+            <span className={cn(textVariants({ size: "caption", tone: "muted" }), "px-0.5")}>
+              then
+            </span>
+          )}
+          {/* A combination never holds one key twice. */}
+          {step.map((cap) => (
+            <Kbd key={cap}>{cap}</Kbd>
+          ))}
+        </Fragment>
       ))}
     </span>
   );

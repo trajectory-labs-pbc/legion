@@ -31,7 +31,7 @@ export function StatusCorner() {
             </Button>
           </Badge>
         ) : connection === "reconnecting" ? (
-          <Badge className="px-3 py-1" data-testid="connection-pill" variant="warning">
+          <Badge className="px-3 py-1" data-testid="connection-pill" variant="muted">
             Reconnecting…
           </Badge>
         ) : null}

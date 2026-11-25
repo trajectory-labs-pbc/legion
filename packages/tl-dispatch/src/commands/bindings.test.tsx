@@ -41,7 +41,7 @@ const catalog = createCatalog([
       {
         name: "search",
         label: "Search",
-        keys: ["$mod+k"],
+        keys: ["$mod+k", "/"],
         inEditable: true,
         hideFrom: ["palette"],
       },
@@ -83,9 +83,16 @@ function openUpstreamPalette(keymap: Keymap, fired: string[]): () => void {
 describe("bindings", () => {
   test("carry the catalog's typing and palette fields", () => {
     const { stack } = setup();
-    const [search, create] = contextBindings(catalog, "global", recorder("global", []), stack).own;
+    const [search, typed, create] = contextBindings(
+      catalog,
+      "global",
+      recorder("global", []),
+      stack
+    ).own;
     expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
     expect([search?.palette, create?.palette]).toEqual([false, true]);
+    expect(typed).toMatchObject({ id: "global.search:typed-keys", keys: ["/"], palette: false });
+    expect(typed?.inEditable).toBeUndefined();
     expect(create?.when?.()).toBe(true);
   });
 
@@ -102,6 +109,27 @@ describe("bindings", () => {
     expect(copy?.binding.when?.()).toBe(true);
     sheet.close();
     expect(copy?.binding.when?.()).toBe(false);
+  });
+
+  test("a typing command's keys fire in a field, but a key that types a character types it", () => {
+    const { keymap, fired } = setup();
+    const field = document.createElement("input");
+    document.body.append(field);
+    try {
+      const inField = (key: string, init: KeyboardEventInit = {}) =>
+        field.dispatchEvent(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+      const handle = (event: Event) => {
+        if (event instanceof KeyboardEvent) keymap.handleKeyDown(event);
+      };
+      field.addEventListener("keydown", handle);
+      expect(inField("/")).toBe(true);
+      inField("k", { ctrlKey: true });
+      expect(fired).toEqual(["global.search"]);
+      press(keymap, "/");
+      expect(fired).toEqual(["global.search", "global.search"]);
+    } finally {
+      field.remove();
+    }
   });
 
   test("a shut command neither fires nor shadows", () => {

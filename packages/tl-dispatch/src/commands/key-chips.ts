@@ -2,8 +2,8 @@ import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
 
 import { keySteps, splitStep } from "./keys";
 
-/** One display chip per step of a key: `["⌘K"]` for a press, `["G", "I"]` for a chord. */
-export type ShortcutChips = readonly string[];
+/** A key's caps by step, one cap per key: `[["⌘", "K"]]` for a press, `[["G"], ["I"]]` for a chord. */
+export type ShortcutChips = readonly (readonly string[])[];
 
 /** The platform the key engine matches `$mod` for, so the chips and the engine agree. */
 export const IS_MAC = MOD_KEY_LABEL === "⌘";
@@ -37,12 +37,12 @@ function modifier(name: string): { mac: string; other: string; aria: string } {
   return found;
 }
 
-/** The chips of a key in the engine's syntax: `⌘K` on a Mac, `Ctrl+K` elsewhere. */
+/** The caps of a key in the engine's syntax, by step: `⌘` `K` on a Mac, `Ctrl` `K` elsewhere. */
 export function chipsOf(keys: string, mac: boolean = IS_MAC): ShortcutChips {
   return keySteps(keys).map((step) => {
     const { modifiers, key } = splitStep(step);
     const names = modifiers.map((name) => (mac ? modifier(name).mac : modifier(name).other));
-    return mac ? [...names, keyName(key)].join("") : [...names, keyName(key)].join("+");
+    return [...names, keyName(key)];
   });
 }
 
@@ -57,7 +57,7 @@ export function rowChips(keys: readonly string[], mac: boolean = IS_MAC): readon
       last += 1;
     }
     if (last - index >= 2) {
-      chips.push([`${first}–${keys[last] ?? ""}`]);
+      chips.push([[`${first}–${keys[last] ?? ""}`]]);
     } else {
       chips.push(chipsOf(first, mac));
       last = index;

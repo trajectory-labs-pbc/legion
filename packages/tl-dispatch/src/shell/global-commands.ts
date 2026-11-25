@@ -26,7 +26,6 @@ const off = (run: (() => void) | undefined): CommandState => ({
 
 const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalActions) => ({
   search: { run: actions.openSearch },
-  "search-only": { run: actions.openSearch },
   help: { run: actions.toggleShortcuts },
   create: { run: actions.createIssue },
   "go-inbox": { run: () => actions.goTo("inbox") },

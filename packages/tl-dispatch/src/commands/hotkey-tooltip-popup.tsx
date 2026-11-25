@@ -21,7 +21,7 @@ export function HotkeyTooltipPopup({ trigger, label, chips, side }: HotkeyToolti
       <TooltipTrigger render={trigger} />
       <TooltipContent className="flex items-center gap-2" side={side}>
         <span>{label}</span>
-        {chips === null ? null : <KbdSequence chips={chips} />}
+        {chips === null ? null : <KbdSequence steps={chips} />}
       </TooltipContent>
     </Tooltip>
   );

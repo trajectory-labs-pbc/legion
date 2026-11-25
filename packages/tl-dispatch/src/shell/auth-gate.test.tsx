@@ -29,10 +29,11 @@ function mount() {
 }
 
 describe("AuthGate", () => {
-  test("draws the skeleton while Dispatch has not said who is here", () => {
+  test("draws the skeleton while Dispatch has not said who is here, in the shell's own panel", () => {
     holdReads("/auth/whoami");
     const container = mount();
-    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-busy="true"]');
+    expect(skeleton?.querySelector('[data-testid="content-panel"] main')).not.toBeNull();
   });
 
   test("a 401 draws the sign-in page", async () => {
@@ -78,7 +79,7 @@ describe("AuthGate", () => {
       expect(container.querySelector('[data-testid="app-shell"]')).not.toBeNull()
     );
     await shellChunksArrive();
-    // A narrow screen: the account is behind the menu.
-    expect(container.querySelector('[aria-label="Open navigation"]')).not.toBeNull();
+    // From 768 px the sidebar names the account.
+    expect(container.textContent).toContain("Signed in as reader");
   });
 });

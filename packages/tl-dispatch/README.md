@@ -13,6 +13,7 @@ replaces them one page at a time.
 | `src/writes` | What a surface says of a failed write, and the alert that says it | upstream's write modules, and the UI package |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
+| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader | the same as `src/shell`; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
 `tests/layering.test.ts` holds the router rules of `src/navigation` and the rules of
 `src/commands`; what `src/loading` imports is a convention. The test resolves every import as the build does (the tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
@@ -46,6 +47,8 @@ import { cn } from "@legion/ui/lib/utils";
 - `src/repaint.css` maps the Tailwind shades and the literal colours upstream's pages use onto
   the theme's tokens, so those pages take the theme with no edit to them.
   `tests/repaint.test.ts` checks it. The file lasts while the app shows upstream's pages.
+- `src/frame.css` overrides the upstream rules that break the frame (the 44 px floor in the
+  navigation, the margin sheet and borderless fields in the content panel). It goes with them.
 
 ## Commands
 
@@ -61,9 +64,10 @@ A feature gives each command of a context its live state with `defineActions`, w
 refuses a missing or unknown command name, and `useRegisterCommands` registers them with the key
 engine and the command store. Everything else reads the store:
 
-- `useCommand(id)` and `useCommandShortcut(id)`: the command, and its key as display chips (`⌘K`
-  on a Mac, `Ctrl+K` elsewhere). No chip shows while the command is off or an open overlay stops
-  its key. `commandStore.run(id)` runs a mounted command through its gate, as its key does.
+- `useCommand(id)` and `useCommandShortcut(id)`: the command, and its key as display chips, one
+  per key (`⌘` `K` on a Mac, `Ctrl` `K` elsewhere). No chip shows while the command is off or an
+  open overlay stops its key. `commandStore.run(id)` runs a mounted command through its gate, as
+  its key does.
 - `CommandButton` and `HotkeyTooltip`: the label, icon, style and key come from the catalog, and a
   click runs what the key runs. A disabled command hides its button unless `showIfDisabled`. The
   tooltip's code loads after the first paint; until then the control carries its keys alone.
@@ -154,14 +158,24 @@ then, a swap means running both routers.
   inbox drawer and the shortcuts sheet, and the global commands that open them
   (`global-commands.ts`).
 - One file per region: `shell-providers.tsx` (the providers upstream's pages read),
-  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `main-region.tsx`,
-  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads. The navigation
+  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `content-panel.tsx` (the
+  card main and the margin sit in), `main-region.tsx`, `margin-region.tsx` and
+  `shell-dialogs.tsx`. Each takes the values it reads. The navigation
   drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
   loads when it first opens; the global keys still run in it.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
 - `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
   `connection-error-page.tsx`, or the shell for the person signed in.
 - `page-fallbacks.tsx`: what main shows while a page's code loads.
+
+## Image
+
+- `docker/`: `Dockerfile` builds the fork's envoy image, upstream's with this app added at
+  `/srv/tl-dispatch`, and `envoy-dispatch.sh` stops the server from starting on a web folder
+  with no build.
+- `DISPATCH_WEB_DIST` names the build the server serves: `/srv/dispatch-web` (upstream's, the
+  image's default) or `/srv/tl-dispatch`. Both are in every image, so a rollback sets it back to
+  `/srv/dispatch-web`.
 
 ## Install
 

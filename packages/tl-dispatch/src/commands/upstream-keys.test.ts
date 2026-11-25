@@ -98,12 +98,16 @@ describe("upstream's key registrations", () => {
 });
 
 describe("upstream's shell keys", () => {
-  test("are the catalog's global keys, so the shell on the catalog changes no key", () => {
+  test("are the catalog's global keys, with only the frame's own besides", () => {
     const live = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
     const global = APP_CONTEXTS.find((context) => context.name === "global");
-    const catalog = (global?.commands ?? []).flatMap((command) => command.keys ?? []);
+    // The frame's own: `[` folds the sidebar beside Shift+S.
+    const own = ["["];
+    const catalog = (global?.commands ?? [])
+      .flatMap((command) => command.keys ?? [])
+      .filter((keys) => !own.includes(keys));
     expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
     expect(live.filter((keys) => !catalog.includes(keys))).toEqual([]);
   });
@@ -153,5 +157,21 @@ describe("our labels for upstream's bindings", () => {
         : [`${key}: ours shortens "${entry?.upstream}", upstream has ${JSON.stringify(labels)}`];
     });
     expect(drift).toEqual([]);
+  });
+
+  test("give every row the sheet can name by scope and id a label of four words at most", () => {
+    // One id with two labels on two pages, or a label that is a condition: no one label fits.
+    const unkeyed = new Set(["issue:tree-edit", "issue:tree-link", "inbox:dismiss"]);
+    const ours = new Map(Object.entries(UPSTREAM_LABELS));
+    const shown = [
+      ...APP_CONTEXTS.flatMap((context) => context.commands.map((command) => command.label)),
+      ...upstream.flatMap((binding) => {
+        const key = `${scopeOf(binding)}:${binding.id}`;
+        if (binding.id === undefined || unkeyed.has(key)) return [];
+        return [ours.get(key)?.label ?? binding.label ?? ""];
+      }),
+    ];
+    const words = (label: string) => label.split(/\s+/).filter((word) => word !== "/").length;
+    expect([...new Set(shown)].filter((label) => words(label) > 4)).toEqual([]);
   });
 });
