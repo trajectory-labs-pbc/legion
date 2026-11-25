@@ -10,6 +10,8 @@ replaces them one page at a time.
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
+| `src/writes` | What a surface says of a failed write | upstream's write modules |
+| `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
 
 `tests/layering.test.ts` holds the router rules of `src/navigation` and the rules of
@@ -139,6 +141,25 @@ and the upstream pages drawn here load them, themselves or through the files the
 the last of those pages is replaced the app must keep a React Router context around them. Before
 then, a swap means running both routers.
 
+## Shell
+
+`src/shell/app-shell.tsx` only composes the frame around every page. Its parts:
+
+- `use-shell-layout.ts`: `useShellLayout()`, the current page's layout on this viewport, with
+  the reader's choices from `use-shell-preferences.ts` (the folded sidebar and margin).
+- `use-shell-overlays.ts`: `useShellOverlays()`, the navigation drawer, search, a new issue, the
+  inbox drawer and the shortcuts sheet, and the global commands that open them
+  (`global-commands.ts`).
+- One file per region: `shell-providers.tsx` (the providers upstream's pages read),
+  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `main-region.tsx`,
+  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads. The navigation
+  drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
+  loads when it first opens; the global keys still run in it.
+- `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
+- `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
+  `connection-error-page.tsx`, or the shell for the person signed in.
+- `page-fallbacks.tsx`: what main shows while a page's code loads.
+
 ## Install
 
 The app is outside the root workspaces. It takes React and the other libraries upstream's web app
@@ -168,7 +189,7 @@ load no page module:
 
 ## Checks
 
-- `bun run test`: the layers, the design rules, the catalog and its components, navigation, the key
+- `bun run test`: the layers, the design rules, the catalog and its components, navigation, the shell's hooks, the key
   engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
@@ -176,6 +197,8 @@ load no page module:
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
   outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
+- `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget. The
+  shortcuts sheet and the tooltips are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.
 
 The `tl-dispatch` job of `.github/workflows/fork-checks.yaml` runs all of them.
