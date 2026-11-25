@@ -39,7 +39,7 @@ export function agentDocuments(): string[] {
 /** The inline code spans of a Markdown text, fenced blocks aside. */
 function codeSpans(text: string): string[] {
   const prose = text.replace(/^```[\s\S]*?^```/gm, "");
-  return [...prose.matchAll(/`([^`\n]+)`/g)].map((match) => match[1] as string);
+  return [...prose.matchAll(/`([^`\n]+)`/g)].map((match) => match[1] ?? "");
 }
 
 /** The file names under a directory, to any depth, `node_modules` and `dist` aside. */
