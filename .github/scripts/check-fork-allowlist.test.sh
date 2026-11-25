@@ -129,4 +129,12 @@ list "$root" 'packages/app/' 'packages/app/index.ts'
 run_check "$root"
 check "both lines are in use" "$(is "$status" 0)"
 
+echo "case: a path that git would quote"
+root=$(fixture quoted)
+accented=$'docs/caf\303\251.md'
+change "$root" fork "$accented"
+list "$root" "$accented"
+run_check "$root"
+check "matches its line as written" "$(is "$status" 0)"
+
 summary "check-fork-allowlist.sh"

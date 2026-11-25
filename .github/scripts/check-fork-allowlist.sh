@@ -15,7 +15,8 @@ base=${1:?usage: check-fork-allowlist.sh <upstream main commit>}
 list=.github/fork-allowlist.txt
 
 entries_text=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$list" | grep -v '^$')
-changed_text=$(git diff --name-only --no-renames "$base...HEAD")
+# Without quotePath, git prints a path that holds a non-ASCII byte in quotes, and no line matches it.
+changed_text=$(git -c core.quotePath=false diff --name-only --no-renames "$base...HEAD")
 mapfile -t entries <<< "$entries_text"
 mapfile -t changed <<< "$changed_text"
 
