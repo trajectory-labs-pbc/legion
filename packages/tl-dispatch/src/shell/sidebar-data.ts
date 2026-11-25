@@ -8,11 +8,12 @@ import {
 import type { AuthenticatedUser, UserAgentStates } from "@upstream-dispatch/api/types";
 import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
 import { pinnedAgentSessions, useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
-import { totalUnreadReplies } from "@upstream-dispatch/features/agents/unread";
+import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
+import { type ReadFault, readFailureOf } from "@/features/read-failure";
 import { useAddress } from "@/navigation/hooks";
 import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
@@ -20,7 +21,6 @@ import { useCurrentPage } from "@/pages/index";
 import type { PageLayout } from "@/pages/page";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
-import { retryOf } from "./read-line";
 import type { RowCount } from "./row-count";
 
 interface SidebarDestination {
@@ -34,17 +34,41 @@ interface SidebarDestination {
   count: RowCount | undefined;
 }
 
-/** A section's rows, none while its read is out; `failed` stays set while a Retry runs. */
+/** A section's rows, none while its read is out or after it failed. */
 export interface SectionRead<T> {
   rows: readonly T[] | undefined;
-  failed: boolean;
-  retry: (() => void) | undefined;
+  fault: ReadFault | undefined;
 }
 
 function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
-  // A Retry puts the read back to pending, so the error count is what says it failed before.
-  const failed = query.data === undefined && query.errorUpdateCount > 0;
-  return { rows: query.data?.map(row), failed, retry: retryOf(query) };
+  return { rows: query.data?.map(row), fault: readFailureOf(query) };
+}
+
+/** Work under no priority or parked under one; none until the summary names a priority. */
+export function priorityFaults(
+  summary:
+    | {
+        empty?: string | null;
+        work_under_no_priority: { count: number };
+        priority_work_parked: { count: number };
+      }
+    | undefined
+): number | undefined {
+  if (summary === undefined || (summary.empty ?? "") !== "") return undefined;
+  return summary.work_under_no_priority.count + summary.priority_work_parked.count;
+}
+
+/** The Agents row's count: the unread replies of every agent. */
+export function useAgentsRowCount(): RowCount {
+  const agents = useQuery(userAgentStateQuery());
+  const unread = totalUnreadReplies(agents.data);
+  return { count: unread, label: unreadRepliesLabel(unread), fault: readFailureOf(agents) };
+}
+
+/** The Priorities row's count: the work off a priority. */
+function usePrioritiesRowCount(): RowCount {
+  const summary = useQuery(prioritySummaryQuery());
+  return { count: priorityFaults(summary.data), fault: readFailureOf(summary) };
 }
 
 /** The pinned agents, oldest pin first, with their unread replies. */
@@ -96,27 +120,18 @@ export function openOf(layout: PageLayout): {
 export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarData {
   const { pathname } = useAddress();
   const open = openOf(useCurrentPage()?.layout ?? {});
-  const inboxCount = useInboxRowCount();
-  const agents = useQuery(userAgentStateQuery());
+  const counts: Partial<Record<NavName, RowCount>> = {
+    inbox: useInboxRowCount(),
+    agents: useAgentsRowCount(),
+    priorities: usePrioritiesRowCount(),
+  };
   // Sorted in its own selection, which runs only when the agent state changes.
   const pinnedAgents = useQuery({ ...userAgentStateQuery(), select: pinnedOf });
-  const summaryRead = useQuery(prioritySummaryQuery());
-  const summary = summaryRead.data;
   const pinnedIssues = useQuery({
     queryKey: ["issues", "pinned"],
     queryFn: () => api.listIssues({ pinned: true }),
   });
   const projects = useQuery(projectsQuery());
-  // A deployment with no priority yet draws no count; nothing is off a list that does not exist.
-  const priorityFaults =
-    summary === undefined || (summary.empty ?? "") !== ""
-      ? undefined
-      : summary.work_under_no_priority.count + summary.priority_work_parked.count;
-  const counts: Partial<Record<NavName, RowCount>> = {
-    inbox: inboxCount,
-    agents: { count: totalUnreadReplies(agents.data), retry: retryOf(agents) },
-    priorities: { count: priorityFaults, retry: retryOf(summaryRead) },
-  };
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"

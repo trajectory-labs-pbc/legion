@@ -3,9 +3,8 @@ import { MountedLiveViews } from "@upstream-dispatch/features/agent-view/Mounted
 import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { DOCUMENT_SCROLL_ATTRIBUTE } from "@upstream-dispatch/hooks/useFootInset";
-import { type RefObject, Suspense } from "react";
+import { type ReactNode, type RefObject, Suspense } from "react";
 import { PageRoutes } from "@/pages/index";
-import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
 
 /** Main: the page outlet, and the live views that outlive the route that opened them. */
 export function MainRegion({
@@ -15,6 +14,7 @@ export function MainRegion({
   liveView,
   mainRef,
   marginHidden,
+  pageFallback: Fallback,
   pathname,
   sidebarHidden,
 }: {
@@ -26,6 +26,8 @@ export function MainRegion({
   liveView: string | undefined;
   mainRef: RefObject<HTMLElement | null>;
   marginHidden: boolean;
+  /** What shows while the page's code loads. */
+  pageFallback: () => ReactNode;
   pathname: string;
   sidebarHidden: boolean;
 }) {
@@ -51,7 +53,7 @@ export function MainRegion({
       tabIndex={-1}
     >
       <ErrorBoundary region="this page" resetKey={pathname}>
-        <Suspense fallback={issueFrame ? <IssueFrameFallback /> : <IssuePageFallback />}>
+        <Suspense fallback={<Fallback />}>
           <PageRoutes />
         </Suspense>
       </ErrorBoundary>

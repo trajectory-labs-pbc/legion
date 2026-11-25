@@ -53,7 +53,7 @@ describe("CommandButton", () => {
     const [create, search] = container.querySelectorAll("button");
     expect(create?.textContent).toBe("Create issue");
     expect(create?.querySelector("svg")).not.toBeNull();
-    expect(create?.dataset.variant).toBe("default");
+    expect(create?.dataset.variant).toBe("outline");
     expect(search?.textContent).toBe("");
     expect(search?.getAttribute("aria-label")).toBe("Search or run commands");
     expect(search?.dataset.variant).toBe("ghost");
@@ -109,7 +109,7 @@ describe("CommandButton", () => {
     expect(button(container)).toBeNull();
   });
 
-  test("a destructive command is destructive unless the caller picks a variant", () => {
+  test("a text button is outline and an icon-only one ghost; a primary is the caller's choice", () => {
     const view = (destructive: boolean) => ({
       command: { ...appCatalog.command("global.create"), destructive },
       label: "x",
@@ -117,7 +117,18 @@ describe("CommandButton", () => {
     });
     expect(commandButtonVariant(view(true), false)).toBe("destructive");
     expect(commandButtonVariant(view(false), true)).toBe("ghost");
-    expect(commandButtonVariant(view(false), false)).toBe("default");
+    expect(commandButtonVariant(view(false), false)).toBe("outline");
+    const { container } = mount(
+      <>
+        <Shell fired={[]} />
+        <CommandButton commandId="global.create" />
+        <CommandButton commandId="global.create" variant="default" />
+      </>
+    );
+    const variants = [...container.querySelectorAll("button")].map((drawn) =>
+      drawn.getAttribute("data-variant")
+    );
+    expect(variants).toEqual(["outline", "default"]);
   });
 });
 

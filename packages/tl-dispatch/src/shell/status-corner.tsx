@@ -26,7 +26,7 @@ export function StatusCorner() {
         {connection === "stuck" ? (
           <Badge className="gap-2 px-3 py-1" data-testid="connection-pill" variant="danger">
             Live updates are not reaching this page
-            <Button onClick={() => window.location.reload()} size="xs" variant="link">
+            <Button onClick={() => window.location.reload()} size="xs" variant="outline">
               Reload
             </Button>
           </Badge>

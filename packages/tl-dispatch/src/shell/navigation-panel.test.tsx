@@ -57,18 +57,22 @@ describe("NavigationPanel", () => {
     expect(started).toBe(1);
   });
 
-  test("shows the shell's refusal with a Retry, and holds Sign out while one is out", () => {
+  test("shows the shell's refusal with a Retry; both show they are busy while a sign-out is out", () => {
     let started = 0;
-    const container = mount(
-      panel({
-        error: "The sign-out did not go through.",
-        pending: true,
-        start: () => (started += 1),
-      })
-    );
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("did not go through");
-    expect(buttonNamed(container, "Sign out")?.disabled).toBe(true);
-    settle(() => buttonNamed(container, "Retry")?.click());
+    const start = () => (started += 1);
+    const error = "The sign-out did not go through.";
+    const idle = mount(panel({ error, start }));
+    expect(idle.querySelector('[role="alert"]')?.textContent).toContain("did not go through");
+    settle(() => buttonNamed(idle, "Retry")?.click());
+    expect(started).toBe(1);
+    // One panel at a time: each mounts the global commands.
+    for (const cleanup of cleanups.splice(0)) cleanup();
+
+    const busy = mount(panel({ error, pending: true, start }));
+    for (const name of ["Sign out", "Retry"]) {
+      expect(buttonNamed(busy, name)?.getAttribute("aria-busy")).toBe("true");
+    }
+    settle(() => buttonNamed(busy, "Retry")?.click());
     expect(started).toBe(1);
   });
 

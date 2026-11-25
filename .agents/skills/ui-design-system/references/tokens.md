@@ -18,10 +18,10 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 | `background` | The frame: the window behind the content panel, the sidebar and its header. Also the panel of a sheet. |
 | `sidebar` | The same colour as `background`, in light and in dark: the sidebar is part of the frame (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
-| `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
+| `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. Also the hover of an outline or a ghost button. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
 | `accent` | Hover inside a menu or a popover. Do not use it on the content panel. |
-| `sidebar-accent` | The hovered and the current row in the sidebar. |
+| `sidebar-accent` | The current row in the sidebar. The hovered row is `sidebar-accent/50`, so hover and current differ. The current row keeps its weight, so its label does not change width. |
 | `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast, and the panel of a dialog, an alert dialog or a drawer (SU5). |
 | `field` | The inside of an input. |
 | `scrim` | The backdrop of a modal overlay (`scrimClass`), and the cover over a modal while a nested modal is open (`coveredClass`); both in `packages/ui/src/lib/overlay-styles.ts`. |
@@ -51,7 +51,7 @@ Never lower a text token's opacity: the contrast tests read the token, not the m
 | Tokens | Meaning |
 | --- | --- |
 | `primary` | The one primary action of a view: near black in light, near white in dark. |
-| `destructive`, `destructive-foreground` | A destructive action: Delete, Revoke. |
+| `destructive`, `destructive-foreground` | The button that does a destructive action: a confirm's Delete or Revoke. The row button that opens the confirm is an outline button. |
 | `danger`, `danger-tint`, `danger-border` | A failed state: a failed check, a refused write, an error. |
 | `warning`, `warning-tint`, `warning-border` | A state that waits on a person: an open ask, a blocked item. |
 | `success`, `success-tint`, `success-border` | A passed state: a passed check, a merged or deployed change. |

@@ -1,21 +1,24 @@
 import { Button } from "@legion/ui/components/button";
 import { Count } from "@legion/ui/components/count";
 import { NavRow } from "@legion/ui/components/nav";
+import { textVariants } from "@legion/ui/lib/typography";
+import { cn } from "@legion/ui/lib/utils";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import { PinIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
+import { HotkeyTooltip, LabelTooltip } from "@/commands/hotkey-tooltip";
 import { navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
+import { ReadFailure } from "@/features/read-failure";
 import { PageLink } from "@/navigation/page-link";
+import { agents } from "@/pages/agents";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
-import { ReadLine } from "./read-line";
-import { RowCountMark } from "./row-count";
+import { CountRetry, RowCountMark } from "./row-count";
 
 import {
   type SectionRead,
@@ -38,27 +41,36 @@ function PinnedAgentRow({
   const { name, viewState, unpin } = usePinnedAgent(agent.sessionId);
   const unpinLabel = `Unpin ${name} from the sidebar`;
   return (
-    <NavRow aria-current={agent.selected ? "page" : undefined} render={<li />}>
-      <AgentName
+    <li className="flex items-center gap-1">
+      <NavRow
+        aria-current={agent.selected ? "page" : undefined}
         className="min-w-0 flex-1"
-        onNavigate={onNavigate}
-        replace={replace}
-        sessionId={agent.sessionId}
-        storedTitle={undefined}
-      />
-      <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
-      <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
-      <Button
-        aria-label={unpinLabel}
-        aria-pressed
-        onClick={unpin}
-        size="icon-xs"
-        title={unpinLabel}
-        variant="ghost"
+        render={
+          <PageLink
+            onClick={onNavigate}
+            page={agents.routes.live}
+            params={{ sessionId: agent.sessionId }}
+            replace={replace}
+          />
+        }
       >
-        <PinIcon aria-hidden className="fill-current" />
-      </Button>
-    </NavRow>
+        <AgentName
+          className="min-w-0 flex-1 truncate"
+          kind="static"
+          sessionId={agent.sessionId}
+          storedTitle={undefined}
+        />
+        <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
+        <span className={textVariants({ className: "shrink-0", size: "caption", tone: "muted" })}>
+          {viewState}
+        </span>
+      </NavRow>
+      <LabelTooltip label={unpinLabel} side="right">
+        <Button aria-label={unpinLabel} aria-pressed onClick={unpin} size="icon-xs" variant="ghost">
+          <PinIcon aria-hidden className="fill-current" />
+        </Button>
+      </LabelTooltip>
+    </li>
   );
 }
 
@@ -79,7 +91,9 @@ function ItemRows({
             aria-current={item.current ? "page" : undefined}
             render={<PageLink onClick={onNavigate} page={page} params={{ key: item.key }} />}
           >
-            <span className="shrink-0 font-medium">{item.key}</span>
+            <span className={textVariants({ className: "shrink-0", weight: "medium" })}>
+              {item.key}
+            </span>
             <span className="truncate text-muted-foreground">{item.text}</span>
             <Count className="ml-auto" value={item.openAsks} />
           </NavRow>
@@ -90,44 +104,41 @@ function ItemRows({
 }
 
 /**
- * A folded section: its rows, its read's line, or `empty` when it has none. A null `empty` draws
- * no section while the read is out or has no rows, so it never shows and then leaves; a failed
- * read still says so, and its loading line shows while Retry runs.
+ * A folded section of rows, drawn only once it has some: a section that shows and then leaves
+ * would move every row under it. A failed read still says so, and keeps saying so while Retry runs.
  */
 function SidebarSection<T>({
   children,
-  empty,
   heading,
   noun,
   read,
 }: {
   children: (rows: readonly T[]) => ReactNode;
-  empty: ReactNode | null;
   heading: string;
   noun: string;
   read: SectionRead<T>;
 }) {
-  const { rows, failed, retry } = read;
-  if (empty === null && !failed && (rows?.length ?? 0) === 0) return null;
-  return (
-    <FoldSection heading={heading}>
-      {rows === undefined ? (
-        <ReadLine noun={noun} retry={retry} />
-      ) : rows.length === 0 ? (
-        empty
-      ) : (
-        children(rows)
-      )}
-    </FoldSection>
-  );
+  const { rows, fault } = read;
+  if (fault !== undefined) {
+    return (
+      <FoldSection heading={heading}>
+        <ReadFailure fault={fault} noun={noun} />
+      </FoldSection>
+    );
+  }
+  if (rows === undefined || rows.length === 0) return null;
+  return <FoldSection heading={heading}>{children(rows)}</FoldSection>;
 }
 
-/** Room at the Inbox row's edge for Peek, while Peek shows. */
-const PEEK_ROOM = "group-hover/peek:pr-9 group-focus-within/peek:pr-9 pointer-coarse:pr-9";
+/** On a touch screen, which has no hover, Peek always shows beside the count. */
+const PEEK_ROOM = "pointer-coarse:pr-9";
 
-/** Peek shows on the row's hover or focus, and always on a touch screen, which has no hover. */
+/** Peek takes the count's box on the row's hover or focus, so nothing moves. */
 const PEEK_SHOWN =
   "absolute top-0 right-0 opacity-0 group-hover/peek:opacity-100 group-focus-within/peek:opacity-100 pointer-coarse:opacity-100";
+/** Under Peek the count fades, not hides, so it stays in the row's name. */
+const COUNT_UNDER_PEEK =
+  "not-pointer-coarse:group-hover/peek:opacity-0 not-pointer-coarse:group-focus-within/peek:opacity-0";
 
 /** The sidebar's rows as `data` holds them; with `peek`, the Inbox row carries Peek. */
 export function SidebarView({
@@ -144,7 +155,9 @@ export function SidebarView({
     <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
         {data.destinations.map(({ name, label, icon: Icon, page, current, keyed, count }) => {
-          const peekHere = peekable && name === "inbox";
+          const fault = count?.fault;
+          // A failed count's Retry takes the box Peek would show in.
+          const peekHere = peekable && name === "inbox" && fault === undefined;
           const row = (
             <NavRow
               aria-current={current ? "page" : undefined}
@@ -153,11 +166,14 @@ export function SidebarView({
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
-              <RowCountMark className="ml-auto" count={count} />
+              <RowCountMark
+                className={cn("ml-auto", peekHere ? COUNT_UNDER_PEEK : null)}
+                count={count}
+              />
             </NavRow>
           );
           return (
-            <li className={peekHere ? "group/peek relative" : undefined} key={name}>
+            <li className={peekHere ? "group/peek relative" : fault && "relative"} key={name}>
               {keyed ? (
                 <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
                   {row}
@@ -166,23 +182,18 @@ export function SidebarView({
                 row
               )}
               {peekHere ? <PeekButton className={PEEK_SHOWN} tooltipSide="right" /> : null}
-              {count?.retry === undefined ? null : (
-                <ReadLine noun={`the ${label} count`} retry={count.retry} />
+              {fault === undefined ? null : (
+                <CountRetry
+                  className="absolute top-0 right-0"
+                  fault={fault}
+                  noun={`the ${label} count`}
+                />
               )}
             </li>
           );
         })}
       </ul>
-      <SidebarSection
-        empty={
-          <p className="px-2 text-xs text-pretty text-muted-foreground">
-            Pin an agent on the Agents page, or in its live view, to keep it here.
-          </p>
-        }
-        heading="Pinned agents"
-        noun="pinned agents"
-        read={data.pinnedAgents}
-      >
+      <SidebarSection heading="Pinned agents" noun="pinned agents" read={data.pinnedAgents}>
         {(agents) => (
           <ul className="flex flex-col gap-0.5">
             {agents.map((agent) => (
@@ -196,10 +207,10 @@ export function SidebarView({
           </ul>
         )}
       </SidebarSection>
-      <SidebarSection empty={null} heading="Pinned" noun="pinned issues" read={data.pinnedIssues}>
+      <SidebarSection heading="Pinned" noun="pinned issues" read={data.pinnedIssues}>
         {(items) => <ItemRows items={items} onNavigate={onNavigate} page={issue.routes.issue} />}
       </SidebarSection>
-      <SidebarSection empty={null} heading="Projects" noun="projects" read={data.projects}>
+      <SidebarSection heading="Projects" noun="projects" read={data.projects}>
         {(items) => (
           <ItemRows items={items} onNavigate={onNavigate} page={project.routes.overview} />
         )}

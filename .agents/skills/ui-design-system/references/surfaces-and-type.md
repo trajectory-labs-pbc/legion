@@ -26,11 +26,11 @@ The tokens are in `tokens.md`.
 
 ## Type (TY4 to TY8)
 
-**TY4** Type comes only from `SurfaceTitle`, `Heading` and `textVariants`; `tokens.md` lists the recipes. No raw `text-*`, `font-*`, `leading-*` or `tracking-*` class in a page. Body and rows are 14 px; metadata is 12 px; a record's title is 20 px. Linear publishes no app text size (its site uses 13 and 15 px); this app keeps the 14/12 scale. Check: (new) a design-rule test fails on a raw size class outside `packages/ui`.
+**TY4** Type comes only from `SurfaceTitle`, `Heading` and `textVariants`; `tokens.md` lists the recipes. No raw `text-*`, `font-*`, `leading-*` or `tracking-*` class in a page. Body and rows are 14 px; metadata is 12 px; a record's title is 20 px. Linear publishes no app text size (its site uses 13 and 15 px); this app keeps the 14/12 scale. Check: a design-rule test fails on a raw size, weight, `leading-*` or `tracking-*` class outside `packages/ui`, an arbitrary size or weight (`text-[13px]`, `font-[550]`) included. `font-mono` is the code face (`tokens.md`), not a size, so the test allows it.
 
 **TY5** Weights: 400 for body text, 500 for a row's title and a label, 600 for a heading. No 700. Linear: Inter, with Inter Display for headings. Check: reviewer.
 
-**TY6** No uppercase labels and no wide tracking. A section label is sentence case at `Heading size="label"`. Linear: the sidebar's small, muted, sentence-case section titles. Check: (new) a design-rule test fails on `uppercase` and `tracking-wide`.
+**TY6** No uppercase labels and no wide tracking. A section label is sentence case at `Heading size="label"`. Linear: the sidebar's small, muted, sentence-case section titles. Check: the TY4 design-rule test also fails on `uppercase`, `lowercase` and every `tracking-*` class.
 
 **TY7** Ids, counts, times and numbers in columns use tabular figures (`tabular-nums`). An issue key is in the text face, `muted-foreground`. Geist Mono is for code values only: a commit hash, a branch, a path, a command. Linear: issue ids in the row. Check: reviewer.
 

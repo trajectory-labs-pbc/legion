@@ -467,5 +467,12 @@
     "copy": "src/pages/not-found/not-found.tsx",
     "commit": "8f3d55230c6b7af1cdb6c04b41bdb1697949d41e",
     "sha256": "f058f5f2a86caab994efe5d57919e0598e126750e9418c93c42309e701a8bb32"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/sidebar/Sidebar.tsx",
+    "part": "Sidebar",
+    "copy": "src/shell/sidebar-data.ts",
+    "commit": "1986e0055471a91c9ea73872ede38392a019b059",
+    "sha256": "734adc3642af6482f5429bdfbe5ca34657291b90d1e5cff7b49e85fac9fdf5c3"
   }
 ]

@@ -68,6 +68,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
           navigationOpen={overlays.navigationOpen}
           onOpenNavigation={overlays.openNavigation}
           project={shell.project}
+          sidebarRef={overlays.sidebarRef}
           user={user}
         >
           {panel}
@@ -76,7 +77,8 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
           fillsViewport={shell.fillsViewport}
           issueFrame={shell.issueFrame}
           marginRail={shell.hasMargin && preferences.marginHidden}
-          sidebarFolded={preferences.sidebarHidden}
+          openerRef={overlays.openerRef}
+          sidebarFolded={preferences.sidebarHidden && !shell.inDrawer}
         >
           <MainRegion
             fillsViewport={shell.fillsViewport}
@@ -85,6 +87,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
             liveView={shell.liveView}
             mainRef={shell.mainRef}
             marginHidden={preferences.marginHidden}
+            pageFallback={shell.pageFallback}
             pathname={shell.pathname}
             sidebarHidden={preferences.sidebarHidden}
           />

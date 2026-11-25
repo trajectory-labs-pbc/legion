@@ -36,6 +36,7 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
+  type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
 } as const;
 
@@ -230,6 +231,12 @@ function unescapeClass(name: string): string {
     .replace(/\\(.)/g, "$1");
 }
 
+/** The declarations `classes` compile to, with Tailwind and the app's theme, as the build does. */
+export async function compiledDeclarations(classes: readonly string[]): Promise<CssDeclaration[]> {
+  const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
+  return parseCss(compiler.build([...classes])).declarations;
+}
+
 /** The class a compiled declaration came from: the innermost selector naming a scanned class. */
 function sourceClass(
   context: readonly string[],
@@ -282,9 +289,8 @@ async function classViolations(
       where.push({ file: file.path, line: lineOf(position) });
     }
   }
-  const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
   const violations: DesignViolation[] = [];
-  for (const declaration of parseCss(compiler.build([...classes.keys()])).declarations) {
+  for (const declaration of await compiledDeclarations([...classes.keys()])) {
     const name = sourceClass(declaration.context, classes);
     const circle = name !== undefined && utilityOf(name) === "rounded-full";
     const problems = declarationProblems(declaration, tokens, { circle });
@@ -426,6 +432,8 @@ function utilityOf(word: string): string {
 }
 
 const HEIGHT = /^(min-h|h|size)-(.+)$/;
+const TYPE_CLASS =
+  /^(text-(xs|sm|base|lg|\d*xl|\[(length:.+|[\d.]+(px|r?em)|calc\(.+\))\]|\(length:.+\))(\/.+)?|font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+\]|\(weight:.+\))|leading-.+|tracking-.+|uppercase|lowercase)$/;
 const inScale = (kind: string, value: string) =>
   (kind !== "min-h" && CONTROL_HEIGHTS.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
@@ -456,6 +464,9 @@ function scriptViolations(
   const visit = (node: ts.Node) => {
     if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
       const utilities = node.text.split(/\s+/).map(utilityOf);
+      for (const utility of utilities) {
+        if (TYPE_CLASS.test(utility)) refuse(node, utility, RULES.type);
+      }
       if (
         utilities.includes("rounded-full") &&
         !utilities.some((utility) => /^size-\d+(\.\d+)?$/.test(utility))

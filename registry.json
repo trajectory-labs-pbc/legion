@@ -514,7 +514,12 @@
     {
       "name": "context-menu",
       "type": "registry:ui",
-      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
       "files": [
         {
           "path": "packages/ui/src/components/context-menu.tsx",
@@ -527,6 +532,11 @@
           "target": "@ui/dropdown-menu.tsx"
         },
         {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        },
+        {
           "path": "packages/ui/src/components/modal-surface-context.tsx",
           "type": "registry:ui",
           "target": "@ui/modal-surface-context.tsx"
@@ -535,6 +545,11 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -627,12 +642,22 @@
     {
       "name": "dropdown-menu",
       "type": "registry:ui",
-      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
       "files": [
         {
           "path": "packages/ui/src/components/dropdown-menu.tsx",
           "type": "registry:ui",
           "target": "@ui/dropdown-menu.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
         },
         {
           "path": "packages/ui/src/components/modal-surface-context.tsx",
@@ -643,6 +668,11 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },

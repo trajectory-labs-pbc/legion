@@ -83,6 +83,7 @@ const OURS: Readonly<Record<string, Partial<ShellBinding>>> = {
     palette: false,
   },
   "global.help": { label: "Show keyboard shortcuts" },
+  "global.inbox-drawer": { label: "Peek inbox" },
   "global.toggle-sidebar": { keys: ["Shift+S", "["] },
 };
 
