@@ -14,7 +14,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, sheet, drawer) is `bg-background` with `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
 
-**SU6** Square corners everywhere. Only a dot or an avatar is round. Linear's corners are round; this theme's are not. Check: the design-rule radius tests.
+**SU6** Square corners everywhere. In tl-dispatch only a dot or an avatar is round. `packages/ui/README.md` lists the parts that are round in the components. Linear's corners are round; this theme's are not. Check: the design-rule radius tests.
 
 ## Density (TY1 to TY3)
 
