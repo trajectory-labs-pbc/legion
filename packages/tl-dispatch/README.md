@@ -172,6 +172,13 @@ bun install            # in packages/ui
 bun install            # in this directory; packages/ui's script links the root packages
 ```
 
+## Image
+
+`docker/Dockerfile` builds the image the fork deploys: upstream's envoy image, unchanged, with this
+app's build at `/srv/tl-dispatch`. `DISPATCH_WEB_DIST` chooses the app the server serves, and its
+default is upstream's app, `/srv/dispatch-web`. `docker/envoy-dispatch.sh` starts the server and
+refuses to start it on a folder with no build.
+
 ## Route map, view map and copied code
 
 `tests/map` holds three checks on what upstream changes. They read the sources as text and
