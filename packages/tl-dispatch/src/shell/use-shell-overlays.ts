@@ -48,33 +48,36 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
     [shell.issueFrame, navigationOpen, shell.railFits]
   );
   const routeProject = shell.project;
+  // The navigation drawer lets the global keys through, so each action closes it first.
+  const closing =
+    <Args extends unknown[]>(run: (...args: Args) => void) =>
+    (...args: Args) => {
+      setNavigationOpen(false);
+      run(...args);
+    };
   useGlobalCommands({
-    openSearch: () => {
-      setNavigationOpen(false);
-      setSearchOpen(true);
-    },
+    openSearch: closing(() => setSearchOpen(true)),
     toggleShortcuts: shortcuts.toggle,
-    createIssue: () => {
-      setNavigationOpen(false);
-      setCreateOpen(true);
-    },
-    goTo: (destination) => {
-      setNavigationOpen(false);
-      navigate(NAV_PAGES[destination]);
-    },
+    createIssue: closing(() => setCreateOpen(true)),
+    goTo: closing((destination) => navigate(NAV_PAGES[destination])),
     openDocuments:
       routeProject === undefined
         ? undefined
-        : () => navigate(project.routes.documents, { params: { key: routeProject } }),
-    toggleInboxDrawer: shell.onInbox ? undefined : () => setInboxDrawerOpen((open) => !open),
+        : closing(() => navigate(project.routes.documents, { params: { key: routeProject } })),
+    toggleInboxDrawer: shell.onInbox
+      ? undefined
+      : closing(() => setInboxDrawerOpen((open) => !open)),
     toggleSidebar: shell.inDrawer
       ? undefined
-      : () => preferences.setSidebarHidden(!preferences.sidebarHidden),
+      : closing(() => preferences.setSidebarHidden(!preferences.sidebarHidden)),
     toggleMargin:
       detailsDrawer !== undefined
-        ? { label: "Open or close Details", run: () => detailsDrawer.setOpen(!detailsDrawer.open) }
+        ? {
+            label: "Open or close Details",
+            run: closing(() => detailsDrawer.setOpen(!detailsDrawer.open)),
+          }
         : !shell.compact && shell.hasMargin
-          ? { run: () => preferences.setMarginHidden(!preferences.marginHidden) }
+          ? { run: closing(() => preferences.setMarginHidden(!preferences.marginHidden)) }
           : undefined,
   });
   return {
