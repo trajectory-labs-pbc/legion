@@ -9,7 +9,7 @@ replaces them one page at a time.
 | --- | --- | --- |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
-| `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
+| `src/loading` | The chunk loaders, and the skeleton a page shows while it loads | upstream's offline retry and error boundary, and the UI package |
 | `src/writes` | What a surface says of a failed write | upstream's write modules |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |

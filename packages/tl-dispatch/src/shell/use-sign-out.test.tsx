@@ -2,9 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
+import { SendStoppedError } from "@upstream-dispatch/features/writes/keyed-write";
+import { plainWrite, writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { http } from "msw";
 
 import { render, settle } from "../../tests/react";
+import { SignOutQuestion } from "./sign-out-question";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";
 
 describe("unsentLabels", () => {
@@ -42,8 +45,16 @@ function mount(logout: () => Response) {
   const client = new QueryClient();
   let current: SignOut | undefined;
   function Probe() {
-    current = useSignOut("reader");
-    return null;
+    const signOut = useSignOut("reader");
+    current = signOut;
+    return (
+      <SignOutQuestion
+        onConfirm={signOut.confirm}
+        onDismiss={signOut.dismiss}
+        open={signOut.asking}
+        question={signOut.question}
+      />
+    );
   }
   const view = render(
     <QueryClientProvider client={client}>
@@ -72,5 +83,41 @@ describe("useSignOut", () => {
     await waitFor(() => expect(client.getQueryData(["inbox"])).toBeUndefined());
     expect(sent.asked).toBe(1);
     expect(signOut()?.error).toBeUndefined();
+  });
+
+  test("asks first while a change is unsent: Cancel keeps the session, Sign out ends it", async () => {
+    const { client, sent, signOut } = mount(() => Response.json({ ok: true }));
+    // A write is the person's whom whoami names.
+    client.setQueryData(["whoami"], { kind: "user", login: "reader", event_head: "0" });
+    // The sign-out stops the unsent write, so its press ends with the stop.
+    const stopped = writesOf(client)
+      .run({
+        detail: null,
+        kind: plainWrite,
+        label: "CORE-1 set to done",
+        method: "PATCH",
+        presentation: "indicator",
+        write: () => new Promise<never>(() => {}),
+      })
+      .catch((error: unknown) => error);
+    const question = () => document.body.querySelector<HTMLElement>('[role="alertdialog"]');
+    const answer = (name: string) =>
+      [...(question()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === name);
+
+    settle(() => signOut()?.start());
+    await waitFor(() => expect(answer("Cancel")).toHaveFocus());
+    expect(question()).toHaveAccessibleName("Sign out?");
+    expect(question()).toHaveAccessibleDescription(
+      "Sign out and discard 1 unsent change? • CORE-1 set to done"
+    );
+    settle(() => answer("Cancel")?.click());
+    await waitFor(() => expect(signOut()?.asking).toBe(false));
+    expect(sent.asked).toBe(0);
+
+    settle(() => signOut()?.start());
+    await waitFor(() => expect(signOut()?.asking).toBe(true));
+    settle(() => answer("Sign out")?.click());
+    await waitFor(() => expect(sent.asked).toBe(1));
+    expect(await stopped).toBeInstanceOf(SendStoppedError);
   });
 });

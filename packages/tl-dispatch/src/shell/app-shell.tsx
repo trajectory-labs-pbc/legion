@@ -11,6 +11,7 @@ import { ShellDialogs } from "./shell-dialogs";
 import { ShellFrame } from "./shell-frame";
 import { ShellProviders } from "./shell-providers";
 import { SidebarRegion } from "./sidebar-region";
+import { SignOutQuestion } from "./sign-out-question";
 import { StatusCorner } from "./status-corner";
 import { useLiveViewPins, usePinsMigration } from "./use-agent-pins";
 import { useShellLayout } from "./use-shell-layout";
@@ -89,6 +90,12 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
           inboxDrawerOpen={overlays.inboxDrawerOpen}
           searchOpen={overlays.searchOpen}
           shortcuts={overlays.shortcuts}
+        />
+        <SignOutQuestion
+          onConfirm={signOut.confirm}
+          onDismiss={signOut.dismiss}
+          open={signOut.asking}
+          question={signOut.question}
         />
       </ShellFrame>
     </ShellProviders>

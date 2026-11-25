@@ -1,5 +1,6 @@
 import { MessagePage } from "@legion/ui/blocks/message-page";
 import { Button } from "@legion/ui/components/button";
+import { textVariants } from "@legion/ui/lib/typography";
 import { useQueryClient } from "@tanstack/react-query";
 import { KeptWrites } from "@upstream-dispatch/features/writes/KeptWrites";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";
@@ -10,7 +11,7 @@ export function SignInPage(): ReactNode {
   const queryClient = useQueryClient();
   return (
     <MessagePage eyebrow="Dispatch" title="Make the next decision clear.">
-      <p className="mt-3 text-sm text-muted-foreground">
+      <p className={textVariants({ className: "mt-3", tone: "muted" })}>
         Sign in to review your team&apos;s open decisions.
       </p>
       <Button
