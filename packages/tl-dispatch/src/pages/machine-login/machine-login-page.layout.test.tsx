@@ -30,8 +30,8 @@ afterEach(() => {
   for (const restore of restores.splice(0)) restore();
 });
 
-function stub() {
-  const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(record);
+function stub(looked: RecordResponse = record) {
+  const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(looked);
   const logins = spyOn(api, "getMachineLogins").mockResolvedValue({
     credentials: [
       {
@@ -71,14 +71,12 @@ const primaries = () =>
     .filter((button) => button.className.includes("bg-primary"))
     .map((button) => button.textContent);
 
-async function lookUp() {
+async function lookUp(headline = "worker-7.example.com asks to start agent sessions as you") {
   const user = userEvent.setup();
   await user.click(screen.getByLabelText("Code shown on the machine"));
   await user.paste("abcd1234");
   await user.click(screen.getByRole("button", { name: "Look up" }));
-  return screen.findByRole("heading", {
-    name: "worker-7.example.com asks to start agent sessions as you",
-  });
+  return screen.findByRole("heading", { name: headline });
 }
 
 test("one 720 px column with one primary action: Look up, then Approve once a request shows", async () => {
@@ -89,6 +87,24 @@ test("one 720 px column with one primary action: Look up, then Approve once a re
   await lookUp();
   expect(primaries()).toEqual(["Approve"]);
   expect(screen.getByRole("button", { name: "Look up" }).className).toContain("border-input");
+});
+
+test.each([
+  [
+    "a service's login, which shows Deny alone",
+    { ...record, approver: "anyone", service: "legion-daemon" },
+    "worker-7.example.com asks to start worker pods as legion-daemon",
+  ],
+  [
+    "an expired login",
+    { ...record, state: "expired" },
+    "worker-7.example.com asked to start agent sessions as you",
+  ],
+] as const)("Look up stays the primary action for %s", async (_name, looked, headline) => {
+  stub(looked);
+  renderPage();
+  await lookUp(headline);
+  expect(primaries()).toEqual(["Look up"]);
 });
 
 test("the headline names the machine and what it asks, over its durations and its approver", async () => {

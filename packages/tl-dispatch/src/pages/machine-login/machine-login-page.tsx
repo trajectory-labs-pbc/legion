@@ -45,6 +45,9 @@ function Decision({
 export function MachineLoginPage(): ReactNode {
   const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
+  // Approve takes the primary from Look up only when it shows.
+  const approvable =
+    view?.decided === null && view.record.state === "pending" && view.record.service === null;
 
   return (
     <section className="max-w-180 space-y-8">
@@ -74,7 +77,7 @@ export function MachineLoginPage(): ReactNode {
         <Button
           disabled={lookup.isPending || code.trim() === ""}
           type="submit"
-          variant={view === undefined ? "default" : "outline"}
+          variant={approvable ? "outline" : "default"}
         >
           Look up
         </Button>
