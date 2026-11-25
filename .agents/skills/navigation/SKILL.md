@@ -73,7 +73,7 @@ A wrong route, a wrong param name or an unknown search key fails the type check.
 
 ## Prefetch on intent
 
-`PageLink` starts the route's `prefetch` reads when the pointer rests on it for `PREFETCH_INTENT_MS` (100 ms) or the link takes focus. The pointer leaving with no click cancels a read that nothing else watches. A click and a lost focus cancel nothing: the page that opens reads the data. Give each route whose page reads data on open a `prefetch`.
+`PageLink` starts the route's `prefetch` reads when the pointer rests on it for `PREFETCH_INTENT_MS` (100 ms) or at once when the link takes focus. The pointer leaving before then starts nothing. A read that started runs to its answer: upstream's reads ignore the abort signal, and the page that opens uses the answer. Give each route whose page reads data on open a `prefetch`.
 
 ## Checks
 
