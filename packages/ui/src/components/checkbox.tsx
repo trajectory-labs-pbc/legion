@@ -10,7 +10,7 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
         "peer relative size-4 shrink-0 rounded-sm border border-input bg-field",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         "data-disabled:cursor-not-allowed data-disabled:opacity-50",
-        "aria-invalid:border-danger aria-invalid:ring-[3px] aria-invalid:ring-danger/20",
+        "aria-invalid:border-danger",
         "data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
         "data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground",
         className

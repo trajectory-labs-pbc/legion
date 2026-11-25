@@ -49,7 +49,7 @@ function Slider({
             index={index}
             aria-label={ariaLabel}
             {...(getAriaLabel === undefined ? {} : { getAriaLabel })}
-            className="block size-4 shrink-0 rounded-full border border-primary bg-background hover:ring-4 hover:ring-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-disabled:pointer-events-none data-disabled:opacity-50"
+            className="block size-4 shrink-0 rounded-full border border-primary bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-disabled:pointer-events-none data-disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>

@@ -9,7 +9,7 @@ const buttonVariants = cva(
     "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     "disabled:pointer-events-none disabled:opacity-50 data-disabled:pointer-events-none data-disabled:opacity-50",
-    "aria-invalid:border-danger aria-invalid:ring-[3px] aria-invalid:ring-danger/20",
+    "aria-invalid:border-danger",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ],
   {

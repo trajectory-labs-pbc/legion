@@ -19,7 +19,7 @@ function NativeSelect({
         className={cn(
           "w-full min-w-0 appearance-none rounded-md border border-input bg-field py-0 pr-8 pl-2.5 text-sm data-[size=default]:h-8 data-[size=sm]:h-7",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none disabled:cursor-not-allowed",
-          "aria-invalid:border-danger aria-invalid:ring-[3px] aria-invalid:ring-danger/20"
+          "aria-invalid:border-danger"
         )}
         {...props}
       />

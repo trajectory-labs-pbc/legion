@@ -226,7 +226,7 @@ function ComboboxChips({ className, ...props }: ComboboxPrimitive.Chips.Props) {
       className={cn(
         "flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2.5 py-1 text-sm has-data-[slot=combobox-chip]:px-1",
         "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus",
-        "has-aria-invalid:border-danger has-aria-invalid:ring-[3px] has-aria-invalid:ring-danger/20",
+        "has-aria-invalid:border-danger",
         className
       )}
       {...props}

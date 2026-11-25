@@ -14,7 +14,7 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
       className={cn(
         "group/input-group relative flex h-8 w-full min-w-0 items-center rounded-md border border-input bg-field",
         "has-[[data-slot=input-group-control]:focus-visible]:outline-2 has-[[data-slot=input-group-control]:focus-visible]:outline-offset-2 has-[[data-slot=input-group-control]:focus-visible]:outline-focus",
-        "has-[[data-slot][aria-invalid=true]]:border-danger has-[[data-slot][aria-invalid=true]]:ring-[3px] has-[[data-slot][aria-invalid=true]]:ring-danger/20",
+        "has-[[data-slot][aria-invalid=true]]:border-danger",
         "in-data-[slot=combobox-content]:has-[[data-slot=input-group-control]:focus-visible]:outline-0",
         "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
         "has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
@@ -96,7 +96,7 @@ function InputGroupInput({ className, ...props }: ComponentProps<"input">) {
     <Input
       data-slot="input-group-control"
       className={cn(
-        "h-full flex-1 rounded-none border-0 bg-transparent focus-visible:outline-0 aria-invalid:ring-0",
+        "h-full flex-1 rounded-none border-0 bg-transparent focus-visible:outline-0",
         className
       )}
       {...props}
@@ -109,7 +109,7 @@ function InputGroupTextarea({ className, ...props }: ComponentProps<"textarea">)
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        "flex-1 resize-none rounded-none border-0 bg-transparent focus-visible:outline-0 aria-invalid:ring-0",
+        "flex-1 resize-none rounded-none border-0 bg-transparent focus-visible:outline-0",
         className
       )}
       {...props}

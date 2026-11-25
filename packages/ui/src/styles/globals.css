@@ -5,6 +5,7 @@
 @import "@fontsource-variable/geist-mono";
 
 @source "../components";
+@source "../lib";
 
 /* Dark follows the OS setting unless the root has .light; a .dark class on an ancestor turns it on. */
 @custom-variant dark {

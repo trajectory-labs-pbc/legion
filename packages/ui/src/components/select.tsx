@@ -26,7 +26,7 @@ function SelectTrigger({
       className={cn(
         "flex w-fit items-center justify-between gap-2 rounded-md border border-input bg-field px-2.5 text-sm whitespace-nowrap data-[size=default]:h-8 data-[size=sm]:h-7",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50",
-        "aria-invalid:border-danger aria-invalid:ring-[3px] aria-invalid:ring-danger/20 data-[placeholder]:text-muted-foreground",
+        "aria-invalid:border-danger data-[placeholder]:text-muted-foreground",
         "*:data-[slot=select-value]:truncate [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
