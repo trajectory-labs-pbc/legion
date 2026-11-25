@@ -13,9 +13,14 @@ function FactList({ className, ...props }: ComponentProps<"dl">) {
 }
 
 /** One fact: its label, then its value, which wraps anywhere. */
-function Fact({ label, children }: { label: ReactNode; children: ReactNode }) {
+function Fact({
+  label,
+  className,
+  children,
+  ...props
+}: Omit<ComponentProps<"div">, "children"> & { label: ReactNode; children: ReactNode }) {
   return (
-    <div data-slot="fact" className="min-w-0">
+    <div data-slot="fact" className={cn("min-w-0", className)} {...props}>
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium wrap-anywhere">{children}</dd>
     </div>

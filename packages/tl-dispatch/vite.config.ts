@@ -104,6 +104,7 @@ export default defineConfig({
     alias: {
       "@": at("./src"),
       "@upstream-dispatch": at("../dispatch/web/src"),
+      "@legion/ui/blocks": at("../ui/src/blocks"),
       "@legion/ui/components": at("../ui/src/components"),
       "@legion/ui/lib": at("../ui/src/lib"),
       "decode-named-character-reference": characterReferenceDecoder,

@@ -11,6 +11,7 @@
     "types": ["bun", "vite/client"],
     "paths": {
       "@/*": ["./src/*"],
+      "@legion/ui/blocks/*": ["../ui/src/blocks/*.tsx"],
       "@legion/ui/components/*": ["../ui/src/components/*.tsx"],
       "@legion/ui/lib/*": ["../ui/src/lib/*.ts"],
       "@upstream-dispatch/*": ["../dispatch/web/src/*"],

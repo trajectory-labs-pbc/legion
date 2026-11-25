@@ -2,7 +2,9 @@
 
 React components on [Base UI](https://base-ui.com), styled with Tailwind CSS 4, in
 [shadcn's monorepo layout](https://ui.shadcn.com/docs/monorepo): `src/components`, `src/lib`
-and `src/styles`, with a `components.json`.
+and `src/styles`, with a `components.json`. `src/blocks` holds the parts with words of their
+own, such as the shortcuts sheet: each is a `registry:block`, which a project installs among its
+components and edits.
 
 ## Use it from a package in this repository
 
@@ -19,6 +21,7 @@ its own copy of each. An app that imports the package from source must dedupe th
 
 ```tsx
 import { Button } from "@legion/ui/components/button";
+import { ShortcutsSheet } from "@legion/ui/blocks/shortcuts-sheet";
 ```
 
 ## Add the components to another project

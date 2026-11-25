@@ -1,7 +1,7 @@
 import {
   ShortcutsSheet,
   type ShortcutSection as ShownSection,
-} from "@legion/ui/components/shortcuts-sheet";
+} from "@legion/ui/blocks/shortcuts-sheet";
 import { useMemo } from "react";
 
 import { rowChips } from "./key-chips";

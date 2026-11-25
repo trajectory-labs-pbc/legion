@@ -175,9 +175,11 @@ function styleProps(path: string, text: string): string[] {
 }
 
 const SOURCES = [
-  ...readdirSync(join(src, "components"))
-    .filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
-    .map((file) => `components/${file}`),
+  ...["blocks", "components"].flatMap((dir) =>
+    readdirSync(join(src, dir))
+      .filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
+      .map((file) => `${dir}/${file}`)
+  ),
   ...readdirSync(join(src, "lib"))
     .filter((file) => file.endsWith(".ts"))
     .map((file) => `lib/${file}`),

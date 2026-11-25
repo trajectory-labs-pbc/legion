@@ -18,9 +18,18 @@ export const registryPath = join(repo, "registry.json");
 
 // The consumer's own React stays theirs.
 const CONSUMER_PROVIDED = new Set(["react", "react-dom"]);
+// A block is a component with words of its own: a consumer installs it among its components
+// and edits the copy.
 const KINDS = {
-  ui: { dir: "src/components", ext: ".tsx", type: "registry:ui" },
-  lib: { dir: "src/lib", ext: ".ts", type: "registry:lib" },
+  ui: { dir: "src/components", ext: ".tsx", type: "registry:ui", item: "registry:ui", at: "ui" },
+  blocks: {
+    dir: "src/blocks",
+    ext: ".tsx",
+    type: "registry:component",
+    item: "registry:block",
+    at: "components",
+  },
+  lib: { dir: "src/lib", ext: ".ts", type: "registry:lib", item: "registry:lib", at: "lib" },
 };
 type Kind = keyof typeof KINDS;
 const isKind = (value: string | undefined): value is Kind =>
@@ -155,11 +164,11 @@ const importsOf = (text: string): string[] =>
 const readSource = (path: string): string => readFileSync(path, "utf8");
 
 // A component item carries every file it imports, so it installs at the ref it was asked for.
-export function componentItem(name: string, read = readSource) {
+export function componentItem(name: string, read = readSource, entryKind: Kind = "ui") {
   const peers = new Map(Object.entries(manifest.peerDependencies));
   const files: RegistryFile[] = [];
   const packages = new Set<string>();
-  const pending: [Kind, string][] = [["ui", name]];
+  const pending: [Kind, string][] = [[entryKind, name]];
   const seen = new Set<string>();
   for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
     const [kind, file] = next;
@@ -169,7 +178,7 @@ export function componentItem(name: string, read = readSource) {
     files.push({
       path: relative(repo, join(pkg, path)),
       type: KINDS[kind].type,
-      target: `@${kind}/${file}${KINDS[kind].ext}`,
+      target: `@${KINDS[kind].at}/${file}${KINDS[kind].ext}`,
     });
     for (const specifier of importsOf(read(join(pkg, path)))) {
       const [, local, localFile] = specifier.match(/^#registry\/legion\/([^/]+)\/(.+)$/) ?? [];
@@ -188,10 +197,10 @@ export function componentItem(name: string, read = readSource) {
     }
   }
   // The component's own file first, then the files it imports.
-  const entry = relative(repo, join(pkg, sourcePath("ui", name)));
+  const entry = relative(repo, join(pkg, sourcePath(entryKind, name)));
   return {
     name,
-    type: "registry:ui",
+    type: KINDS[entryKind].item,
     dependencies: [...packages].sort(),
     files: files.sort(
       (a, b) => Number(b.path === entry) - Number(a.path === entry) || a.path.localeCompare(b.path)
@@ -202,15 +211,21 @@ export function componentItem(name: string, read = readSource) {
 export function buildRegistry() {
   const problems = peerVersionProblems(manifest.peerDependencies, manifest.devDependencies);
   if (problems.length > 0) throw new Error(problems.join("\n"));
-  const components = readdirSync(join(pkg, KINDS.ui.dir))
-    .filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
-    .map((file) => file.slice(0, -".tsx".length))
-    .sort();
+  const named = (kind: Kind) =>
+    readdirSync(join(pkg, KINDS[kind].dir))
+      .filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
+      .map((file) => file.slice(0, -".tsx".length))
+      .sort();
   return {
     $schema: "https://ui.shadcn.com/schema/registry.json",
     name: "legion",
     homepage: "https://github.com/<owner>/<repo>",
-    items: [themeItem(), ...fontItems(), ...components.map((name) => componentItem(name))],
+    items: [
+      themeItem(),
+      ...fontItems(),
+      ...named("ui").map((name) => componentItem(name)),
+      ...named("blocks").map((name) => componentItem(name, readSource, "blocks")),
+    ],
   };
 }
 

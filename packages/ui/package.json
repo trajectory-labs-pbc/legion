@@ -6,12 +6,14 @@
   "private": true,
   "imports": {
     "#registry/legion/ui/*": "./src/components/*.tsx",
+    "#registry/legion/blocks/*": "./src/blocks/*.tsx",
     "#registry/legion/lib/*": "./src/lib/*.ts"
   },
   "exports": {
     "./globals.css": "./src/styles/globals.css",
     "./components/*": "./src/components/*.tsx",
-    "./lib/*": "./src/lib/*.ts"
+    "./lib/*": "./src/lib/*.ts",
+    "./blocks/*": "./src/blocks/*.tsx"
   },
   "scripts": {
     "test": "bun test",

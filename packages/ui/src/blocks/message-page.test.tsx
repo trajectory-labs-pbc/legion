@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
 
-import { MessagePage } from "#registry/legion/ui/message-page";
+import { MessagePage } from "#registry/legion/blocks/message-page";
 
 describe("MessagePage", () => {
   it("is the page's main, titled by its one h1, with what to do next", () => {

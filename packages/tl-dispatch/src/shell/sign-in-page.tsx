@@ -1,5 +1,5 @@
+import { MessagePage } from "@legion/ui/blocks/message-page";
 import { Button } from "@legion/ui/components/button";
-import { MessagePage } from "@legion/ui/components/message-page";
 import { useQueryClient } from "@tanstack/react-query";
 import { KeptWrites } from "@upstream-dispatch/features/writes/KeptWrites";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";

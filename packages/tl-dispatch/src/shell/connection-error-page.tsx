@@ -1,5 +1,5 @@
+import { MessagePage } from "@legion/ui/blocks/message-page";
 import { Button } from "@legion/ui/components/button";
-import { MessagePage } from "@legion/ui/components/message-page";
 import type { ReactNode } from "react";
 
 /** Shown when the sign-in check got no answer. */

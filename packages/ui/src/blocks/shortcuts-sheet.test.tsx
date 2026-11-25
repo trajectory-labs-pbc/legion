@@ -6,7 +6,7 @@ import {
   filterShortcuts,
   type ShortcutSection,
   ShortcutsSheet,
-} from "#registry/legion/ui/shortcuts-sheet";
+} from "#registry/legion/blocks/shortcuts-sheet";
 
 const SECTIONS: readonly ShortcutSection[] = [
   {

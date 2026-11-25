@@ -29,8 +29,9 @@ import { Button } from "@legion/ui/components/button";
 import { cn } from "@legion/ui/lib/utils";
 ```
 
-- `tsconfig.json` and `vite.config.ts` point `@legion/ui/components` and `@legion/ui/lib` at
-  `packages/ui/src`. `src/styles.css` imports the package's stylesheet after upstream's.
+- `tsconfig.json` and `vite.config.ts` point `@legion/ui/components`, `@legion/ui/blocks` and
+  `@legion/ui/lib` at `packages/ui/src`. A block is a part with words of its own, such as the
+  shortcuts sheet. `src/styles.css` imports the package's stylesheet after upstream's.
 - The package's components import `@base-ui/react`, `class-variance-authority`, `cn` and
   `lucide-react` (`uiPackages` in `package.json`). Both packages install them, so the build takes
   this app's copy of each (`resolve.dedupe`), and `scripts/one-copy-each.ts` fails a build that

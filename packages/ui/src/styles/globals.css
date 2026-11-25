@@ -4,6 +4,7 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@source "../blocks";
 @source "../components";
 @source "../lib";
 

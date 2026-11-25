@@ -704,28 +704,6 @@
       ]
     },
     {
-      "name": "message-page",
-      "type": "registry:ui",
-      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
-      "files": [
-        {
-          "path": "packages/ui/src/components/message-page.tsx",
-          "type": "registry:ui",
-          "target": "@ui/message-page.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/heading.tsx",
-          "type": "registry:ui",
-          "target": "@ui/heading.tsx"
-        },
-        {
-          "path": "packages/ui/src/lib/typography.ts",
-          "type": "registry:lib",
-          "target": "@lib/typography.ts"
-        }
-      ]
-    },
-    {
       "name": "modal-surface-context",
       "type": "registry:ui",
       "dependencies": [],
@@ -872,58 +850,6 @@
       ]
     },
     {
-      "name": "shortcuts-sheet",
-      "type": "registry:ui",
-      "dependencies": [
-        "@base-ui/react@1.9.0",
-        "class-variance-authority@0.7.1",
-        "cn@0.2.6",
-        "lucide-react@1.70.0"
-      ],
-      "files": [
-        {
-          "path": "packages/ui/src/components/shortcuts-sheet.tsx",
-          "type": "registry:ui",
-          "target": "@ui/shortcuts-sheet.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/heading.tsx",
-          "type": "registry:ui",
-          "target": "@ui/heading.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/input.tsx",
-          "type": "registry:ui",
-          "target": "@ui/input.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/kbd.tsx",
-          "type": "registry:ui",
-          "target": "@ui/kbd.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/modal-surface-context.tsx",
-          "type": "registry:ui",
-          "target": "@ui/modal-surface-context.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/sheet.tsx",
-          "type": "registry:ui",
-          "target": "@ui/sheet.tsx"
-        },
-        {
-          "path": "packages/ui/src/lib/overlay-styles.ts",
-          "type": "registry:lib",
-          "target": "@lib/overlay-styles.ts"
-        },
-        {
-          "path": "packages/ui/src/lib/typography.ts",
-          "type": "registry:lib",
-          "target": "@lib/typography.ts"
-        }
-      ]
-    },
-    {
       "name": "skeleton",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],
@@ -1050,6 +976,80 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "message-page",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/message-page.tsx",
+          "type": "registry:component",
+          "target": "@components/message-page.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "shortcuts-sheet",
+      "type": "registry:block",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/shortcuts-sheet.tsx",
+          "type": "registry:component",
+          "target": "@components/shortcuts-sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     }
