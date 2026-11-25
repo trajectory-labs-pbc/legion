@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  createAlertDialogHandle,
 } from "#registry/legion/ui/alert-dialog";
 import { Button } from "#registry/legion/ui/button";
 
@@ -44,6 +45,40 @@ describe("AlertDialog", () => {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Delete" }));
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("serves many triggers from one dialog, each with its payload, and returns the focus", async () => {
+    const onRevoke = vi.fn();
+    const handle = createAlertDialogHandle<string>();
+    render(
+      <>
+        {["laptop", "devbox"].map((machine) => (
+          <AlertDialogTrigger handle={handle} key={machine} payload={machine} render={<Button />}>
+            Revoke {machine}
+          </AlertDialogTrigger>
+        ))}
+        <AlertDialog handle={handle}>
+          {({ payload }) =>
+            payload === undefined ? null : (
+              <AlertDialogContent>
+                <AlertDialogTitle>Revoke {payload}?</AlertDialogTitle>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onRevoke(payload)}>Revoke</AlertDialogAction>
+              </AlertDialogContent>
+            )
+          }
+        </AlertDialog>
+      </>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Revoke devbox" }));
+    await screen.findByRole("alertdialog", { name: "Revoke devbox?" });
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Revoke devbox" }));
+    await userEvent.click(screen.getByRole("button", { name: "Revoke laptop" }));
+    await screen.findByRole("alertdialog", { name: "Revoke laptop?" });
+    await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
+    expect(onRevoke.mock.calls).toEqual([["laptop"]]);
   });
 
   it("closes from Cancel by keyboard", async () => {

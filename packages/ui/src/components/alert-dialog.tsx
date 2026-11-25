@@ -8,7 +8,10 @@ import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
-function AlertDialogTrigger(props: AlertDialogPrimitive.Trigger.Props) {
+// One dialog for many triggers: each trigger hands the dialog its own payload.
+const createAlertDialogHandle = AlertDialogPrimitive.createHandle;
+
+function AlertDialogTrigger<Payload>(props: AlertDialogPrimitive.Trigger.Props<Payload>) {
   return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
 }
 
@@ -148,4 +151,5 @@ export {
   AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
+  createAlertDialogHandle,
 };
