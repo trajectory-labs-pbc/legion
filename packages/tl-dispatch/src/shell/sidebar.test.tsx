@@ -1,24 +1,14 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { holdShellReads } from "../../tests/network";
 import { render } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
 import { Sidebar } from "./sidebar";
-
-const realFetch = globalThis.fetch;
-beforeAll(() => {
-  // Reads stay pending: the rows draw from the nav table alone.
-  globalThis.fetch = Object.assign(() => new Promise<Response>(() => {}), {
-    preconnect: realFetch.preconnect,
-  });
-});
-afterAll(() => {
-  globalThis.fetch = realFetch;
-});
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -46,6 +36,7 @@ function Commands({ enabled }: { enabled: boolean }) {
 }
 
 function mount(path: string, withCommands = true) {
+  holdShellReads();
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path={path}>
