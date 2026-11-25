@@ -122,4 +122,11 @@ check "names the line" \
   "$(contains "$out" '^::error file=.github/fork-allowlist.txt::packages/daemon/ is on .*upstream has files in it')"
 check "names nothing else" "$(is "$(grep -c '^::error' <<< "$out")" 1)"
 
+echo "case: a file line under a directory line"
+root=$(fixture overlap)
+change "$root" fork packages/app/index.ts packages/app/README.md
+list "$root" 'packages/app/' 'packages/app/index.ts'
+run_check "$root"
+check "both lines are in use" "$(is "$status" 0)"
+
 summary "check-fork-allowlist.sh"
