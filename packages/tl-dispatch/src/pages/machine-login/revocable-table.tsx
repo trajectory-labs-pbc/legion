@@ -1,6 +1,6 @@
+import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
 import { Heading } from "@legion/ui/components/heading";
-import { LoadState } from "@legion/ui/components/load-state";
 import {
   Table,
   TableBody,
@@ -54,14 +54,23 @@ export function RevocableTable<Row>({
         </Heading>
         <p className="max-w-prose text-sm text-pretty text-muted-foreground">{description}</p>
       </div>
-      <LoadState
-        failed={query.isError}
-        failure={`Couldn't load ${noun}.`}
-        loading={`Loading ${noun}…`}
-        onRetry={() => void query.refetch()}
-        pending={query.isPending}
-        retrying={query.isFetching}
-      >
+      {query.isPending ? (
+        <p className="text-sm text-muted-foreground">Loading {noun}…</p>
+      ) : query.isError ? (
+        <Alert variant="danger">
+          <AlertTitle>Couldn't load {noun}.</AlertTitle>
+          <AlertAction>
+            <Button
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+              size="sm"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : (
         <div className="border border-border bg-card">
           <Table>
             <TableHeader>
@@ -111,7 +120,7 @@ export function RevocableTable<Row>({
             </TableBody>
           </Table>
         </div>
-      </LoadState>
+      )}
       {refused === undefined ? null : (
         <p className="text-sm text-danger">
           {writeFailureNote(revoke.error, {
