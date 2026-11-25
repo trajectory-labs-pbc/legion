@@ -178,39 +178,51 @@ function isReference(node: ts.Identifier): boolean {
   );
 }
 
-/** The names a file declares or imports at the top level. */
-export function topLevelNames(source: ts.SourceFile): Set<string> {
-  const names = new Set<string>();
+/** Each name a file declares or imports at the top level, with its declaration; an import has none. */
+function topLevelNames(source: ts.SourceFile): Map<string, ts.Statement | undefined> {
+  const names = new Map<string, ts.Statement | undefined>();
   for (const statement of source.statements) {
     if (ts.isImportDeclaration(statement) && statement.importClause) {
       const clause = statement.importClause;
-      if (clause.name) names.add(clause.name.text);
+      // A type loads nothing, so no copy follows it.
+      if (clause.isTypeOnly) continue;
+      if (clause.name) names.set(clause.name.text, undefined);
       const bindings = clause.namedBindings;
-      if (bindings && ts.isNamespaceImport(bindings)) names.add(bindings.name.text);
+      if (bindings && ts.isNamespaceImport(bindings)) names.set(bindings.name.text, undefined);
       if (bindings && ts.isNamedImports(bindings)) {
-        for (const element of bindings.elements) names.add(element.name.text);
+        for (const element of bindings.elements) {
+          if (!element.isTypeOnly) names.set(element.name.text, undefined);
+        }
       }
     } else if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name)) names.add(declaration.name.text);
+        if (ts.isIdentifier(declaration.name)) names.set(declaration.name.text, statement);
       }
     } else if (
       (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
       statement.name
     ) {
-      names.add(statement.name.text);
+      names.set(statement.name.text, statement);
     }
   }
   return names;
 }
 
-/** Each top-level name of app.tsx that a `<Route>`'s element refers to, such as a page's lazy. */
+/**
+ * Each top-level name of app.tsx that a `<Route>`'s element refers to, such as a page's lazy, and
+ * each one the declarations of those refer to in turn, such as the imports a page's body draws.
+ */
 export function routeTargets(file = upstreamAppFile, text?: string): string[] {
   const source = parseScript(file, text);
   const declared = topLevelNames(source);
   const found = new Set<string>();
   const collect = (node: ts.Node): void => {
-    if (ts.isIdentifier(node) && declared.has(node.text) && isReference(node)) found.add(node.text);
+    if (ts.isIdentifier(node) && declared.has(node.text) && isReference(node)) {
+      const fresh = !found.has(node.text);
+      found.add(node.text);
+      const declaration = declared.get(node.text);
+      if (fresh && declaration) collect(declaration);
+    }
     ts.forEachChild(node, collect);
   };
   const visit = (node: ts.Node): void => {
