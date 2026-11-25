@@ -35,6 +35,7 @@
     "@types/react-dom",
     "@vitejs/plugin-react",
     "clsx",
+    "msw",
     "prosemirror-model",
     "react",
     "react-dom",
