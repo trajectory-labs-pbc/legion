@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 import { act } from "react";
 
 import { render } from "../../tests/react";
@@ -31,8 +32,8 @@ const flush = () => act(() => new Promise((resolve) => setTimeout(resolve, 10)))
 
 describe("lazyRegion", () => {
   test("a chunk that fails online shows its region's error alone; the rest stays", async () => {
-    const logged = spyOn(console, "error").mockImplementation(() => {});
-    cleanups.push(() => logged.mockRestore());
+    // The error boundary logs the chunk's failure.
+    quietConsoleError();
     network(true);
     const Lazy = lazyRegion(
       "the shortcuts sheet",
