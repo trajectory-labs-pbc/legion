@@ -62,7 +62,5 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
-      - name: Test (components, theme, registry.json drift)
+      - name: Test (components, theme, registry.json drift and validity)
         run: bun run test
-      - name: Validate registry.json
-        run: bun run registry:validate
