@@ -37,7 +37,8 @@ export interface PageEntry {
   linkForms?: LinkForms;
 }
 
-function resolveModule(from: string, specifier: string): string {
+/** The file a relative or aliased specifier names: none for a package or a file that is not there. */
+function moduleFile(from: string, specifier: string): string | undefined {
   let base: string;
   if (specifier.startsWith(UPSTREAM_ALIAS)) {
     base = join(UPSTREAM_WEB, specifier.slice(UPSTREAM_ALIAS.length));
@@ -46,14 +47,22 @@ function resolveModule(from: string, specifier: string): string {
   } else if (specifier.startsWith(".")) {
     base = resolve(dirname(from), specifier);
   } else {
-    throw new Error(`${from}: cannot read constants from package ${specifier}`);
+    return undefined;
   }
-  for (const candidate of [base, `${base}.ts`, `${base}.tsx`, join(base, "index.ts")]) {
-    if (existsSync(candidate) && statSync(candidate).isFile()) {
-      return candidate;
-    }
-  }
-  throw new Error(`${from}: cannot resolve ${specifier}`);
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, "index.ts"),
+    join(base, "index.tsx"),
+  ];
+  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+}
+
+function resolveModule(from: string, specifier: string): string {
+  const file = moduleFile(from, specifier);
+  if (file === undefined) throw new Error(`${from}: cannot resolve ${specifier} to a source file`);
+  return file;
 }
 
 /** The string a constant holds, followed through named imports. */
@@ -482,25 +491,6 @@ function sourceFiles(root: string, skip: readonly string[]): string[] {
   return found;
 }
 
-function importTarget(from: string, specifier: string, webSrc: string): string | undefined {
-  let base: string;
-  if (specifier.startsWith(UPSTREAM_ALIAS)) {
-    base = join(webSrc, specifier.slice(UPSTREAM_ALIAS.length));
-  } else if (specifier.startsWith(".")) {
-    base = resolve(dirname(from), specifier);
-  } else {
-    return undefined;
-  }
-  const candidates = [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    join(base, "index.ts"),
-    join(base, "index.tsx"),
-  ];
-  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
-}
-
 /** The modules a file loads at run time: its imports and re-exports, type-only ones aside, and each `import()`. */
 export function runtimeImports(file: string, text: string): string[] {
   const source = parseScript(file, text);
@@ -539,21 +529,20 @@ export function runtimeImports(file: string, text: string): string[] {
   return found;
 }
 
+const upstreamFeatures = () =>
+  sourceFiles(join(UPSTREAM_WEB, "features"), ["__tests__", "__fixtures__"]);
+
 /**
  * For each view file under upstream's `features/`, the files that load it at run time: upstream's
  * own feature files and this app's sources.
  */
-export function viewImporters(webSrc = UPSTREAM_WEB): Map<string, string[]> {
+export function viewImporters(): Map<string, string[]> {
   const importers = new Map<string, string[]>();
-  const files = [
-    ...sourceFiles(join(webSrc, "features"), ["__tests__", "__fixtures__"]),
-    ...sourceFiles(forkSrc, []),
-  ];
-  for (const file of files) {
+  for (const file of [...upstreamFeatures(), ...sourceFiles(forkSrc, [])]) {
     for (const specifier of runtimeImports(file, readFileSync(file, "utf8"))) {
-      const target = importTarget(file, specifier, webSrc);
+      const target = moduleFile(file, specifier);
       if (!target) continue;
-      const view = relative(webSrc, target);
+      const view = relative(UPSTREAM_WEB, target);
       if (view.startsWith("features/") && view.endsWith(".tsx")) {
         importers.set(view, [...(importers.get(view) ?? []), file]);
       }
@@ -563,20 +552,9 @@ export function viewImporters(webSrc = UPSTREAM_WEB): Map<string, string[]> {
 }
 
 /** Every view file under upstream's `features/`: each `.tsx` that is not a test or a fixture. */
-export function featureViews(webSrc = UPSTREAM_WEB): string[] {
-  const found: string[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name !== "__tests__" && entry.name !== "__fixtures__") {
-          walk(path);
-        }
-      } else if (entry.name.endsWith(".tsx") && !entry.name.endsWith(".test.tsx")) {
-        found.push(relative(webSrc, path));
-      }
-    }
-  };
-  walk(join(webSrc, "features"));
-  return found.sort();
+export function featureViews(): string[] {
+  return upstreamFeatures()
+    .filter((file) => file.endsWith(".tsx"))
+    .map((file) => relative(UPSTREAM_WEB, file))
+    .sort();
 }
