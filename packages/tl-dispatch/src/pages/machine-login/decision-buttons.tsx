@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 
 import { Button } from "@/ui/button";
+import { writeFailureNote } from "@/writes/write-failure-note";
 import {
   apiErrorMessage,
   type DecisionResponse,
   type KeyedWrite,
-  SendStoppedError,
   type StateResponse,
   type SubmitGuard,
-  stoppedWriteNote,
 } from "./upstream";
 
 /** Approve and Deny for a pending machine login; with no `approve`, only Deny shows. */
@@ -41,20 +40,20 @@ export function DecisionButtons({
       {/* A stopped decision may have been made; pressing again sends a new one. */}
       {approve?.isError ? (
         <p className="text-sm text-destructive">
-          {approve.error instanceof SendStoppedError
-            ? stoppedWriteNote("the approval", "made", {
-                anew: "Pressing Approve again sends a new approval.",
-              })
-            : apiErrorMessage(approve.error, "Could not approve this request.")}
+          {writeFailureNote(approve.error, {
+            what: "the approval",
+            anew: "Pressing Approve again sends a new approval.",
+            refused: (error) => apiErrorMessage(error, "Could not approve this request."),
+          })}
         </p>
       ) : null}
       {deny.isError ? (
         <p className="text-sm text-destructive">
-          {deny.error instanceof SendStoppedError
-            ? stoppedWriteNote("the denial", "made", {
-                anew: "Pressing Deny again sends a new denial.",
-              })
-            : apiErrorMessage(deny.error, "Could not deny this request.")}
+          {writeFailureNote(deny.error, {
+            what: "the denial",
+            anew: "Pressing Deny again sends a new denial.",
+            refused: (error) => apiErrorMessage(error, "Could not deny this request."),
+          })}
         </p>
       ) : null}
     </div>

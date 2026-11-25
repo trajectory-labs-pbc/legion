@@ -17,7 +17,7 @@ export {
 export { credentialPendingQuery } from "@upstream-dispatch/features/credentials/pending";
 export { Timestamp } from "@upstream-dispatch/features/refs/Timestamp";
 export { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
-export { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
+export { stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
 export {
   refusedNote,
   useRefusalOfSubject,

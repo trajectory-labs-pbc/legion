@@ -3,16 +3,11 @@ import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { SurfaceTitle } from "@/ui/heading";
 import { Input } from "@/ui/input";
+import { writeFailureNote } from "@/writes/write-failure-note";
 import { DecisionButtons } from "./decision-buttons";
 import { MachineLogins } from "./machine-logins";
 import { RecordFacts } from "./record-facts";
-import {
-  apiErrorMessage,
-  machineName,
-  SendStoppedError,
-  stoppedWriteNote,
-  useDocumentTitle,
-} from "./upstream";
+import { apiErrorMessage, machineName, useDocumentTitle } from "./upstream";
 import { useMachineLogin } from "./use-machine-login";
 
 /** The login's decision, in place of the buttons that decide it. */
@@ -84,11 +79,11 @@ export function MachineLoginPage(): ReactNode {
         </form>
         {lookup.isError ? (
           <p className="text-sm text-destructive">
-            {lookup.error instanceof SendStoppedError
-              ? stoppedWriteNote("the lookup of that code", "made", {
-                  anew: "Look up sends the code in the field as a new lookup.",
-                })
-              : apiErrorMessage(lookup.error, "Could not look up that code.")}
+            {writeFailureNote(lookup.error, {
+              what: "the lookup of that code",
+              anew: "Look up sends the code in the field as a new lookup.",
+              refused: (error) => apiErrorMessage(error, "Could not look up that code."),
+            })}
           </p>
         ) : null}
         {view === undefined ? null : (

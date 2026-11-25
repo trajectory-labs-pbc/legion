@@ -3,10 +3,9 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/ui/button";
 import { Heading } from "@/ui/heading";
+import { writeFailureNote } from "@/writes/write-failure-note";
 import {
   refusedNote,
-  SendStoppedError,
-  stoppedWriteNote,
   useKeyedWrite,
   useRefusalOfSubject,
   useSubmitGuard,
@@ -163,11 +162,11 @@ export function RevocableTable<Row>({
       ) : null}
       {refused === undefined ? null : (
         <p className="text-sm text-destructive">
-          {mutation.error instanceof SendStoppedError
-            ? stoppedWriteNote(`the revoke of ${rowName(refused)}`, "made", {
-                anew: "Pressing Revoke again sends a new revoke.",
-              })
-            : refusedNote(`revoke ${rowName(refused)}`, mutation.error)}
+          {writeFailureNote(mutation.error, {
+            what: `the revoke of ${rowName(refused)}`,
+            anew: "Pressing Revoke again sends a new revoke.",
+            refused: (error) => refusedNote(`revoke ${rowName(refused)}`, error),
+          })}
         </p>
       )}
     </section>
