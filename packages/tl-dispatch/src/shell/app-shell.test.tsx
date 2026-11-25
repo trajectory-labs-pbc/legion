@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
@@ -11,18 +11,15 @@ import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AppShell } from "./app-shell";
 
-const realConfirm = window.confirm;
-beforeAll(() => {
-  window.confirm = () => true;
-});
-afterAll(() => {
-  window.confirm = realConfirm;
-});
 beforeEach(() => {
   holdShellReads();
   // A sign-out is refused.
   answerRequests(http.post("/auth/logout", () => Response.json({}, { status: 403 })));
 });
+
+/** The narrow screen's Menu, named by its text alone. */
+const menuButton = (root: HTMLElement) =>
+  [...root.querySelectorAll("button")].find((button) => button.textContent === "Menu");
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -74,7 +71,7 @@ describe("AppShell", () => {
       });
     const button = (text: string) =>
       [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
-    click("Open navigation");
+    settle(() => menuButton(document.body)?.click());
     await until(() => button("Sign out") !== undefined);
     settle(() => button("Sign out")?.click());
     const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
@@ -85,7 +82,7 @@ describe("AppShell", () => {
     expect(alert()).toContain("did not go through");
     click("Close navigation");
     await until(() => button("Sign out") === undefined);
-    click("Open navigation");
+    settle(() => menuButton(document.body)?.click());
     await until(() => button("Sign out") !== undefined);
     expect(alert()).toContain("did not go through");
   });
@@ -106,35 +103,94 @@ describe("AppShell", () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
   });
 
-  test.each([
+  const foldKeys = [
     ["Shift+S", { key: "S", shiftKey: true }],
     ["[", { key: "[" }],
-  ] as const)("%s folds the sidebar to its rail and gives main the full width, and again unfolds it", async (_key, init) => {
-    // A viewport where the sidebar is a column and can fold.
+  ] as const;
+
+  /** Presses a key where the focus is, as a person does. */
+  const pressOnFocus = (init: KeyboardEventInit) =>
+    settle(() => {
+      (document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
+      );
+    });
+
+  /** The shell's parts that a fold changes, on a viewport where the sidebar is a column. */
+  async function foldable() {
     viewport(768);
     const view = await mount();
-    const main = () => view.container.querySelector('[data-testid="main-content"]');
-    const rail = () => view.container.querySelector('[data-testid="sidebar-rail"]');
-    const fold = () =>
-      settle(() => {
-        document.body.dispatchEvent(
-          new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
-        );
-      });
-    const panel = () => view.container.querySelector('[data-testid="content-panel"]');
-    const sidebar = () => view.container.querySelector('[data-testid="sidebar"]');
-    expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
-    expect(rail()).toBeNull();
-    expect(sidebar()?.className).toContain("w-60");
-    expect(panel()?.className).not.toContain("md:ml-14");
-    fold();
-    expect(main()?.getAttribute("data-shell-layout")).toBe("full-width");
-    expect(rail()).not.toBeNull();
-    expect(sidebar()).toBeNull();
-    expect(panel()?.className).toContain("md:ml-14");
-    fold();
-    expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
-    expect(rail()).toBeNull();
+    const part = (testId: string) =>
+      view.container.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
+    const button = (name: string) =>
+      view.container.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
+    return { part, button };
+  }
+
+  test.each(
+    foldKeys
+  )("%s folds the sidebar away: the panel fills the window under a row that shows it again", async (_key, init) => {
+    const { part, button } = await foldable();
+    expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("standard");
+    expect(part("panel-header")).toBeNull();
+    expect(part("sidebar")?.className).toContain("w-60");
+    expect(part("content-panel")?.className).not.toContain("md:ml-(--panel-inset)");
+    pressOnFocus(init);
+    expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("full-width");
+    expect(part("sidebar")).toBeNull();
+    // Inset 8 px on all four sides, with a 44 px row on top that holds only Show sidebar and
+    // stays in view while the page scrolls, over a strip that hides the page in the inset.
+    expect(part("content-panel")?.className.split(" ")).toEqual(
+      expect.arrayContaining(["md:ml-(--panel-inset)", "[--panel-row:--spacing(11)]"])
+    );
+    const row = part("panel-header");
+    expect(row?.parentElement).toBe(part("content-panel"));
+    expect(row?.className.split(" ")).toEqual(
+      expect.arrayContaining([
+        "h-(--panel-row)",
+        "border-b",
+        "sticky",
+        "top-(--panel-inset)",
+        "bg-card",
+        "before:h-(--panel-inset)",
+        "before:bg-background",
+      ])
+    );
+    expect(
+      [...(row?.querySelectorAll("button") ?? [])].map((b) => b.getAttribute("aria-label"))
+    ).toEqual(["Show sidebar"]);
+    pressOnFocus(init);
+    expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("standard");
+    expect(part("panel-header")).toBeNull();
+    expect(button("Show sidebar")).toBeNull();
+  });
+
+  test.each(
+    foldKeys
+  )("%s from inside the sidebar hands the focus to Show sidebar, and back to Hide sidebar", async (_key, init) => {
+    const { part, button } = await foldable();
+    settle(() => part("sidebar")?.querySelector<HTMLElement>("a[href]")?.focus());
+    expect(part("sidebar")?.contains(document.activeElement)).toBe(true);
+    // The focused button shows its tooltip, which places itself a moment later.
+    const placed = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    pressOnFocus(init);
+    expect(document.activeElement).toBe(button("Show sidebar"));
+    await placed();
+    pressOnFocus(init);
+    expect(document.activeElement).toBe(button("Hide sidebar"));
+    await placed();
+  });
+
+  test.each(foldKeys)("%s from the page leaves the focus where it is", async (_key, init) => {
+    const { part } = await foldable();
+    const main = part("main-content");
+    settle(() => main?.focus());
+    pressOnFocus(init);
+    expect(part("sidebar")).toBeNull();
+    expect(document.activeElement).toBe(main);
+    pressOnFocus(init);
+    expect(part("sidebar")).not.toBeNull();
+    expect(document.activeElement).toBe(main);
   });
 
   test.each([
@@ -143,8 +199,10 @@ describe("AppShell", () => {
     viewport(width);
     const view = await mount();
     const column = view.container.querySelector('[data-testid="sidebar"]');
-    const menu = view.container.querySelector('[aria-label="Open navigation"]');
-    expect([column !== null, menu !== null]).toEqual(width < 768 ? [false, true] : [true, false]);
+    const menu = menuButton(view.container);
+    expect([column !== null, menu !== undefined]).toEqual(
+      width < 768 ? [false, true] : [true, false]
+    );
   });
 
   test("draws the inverted L: the sidebar on the window's ground, main in an inset card", async () => {
@@ -159,6 +217,12 @@ describe("AppShell", () => {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");
+  });
+
+  test("the skip link draws the app's focus ring, not the browser's", async () => {
+    const view = await mount();
+    const skip = view.container.querySelector('a[href="#main-content"]');
+    expect(skip?.className).toContain("focus-visible:outline-focus");
   });
 
   test("$mod+k opens the search palette at once: a key typed next is the palette's", async () => {
@@ -180,9 +244,7 @@ describe("AppShell", () => {
     const openMenu = async () => {
       viewport(375);
       await mount();
-      settle(() => {
-        document.body.querySelector<HTMLElement>('[aria-label="Open navigation"]')?.click();
-      });
+      settle(() => menuButton(document.body)?.click());
       // The menu takes the focus a moment after it opens.
       await until(() => menu()?.contains(document.activeElement) === true);
     };

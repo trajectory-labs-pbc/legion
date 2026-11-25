@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
+import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
@@ -82,7 +84,7 @@ function mount(
   return view.container;
 }
 
-const PEEK = "Peek at the inbox without leaving this page";
+const PEEK = "Peek inbox";
 
 /** Moves a mouse onto `element`, or off it with `leave`. */
 function hover(element: Element, leave = false) {
@@ -119,13 +121,10 @@ function rowsOf(container: HTMLElement) {
   }));
 }
 
-const readOf = <T,>(rows: readonly T[]): SectionRead<T> => ({
-  rows,
-  failed: false,
-  retry: undefined,
-});
-const OUT = { rows: undefined, failed: false, retry: undefined } as const;
-const failedRead = (retry: () => void) => ({ rows: undefined, failed: true, retry });
+const readOf = <T,>(rows: readonly T[]): SectionRead<T> => ({ rows, fault: undefined });
+const OUT = { rows: undefined, fault: undefined };
+const faultOf = (retry: () => void) => ({ retrying: false, retry });
+const failedRead = (retry: () => void) => ({ rows: undefined, fault: faultOf(retry) });
 const PROJECT = { key: "CORE", text: "Core", openAsks: 0, current: false };
 
 const destination = (name: string, count?: SidebarData["destinations"][number]["count"]) => {
@@ -178,7 +177,7 @@ describe("the sidebar", () => {
     expect(tooltip.keys).toEqual(["G", "I"]);
   });
 
-  test("Peek sits at the Inbox row's edge, shown on its hover or focus, named with its key", async () => {
+  test("Peek takes the Inbox count's box on the row's hover or focus, named with its key", async () => {
     await loadHotkeyTooltip();
     const peeked: string[] = [];
     const container = mount("/agents", { onPeek: () => peeked.push("peek"), peek: true });
@@ -188,13 +187,18 @@ describe("the sidebar", () => {
     for (const shown of [
       "opacity-0",
       "group-hover/peek:opacity-100",
-      "focus-within/peek:opacity-100",
+      "group-focus-within/peek:opacity-100",
+      "pointer-coarse:opacity-100",
     ]) {
       expect(peek.className).toContain(shown);
     }
-    expect(peek.closest("li")?.querySelector("a")?.className).toContain("group-hover/peek:pr-9");
+    expect(peek.className).toContain("right-0");
+    // A touch screen shows Peek beside the count; a mouse's hover puts it over the count.
+    const link = peek.closest("li")?.querySelector("a");
+    expect(link?.className).toContain("pointer-coarse:pr-9");
+    expect(link?.className).not.toContain("group-hover/peek:pr-9");
     const tooltip = await tooltipOf(peek);
-    expect(tooltip.text).toStartWith("Peek");
+    expect(tooltip.text).toStartWith(PEEK);
     expect(tooltip.keys).toEqual(["I"]);
     settle(() => peek.click());
     expect(peeked).toEqual(["peek"]);
@@ -234,10 +238,10 @@ describe("the sidebar", () => {
     expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
   });
 
-  test("a pinned agent's unpin control fits its 28 px row", () => {
+  test("a pinned agent's link is its 28 px row and carries current; Unpin fits beside it", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: readOf([{ sessionId: "s-1", selected: false, unread: 0 }]),
+      pinnedAgents: readOf([{ sessionId: "s-1", selected: true, unread: 0 }]),
       inLiveView: false,
       pinnedIssues: readOf([]),
       projects: readOf([]),
@@ -247,58 +251,73 @@ describe("the sidebar", () => {
     );
     expect(unpin?.getAttribute("data-size")).toBe("icon-xs");
     expect(unpin?.getAttribute("aria-pressed")).toBe("true");
-    expect(unpin?.closest("li")?.className).toContain("h-7");
+    // The app's tooltip names Unpin, not the browser's.
+    expect(unpin?.hasAttribute("title")).toBe(false);
+    const link = unpin?.closest("li")?.querySelector("a");
+    expect(link?.className).toContain("h-7");
+    expect(link?.getAttribute("aria-current")).toBe("page");
+    expect(unpin?.closest("li")?.hasAttribute("aria-current")).toBe(false);
   });
 
-  test("pinned agents fold under their heading, and with none it says how to pin one", () => {
+  test("pinned agents fold under their heading", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: readOf([]),
+      pinnedAgents: readOf([{ sessionId: "s-1", selected: false, unread: 0 }]),
       inLiveView: false,
       pinnedIssues: readOf([]),
       projects: readOf([]),
     });
     const fold = foldOf(container, "Pinned agents");
-    const hint = "Pin an agent on the Agents page, or in its live view, to keep it here.";
-    const list = () => document.getElementById(fold.getAttribute("aria-controls") ?? "");
+    // Folded, the heading controls nothing, so the list's id is read while it shows.
+    const id = fold.getAttribute("aria-controls") ?? "";
+    const list = () => document.getElementById(id);
     expect(fold.getAttribute("aria-expanded")).toBe("true");
-    expect(list()?.textContent).toBe(hint);
+    expect(list()?.querySelector("a")).not.toBeNull();
     settle(() => fold.click());
     expect(fold.getAttribute("aria-expanded")).toBe("false");
-    expect(container.textContent).not.toContain(hint);
+    expect(list()).toBeNull();
     settle(() => fold.click());
-    expect(list()?.textContent).toBe(hint);
+    expect(list()?.querySelector("a")).not.toBeNull();
   });
 
-  test("a read still out draws a quiet line after a moment; a failed one says so beside Retry", async () => {
+  test("a failed count is a danger icon in its box that retries; a failed section says so beside Retry", () => {
     const asked: string[] = [];
     const failed = (name: string) => () => asked.push(name);
     const container = mountView({
       destinations: [
-        destination("inbox", { count: undefined, needsYou: true, retry: failed("inbox") }),
-        destination("agents", { count: 0, retry: failed("agents") }),
-        destination("priorities", { count: undefined, retry: failed("priorities") }),
+        destination("inbox", { count: undefined, needsYou: true, fault: faultOf(failed("inbox")) }),
+        destination("agents", { count: undefined, fault: faultOf(failed("agents")) }),
+        destination("priorities", { count: undefined, fault: faultOf(failed("priorities")) }),
       ],
       pinnedAgents: failedRead(failed("pinned agents")),
       inLiveView: false,
       pinnedIssues: failedRead(failed("pinned issues")),
       projects: failedRead(failed("projects")),
     });
-    const lines = () => [...container.querySelectorAll("p")];
-    expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned agents…");
-    await sleep(250);
-    expect(lines().map((line) => line.textContent)).toEqual([
-      "Could not load the Inbox count.Retry",
-      "Could not load the Agents count.Retry",
-      "Could not load the Priorities count.Retry",
+    const counts = [
+      ...container.querySelectorAll<HTMLButtonElement>('button[aria-label^="Could not load"]'),
+    ];
+    expect(counts.map((count) => count.getAttribute("aria-label"))).toEqual([
+      "Could not load the Inbox count. Retry",
+      "Could not load the Agents count. Retry",
+      "Could not load the Priorities count. Retry",
+    ]);
+    for (const count of counts) {
+      expect(count.getAttribute("data-variant")).toBe("quiet-danger");
+      expect(count.querySelector("svg.lucide-circle-alert")).not.toBeNull();
+      // In the count's box at the row's edge, over the link, not inside it.
+      expect(count.className).toContain("absolute top-0 right-0");
+      expect(count.closest("a")).toBeNull();
+      expect(count.closest("li")?.className).toContain("relative");
+      settle(() => count.click());
+    }
+    const alerts = [...container.querySelectorAll('[role="alert"]')];
+    expect(alerts.map((alert) => alert.textContent)).toEqual([
       "Could not load pinned agents.Retry",
       "Could not load pinned issues.Retry",
       "Could not load projects.Retry",
     ]);
-    for (const line of lines()) {
-      expect(line.className).toContain("text-danger");
-      settle(() => line.querySelector("button")?.click());
-    }
+    for (const alert of alerts) settle(() => alert.querySelector("button")?.click());
     expect(asked).toEqual([
       "inbox",
       "agents",
@@ -309,7 +328,7 @@ describe("the sidebar", () => {
     ]);
   });
 
-  test("pinned issues and projects draw nothing while out or empty; pinned agents say how to pin", async () => {
+  test("every pinned section draws nothing while out or empty", async () => {
     const container = mountView({
       destinations: [],
       pinnedAgents: OUT,
@@ -318,8 +337,7 @@ describe("the sidebar", () => {
       projects: OUT,
     });
     await sleep(250);
-    expect(headingsOf(container)).toEqual(["Pinned agents"]);
-    expect(container.textContent).toContain("Loading pinned agents…");
+    expect(headingsOf(container)).toEqual([]);
     for (const view of mounted.splice(0)) view.unmount();
     const empty = mountView({
       destinations: [],
@@ -328,8 +346,7 @@ describe("the sidebar", () => {
       pinnedIssues: readOf([]),
       projects: readOf([]),
     });
-    expect(headingsOf(empty)).toEqual(["Pinned agents"]);
-    expect(empty.textContent).toContain("Pin an agent on the Agents page");
+    expect(headingsOf(empty)).toEqual([]);
   });
 
   test("every section's heading folds it, and this browser keeps the fold", () => {
@@ -341,11 +358,11 @@ describe("the sidebar", () => {
       projects: readOf([PROJECT]),
     };
     const first = mountView(data);
-    expect(headingsOf(first)).toEqual(["Pinned agents", "Pinned", "Projects"]);
+    expect(headingsOf(first)).toEqual(["Pinned", "Projects"]);
     for (const heading of ["Pinned", "Projects"]) settle(() => foldOf(first, heading).click());
-    expect(openOf(first)).toEqual([true, false, false]);
+    expect(openOf(first)).toEqual([false, false]);
     for (const view of mounted.splice(0)) view.unmount();
-    expect(openOf(mountView(data))).toEqual([true, false, false]);
+    expect(openOf(mountView(data))).toEqual([false, false]);
   });
 
   test("a browser that refuses storage still folds a section", () => {
@@ -365,14 +382,14 @@ describe("the sidebar", () => {
         projects: readOf([PROJECT]),
       });
       settle(() => foldOf(container, "Projects").click());
-      expect(openOf(container)).toEqual([true, false]);
+      expect(openOf(container)).toEqual([false]);
     } finally {
       if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
       else Object.defineProperty(window, "localStorage", kept);
     }
   });
 
-  test("while Retry asks again, the section shows its loading line, not the failure", async () => {
+  test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
     let projectReads = 0;
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
@@ -386,9 +403,8 @@ describe("the sidebar", () => {
       [...container.querySelectorAll("button")].find((button) => button.textContent === "Retry");
     await waitFor(() => retry() !== undefined);
     settle(() => retry()?.click());
-    await waitFor(() => container.textContent?.includes("Loading projects…") === true);
-    expect(container.textContent).not.toContain("Could not load projects.");
-    expect(retry()).toBeUndefined();
+    await waitFor(() => retry()?.getAttribute("aria-busy") === "true");
+    expect(container.textContent).toContain("Could not load projects.");
     expect(projectReads).toBe(2);
   });
 
@@ -415,11 +431,13 @@ describe("the sidebar", () => {
   });
 
   /** Mounts the sidebar on the inbox `inbox` answers and `unread` unread threads, once both are asked. */
-  async function mountInbox(inbox: () => Response | undefined, unread: number) {
+  async function mountInbox(inbox: () => Response | undefined, unread: number, peek = false) {
     const asked = new Set<string>();
     const answer = inboxReads(inbox, unread);
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      onPeek: () => {},
+      peek,
       answer: (url) => {
         if (url.endsWith("/api/v1/inbox") || url.includes("/api/v1/me/replies")) asked.add(url);
         return answer(url);
@@ -429,6 +447,7 @@ describe("the sidebar", () => {
     await sleep(150);
     return container.querySelector('nav a[href="/"]');
   }
+  const INBOX_RETRY = "Could not load the Inbox count. Retry";
   const numberOf = (row: Element | null) =>
     row?.querySelector('[data-slot="attention-mark"], [data-slot="count"]') ?? null;
 
@@ -439,6 +458,19 @@ describe("the sidebar", () => {
     expect(count?.textContent).toBe("3");
     expect(count?.hasAttribute("title")).toBe(false);
     expect(count?.className).toContain("text-muted-foreground");
+  });
+
+  test("under Peek the Inbox count fades, so the link's name keeps it, and a touch screen shows it", async () => {
+    const inboxRow = await mountInbox(() => json(INBOX_TWO_FOR_READER), 3, true);
+    expect(inboxRow).toBe(screen.getByRole("link", { name: "Inbox Needs you: 2" }));
+    const mark = inboxRow?.querySelector('[data-slot="attention-mark"]');
+    const underPeek = mark?.className.split(" ").filter((name) => name.includes("/peek:")) ?? [];
+    expect(underPeek).toHaveLength(2);
+    // Hover and focus only fade it, and never where a touch screen shows Peek beside it.
+    const compiled = await compiledDeclarations(underPeek);
+    expect(compiled.map(({ property, value, context }) => [property, value, context[0]])).toEqual(
+      underPeek.map(() => ["opacity", "0%", "@media not (pointer: coarse)"])
+    );
   });
 
   test("with nothing waiting and nothing unread, the Inbox shows no number", async () => {
@@ -454,7 +486,7 @@ describe("the sidebar", () => {
   test("a failed inbox read shows no unread count in its place", async () => {
     const inboxRow = await mountInbox(() => json({ error: { code: "INTERNAL" } }, 500), 3);
     expect(numberOf(inboxRow)).toBeNull();
-    expect(inboxRow?.closest("li")?.textContent).toContain("Could not load the Inbox count.");
+    expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
   });
 
   test("the Inbox count's Retry asks every read the count needs again", async () => {
@@ -472,10 +504,10 @@ describe("the sidebar", () => {
       },
     });
     const retry = () =>
-      [
-        ...(container.querySelector('nav a[href="/"]')?.closest("li")?.querySelectorAll("button") ??
-          []),
-      ].find((button) => button.textContent === "Retry");
+      container
+        .querySelector('nav a[href="/"]')
+        ?.closest("li")
+        ?.querySelector<HTMLButtonElement>(`[aria-label="${INBOX_RETRY}"]`) ?? undefined;
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => retry() !== undefined);
     asked.length = 0;

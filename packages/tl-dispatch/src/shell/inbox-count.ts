@@ -4,7 +4,7 @@ import { credentialPendingQuery } from "@upstream-dispatch/features/credentials/
 import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { useIsHuman } from "@upstream-dispatch/hooks/useIsHuman";
 import { needsYouLabel } from "@/features/needs-you";
-import { retryOf } from "./read-line";
+import { readFailureOf } from "@/features/read-failure";
 import type { RowCount } from "./row-count";
 
 /**
@@ -22,7 +22,7 @@ export function useInboxRowCount(): RowCount {
   const waiting = useNeedsYouCount();
   const reads = human ? [inbox, viewer, credentials, replies] : [inbox, viewer, credentials];
   if (reads.some((read) => read.data === undefined)) {
-    return { count: undefined, needsYou: true, retry: retryOf(...reads) };
+    return { count: undefined, needsYou: true, fault: readFailureOf(...reads) };
   }
   const unread = replies.data ?? 0;
   if (waiting > 0 || unread === 0) {

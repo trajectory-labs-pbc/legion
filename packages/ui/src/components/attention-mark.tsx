@@ -18,11 +18,7 @@ function AttentionMark({
       aria-label={label}
       data-slot="attention-mark"
       role="img"
-      className={cn(
-        badgeVariants({ variant: "warning" }),
-        "h-5 min-w-5 rounded-none px-1 py-0 tabular-nums",
-        className
-      )}
+      className={cn(badgeVariants({ size: "count", variant: "warning" }), className)}
       {...props}
     >
       {count}

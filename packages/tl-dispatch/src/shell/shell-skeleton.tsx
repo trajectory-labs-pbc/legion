@@ -1,6 +1,8 @@
 import { NavSurface } from "@legion/ui/components/nav";
 import { Skeleton } from "@legion/ui/components/skeleton";
 import type { ReactNode } from "react";
+import { PageSkeleton } from "@/loading/page-skeleton";
+import { AppNameText } from "./app-name";
 import { ContentPanel } from "./content-panel";
 
 const ROWS = [0, 1, 2, 3];
@@ -9,14 +11,16 @@ const ROWS = [0, 1, 2, 3];
 export function ShellSkeleton(): ReactNode {
   return (
     <div aria-busy="true" className="text-foreground md:flex">
-      <NavSurface className="flex h-11 items-center px-4 md:hidden" render={<header />}>
-        <span className="text-sm font-semibold">Dispatch</span>
+      <NavSurface className="flex h-11 items-center px-2 md:hidden" render={<header />}>
+        <AppNameText />
       </NavSurface>
       <NavSurface className="hidden p-2 md:block md:min-h-dvh md:w-60 md:shrink-0">
-        <span className="flex h-11 items-center px-2 text-sm font-semibold">Dispatch</span>
-        <div aria-label="Loading navigation" className="mt-2 space-y-2 px-2" role="status">
+        <div className="flex h-11 items-center">
+          <AppNameText />
+        </div>
+        <div aria-label="Loading navigation" className="mt-2 space-y-0.5" role="status">
           {ROWS.map((row) => (
-            <Skeleton className="h-4 w-full bg-sidebar-accent" key={row} />
+            <Skeleton className="h-7 w-full" key={row} />
           ))}
         </div>
       </NavSurface>
@@ -27,11 +31,7 @@ export function ShellSkeleton(): ReactNode {
         sidebarFolded={false}
       >
         <main className="min-w-0 flex-1 p-6">
-          <div aria-label="Loading Dispatch" className="space-y-3" role="status">
-            {ROWS.slice(0, 3).map((row) => (
-              <Skeleton className="h-4 w-full" key={row} />
-            ))}
-          </div>
+          <PageSkeleton label="Loading Dispatch" />
         </main>
       </ContentPanel>
     </div>

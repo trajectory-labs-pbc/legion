@@ -39,7 +39,7 @@ const LIVE_KEYS: readonly CommandDefinition[] = [
   { name: "go-settings", keys: ["g s"], label: "Go to Settings" },
   { name: "go-documents", keys: ["g d"], label: "Go to Documents" },
   { name: "go-project", keys: ["g p"], label: "Go to project…", hideFrom: ["palette"] },
-  { name: "inbox-drawer", keys: ["i"], label: "Open the inbox" },
+  { name: "inbox-drawer", keys: ["i"], label: "Peek inbox" },
   { name: "toggle-sidebar", keys: ["Shift+S", "["], label: "Toggle sidebar" },
   { name: "toggle-margin", keys: ["Shift+M"], label: "Toggle margin" },
 ];

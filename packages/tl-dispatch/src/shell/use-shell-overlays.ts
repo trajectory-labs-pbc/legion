@@ -1,5 +1,6 @@
 import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
@@ -13,8 +14,11 @@ interface ShellOverlays {
   navigationOpen: boolean;
   openNavigation: () => void;
   closeNavigation: () => void;
-  /** The control the navigation drawer focuses when it opens. */
+  /** The control that puts the navigation away: the drawer focuses it when it opens. */
   closeButtonRef: RefObject<HTMLButtonElement | null>;
+  sidebarRef: RefObject<HTMLElement | null>;
+  /** The folded sidebar's Show sidebar button. */
+  openerRef: RefObject<HTMLButtonElement | null>;
   /** The issue frame's way to the navigation, where its icon rail does not fit. */
   shellNavigation: ShellNavigation | undefined;
   searchOpen: boolean;
@@ -40,6 +44,8 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
   // A context value: a new function each render would redraw every reader.
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [setShortcutsOpen]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const openerRef = useRef<HTMLButtonElement>(null);
   const shellNavigation = useMemo<ShellNavigation | undefined>(
     () =>
       shell.issueFrame && shell.compact
@@ -69,7 +75,14 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
       : closing(() => setInboxDrawerOpen((open) => !open)),
     toggleSidebar: shell.inDrawer
       ? undefined
-      : closing(() => preferences.setSidebarHidden(!preferences.sidebarHidden)),
+      : closing(() => {
+          const folding = !preferences.sidebarHidden;
+          // When the toggle removes the focused element, the focus moves to the toggle button it draws.
+          const leaving = folding ? sidebarRef.current : openerRef.current;
+          const handOff = leaving?.contains(document.activeElement) === true;
+          flushSync(() => preferences.setSidebarHidden(folding));
+          if (handOff) (folding ? openerRef : closeButtonRef).current?.focus();
+        }),
     toggleMargin:
       detailsDrawer !== undefined
         ? {
@@ -85,6 +98,8 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
     openNavigation: () => setNavigationOpen(true),
     closeNavigation: () => setNavigationOpen(false),
     closeButtonRef,
+    sidebarRef,
+    openerRef,
     shellNavigation,
     searchOpen,
     closeSearch: () => setSearchOpen(false),

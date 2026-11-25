@@ -16,10 +16,10 @@ export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "child
   tooltipSide?: HotkeyTooltipProps["side"];
 }
 
-/** A destructive command draws as one; an icon-only button is ghost; any other is the default. */
+/** A destructive command draws as one; an icon-only button is ghost; any other is outline. */
 export function commandButtonVariant(view: CommandView, iconOnly: boolean): ButtonProps["variant"] {
   if (view.command.destructive === true) return "destructive";
-  return iconOnly ? "ghost" : "default";
+  return iconOnly ? "ghost" : "outline";
 }
 
 /** A button for one command: its label, icon, key and gate come from the catalog, and a click runs what its key runs. */
@@ -48,7 +48,9 @@ export function CommandButton({
         size={size}
         variant={variant ?? commandButtonVariant(view, onlyIcon)}
       >
-        {Icon === undefined ? null : <Icon aria-hidden />}
+        {Icon === undefined ? null : (
+          <Icon aria-hidden data-icon={onlyIcon ? undefined : "inline-start"} />
+        )}
         {onlyIcon ? null : <span>{shown}</span>}
       </Button>
     </HotkeyTooltip>

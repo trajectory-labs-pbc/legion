@@ -42,7 +42,11 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
           variant="ghost"
         >
           {heading}
-          {open ? <ChevronDownIcon aria-hidden /> : <ChevronRightIcon aria-hidden />}
+          {open ? (
+            <ChevronDownIcon aria-hidden data-icon="inline-end" />
+          ) : (
+            <ChevronRightIcon aria-hidden data-icon="inline-end" />
+          )}
         </Button>
       </Heading>
       {open ? <div id={bodyId}>{children}</div> : null}

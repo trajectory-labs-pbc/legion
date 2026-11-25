@@ -41,7 +41,7 @@ interface ShortcutsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sections: readonly ShortcutSection[];
-  /** Where the keys work, under the title: `The keys that work here, where you pressed ?`. */
+  /** Where the keys work, under the title: `The keys that work right now.` */
   description: string;
 }
 

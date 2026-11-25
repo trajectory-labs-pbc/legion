@@ -130,7 +130,7 @@ describe("DropdownMenu", () => {
             <DropdownMenuLabel>Go to</DropdownMenuLabel>
             <DropdownMenuLinkItem href="#history">
               History
-              <DropdownMenuShortcut>H</DropdownMenuShortcut>
+              <DropdownMenuShortcut steps={[["G"], ["H"]]} />
             </DropdownMenuLinkItem>
           </DropdownMenuGroup>
           <DropdownMenuSub>
@@ -145,6 +145,10 @@ describe("DropdownMenu", () => {
     const group = await screen.findByRole("group", { name: "Go to" });
     const link = screen.getByText("History").closest("a");
     expect(link?.getAttribute("href")).toBe("#history");
+    expect([...(link?.querySelectorAll("kbd") ?? [])].map((key) => key.textContent)).toEqual([
+      "G",
+      "H",
+    ]);
     expect(group.contains(link)).toBe(true);
     const subTrigger = screen.getByRole("menuitem", { name: "Move to" });
     subTrigger.focus();

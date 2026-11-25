@@ -1,14 +1,8 @@
 import { CommandButton, type CommandButtonProps } from "@/commands/command-button";
 
-/** Opens the inbox drawer over the page: "Peek" in its tooltip, upstream's fuller name for a screen reader. */
-export function PeekButton(props: Omit<CommandButtonProps, "commandId" | "label" | "size">) {
-  return (
-    <CommandButton
-      aria-label="Peek at the inbox without leaving this page"
-      commandId="global.inbox-drawer"
-      label="Peek"
-      size="icon-sm"
-      {...props}
-    />
-  );
+/** Opens the inbox drawer over the page; its name, icon and key are the catalog's. */
+export function PeekButton(
+  props: Omit<CommandButtonProps, "aria-label" | "commandId" | "label" | "size">
+) {
+  return <CommandButton commandId="global.inbox-drawer" size="icon-sm" {...props} />;
 }

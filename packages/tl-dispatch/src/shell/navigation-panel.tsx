@@ -1,9 +1,10 @@
+import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
+import { textVariants } from "@legion/ui/lib/typography";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import type { RefObject } from "react";
 import { CommandButton } from "@/commands/command-button";
-import { PageLink } from "@/navigation/page-link";
-import { inbox } from "@/pages/inbox";
+import { AppName } from "./app-name";
 import { Sidebar } from "./sidebar";
 import type { SignOut } from "./use-sign-out";
 
@@ -26,13 +27,7 @@ export function NavigationPanel({
   return (
     <>
       <div className="flex h-11 shrink-0 items-center gap-1">
-        <PageLink
-          className="mr-auto truncate rounded-md px-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-          onClick={onClose}
-          page={inbox.routes.home}
-        >
-          Dispatch
-        </PageLink>
+        <AppName className="mr-auto" onClick={onClose} />
         <CommandButton
           commandId="global.search"
           label="Search"
@@ -59,26 +54,37 @@ export function NavigationPanel({
           <CommandButton
             commandId="global.toggle-sidebar"
             label="Hide sidebar"
+            ref={closeButtonRef}
             size="icon-sm"
             tooltipSide="bottom"
           />
         )}
       </div>
       <Sidebar onNavigate={compact ? onClose : undefined} peek={!compact} user={user} />
-      <div className="mt-auto flex flex-col pt-4 text-xs">
+      <div className="mt-auto flex flex-col gap-1 pt-4">
         <div className="flex h-7 items-center gap-2 pl-2">
-          <p className="min-w-0 flex-1 truncate text-muted-foreground">Signed in as {user.login}</p>
-          <Button disabled={signOut.pending} onClick={signOut.start} size="xs" variant="ghost">
+          <p
+            className={textVariants({
+              className: "min-w-0 flex-1 truncate",
+              size: "caption",
+              tone: "muted",
+            })}
+          >
+            Signed in as {user.login}
+          </p>
+          <Button loading={signOut.pending} onClick={signOut.start} size="xs" variant="ghost">
             Sign out
           </Button>
         </div>
         {signOut.error === undefined ? null : (
-          <p className="px-2 text-danger" role="alert">
-            {signOut.error}{" "}
-            <Button onClick={signOut.start} size="xs" variant="link">
-              Retry
-            </Button>
-          </p>
+          <Alert size="compact" variant="danger">
+            <AlertTitle>{signOut.error}</AlertTitle>
+            <AlertAction>
+              <Button loading={signOut.pending} onClick={signOut.start} size="xs" variant="outline">
+                Retry
+              </Button>
+            </AlertAction>
+          </Alert>
         )}
       </div>
     </>

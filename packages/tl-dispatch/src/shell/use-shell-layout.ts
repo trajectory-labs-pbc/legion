@@ -7,9 +7,11 @@ import {
   useMediaQuery,
 } from "@upstream-dispatch/features/shell/useDialog";
 import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
-import { type RefObject, useRef } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
+import { PageFallback } from "@/loading/page-skeleton";
 import { useAddress } from "@/navigation/hooks";
 import { useCurrentPage } from "@/pages/index";
+import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
 import { useDetailsDrawer } from "./use-details-drawer";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 import { type ShellPreferences, useShellPreferences } from "./use-shell-preferences";
@@ -24,6 +26,8 @@ export interface ShellLayout {
   marginBeside: boolean;
   /** The outline issue page frames itself. */
   issueFrame: boolean;
+  /** What main shows while the page's code loads. */
+  pageFallback: () => ReactNode;
   /** The navigation is a drawer, not a sidebar. */
   inDrawer: boolean;
   fillsViewport: boolean;
@@ -61,6 +65,11 @@ export function useShellLayout(): ShellLayout {
     compact,
     marginBeside,
     issueFrame,
+    pageFallback: issueFrame
+      ? IssueFrameFallback
+      : layout.issue === undefined
+        ? PageFallback
+        : IssuePageFallback,
     inDrawer: compact || issueFrame,
     fillsViewport,
     hasMargin: layout.margin === true,

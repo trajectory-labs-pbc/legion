@@ -9,7 +9,7 @@ import { answerShellReads, json, waitFor } from "../../tests/network";
 import { render, settle, sleep } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
-const PEEK = "Peek at the inbox without leaving this page";
+const PEEK = "Peek inbox";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -60,11 +60,13 @@ describe("CompactHeader", () => {
       (a) => `${a.textContent} ${a.getAttribute("href")}`
     );
     expect(links).toEqual(["Dispatch /", "Inbox /"]);
+    // The name draws the app's focus ring, not the browser's.
+    expect(away.querySelector("a")?.className).toContain("focus-visible:outline-focus");
     expect(away.querySelector('[aria-current="page"]')).toBeNull();
     expect(away.querySelector(`[aria-label="${PEEK}"]`)).not.toBeNull();
   });
 
-  test("Peek is named for what it does, and its tooltip says Peek with its key", async () => {
+  test("Peek has the catalog's one name and its own icon, and its tooltip shows the name with its key", async () => {
     await loadHotkeyTooltip();
     const away = mount(
       <CompactHeader navigationOpen={false} onInbox={false} onOpenNavigation={() => {}} />
@@ -72,6 +74,7 @@ describe("CompactHeader", () => {
     const peek = away.querySelector<HTMLButtonElement>(`[aria-label="${PEEK}"]`);
     if (peek === null) throw new Error("no Peek");
     expect(peek.textContent).toBe("");
+    expect(peek.querySelector("svg")?.getAttribute("class")).toContain("lucide-eye");
     settle(() => {
       peek.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }));
       peek.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
@@ -79,8 +82,7 @@ describe("CompactHeader", () => {
     });
     await sleep(700);
     const popup = document.querySelector('[data-slot="tooltip-content"]');
-    expect(popup?.textContent).toStartWith("Peek");
-    expect(popup?.textContent).not.toContain("inbox");
+    expect(popup?.textContent).toStartWith(PEEK);
     expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
       "I",
     ]);
@@ -152,12 +154,15 @@ describe("CompactHeader", () => {
     expect(count()?.textContent).toBe("3");
   });
 
-  test("Menu says whether the navigation is open and opens it", () => {
+  test("Menu, named by its text alone, says whether the navigation is open and opens it", () => {
     let opened = 0;
     const container = mount(
       <CompactHeader navigationOpen onInbox onOpenNavigation={() => (opened += 1)} />
     );
-    const menu = container.querySelector<HTMLButtonElement>('[aria-label="Open navigation"]');
+    const menu = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Menu"
+    );
+    expect(menu?.hasAttribute("aria-label")).toBe(false);
     expect(menu?.getAttribute("aria-expanded")).toBe("true");
     settle(() => menu?.click());
     expect(opened).toBe(1);
