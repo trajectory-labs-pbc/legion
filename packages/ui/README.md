@@ -25,14 +25,16 @@ The root `registry.json` is a shadcn GitHub registry. Its items point at this pa
 so `shadcn add` copies them as they are here:
 
 ```sh
-bunx --bun shadcn@4.23.0 add trajectory-labs-pbc/legion/theme#<ref>
+bunx --bun shadcn@4.23.0 add --yes trajectory-labs-pbc/legion/theme#<ref>
 bunx --bun shadcn@4.23.0 add trajectory-labs-pbc/legion/font-geist#<ref> trajectory-labs-pbc/legion/font-geist-mono#<ref>
 bunx --bun shadcn@4.23.0 add trajectory-labs-pbc/legion/button#<ref> trajectory-labs-pbc/legion/dialog#<ref>
 ```
 
+shadcn asks before a theme item replaces CSS variables; `--yes` answers it.
+
 Each component item lists every file it imports and has no `registryDependencies`. shadcn does
-not pass an item's `#<ref>` on to its dependencies, so a dependency without its own tag or commit
-would install from the default branch instead of the ref you asked for.
+not pass an item's `#<ref>` on to its dependencies: a dependency with no tag or commit of its own
+installs from the default branch, not from the ref you asked for.
 
 ## Change it
 
