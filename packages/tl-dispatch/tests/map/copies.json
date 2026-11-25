@@ -43,6 +43,13 @@
   },
   {
     "file": "packages/dispatch/web/vite.config.ts",
+    "part": "default.plugins",
+    "copy": "vite.config.ts",
+    "commit": "d079920d94ff294516874c008228b088019af777",
+    "sha256": "037711b01a70e61d445860df371bf3d566735cc4fd863351cd09a2f4e35cafe0"
+  },
+  {
+    "file": "packages/dispatch/web/vite.config.ts",
     "part": "default.worker",
     "copy": "vite.config.ts",
     "commit": "d079920d94ff294516874c008228b088019af777",
