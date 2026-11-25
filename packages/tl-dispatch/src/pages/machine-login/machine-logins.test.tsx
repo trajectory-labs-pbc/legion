@@ -182,6 +182,8 @@ test("MLS-02 revoking a machine login refreshes Live grants", async () => {
   }
 });
 
+// Changed from upstream, MLS-03 to MLS-07: Revoke's name, its question and the refusal line also
+// name the login's credential id, so each row's Revoke has its own accessible name.
 test("MLS-03 the machine-login page lists the viewer's machine logins, and Revoke ends the one confirmed", async () => {
   jest.useFakeTimers();
   const user = userOnFakeClock();
@@ -208,7 +210,7 @@ test("MLS-03 the machine-login page lists the viewer's machine logins, and Revok
     await user.click(within(devboxRow as HTMLElement).getByRole("button", revoke));
     expect(confirm.mock.calls).toEqual([
       [
-        "Revoke the machine login for devbox.example.com? Every agent session it started loses its secrets at once, and the machine needs a new login.",
+        "Revoke the machine login for devbox.example.com, credential cred-devbox? Every agent session it started loses its secrets at once, and the machine needs a new login.",
       ],
     ]);
     // A mutation calls its function a few microtasks after the click; a timer runs after them all.
@@ -260,7 +262,7 @@ test("MLS-04 a service's login someone else approved is listed by its service an
     await user.click(within(daemonRow as HTMLElement).getByRole("button", revoke));
     expect(confirm.mock.calls).toEqual([
       [
-        "Revoke the machine login for legion-daemon on cluster.example.com? Every session it started, its worker pods included, ends at once.",
+        "Revoke the machine login for legion-daemon on cluster.example.com, credential cred-daemon? Every session it started, its worker pods included, ends at once.",
       ],
     ]);
     await waitFor(() =>
@@ -303,7 +305,7 @@ test("MLS-05 a service's login from a broker that sends no subject is shown as o
     await user.click(within(row as HTMLElement).getByRole("button", revoke));
     expect(confirm.mock.calls).toEqual([
       [
-        "Revoke the machine login for legion-daemon on cluster.example.com? Every session it started, its worker pods included, ends at once.",
+        "Revoke the machine login for legion-daemon on cluster.example.com, credential cred-daemon? Every session it started, its worker pods included, ends at once.",
       ],
     ]);
   } finally {
@@ -342,7 +344,7 @@ test("MLS-06 a service's token login names its ServiceAccount, and its Revoke sa
     await user.click(within(row as HTMLElement).getByRole("button", revoke));
     expect(confirm.mock.calls).toEqual([
       [
-        "Revoke the machine login for legion-daemon on legion-system/legion-daemon-legion? Every session it started, its worker pods included, ends at once, and a running pod stays without secrets until it is replaced; legion-daemon logs in again with its Kubernetes token, for the pods it launches next, unless system:serviceaccount:legion-system:legion-daemon-legion is removed from the broker's BROKER_SERVICE_LOGINS.",
+        "Revoke the machine login for legion-daemon on legion-system/legion-daemon-legion, credential cred-token? Every session it started, its worker pods included, ends at once, and a running pod stays without secrets until it is replaced; legion-daemon logs in again with its Kubernetes token, for the pods it launches next, unless system:serviceaccount:legion-system:legion-daemon-legion is removed from the broker's BROKER_SERVICE_LOGINS.",
       ],
     ]);
     expect(revokeMachineLogin).not.toHaveBeenCalled();
@@ -395,7 +397,7 @@ test("MLS-07 a person's pod login reads as the viewer's own pod, and its Revoke 
     await user.click(within(podRow).getByRole("button", revoke));
     expect(confirm.mock.calls).toEqual([
       [
-        "Revoke the machine login for people/ada (your pod)? Every session it started ends at once. The pod logs in again with its token, under a new login, while the broker's BROKER_SERVICE_LOGINS names its Kubernetes account, and that login is yours while BROKER_POD_OPERATORS maps the account to you.",
+        "Revoke the machine login for people/ada (your pod), credential cred-ada-pod? Every session it started ends at once. The pod logs in again with its token, under a new login, while the broker's BROKER_SERVICE_LOGINS names its Kubernetes account, and that login is yours while BROKER_POD_OPERATORS maps the account to you.",
       ],
     ]);
     expect(revokeMachineLogin).not.toHaveBeenCalled();
@@ -436,7 +438,15 @@ test("MLS-08 two logins of one service on one host are told apart by their crede
     const daemonRow = section.getByText("cred-daemon").closest("tr") as HTMLElement;
     expect(within(daemonRow).getByText("bob@example.com")).toBeDefined();
 
-    await user.click(within(copyRow).getByRole("button", revoke));
+    // Each Revoke, and the question it asks, names its own credential.
+    const name = "the machine login for legion-daemon on cluster.example.com, credential";
+    expect(section.getByRole("button", { name: `Revoke ${name} cred-daemon` })).toBeDefined();
+    await user.click(section.getByRole("button", { name: `Revoke ${name} cred-copy` }));
+    expect(confirm.mock.calls).toEqual([
+      [
+        `Revoke ${name} cred-copy? Every session it started, its worker pods included, ends at once.`,
+      ],
+    ]);
     await waitFor(() => expect(revokeMachineLogin).toHaveBeenCalledWith("cred-copy", keyedAttempt));
     await waitFor(() => expect(section.queryByText("cred-copy")).not.toBeInTheDocument());
     expect(section.getByText("cred-daemon")).toBeDefined();

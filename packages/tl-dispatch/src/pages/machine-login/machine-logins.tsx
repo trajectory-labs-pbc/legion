@@ -18,6 +18,10 @@ function approvedBy(login: LauncherCredentialResp): string {
   return `No one: ${login.subject}`;
 }
 
+// The credential id tells apart two logins of one service on one host.
+const loginName = (login: LauncherCredentialResp) =>
+  `the machine login for ${machineName(login)}, credential ${login.credential_id}`;
+
 /** What revoking a login ends, and what logs in again after it. */
 function revokeOutcome(login: LauncherCredentialResp): string {
   if (login.person != null) {
@@ -68,9 +72,7 @@ export function MachineLogins(): ReactNode {
   return (
     <RevocableTable
       columns={columns}
-      confirm={(login) =>
-        `Revoke the machine login for ${machineName(login)}? ${revokeOutcome(login)}`
-      }
+      confirm={(login) => `Revoke ${loginName(login)}? ${revokeOutcome(login)}`}
       description="Every machine and every pod logged in as you, and every service's login. A pod logs in as you when the broker's BROKER_POD_OPERATORS maps the pod's Kubernetes account to you. The list shows a login while it is unexpired or a session it started still runs: a session outlives its login's expiry. Only you may revoke the logins of your machines and your pods. Anyone signed in may revoke a service's login. Revoking a login ends it now: it starts no more sessions, and every session it started loses its secrets."
       empty="No live machine logins."
       heading="Machine logins"
@@ -83,7 +85,7 @@ export function MachineLogins(): ReactNode {
       query={logins}
       revoke={(login, bounds) => api.revokeMachineLogin(login.credential_id, bounds)}
       rowKey={(login) => login.credential_id}
-      rowName={(login) => `the machine login for ${machineName(login)}`}
+      rowName={loginName}
     />
   );
 }
