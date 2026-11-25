@@ -16,7 +16,7 @@ const FIRST_SEGMENTS = new Set([
   "src",
   "tests",
   "web",
-  ...(existsSync(SKILLS) ? readdirSync(SKILLS) : []),
+  ...readdirSync(SKILLS),
 ]);
 const FILE_NAME = /^[\w.-]+\.(tsx?|json|md|css|sh|ya?ml|txt)$/;
 const PATH = /^[\w.@-]+(\/[\w.@-]+)+\/?$/;
@@ -24,16 +24,10 @@ const UPSTREAM_ALIAS = "@upstream-dispatch/";
 
 /** Every Markdown file the agents read for this app: the skills, and this package's AGENTS.md. */
 export function agentDocuments(): string[] {
-  const found: string[] = [join(PACKAGE_ROOT, "AGENTS.md")];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path);
-      else if (entry.name.endsWith(".md")) found.push(path);
-    }
-  };
-  walk(SKILLS);
-  return found.sort();
+  const skills = readdirSync(SKILLS, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => join(entry.parentPath, entry.name));
+  return [join(PACKAGE_ROOT, "AGENTS.md"), ...skills].sort();
 }
 
 /** The inline code spans of a Markdown text, fenced blocks aside. */
