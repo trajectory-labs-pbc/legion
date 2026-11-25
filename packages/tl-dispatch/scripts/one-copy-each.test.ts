@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { bundleCopyProblems } from "./one-copy-each";
+
+type Versions = Record<string, string>;
+const manifest = (dir: string) =>
+  JSON.parse(readFileSync(join(import.meta.dir, dir, "package.json"), "utf8")) as {
+    uiPackages: string[];
+    dependencies: Versions;
+    devDependencies: Versions;
+    peerDependencies?: Versions;
+  };
 
 const own = "/repo/packages/tl-dispatch/node_modules/";
 const root = "/repo/node_modules/.bun/react@19.2.8/node_modules/react";
@@ -47,5 +58,15 @@ describe("one copy of each shared package in the bundle", () => {
     expect(bundleCopyProblems([`${own}react/index.js`], { root: ["react"], ui: [] }, own)).toEqual([
       `react (${own}react)`,
     ]);
+  });
+
+  // The build bundles this app's copy; the tests and the type check load packages/ui's.
+  test("this app and packages/ui pin each UI package at one version", () => {
+    const app = manifest("..");
+    const ui = manifest("../../ui");
+    const pins = (versions: Versions | undefined) =>
+      Object.fromEntries(app.uiPackages.map((name) => [name, versions?.[name]]));
+    expect(pins(ui.devDependencies)).toEqual(pins(app.dependencies));
+    expect(pins(ui.peerDependencies)).toEqual(pins(app.dependencies));
   });
 });
