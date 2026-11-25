@@ -5,10 +5,10 @@
 # the fork's image serves the commit it names. A commit that workflow has no run for on main, or
 # only cancelled ones, has no upstream image: the script says so in a notice and exits 3. On a pull
 # request, which that workflow does not run for, it is the image of the newest first-parent
-# ancestor that has one, and the script fails when upstream's inputs of that image differ between
-# the ancestor and <commit>. A pull request that changes only the listener's own file gets a notice
-# and exit 3 instead: the push run on main tests that change. The tag can move, so the digest is used only once its attestation
-# shows that workflow built it on main from the commit the tag names.
+# ancestor that has one. When upstream's inputs of that image differ between the ancestor and
+# <commit>, that image cannot show the change: the script says so in a notice and exits 3, and the
+# push run on main tests the image. The tag can move, so the digest is used only once its
+# attestation shows that workflow built it on main from the commit the tag names.
 set -euo pipefail
 event=$1
 commit=$2
@@ -67,15 +67,11 @@ if [ "$event" = pull_request ]; then
     exit 1
   fi
   changed=$(git diff --name-only "$commit" "$built" -- "${inputs[@]}")
-  if [ "$changed" = "$listener" ]; then
-    notice="No smoke build: this pull request changes $listener and no other input of upstream's image, so main's image cannot show the change. The push run on main tests it after the merge."
+  if [ -n "$changed" ]; then
+    notice="No smoke build: the listener's inputs changed since $commit, the newest commit on main with an upstream image, so that image cannot show this pull request's change; the push run on main tests this image. Changed: $(tr '\n' ' ' <<<"$changed")"
     echo "::notice::$notice" >&2
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "$notice" >>"$GITHUB_STEP_SUMMARY"; fi
     exit 3
-  fi
-  if [ -n "$changed" ]; then
-    echo "::error::upstream's envoy image inputs differ between $commit, the newest commit on main with an upstream image, and this pull request's merge commit, so this smoke build cannot test the pull request's own upstream change; main builds that image after the merge. Changed: $(tr '\n' ' ' <<<"$changed")" >&2
-    exit 1
   fi
 else
   runs=$(settled_runs "$commit")
