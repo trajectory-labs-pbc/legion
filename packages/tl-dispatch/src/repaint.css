@@ -81,7 +81,7 @@
   );
   --color-sky-200: color-mix(
     in oklab,
-    var(--border) var(--repaint-light),
+    color-mix(in oklab, var(--border) 88%, var(--muted-foreground)) var(--repaint-light),
     color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground))
   );
   --color-sky-300: color-mix(
