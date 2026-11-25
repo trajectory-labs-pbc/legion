@@ -1,0 +1,21 @@
+// Class names the overlays share.
+
+/** The open and close motion of a floating popup. */
+export const popupMotion =
+  "origin-(--transform-origin) motion-safe:transition-[opacity,scale] motion-safe:duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0";
+
+/** The open and close motion of a dialog. */
+export const modalPopupMotion =
+  "motion-safe:transition-[opacity,scale] motion-safe:duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0";
+
+/** A modal backdrop: the scrim, transparent when another modal's scrim is below. */
+export const scrimClass =
+  "fixed inset-0 z-50 bg-scrim/50 motion-safe:transition-opacity motion-safe:duration-200 data-[stacked]:bg-transparent data-starting-style:opacity-0 data-ending-style:opacity-0";
+
+/** A modal popup that dims while another modal covers it. */
+export const coveredClass =
+  "after:pointer-events-none after:absolute after:inset-0 after:bg-scrim after:opacity-0 motion-safe:after:transition-opacity data-[covered]:after:opacity-25";
+
+/** The close button in a dialog's or a sheet's corner, a 24px target. */
+export const closeButtonClass =
+  "absolute top-3 right-3 inline-flex size-6 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
