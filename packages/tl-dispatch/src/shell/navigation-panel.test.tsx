@@ -72,11 +72,23 @@ describe("NavigationPanel", () => {
     expect(started).toBe(1);
   });
 
-  test("wide, it offers search, new issue and hiding the sidebar", () => {
+  test("wide, its name row offers search, new issue and hiding the sidebar, as icons", () => {
     const wide = mount(panel({}));
-    expect(buttonNamed(wide, "Search")).toBeDefined();
-    expect(buttonNamed(wide, "New issue")).toBeDefined();
-    expect(buttonNamed(wide, "Hide sidebar")).toBeDefined();
+    const row = wide.querySelector("a")?.parentElement;
+    for (const name of ["Search", "New issue", "Hide sidebar"]) {
+      const button = buttonNamed(wide, name);
+      expect(button?.parentElement).toBe(row);
+      expect(button?.textContent).toBe("");
+    }
+    expect(row?.className).toContain("h-11");
+  });
+
+  test("names the account on one row, beside Sign out", () => {
+    const container = mount(panel({}));
+    const account = [...container.querySelectorAll("p")].find((p) =>
+      p.textContent?.startsWith("Signed in as")
+    );
+    expect(account?.parentElement).toBe(buttonNamed(container, "Sign out")?.parentElement);
   });
 
   test("in a drawer, Close ends it, and there is no sidebar to hide", () => {
@@ -87,7 +99,7 @@ describe("NavigationPanel", () => {
     expect(closed).toBe(1);
   });
 
-  test("opens the tooltips of its buttons to the right, off the page", async () => {
+  test("opens the tooltips of its name row's buttons below, clear of the window and each other", async () => {
     const container = mount(panel({}));
     for (const name of ["Hide sidebar", "Search", "New issue"]) {
       const trigger = buttonNamed(container, name);
@@ -103,7 +115,7 @@ describe("NavigationPanel", () => {
       settle(() => {});
       const popup = document.querySelector('[data-slot="tooltip-content"]');
       expect(popup?.textContent?.startsWith(name)).toBe(true);
-      expect(popup?.getAttribute("data-side")).toBe("right");
+      expect(popup?.getAttribute("data-side")).toBe("bottom");
       settle(() => {
         trigger.dispatchEvent(
           new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" })

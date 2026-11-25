@@ -44,17 +44,23 @@ export function SidebarRegion({
   return folded ? (
     <NavSurface
       aria-label="Collapsed sidebar"
-      className="fixed inset-y-0 left-0 z-10 flex w-14 justify-center border-r p-2"
+      className="fixed inset-y-0 left-0 z-10 flex w-14 justify-center p-2"
       data-testid="sidebar-rail"
     >
-      <CommandButton commandId="global.toggle-sidebar" label="Show sidebar" size="icon" />
+      <CommandButton
+        commandId="global.toggle-sidebar"
+        label="Show sidebar"
+        size="icon-sm"
+        tooltipSide="right"
+      />
     </NavSurface>
   ) : (
     <NavSurface
       aria-label="Navigation"
-      className="relative order-1 w-72 border-r [overflow-anchor:none]"
+      className="relative order-1 w-60 shrink-0 [overflow-anchor:none]"
+      data-testid="sidebar"
     >
-      <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto p-4">{children}</div>
+      <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto p-2">{children}</div>
     </NavSurface>
   );
 }

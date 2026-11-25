@@ -27,15 +27,24 @@ function mount(children: ReactNode) {
 }
 
 describe("CompactHeader", () => {
-  test("on the Inbox the count is text, with no Peek", () => {
+  test("is one 44 px row", () => {
+    const header = mount(
+      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />
+    ).querySelector("header");
+    expect(header?.className).toContain("h-11");
+    expect(header?.className).not.toContain("wrap");
+  });
+
+  test("on the Inbox its link is the open page, with no Peek", () => {
     const home = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />
     );
-    expect(home.querySelector("span")?.textContent).toBe("Inbox");
-    expect(home.textContent).not.toContain("Peek");
+    const current = home.querySelector('[aria-current="page"]');
+    expect(current?.textContent).toBe("Inbox");
+    expect(home.querySelector('[aria-label="Peek at the inbox"]')).toBeNull();
   });
 
-  test("elsewhere the count links home, beside a Peek at the inbox", () => {
+  test("elsewhere the Inbox links home, beside a Peek at the inbox", () => {
     const away = mount(
       <CompactHeader navigationOpen={false} onInbox={false} onOpenNavigation={() => {}} />
     );
@@ -43,7 +52,8 @@ describe("CompactHeader", () => {
       (a) => `${a.textContent} ${a.getAttribute("href")}`
     );
     expect(links).toEqual(["Dispatch /", "Inbox /"]);
-    expect(away.textContent).toContain("Peek");
+    expect(away.querySelector('[aria-current="page"]')).toBeNull();
+    expect(away.querySelector('[aria-label="Peek at the inbox"]')).not.toBeNull();
   });
 
   test("Menu says whether the navigation is open and opens it", () => {

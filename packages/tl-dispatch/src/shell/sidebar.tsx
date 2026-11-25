@@ -1,14 +1,13 @@
-import { Badge } from "@legion/ui/components/badge";
+import { Count } from "@legion/ui/components/count";
 import { Heading } from "@legion/ui/components/heading";
-import { KbdSequence } from "@legion/ui/components/kbd";
 import { NavRow } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import type { ReactNode } from "react";
-import { type NavName, navCommandName } from "@/commands/nav";
-import { useCommandShortcut } from "@/commands/use-command";
+import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
+import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
@@ -20,17 +19,10 @@ import {
   useSidebarData,
 } from "./sidebar-data";
 
-/** A count beside a row; none while there is nothing to count. */
-function Count({ count, label }: { count: number | undefined; label?: string }) {
-  if (count === undefined || count === 0) return null;
-  return <Badge title={label}>{count}</Badge>;
-}
-
-/** The destination's `G` chord, while it runs. */
-function KeyHint({ name }: { name: NavName }) {
-  const chips = useCommandShortcut(`global.${navCommandName(name)}` as const);
-  return chips === null ? null : <KbdSequence chips={chips} className="ml-auto" />;
-}
+/** The destinations a `G` chord opens; their rows show it in a tooltip, never at rest. */
+const KEYED: ReadonlySet<NavName> = new Set(
+  NAV_DESTINATIONS.flatMap((destination) => ("key" in destination ? [destination.name] : []))
+);
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
@@ -59,7 +51,7 @@ function PinnedAgentRow({
         sessionId={agent.sessionId}
         storedTitle={undefined}
       />
-      <Count count={agent.unread} label={unreadRepliesLabel(agent.unread)} />
+      <Count needsYou title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
       <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
       <PinButton label={`Unpin ${name} from the sidebar`} onClick={unpin} pinned quiet />
     </NavRow>
@@ -85,7 +77,7 @@ function ItemRows({
           >
             <span className="shrink-0 font-medium">{item.key}</span>
             <span className="truncate text-muted-foreground">{item.text}</span>
-            <Count count={item.openAsks} />
+            <Count className="ml-auto" value={item.openAsks} />
           </NavRow>
         </li>
       ))}
@@ -94,7 +86,7 @@ function ItemRows({
 }
 
 /** The sidebar's rows as `data` holds them. */
-function SidebarView({
+export function SidebarView({
   data,
   onNavigate,
 }: {
@@ -102,21 +94,36 @@ function SidebarView({
   onNavigate: (() => void) | undefined;
 }) {
   return (
-    <nav aria-label="Navigation" className="mt-6 flex flex-col gap-5">
+    <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
-        {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => (
-          <li key={name}>
+        {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => {
+          const row = (
             <NavRow
               aria-current={current ? "page" : undefined}
               render={<PageLink onClick={onNavigate} page={page} />}
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
-              <Count count={count?.count} label={count?.label} />
-              <KeyHint name={name} />
+              <Count
+                className="ml-auto"
+                needsYou={count?.needsYou}
+                title={count?.label}
+                value={count?.count ?? 0}
+              />
             </NavRow>
-          </li>
-        ))}
+          );
+          return (
+            <li key={name}>
+              {KEYED.has(name) ? (
+                <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
+                  {row}
+                </HotkeyTooltip>
+              ) : (
+                row
+              )}
+            </li>
+          );
+        })}
       </ul>
       {data.pinnedAgents.length === 0 ? null : (
         <section>
@@ -149,7 +156,7 @@ function SidebarView({
   );
 }
 
-/** The sidebar: the nav table's destinations with their counts and keys, then the pins. */
+/** The sidebar: the nav table's destinations with their counts, then the pins. */
 export function Sidebar({
   onNavigate,
   user,

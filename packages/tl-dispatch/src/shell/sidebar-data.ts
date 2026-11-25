@@ -25,6 +25,8 @@ import { NAV_PAGES } from "./nav-pages";
 interface SidebarCount {
   count: number | undefined;
   label?: string;
+  /** What it counts waits on the reader, so it takes the "needs you" mark. */
+  needsYou?: boolean;
 }
 
 interface SidebarDestination {
@@ -93,8 +95,8 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
   const unread = totalUnreadReplies(agentState);
   const counts: Partial<Record<NavName, SidebarCount>> = {
-    inbox: { count: inboxCount },
-    agents: { count: unread, label: unreadRepliesLabel(unread) },
+    inbox: { count: inboxCount, needsYou: true },
+    agents: { count: unread, label: unreadRepliesLabel(unread), needsYou: true },
     priorities: { count: priorityFaults },
   };
   return {

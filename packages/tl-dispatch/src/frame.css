@@ -1,0 +1,15 @@
+/* Outside any layer, as upstream's stylesheet is; each rule matches the one it answers, later. */
+
+/* Below 1280 px upstream makes buttons and links inline 44 px boxes; the navigation keeps its own. */
+@media (max-width: 1279px) {
+  [data-slot="nav-surface"] :is(button, a:not(.prose a)) {
+    display: revert-layer;
+  }
+}
+
+@media (max-width: 1279px) and (pointer: fine) {
+  [data-slot="nav-surface"] :is(button, a:not(.prose a)) {
+    min-width: revert-layer;
+    min-height: revert-layer;
+  }
+}
