@@ -112,4 +112,14 @@ check "fails" "$(is "$status" 1)"
 check "the sibling's file is not listed" "$(contains "$out" 'packages/appendix/index.ts differs')"
 check "the line is not used" "$(contains "$out" 'packages/app/ is on ')"
 
+echo "case: a directory line that names a directory of upstream's"
+root=$(fixture upstream-directory)
+change "$root" fork packages/daemon/ghbranch/branch.go
+list "$root" 'packages/daemon/'
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "names the line" \
+  "$(contains "$out" '^::error file=.github/fork-allowlist.txt::packages/daemon/ is on .*upstream has files in it')"
+check "names nothing else" "$(is "$(grep -c '^::error' <<< "$out")" 1)"
+
 summary "check-fork-allowlist.sh"

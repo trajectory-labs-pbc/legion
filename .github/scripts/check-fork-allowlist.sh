@@ -21,6 +21,14 @@ mapfile -t changed <<< "$changed_text"
 
 declare -A used=()
 fail=0
+upstream=$(git merge-base "$base" HEAD)
+for entry in "${entries[@]}"; do
+  # A directory line admits every file under it, so it must not name a directory of upstream's.
+  if [[ $entry == */ ]] && [ -n "$(git ls-tree -r --name-only "$upstream" -- "$entry")" ]; then
+    echo "::error file=$list::$entry is on $list as a directory the fork owns, and upstream has files in it"
+    fail=1
+  fi
+done
 for file in "${changed[@]}"; do
   [ -n "$file" ] || continue
   hit=""
