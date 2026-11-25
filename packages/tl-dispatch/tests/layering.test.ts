@@ -50,6 +50,7 @@ describe("layers", () => {
       'import { useNavigate } from "react-router-dom";',
       "never imports navigation",
     ],
+    ["src/navigation/x.ts", 'import { inbox } from "@/pages/inbox";', "navigation names no page"],
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
     ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
     ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],
