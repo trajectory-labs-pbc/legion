@@ -81,7 +81,7 @@ describe("upstream's key registrations", () => {
 
   test("a key equal to one an upstream page binds in the same scope clashes; in another scope it does not", () => {
     const theirs: KeyRegistration[] = [
-      { file: "page.tsx", line: 1, scope: "issue", id: "x", keys: "x" },
+      { file: "page.tsx", line: 1, scope: "issue", id: "x", label: "X", keys: "x" },
     ];
     const ours = (scope: CommandContext["scope"]): CommandContext[] => [
       {
@@ -108,15 +108,40 @@ describe("upstream's shell keys", () => {
   });
 });
 
+/**
+ * Upstream's files whose bindings are built in a table outside the registering call, so the
+ * scanner reads no scope for them, with the scope that call names.
+ */
+const TABLE_SCOPES: Readonly<Record<string, string>> = {
+  "features/issue-page/useIssueKeymap.ts": "issue",
+  "features/issue-page/useTreeKeymap.ts": "issue",
+  "features/issue/IssuePage.tsx": "issue",
+};
+
+const upstreamFile = (file: string) => file.replace(/^\.\.\/dispatch\/web\/src\//, "");
+const scopeOf = (binding: KeyRegistration) =>
+  binding.scope ?? TABLE_SCOPES[upstreamFile(binding.file)];
+
 describe("our labels for upstream's bindings", () => {
-  test("each names a binding upstream registers, by its scope and id", () => {
-    const named = (key: string) => {
+  test("every upstream binding has a scope: written, declared with a literal, or listed here", () => {
+    const unscoped = upstream.filter((binding) => scopeOf(binding) === undefined);
+    expect(unscoped.map((binding) => `${upstreamFile(binding.file)}:${binding.line}`)).toEqual([]);
+  });
+
+  test("each names a binding upstream registers in its scope, whose label is still the one we shorten", () => {
+    const drift = Object.entries(UPSTREAM_LABELS).flatMap(([key, entry]) => {
       const [scope, id] = key.split(":");
-      // A scope passed as a variable reads as undefined; the inbox's defaults to "inbox".
-      return upstream.some(
-        (binding) => binding.id === id && (binding.scope === scope || binding.scope === undefined)
-      );
-    };
-    expect(Object.keys(UPSTREAM_LABELS).filter((key) => !named(key))).toEqual([]);
+      const labels = [
+        ...new Set(
+          upstream
+            .filter((binding) => binding.id === id && scopeOf(binding) === scope)
+            .map((binding) => binding.label)
+        ),
+      ];
+      return labels.length === 1 && labels[0] === entry?.upstream
+        ? []
+        : [`${key}: ours shortens "${entry?.upstream}", upstream has ${JSON.stringify(labels)}`];
+    });
+    expect(drift).toEqual([]);
   });
 });

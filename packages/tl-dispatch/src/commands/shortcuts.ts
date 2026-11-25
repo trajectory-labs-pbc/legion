@@ -22,7 +22,9 @@ export interface ShortcutSection {
 }
 
 /** Our labels for upstream's bindings, by `scope:id`, where theirs do not fit the sheet. */
-export type UpstreamLabels = Readonly<Partial<Record<`${KeymapScope}:${string}`, string>>>;
+export type UpstreamLabels = Readonly<
+  Partial<Record<`${KeymapScope}:${string}`, { upstream: string; label: string }>>
+>;
 
 /** Keys every reader knows; the sheet leaves them out, and they still run. */
 export const UNIVERSAL_KEYS = ["Escape"] as const;
@@ -72,7 +74,7 @@ export function liveShortcuts(
       const own = catalog.find(binding.id.replace(UNDER_OVERLAY, ""));
       if (shown.length === 0 || own?.hideFrom?.includes("sheet") === true) continue;
       const group = own === undefined ? scopeGroup(scope) : (own.group ?? DEFAULT_GROUP);
-      const label = upstreamLabels[`${scope}:${binding.id}`] ?? binding.label;
+      const label = upstreamLabels[`${scope}:${binding.id}`]?.label ?? binding.label;
       const rowId = own?.id ?? `${scope}:${label}`;
       const section = sections.get(group.id) ?? { group, rows: new Map<string, ShortcutRow>() };
       sections.set(group.id, section);

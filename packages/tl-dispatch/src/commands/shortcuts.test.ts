@@ -57,7 +57,10 @@ function setup() {
   );
   const sheet = () =>
     liveShortcuts(keymap.describe(), stack.liveScopes(), catalog, {
-      "inbox:snooze": "Snooze",
+      "inbox:snooze": {
+        upstream: "Snooze the focused ask, or every selected ask",
+        label: "Snooze",
+      },
     }).map(({ group, rows }) => [
       group.label,
       rows.map((row) => `${row.label}: ${row.keys.join(" | ")}`),

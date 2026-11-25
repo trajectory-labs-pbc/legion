@@ -12,6 +12,8 @@ export interface KeyRegistration {
   scope: string | undefined;
   /** The binding's `id`, when it is a literal. */
   id: string | undefined;
+  /** The label as written: a template's expressions read `{name}`, other expressions their source. */
+  label: string | undefined;
   keys: string;
 }
 
@@ -36,7 +38,45 @@ function hasMember(node: ts.ObjectLiteralExpression, name: string): boolean {
   return node.properties.some((member) => member.name?.getText() === name);
 }
 
-/** The scope argument of the registering call the object sits in, when it is a literal. */
+/** The label's words as written; a template's expressions read `{expression}`. */
+function labelText(node: ts.Expression | undefined): string | undefined {
+  if (node === undefined) return undefined;
+  const literal = literalText(node);
+  if (literal !== undefined) return literal;
+  if (ts.isTemplateExpression(node)) {
+    return (
+      node.head.text +
+      node.templateSpans
+        .map((span) => `{${span.expression.getText()}}${span.literal.text}`)
+        .join("")
+    );
+  }
+  return node.getText();
+}
+
+/** The string literal a name is declared with in its file, such as a parameter's default. */
+function declaredLiteral(name: ts.Identifier): string | undefined {
+  let found: string | undefined;
+  const visit = (node: ts.Node) => {
+    if (found !== undefined) return;
+    if (
+      (ts.isBindingElement(node) || ts.isParameter(node) || ts.isVariableDeclaration(node)) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name.text &&
+      node.initializer !== undefined
+    ) {
+      found = literalText(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(name.getSourceFile());
+  return found;
+}
+
+/**
+ * The scope argument of the registering call the object sits in: a literal, `DIALOG_SCOPE`, or a
+ * name declared with a literal, such as the inbox's `keymapScope = "inbox"`.
+ */
 function scopeOf(node: ts.Node): string | undefined {
   for (let at: ts.Node | undefined = node.parent; at !== undefined; at = at.parent) {
     if (!ts.isCallExpression(at)) continue;
@@ -50,6 +90,7 @@ function scopeOf(node: ts.Node): string | undefined {
     const scope = at.arguments[0];
     if (scope === undefined) return undefined;
     if (ts.isIdentifier(scope) && scope.text === "DIALOG_SCOPE") return "dialog";
+    if (ts.isIdentifier(scope)) return declaredLiteral(scope);
     return literalText(scope);
   }
   return undefined;
@@ -78,8 +119,11 @@ export function keyRegistrations(
       const line = source.getLineAndCharacterOfPosition(node.getStart()).line + 1;
       const idNode = property(node, "id");
       const id = idNode === undefined ? undefined : literalText(idNode);
+      const label = labelText(property(node, "label"));
       for (const text of texts) {
-        if (text !== undefined) found.push({ file, line, scope: scopeOf(node), id, keys: text });
+        if (text !== undefined) {
+          found.push({ file, line, scope: scopeOf(node), id, label, keys: text });
+        }
       }
     }
     ts.forEachChild(node, visit);
