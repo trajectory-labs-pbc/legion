@@ -24,3 +24,7 @@
 # A fix not yet upstream.
 packages/daemon/internal/ghbranch/ghbranch.go
 packages/daemon/internal/ghbranch/ghbranch_test.go
+
+# The docs build names the repository the fork was forked from.
+.github/scripts/ci_filter_coverage.py
+.github/workflows/docs-site.yaml
