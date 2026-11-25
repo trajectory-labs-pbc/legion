@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider, queryOptions, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { MemoryNavigationProvider } from "../../tests/navigation";
@@ -7,16 +7,15 @@ import { render, settle } from "../../tests/react";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
 import { pageRoute, prefetchOf } from "./page-route";
 
-/** A read that waits until the test lets it answer, and records each start and abort. */
+/** A read that waits until the test lets it answer, and records each start. */
 function slowRead() {
   const log: string[] = [];
   let answer = () => {};
   const options = queryOptions({
     queryKey: ["machine", "m"],
-    queryFn: ({ signal }) =>
+    queryFn: () =>
       new Promise<string>((resolve) => {
         log.push("start");
-        signal.addEventListener("abort", () => log.push("abort"));
         answer = () => resolve("data");
       }),
   });
@@ -118,7 +117,7 @@ describe("PageLink", () => {
     expect(client.getQueryState(read.options.queryKey)?.status).toBe("success");
   });
 
-  test("the pointer leaving after a click keeps the read the click uses", async () => {
+  test("the pointer leaving keeps a read that started, so its answer is cached", async () => {
     const { read, page, client } = setup();
     const link = mount(
       client,
@@ -127,30 +126,16 @@ describe("PageLink", () => {
       </PageLink>
     );
     fire(link, "pointerover");
-    await wait(PREFETCH_INTENT_MS + 50);
-    fire(link, "click");
-    fire(link, "pointerout");
-    await wait(0);
-    expect(read.log).toEqual(["start"]);
-  });
-
-  test("a quick click with no focus, as Safari's, keeps the read the wait then starts", async () => {
-    const { read, page, client } = setup();
-    const link = mount(
-      client,
-      <PageLink page={page} params={{ machine: "m" }}>
-        Box
-      </PageLink>
-    );
-    fire(link, "pointerover");
-    fire(link, "click");
     await wait(PREFETCH_INTENT_MS + 50);
     fire(link, "pointerout");
     await wait(0);
     expect(read.log).toEqual(["start"]);
+    read.answer();
+    await wait(0);
+    expect(client.getQueryState(read.options.queryKey)?.status).toBe("success");
   });
 
-  test("control: a click on an earlier visit does not keep a later visit's read", async () => {
+  test("a click during the wait keeps the read the wait then starts", async () => {
     const { read, page, client } = setup();
     const link = mount(
       client,
@@ -160,28 +145,8 @@ describe("PageLink", () => {
     );
     fire(link, "pointerover");
     fire(link, "click");
-    fire(link, "pointerout");
-    fire(link, "pointerover");
     await wait(PREFETCH_INTENT_MS + 50);
-    fire(link, "pointerout");
-    await wait(0);
-    expect(read.log).toEqual(["start", "abort"]);
-  });
-
-  test("control: the pointer leaving with no click stops a read nothing else watches", async () => {
-    const { read, page, client } = setup();
-    const link = mount(
-      client,
-      <PageLink page={page} params={{ machine: "m" }}>
-        Box
-      </PageLink>
-    );
-    fire(link, "pointerover");
-    await wait(PREFETCH_INTENT_MS + 50);
-    fire(link, "pointerout");
-    await wait(0);
-    expect(read.log).toEqual(["start", "abort"]);
-    expect(client.getQueryState(read.options.queryKey)?.fetchStatus).toBe("idle");
+    expect(read.log).toEqual(["start"]);
   });
 
   test("the pointer must rest the whole wait: half of it starts nothing", async () => {
@@ -211,28 +176,6 @@ describe("PageLink", () => {
     for (const view of mounted.splice(0)) view.unmount();
     await wait(PREFETCH_INTENT_MS + 50);
     expect(read.log).toEqual([]);
-  });
-
-  test("leaving keeps a read the page already watches", async () => {
-    const { read, page, client } = setup();
-    function Watcher() {
-      useQuery(read.options);
-      return null;
-    }
-    const link = mount(
-      client,
-      <>
-        <Watcher />
-        <PageLink page={page} params={{ machine: "m" }}>
-          Box
-        </PageLink>
-      </>
-    );
-    fire(link, "pointerover");
-    await wait(PREFETCH_INTENT_MS + 50);
-    fire(link, "pointerout");
-    await wait(0);
-    expect(read.log).toEqual(["start"]);
   });
 
   test("takes no params for a page whose path binds none, and requires them where it does", () => {

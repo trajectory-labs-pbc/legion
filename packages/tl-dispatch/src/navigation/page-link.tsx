@@ -1,8 +1,7 @@
-import { type QueryKey, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type ComponentProps,
   type FocusEvent,
-  type MouseEvent,
   type PointerEvent,
   useEffect,
   useLayoutEffect,
@@ -21,20 +20,16 @@ interface PrefetchIntent {
   onPointerLeave: () => void;
   onFocus: () => void;
   onBlur: () => void;
-  onClick: () => void;
 }
 
 /**
  * Starts a page's reads while the reader shows intent: the pointer rests, or focus arrives.
- * The pointer leaving with no click stops the wait, and stops a read nothing else watches.
- * Losing focus and a click cancel nothing: after a click the shell moves focus to the page,
- * whose lazy code may not read yet.
+ * The pointer leaving and losing focus only stop the wait. A read that started runs to its
+ * answer: upstream's reads ignore the abort signal, so a cancel would only discard it.
  */
 function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): PrefetchIntent {
   const client = useQueryClient();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const started = useRef<readonly QueryKey[]>([]);
-  const clicked = useRef(false);
   const latest = useRef(reads);
   useLayoutEffect(() => {
     latest.current = reads;
@@ -45,38 +40,17 @@ function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): Pref
   };
   const start = () => {
     stopWaiting();
-    started.current = (latest.current?.() ?? []).map((prefetch) => {
-      void prefetch.start(client);
-      return prefetch.queryKey;
-    });
+    for (const prefetch of latest.current?.() ?? []) void prefetch.start(client);
   };
-  const leave = () => {
-    stopWaiting();
-    if (!clicked.current) {
-      for (const queryKey of started.current) {
-        const query = client.getQueryCache().find({ queryKey, exact: true });
-        if (query?.state.fetchStatus === "fetching" && query.getObserversCount() === 0) {
-          void client.cancelQueries({ queryKey, exact: true });
-        }
-      }
-    }
-    started.current = [];
-  };
-  // Unmounting only stops the wait: a click unmounts the link before its page's reads attach.
   useEffect(() => () => clearTimeout(timer.current), []);
   return {
     onPointerEnter: () => {
-      // A visit starts unclicked; a click before the wait ends still keeps the read it starts.
-      clicked.current = false;
       if (latest.current === undefined || timer.current !== undefined) return;
       timer.current = setTimeout(start, PREFETCH_INTENT_MS);
     },
-    onPointerLeave: leave,
+    onPointerLeave: stopWaiting,
     onFocus: start,
     onBlur: stopWaiting,
-    onClick: () => {
-      clicked.current = true;
-    },
   };
 }
 
@@ -110,17 +84,12 @@ export function PageLink<Path extends string, Search extends string>({
   onPointerLeave,
   onFocus,
   onBlur,
-  onClick,
   ...rest
 }: PageLinkProps<Path, Search>) {
   const intent = usePrefetchIntent(readsOf(page, params));
   return (
     <Link
       {...rest}
-      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-        onClick?.(event);
-        intent.onClick();
-      }}
       onBlur={(event: FocusEvent<HTMLAnchorElement>) => {
         onBlur?.(event);
         intent.onBlur();
