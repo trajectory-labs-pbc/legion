@@ -3,10 +3,9 @@ import { Count } from "@legion/ui/components/count";
 import { Heading } from "@legion/ui/components/heading";
 import { NavRow } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, PinIcon } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
@@ -89,7 +88,16 @@ function PinnedAgentRow({
       />
       <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
       <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
-      <PinButton label={`Unpin ${name} from the sidebar`} onClick={unpin} pinned quiet />
+      <Button
+        aria-label={`Unpin ${name} from the sidebar`}
+        aria-pressed
+        onClick={unpin}
+        size="icon-xs"
+        title={`Unpin ${name} from the sidebar`}
+        variant="ghost"
+      >
+        <PinIcon aria-hidden className="fill-current" />
+      </Button>
     </NavRow>
   );
 }

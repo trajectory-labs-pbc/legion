@@ -222,6 +222,22 @@ describe("the sidebar", () => {
     expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
   });
 
+  test("a pinned agent's unpin control fits its 28 px row", () => {
+    const container = mountView({
+      destinations: [],
+      pinnedAgents: { status: "success", rows: [{ sessionId: "s-1", selected: false, unread: 0 }] },
+      inLiveView: false,
+      pinnedIssues: { status: "success", rows: [] },
+      projects: { status: "success", rows: [] },
+    });
+    const unpin = [...container.querySelectorAll("button")].find((button) =>
+      /^Unpin .+ from the sidebar$/.test(button.getAttribute("aria-label") ?? "")
+    );
+    expect(unpin?.getAttribute("data-size")).toBe("icon-xs");
+    expect(unpin?.getAttribute("aria-pressed")).toBe("true");
+    expect(unpin?.closest("li")?.className).toContain("h-7");
+  });
+
   test("pinned agents fold under their heading, and with none it says how to pin one", () => {
     const container = mountView({
       destinations: [],
