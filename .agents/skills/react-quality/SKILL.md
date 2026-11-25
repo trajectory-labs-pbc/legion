@@ -105,7 +105,7 @@ A comment says why the code is as it is, in one short line where possible. It ne
 
 ## 7. Tests that name parity IDs
 
-A rebuilt page keeps everything upstream's page did. Each action, key, URL form, view state and live update of the page has a parity ID: a short prefix for the view it covers, and a number (`MLP-01`). Its test name starts with the ID, so a reviewer can match the parity list to the tests with one search.
+A rebuilt page keeps everything upstream's page did. Each action, key, URL form, view state and live update of the page has a parity ID: a short prefix for the view it covers, and a number (`MLP-01`). Its test name starts with the ID, so one search for the prefix lists what the page keeps. The IDs live only in the test names: no separate list exists.
 
 ```ts
 // Bad
@@ -116,7 +116,7 @@ test("MLP-01 code -> lookup -> Approve posts the looked-up code", async () => { 
 test("MLP-02 a refused lookup shows the server's reason under the field", async () => { ... });
 ```
 
-A port of an upstream test keeps upstream's assertion and adds the ID. A new parity item gets the next free number for its prefix.
+A port of an upstream test keeps upstream's assertion and adds the ID. A new parity item gets the number after the highest one in the page's tests.
 
 ## Checks
 
