@@ -44,3 +44,27 @@ jobs:
 
       - name: Check the fork's diff against the allowlist
         run: .github/scripts/check-fork-allowlist.sh FETCH_HEAD
+
+  ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      # The root install first: the package links React and the test tools from it.
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun install --frozen-lockfile
+      - name: Type-check
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Test (components, theme, registry.json drift)
+        run: bun run test
+      - name: Validate registry.json
+        run: bun run registry:validate

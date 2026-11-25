@@ -1,0 +1,1057 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "legion",
+  "homepage": "https://github.com/<owner>/<repo>",
+  "items": [
+    {
+      "name": "theme",
+      "type": "registry:theme",
+      "title": "Theme",
+      "description": "Light and dark colours, a focus colour, square corners, and a dark variant that follows the OS setting unless the root has .light, or a .dark class.",
+      "cssVars": {
+        "theme": {
+          "radius-sm": "calc(var(--radius) * 0.6)",
+          "radius-md": "calc(var(--radius) * 0.8)",
+          "radius-lg": "var(--radius)",
+          "radius-xl": "calc(var(--radius) * 1.4)",
+          "color-background": "var(--background)",
+          "color-foreground": "var(--foreground)",
+          "color-card": "var(--card)",
+          "color-card-foreground": "var(--card-foreground)",
+          "color-popover": "var(--popover)",
+          "color-popover-foreground": "var(--popover-foreground)",
+          "color-primary": "var(--primary)",
+          "color-primary-foreground": "var(--primary-foreground)",
+          "color-secondary": "var(--secondary)",
+          "color-secondary-foreground": "var(--secondary-foreground)",
+          "color-muted": "var(--muted)",
+          "color-muted-foreground": "var(--muted-foreground)",
+          "color-accent": "var(--accent)",
+          "color-accent-foreground": "var(--accent-foreground)",
+          "color-destructive": "var(--destructive)",
+          "color-destructive-foreground": "var(--destructive-foreground)",
+          "color-border": "var(--border)",
+          "color-input": "var(--input)",
+          "color-field": "var(--field)",
+          "color-ring": "var(--ring)",
+          "color-focus": "var(--focus)",
+          "color-chart-1": "var(--chart-1)",
+          "color-chart-2": "var(--chart-2)",
+          "color-chart-3": "var(--chart-3)",
+          "color-chart-4": "var(--chart-4)",
+          "color-chart-5": "var(--chart-5)",
+          "color-sidebar": "var(--sidebar)",
+          "color-sidebar-foreground": "var(--sidebar-foreground)",
+          "color-sidebar-primary": "var(--sidebar-primary)",
+          "color-sidebar-primary-foreground": "var(--sidebar-primary-foreground)",
+          "color-sidebar-accent": "var(--sidebar-accent)",
+          "color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
+          "color-sidebar-border": "var(--sidebar-border)",
+          "color-sidebar-ring": "var(--sidebar-ring)",
+          "color-danger": "var(--danger)",
+          "color-danger-tint": "var(--danger-tint)",
+          "color-danger-border": "var(--danger-border)",
+          "color-warning": "var(--warning)",
+          "color-warning-tint": "var(--warning-tint)",
+          "color-warning-border": "var(--warning-border)",
+          "color-success": "var(--success)",
+          "color-success-tint": "var(--success-tint)",
+          "color-success-border": "var(--success-border)",
+          "color-scrim": "var(--scrim)"
+        },
+        "light": {
+          "background": "#eae9e6",
+          "foreground": "#141414",
+          "card": "#ffffff",
+          "card-foreground": "#141414",
+          "popover": "#ffffff",
+          "popover-foreground": "#141414",
+          "primary": "#141414",
+          "primary-foreground": "#ffffff",
+          "secondary": "#f5f4f2",
+          "secondary-foreground": "#141414",
+          "muted": "#f0efec",
+          "muted-foreground": "#636363",
+          "accent": "#e1dfda",
+          "accent-foreground": "#141414",
+          "destructive": "#9b1c1f",
+          "destructive-foreground": "#f8d7d8",
+          "border": "#e1e2e3",
+          "input": "color-mix(in srgb, var(--foreground) 50%, var(--background))",
+          "field": "#ffffff",
+          "ring": "#ee6018",
+          "focus": "#d4550f",
+          "chart-1": "#141414",
+          "chart-2": "#636363",
+          "chart-3": "#ee6018",
+          "chart-4": "#f5a06a",
+          "chart-5": "#d4550f",
+          "sidebar": "#eae9e6",
+          "sidebar-foreground": "#141414",
+          "sidebar-primary": "#141414",
+          "sidebar-primary-foreground": "#ffffff",
+          "sidebar-accent": "#f9f9f8",
+          "sidebar-accent-foreground": "#141414",
+          "sidebar-border": "#e1e2e3",
+          "sidebar-ring": "#ee6018",
+          "danger": "#c32b21",
+          "danger-tint": "#fce8e6",
+          "danger-border": "#f3b7b0",
+          "warning": "#965e00",
+          "warning-tint": "#fef7e0",
+          "warning-border": "#f5dfa0",
+          "success": "#167834",
+          "success-tint": "#e6f4ea",
+          "success-border": "#a8d5b5",
+          "scrim": "#000",
+          "radius": "0"
+        },
+        "dark": {
+          "background": "#1b1a18",
+          "foreground": "#f5f4f2",
+          "card": "#252320",
+          "card-foreground": "#f5f4f2",
+          "popover": "#252320",
+          "popover-foreground": "#f5f4f2",
+          "primary": "#f5f4f2",
+          "primary-foreground": "#1b1a18",
+          "secondary": "#2c2a26",
+          "secondary-foreground": "#f5f4f2",
+          "muted": "#302e2a",
+          "muted-foreground": "#b7b3ab",
+          "accent": "#3d3a34",
+          "accent-foreground": "#f5f4f2",
+          "destructive": "#9b1c1f",
+          "destructive-foreground": "#f8d7d8",
+          "border": "#494640",
+          "input": "color-mix(in srgb, var(--foreground) 50%, var(--background))",
+          "field": "#211f1c",
+          "ring": "#f8b98a",
+          "focus": "#f8b98a",
+          "chart-1": "#f5f4f2",
+          "chart-2": "#b7b3ab",
+          "chart-3": "#f5a06a",
+          "chart-4": "#ee6018",
+          "chart-5": "#d4550f",
+          "sidebar": "#252320",
+          "sidebar-foreground": "#f5f4f2",
+          "sidebar-primary": "#f5f4f2",
+          "sidebar-primary-foreground": "#1b1a18",
+          "sidebar-accent": "#302e2a",
+          "sidebar-accent-foreground": "#f5f4f2",
+          "sidebar-border": "#494640",
+          "sidebar-ring": "#f5a06a",
+          "danger": "#f5a097",
+          "danger-tint": "#3d1f1c",
+          "danger-border": "#6e2d28",
+          "warning": "#e8b95b",
+          "warning-tint": "#3a2e12",
+          "warning-border": "#6a5420",
+          "success": "#86d49b",
+          "success-tint": "#1b3324",
+          "success-border": "#2e5a3a",
+          "scrim": "rgb(0 0 0 / 0.6)"
+        }
+      },
+      "css": {
+        "@custom-variant dark": {
+          "&:where(.dark, .dark *)": {
+            "@slot": {}
+          },
+          "@media (prefers-color-scheme: dark)": {
+            "&:where(:root:not(.light), :root:not(.light) *)": {
+              "@slot": {}
+            }
+          }
+        },
+        ":root": {
+          "color-scheme": "light"
+        },
+        ".dark": {
+          "color-scheme": "dark"
+        },
+        "@media (prefers-color-scheme: dark)": {
+          ":root:not(.light)": {
+            "color-scheme": "dark",
+            "--background": "#1b1a18",
+            "--foreground": "#f5f4f2",
+            "--card": "#252320",
+            "--card-foreground": "#f5f4f2",
+            "--popover": "#252320",
+            "--popover-foreground": "#f5f4f2",
+            "--primary": "#f5f4f2",
+            "--primary-foreground": "#1b1a18",
+            "--secondary": "#2c2a26",
+            "--secondary-foreground": "#f5f4f2",
+            "--muted": "#302e2a",
+            "--muted-foreground": "#b7b3ab",
+            "--accent": "#3d3a34",
+            "--accent-foreground": "#f5f4f2",
+            "--destructive": "#9b1c1f",
+            "--destructive-foreground": "#f8d7d8",
+            "--border": "#494640",
+            "--input": "color-mix(in srgb, var(--foreground) 50%, var(--background))",
+            "--field": "#211f1c",
+            "--ring": "#f8b98a",
+            "--focus": "#f8b98a",
+            "--chart-1": "#f5f4f2",
+            "--chart-2": "#b7b3ab",
+            "--chart-3": "#f5a06a",
+            "--chart-4": "#ee6018",
+            "--chart-5": "#d4550f",
+            "--sidebar": "#252320",
+            "--sidebar-foreground": "#f5f4f2",
+            "--sidebar-primary": "#f5f4f2",
+            "--sidebar-primary-foreground": "#1b1a18",
+            "--sidebar-accent": "#302e2a",
+            "--sidebar-accent-foreground": "#f5f4f2",
+            "--sidebar-border": "#494640",
+            "--sidebar-ring": "#f5a06a",
+            "--danger": "#f5a097",
+            "--danger-tint": "#3d1f1c",
+            "--danger-border": "#6e2d28",
+            "--warning": "#e8b95b",
+            "--warning-tint": "#3a2e12",
+            "--warning-border": "#6a5420",
+            "--success": "#86d49b",
+            "--success-tint": "#1b3324",
+            "--success-border": "#2e5a3a",
+            "--scrim": "rgb(0 0 0 / 0.6)"
+          }
+        },
+        "@layer base": {
+          "*": {
+            "@apply border-border outline-focus": {}
+          },
+          "body": {
+            "@apply bg-background text-foreground": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "font-geist",
+      "type": "registry:font",
+      "title": "Geist",
+      "dependencies": ["@fontsource-variable/geist@5.3.0"],
+      "font": {
+        "family": "\"Geist Variable\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+        "provider": "google",
+        "import": "Geist",
+        "variable": "--font-sans",
+        "dependency": "@fontsource-variable/geist"
+      }
+    },
+    {
+      "name": "font-geist-mono",
+      "type": "registry:font",
+      "title": "Geist Mono",
+      "dependencies": ["@fontsource-variable/geist-mono@5.3.0"],
+      "font": {
+        "family": "\"Geist Mono Variable\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+        "provider": "google",
+        "import": "Geist_Mono",
+        "variable": "--font-mono",
+        "selector": "code, kbd, samp, pre",
+        "dependency": "@fontsource-variable/geist-mono"
+      }
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/alert.tsx",
+          "type": "registry:ui",
+          "target": "@ui/alert.tsx"
+        }
+      ]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/alert-dialog.tsx",
+          "type": "registry:ui",
+          "target": "@ui/alert-dialog.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "avatar",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/avatar.tsx",
+          "type": "registry:ui",
+          "target": "@ui/avatar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/badge.tsx",
+          "type": "registry:ui",
+          "target": "@ui/badge.tsx"
+        }
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/breadcrumb.tsx",
+          "type": "registry:ui",
+          "target": "@ui/breadcrumb.tsx"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/card.tsx",
+          "type": "registry:ui",
+          "target": "@ui/card.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/checkbox.tsx",
+          "type": "registry:ui",
+          "target": "@ui/checkbox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/collapsible.tsx",
+          "type": "registry:ui",
+          "target": "@ui/collapsible.tsx"
+        }
+      ]
+    },
+    {
+      "name": "combobox",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/combobox.tsx",
+          "type": "registry:ui",
+          "target": "@ui/combobox.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input-group.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input-group.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/textarea.tsx",
+          "type": "registry:ui",
+          "target": "@ui/textarea.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "context-menu",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/context-menu.tsx",
+          "type": "registry:ui",
+          "target": "@ui/context-menu.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/dropdown-menu.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dropdown-menu.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/dialog.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dialog.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "drawer",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/drawer.tsx",
+          "type": "registry:ui",
+          "target": "@ui/drawer.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/dropdown-menu.tsx",
+          "type": "registry:ui",
+          "target": "@ui/dropdown-menu.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "fact",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/fact.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fact.tsx"
+        }
+      ]
+    },
+    {
+      "name": "heading",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "hover-card",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/hover-card.tsx",
+          "type": "registry:ui",
+          "target": "@ui/hover-card.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        }
+      ]
+    },
+    {
+      "name": "input-group",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/input-group.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input-group.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/textarea.tsx",
+          "type": "registry:ui",
+          "target": "@ui/textarea.tsx"
+        }
+      ]
+    },
+    {
+      "name": "kbd",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        }
+      ]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/label.tsx",
+          "type": "registry:ui",
+          "target": "@ui/label.tsx"
+        }
+      ]
+    },
+    {
+      "name": "modal-surface-context",
+      "type": "registry:ui",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        }
+      ]
+    },
+    {
+      "name": "native-select",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/native-select.tsx",
+          "type": "registry:ui",
+          "target": "@ui/native-select.tsx"
+        }
+      ]
+    },
+    {
+      "name": "nav",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/nav.tsx",
+          "type": "registry:ui",
+          "target": "@ui/nav.tsx"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/popover.tsx",
+          "type": "registry:ui",
+          "target": "@ui/popover.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/radio-group.tsx",
+          "type": "registry:ui",
+          "target": "@ui/radio-group.tsx"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/select.tsx",
+          "type": "registry:ui",
+          "target": "@ui/select.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/separator.tsx",
+          "type": "registry:ui",
+          "target": "@ui/separator.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/skeleton.tsx",
+          "type": "registry:ui",
+          "target": "@ui/skeleton.tsx"
+        }
+      ]
+    },
+    {
+      "name": "slider",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/slider.tsx",
+          "type": "registry:ui",
+          "target": "@ui/slider.tsx"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/switch.tsx",
+          "type": "registry:ui",
+          "target": "@ui/switch.tsx"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/table.tsx",
+          "type": "registry:ui",
+          "target": "@ui/table.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/tabs.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tabs.tsx"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/textarea.tsx",
+          "type": "registry:ui",
+          "target": "@ui/textarea.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/toggle.tsx",
+          "type": "registry:ui",
+          "target": "@ui/toggle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toggle-group",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/toggle-group.tsx",
+          "type": "registry:ui",
+          "target": "@ui/toggle-group.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/toggle.tsx",
+          "type": "registry:ui",
+          "target": "@ui/toggle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tooltip.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "message-page",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/message-page.tsx",
+          "type": "registry:component",
+          "target": "@components/message-page.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "shortcuts-sheet",
+      "type": "registry:block",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/shortcuts-sheet.tsx",
+          "type": "registry:component",
+          "target": "@components/shortcuts-sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    }
+  ]
+}
