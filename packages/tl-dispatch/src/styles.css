@@ -3,6 +3,7 @@
 @import "../../ui/src/styles/theme.css";
 @import "./tokens.css";
 @import "./repaint.css";
+@import "./frame.css";
 
 @source "./";
 @source "../../dispatch/web/src";

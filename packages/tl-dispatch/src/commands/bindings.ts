@@ -12,25 +12,50 @@ import {
 /** A global command's copy in the dialog scope ends in this, so the sheet shows it once. */
 export const UNDER_OVERLAY = ":under-overlay";
 
-function toBinding(spec: CommandSpec, gate: () => boolean): KeyBinding {
+/** The binding of a typing command's keys that type a character, which stay typing in a field. */
+const TYPED_KEYS = ":typed-keys";
+
+/** A key that types a character: `/`, `?`, `Shift+A`. */
+const typesCharacter = (keys: string) => /^(Shift\+)?.$/.test(keys);
+
+/** The catalog id a binding of ours stands for. */
+export function commandIdOf(bindingId: string): string {
+  return bindingId.replace(UNDER_OVERLAY, "").replace(TYPED_KEYS, "");
+}
+
+/** A command's bindings: one, or for an `inEditable` command with a key a field types, two. */
+function bindingsOf(spec: CommandSpec, gate: () => boolean): KeyBinding[] {
   const { command } = spec;
-  return {
-    id: command.id,
-    keys: command.keys ?? [],
+  const keys = command.keys ?? [];
+  const binding = (id: string, own: readonly string[], inEditable: boolean): KeyBinding => ({
+    id,
+    keys: own,
     label: spec.label,
     run: () => {
       runCommand(spec);
     },
     when: () => spec.enabled && gate(),
-    ...(command.inEditable === true ? { inEditable: true } : {}),
+    ...(inEditable ? { inEditable: true } : {}),
     // Stated every time: the engine's own default drops a binding with two keys.
     palette: command.hideFrom?.includes("palette") !== true,
-  };
+  });
+  const typed = keys.filter(typesCharacter);
+  if (command.inEditable !== true || typed.length === 0) {
+    return [binding(command.id, keys, command.inEditable === true)];
+  }
+  return [
+    binding(
+      command.id,
+      keys.filter((key) => !typesCharacter(key)),
+      true
+    ),
+    { ...binding(`${command.id}${TYPED_KEYS}`, typed, false), palette: false },
+  ];
 }
 
 /** The key engine's bindings for a set of specs; the gate is read on every press. */
 export function toBindings(specs: CommandSpecs, gate: () => boolean = () => true): KeyBinding[] {
-  return specs.map((spec) => toBinding(spec, gate));
+  return specs.flatMap((spec) => bindingsOf(spec, gate));
 }
 
 interface ContextBindings {
@@ -54,13 +79,12 @@ export function contextBindings(
     scope === "global"
       ? specs
           .filter((spec) => (spec.command.keys ?? []).length > 0)
-          .map((spec) => {
+          .flatMap((spec) => {
             const reach = spec.command.overlays ?? "under-most";
-            const binding = toBinding(spec, () => stack.passes(reach));
-            return {
+            return bindingsOf(spec, () => stack.passes(reach)).map((binding) => ({
               reach,
               binding: { ...binding, id: `${binding.id}${UNDER_OVERLAY}`, palette: false },
-            };
+            }));
           })
       : [];
   return { scope, own, underOverlays };

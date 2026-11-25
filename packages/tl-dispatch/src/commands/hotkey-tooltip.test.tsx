@@ -116,7 +116,7 @@ describe("HotkeyTooltip, while its code arrives", () => {
     logged.mockRestore();
     const control = view.container.querySelector("button");
     expect(control?.getAttribute("data-slot")).toBeNull();
-    expect(control?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
+    expect(control?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K \/$/);
   });
 });
 

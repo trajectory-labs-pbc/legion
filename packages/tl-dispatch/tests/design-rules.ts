@@ -28,6 +28,7 @@ export const RULES = {
   round: "only a dot or an avatar is round: `rounded-full` goes with a numeric `size-N`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
+  fade: "a transition moves opacity alone: a row's hover and highlight change at once",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -107,6 +108,21 @@ const FOCUS_PROPERTY = new Set([
 ]);
 const TEXT_PROPERTY = new Set(["color", "-webkit-text-fill-color"]);
 const MOTION_PROPERTY = /^(transition|animation)(-|$)|^(transform|translate|scale|rotate)$/;
+/** `value` with every parenthesised group taken out, nested ones too. */
+function outsideParentheses(value: string): string {
+  let rest = value;
+  while (/\([^()]*\)/.test(rest)) rest = rest.replace(/\([^()]*\)/g, "");
+  return rest;
+}
+
+/** A transition of opacity alone, or none: `transition-property`, or each item of the shorthand. */
+const fades = (property: string, value: string) =>
+  property === "transition-property"
+    ? /^(opacity|none)$/.test(value)
+    : property !== "transition" ||
+      outsideParentheses(value)
+        .split(",")
+        .every((item) => /^(opacity|none)\b/.test(item.trim()));
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -184,6 +200,7 @@ export function declarationProblems(
   if (property === "scale" || (/^transition(-property)?$/.test(property) && SCALES.test(value))) {
     problems.push(RULES.scale);
   }
+  if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
   return problems;
 }

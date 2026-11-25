@@ -41,7 +41,7 @@ const catalog = createCatalog([
       {
         name: "search",
         label: "Search",
-        keys: ["$mod+k"],
+        keys: ["$mod+k", "/"],
         inEditable: true,
         hideFrom: ["palette"],
       },
@@ -104,12 +104,35 @@ describe("bindings", () => {
   test("carry the catalog's typing and palette fields, and read the gate on every press", () => {
     const fired: string[] = [];
     let open = true;
-    const [search, create] = toBindings(recorder("global", fired), () => open);
+    const [search, typed, create] = toBindings(recorder("global", fired), () => open);
     expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
     expect([search?.palette, create?.palette]).toEqual([false, true]);
+    expect(typed).toMatchObject({ id: "global.search:typed-keys", keys: ["/"], palette: false });
+    expect(typed?.inEditable).toBeUndefined();
     expect(create?.when?.()).toBe(true);
     open = false;
     expect(create?.when?.()).toBe(false);
+  });
+
+  test("a typing command's keys fire in a field, but a key that types a character types it", () => {
+    const { keymap, fired } = setup();
+    const field = document.createElement("input");
+    document.body.append(field);
+    try {
+      const inField = (key: string, init: KeyboardEventInit = {}) =>
+        field.dispatchEvent(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+      const handle = (event: Event) => {
+        if (event instanceof KeyboardEvent) keymap.handleKeyDown(event);
+      };
+      field.addEventListener("keydown", handle);
+      expect(inField("/")).toBe(true);
+      inField("k", { ctrlKey: true });
+      expect(fired).toEqual(["global.search"]);
+      press(keymap, "/");
+      expect(fired).toEqual(["global.search", "global.search"]);
+    } finally {
+      field.remove();
+    }
   });
 
   test("a shut command neither fires nor shadows", () => {
