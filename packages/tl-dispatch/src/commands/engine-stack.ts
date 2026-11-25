@@ -46,8 +46,7 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   const push = keymap.pushScope;
   keymap.pushScope = (scope) => {
     const pop = push(scope);
-    const entry = [scope] as const;
-    upstream.push(...entry);
+    upstream.push(scope);
     notify();
     let popped = false;
     return () => {
