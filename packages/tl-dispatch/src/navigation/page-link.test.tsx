@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
+import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { MemoryNavigationProvider } from "../../tests/navigation";
@@ -183,8 +184,12 @@ describe("PageLink", () => {
     const home = pageRoute({ path: "/", element: null });
     const link = mount(client, <PageLink page={home}>Home</PageLink>);
     expect(link.getAttribute("href")).toBe("/");
+    // React logs the render error it rethrows.
+    quietConsoleError();
     // @ts-expect-error the route binds :machine
-    expect(() => render(<PageLink page={page}>Box</PageLink>)).toThrow();
+    expect(() => mount(client, <PageLink page={page}>Box</PageLink>)).toThrow(
+      'needs its "machine" param'
+    );
   });
 });
 
