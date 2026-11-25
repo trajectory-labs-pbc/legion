@@ -4,6 +4,9 @@
 # that first edits it. When the daily sync pull request fails on a line the fork no longer changes,
 # because upstream took the change, remove the line with a commit on the sync branch.
 
+# The fork's own web app, beside upstream's, outside the root workspaces.
+packages/tl-dispatch/
+
 # The fork's UI package, outside the root workspaces, and the shadcn registry that serves it.
 packages/ui/
 registry.json
