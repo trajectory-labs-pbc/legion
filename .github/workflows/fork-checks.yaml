@@ -67,7 +67,7 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
-      - name: Test (layers, design rules)
+      - name: Test (layers, design rules, route map, view map, copied upstream code)
         run: bun run test
 
   ui:
