@@ -10,7 +10,6 @@
     "test": "bun test --timeout 60000",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
-    "check:entry-budget": "bun scripts/check-entry-budget.ts",
     "postinstall": "bun ../ui/scripts/link-root-packages.ts ."
   },
   "dependencies": {
