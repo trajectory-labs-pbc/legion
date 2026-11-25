@@ -12,7 +12,8 @@
    `color-mix(in oklab, A var(--repaint-light), B)` is A in light and B in dark.
 
    `tests/repaint.test.ts` compiles the stylesheet, resolves these values and holds every text
-   pair upstream registers to its ratio. It reads `var()` and `color-mix()`. */
+   pair upstream registers, and the text a rule here colours, to its ratio. It reads `var()` and
+   `color-mix()`. */
 
 :root {
   --repaint-light: 100%;

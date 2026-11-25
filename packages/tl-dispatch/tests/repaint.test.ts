@@ -12,6 +12,7 @@ import {
   CALLOUT_WARNING_BG,
   CONTRAST_CHECKS,
   type ColorPair,
+  PAGE_COLORS,
 } from "@upstream-dispatch/theme/classes";
 import { contrastRatio, type Oklch } from "@upstream-dispatch/theme/contrast";
 
@@ -369,22 +370,112 @@ function paletteProblems(declarations: readonly CssDeclaration[]): string[] {
   return problems;
 }
 
-/** Each text pair upstream registers that falls below its ratio on the repainted shades. */
+/** The name of each colour of the issue page and the icon rail. Upstream names a page colour's
+ *  dark side by a Tailwind shade, but the page draws `--color-<its name>` in both schemes. */
+const PAGE_NAMES = new Map<ColorPair, string>(
+  Object.entries(PAGE_COLORS).map(([name, pair]) => [pair, name])
+);
+
+/** Text a rule of `src/repaint.css` colours, the ground it is drawn on and its ratio. Each side is
+ *  a token or `selector { property }`. */
+const RULE_PAIRS: readonly (readonly [text: string, ground: string, minRatio: number])[] = [
+  [".dispatch-doc .milkdown a { color }", "--card", 4.5],
+  [".dispatch-markdown { --tw-prose-links }", "--card", 4.5],
+  [".dispatch-markdown { --tw-prose-links }", "--muted", 4.5],
+  [
+    "::highlight(dispatch-search) { color }",
+    "::highlight(dispatch-search) { background-color }",
+    4.5,
+  ],
+  [
+    ":is(.dispatch-doc, .dispatch-markdown) [data-proof-block-badge] { color }",
+    ":is(.dispatch-doc, .dispatch-markdown) [data-proof-block-badge] { background-color }",
+    4.5,
+  ],
+  [":is(.dispatch-doc, .dispatch-markdown) [data-proof-block-name] { color }", "--card", 4.5],
+  [":is(.dispatch-doc, .dispatch-markdown) [data-proof-block-title] { color }", "--card", 4.5],
+  [
+    ".dispatch-doc .milkdown .editor.ProseMirror > p.is-editor-empty:first-child::before { color }",
+    "--card",
+    4.5,
+  ],
+  [
+    ".prose { --tw-prose-body }",
+    ".dispatch-doc span[data-dispatch='ask'] { background-color }",
+    4.5,
+  ],
+  [".prose { --tw-prose-pre-code }", ".prose { --tw-prose-pre-bg }", 4.5],
+  ...[
+    "body",
+    "headings",
+    "lead",
+    "links",
+    "bold",
+    "counters",
+    "quotes",
+    "captions",
+    "kbd",
+    "code",
+  ].map((name) => [`.prose { --tw-prose-${name} }`, "--card", 4.5] as const),
+];
+
+/** The value the rule at `selector` gives `property`: the last such rule outside every layer. */
+function ruleValue(
+  declarations: readonly CssDeclaration[],
+  selector: string,
+  property: string
+): string | undefined {
+  return declarations
+    .filter((declaration) => {
+      const { selector: rule, around } = place(declaration.context);
+      return (
+        declaration.property === property &&
+        around.length === 0 &&
+        split(withoutWhere(rule), ",").some((part) => selectorKey(part) === selectorKey(selector))
+      );
+    })
+    .at(-1)?.value;
+}
+
+/** Each text pair that falls below its ratio: the pairs upstream registers, on the variable the
+ *  page draws each from, and the pairs of `RULE_PAIRS`. A colour that does not resolve is one. */
 function contrastProblems(declarations: readonly CssDeclaration[]): string[] {
   const problems: string[] = [];
   for (const scheme of SCHEMES) {
     const variables = rootValues(declarations, scheme);
-    const colour = (swatch: { name: string; oklch: Oklch }) => {
-      const held = evaluate(`var(--color-${swatch.name})`, scheme, variables);
-      return held === undefined ? swatch.oklch : toOklch(held);
+    const shade = (pair: ColorPair) =>
+      evaluate(`var(--color-${PAGE_NAMES.get(pair) ?? pair[scheme].name})`, scheme, variables);
+    const drawn = (colour: string) => {
+      const rule = /^(.*) \{ (.*) \}$/.exec(colour);
+      const value =
+        rule === null
+          ? `var(${colour})`
+          : ruleValue(declarations, rule[1] as string, rule[2] as string);
+      return value === undefined ? undefined : evaluate(value, scheme, variables);
     };
-    for (const check of CONTRAST_CHECKS) {
-      const ratio = contrastRatio(
-        colour(check.foreground[scheme]),
-        colour(check.background[scheme])
-      );
-      if (ratio < check.minRatio) {
-        problems.push(`${check.description} (${scheme}): ${ratio.toFixed(2)} < ${check.minRatio}`);
+    const pairs = [
+      ...CONTRAST_CHECKS.map(
+        (check) =>
+          [
+            check.description,
+            shade(check.foreground),
+            shade(check.background),
+            check.minRatio,
+          ] as const
+      ),
+      ...RULE_PAIRS.map(
+        ([text, ground, minRatio]) =>
+          [`${text} on ${ground}`, drawn(text), drawn(ground), minRatio] as const
+      ),
+    ];
+    for (const [description, text, ground, minRatio] of pairs) {
+      if (text === undefined || ground === undefined) {
+        problems.push(`${description} (${scheme}): not a colour this test reads`);
+        continue;
+      }
+      const ratio = contrastRatio(toOklch(text), toOklch(ground));
+      if (ratio < minRatio) {
+        problems.push(`${description} (${scheme}): ${ratio.toFixed(2)} < ${minRatio}`);
       }
     }
   }
@@ -576,19 +667,33 @@ describe("the repaint of upstream's pages", async () => {
     expect(problems).toContain("--color-sky-950 (dark): a blue");
   });
 
-  test("keeps every text pair upstream registers at its ratio, links included", () => {
+  test("keeps every text pair upstream registers, and the text a rule colours, at its ratio", () => {
     expect(CONTRAST_CHECKS.length).toBeGreaterThanOrEqual(20);
     expect(CONTRAST_CHECKS.map((check) => check.description)).toContain("link on canvas");
     expect(contrastProblems(declarations)).toEqual([]);
   });
 
-  test("fails when the link shade is set to the page's colour", async () => {
-    const shade = /--color-sky-700:[^;]*;/;
-    expect(repaintText).toMatch(shade);
-    const broken = repaintText.replace(shade, "--color-sky-700: var(--background);");
-    expect(contrastProblems(await generate(broken))).toContainEqual(
-      expect.stringContaining("link on canvas (light)")
-    );
+  test("fails when a shade, a page colour or a rule's colour is the ground's", async () => {
+    const broken = [
+      [/--color-sky-700:[^;]*;/, "--color-sky-700: var(--background);"],
+      // Dark only: upstream names this side by a Tailwind shade the page does not draw.
+      [
+        /--color-page-check:[^;]*;/,
+        "--color-page-check: color-mix(in oklab, var(--muted-foreground) var(--repaint-light), var(--background));",
+      ],
+      [/(\.dispatch-doc \.milkdown a \{\s*color:)[^;]*;/, "$1 var(--card);"],
+    ].reduce((text, [rule, replacement]) => {
+      expect(text).toMatch(rule as RegExp);
+      return text.replace(rule as RegExp, replacement as string);
+    }, repaintText);
+    const problems = contrastProblems(await generate(broken));
+    for (const problem of [
+      "link on canvas (light)",
+      "page-check text on page-paper (dark)",
+      ".dispatch-doc .milkdown a { color } on --card (light)",
+    ]) {
+      expect(problems).toContainEqual(expect.stringContaining(problem));
+    }
   });
 
   test("moves every hover state a step from its resting colour", () => {
