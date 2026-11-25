@@ -409,6 +409,7 @@ const RULE_PAIRS: readonly (readonly [text: string, ground: string, minRatio: nu
     4.5,
   ],
   [".prose { --tw-prose-pre-code }", ".prose { --tw-prose-pre-bg }", 4.5],
+  [".dispatch-doc .proof-editor { --pre-color }", ".dispatch-doc .proof-editor { --pre-bg }", 4.5],
   ...[
     "body",
     "headings",

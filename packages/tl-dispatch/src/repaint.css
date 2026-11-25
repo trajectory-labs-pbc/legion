@@ -375,7 +375,8 @@
 
 .dispatch-doc .proof-editor {
   --code-bg: var(--muted);
-  --pre-bg: var(--color-slate-950);
+  /* A code block: the foreground as ground in light, a raised surface in dark, so both have an edge. */
+  --pre-bg: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--card));
   --blockquote-border: color-mix(
     in oklab,
     var(--color-slate-300) var(--repaint-light),
