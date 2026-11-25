@@ -1,13 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useNavigationType } from "react-router-dom";
-import { PageRoutes, useCurrentPage } from "@/pages/index";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useAddress, usePageNavigate, usePageParams, usePageSearch } from "./hooks";
 import { pageRoute } from "./page-route";
+import { createRouteTree } from "./route-tree";
 
 const machine = pageRoute({ path: "/machines/:machine", element: null, search: ["tab"] });
+
+// The tree of a small app: navigation's tests name none of the app's pages.
+const { PageRoutes, useCurrentPage } = createRouteTree([
+  { id: "machines", routes: { machine } },
+  { id: "issue", routes: { issue: pageRoute({ path: "/issues/:key/*", element: null }) } },
+  { id: "priorities", routes: { one: pageRoute({ path: "/priorities/:id", element: null }) } },
+  { id: "not-found", routes: { any: pageRoute({ path: "/*", element: "nothing here" }) } },
+]);
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -66,14 +73,12 @@ describe("the page hooks", () => {
 
   test("PageRoutes draws the route's element", () => {
     const view = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryNavigationProvider path="/nowhere">
-          <PageRoutes />
-        </MemoryNavigationProvider>
-      </QueryClientProvider>
+      <MemoryNavigationProvider path="/nowhere">
+        <PageRoutes />
+      </MemoryNavigationProvider>
     );
     mounted.push(view);
-    expect(view.container.textContent).toContain("not found");
+    expect(view.container.textContent).toBe("nothing here");
   });
 
   test("usePageNavigate replaces the address when asked, and pushes otherwise", () => {
