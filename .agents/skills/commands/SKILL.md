@@ -74,7 +74,7 @@ The app compiles the catalog to upstream's key engine (`@upstream-dispatch/featu
 
 ## Checks
 
-- `src/commands/catalog.test.ts`: the catalog's load-time refusals, and parity with the keys upstream's shell binds.
+- `src/commands/schema.test.ts`: the app's catalog and the catalog's load-time refusals. `upstream-keys.test.ts`: parity with the keys upstream's shell binds, and clashes with upstream's page keys. `catalog.test.ts`: the typed command ids.
 - `src/commands/bindings.test.tsx`, `key-engine.test.tsx`, `engine-stack.test.ts`: registration, gates, chords and overlay reach.
 - `command-button.test.tsx`, `hotkey-tooltip.test.tsx`, `shortcuts-sheet.test.tsx`: the surfaces.
 - A reviewer checks that a new action has one catalog entry, one gate, and no key chip or `useKeymap` call in a component.
