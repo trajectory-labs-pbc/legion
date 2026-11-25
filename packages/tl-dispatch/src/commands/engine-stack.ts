@@ -62,26 +62,28 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   let ours: readonly OverlayLayer[] = [];
   let popOurs: (() => void) | undefined;
   /**
-   * Reads the overlays again and tells nobody: a read may run in a render. It says whether
-   * they changed. Removing an overlay fires no event, so every read of the stack starts here.
+   * Reads the overlays again and tells nobody: a read may run in a render. Removing an overlay
+   * fires no event, so every read of the stack starts here.
    */
-  const read = (): boolean => {
+  const read = () => {
     const open = layers.get();
-    if (open.length === ours.length && open.every((layer, index) => layer === ours[index])) {
-      return false;
-    }
+    if (open.length === ours.length && open.every((layer, index) => layer === ours[index])) return;
     ours = open;
     if (open.length > 0 && popOurs === undefined) popOurs = push(DIALOG_SCOPE);
     if (open.length === 0 && popOurs !== undefined) {
       popOurs();
       popOurs = undefined;
     }
-    return true;
-  };
-  const sync = () => {
-    if (read()) notify();
   };
   read();
+  /** The overlays the listeners last heard of: a render's read may have seen newer ones. */
+  let told = ours;
+  const sync = () => {
+    read();
+    if (told === ours) return;
+    told = ours;
+    notify();
+  };
   layers.subscribe(sync);
   // Before the engine picks the scopes a key press consults.
   const handleKeyDown = keymap.handleKeyDown;
