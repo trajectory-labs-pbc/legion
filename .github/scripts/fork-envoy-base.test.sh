@@ -33,9 +33,15 @@ echo '{"digest":"$digest"}'
 EOF
 chmod +x "$work/bin/gh" "$work/bin/docker"
 
+# The history holds this repository's listener, whose path list the script reads.
+listener=.github/workflows/release-envoy-listener.yaml
+commit() { git -C "$1" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "$2"; }
 git init -q "$work/repo"
+mkdir -p "$work/repo/.github/workflows"
+cp "$(dirname "$script")/../workflows/release-envoy-listener.yaml" "$work/repo/$listener"
+git -C "$work/repo" add .
 for n in 1 2 3 4 5; do
-  git -C "$work/repo" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "c$n"
+  commit "$work/repo" "c$n"
 done
 head=$(git -C "$work/repo" rev-parse HEAD)
 parent=$(git -C "$work/repo" rev-parse HEAD^1)
@@ -136,6 +142,39 @@ go pull_request
 check "a pull request walks past ancestors with no image" \
   "$image_printed"' && grep -q "^docker .*ghcr.io/owner/legion/envoy:$grandparent " "$STUB/calls"'
 check "and does not wait on a run that has ended" '! grep -q "run watch" "$STUB/calls"'
+
+# pull_request_of <name> <file>...: a clone whose HEAD changes the files on top of $head.
+pull_request_of() {
+  local clone="$work/$1" file
+  shift
+  git clone -q "$work/repo" "$clone"
+  for file in "$@"; do
+    mkdir -p "$clone/$(dirname "$file")"
+    echo changed >>"$clone/$file"
+  done
+  git -C "$clone" add .
+  commit "$clone" "pull request"
+}
+
+pull_request_of pr-app packages/tl-dispatch/src/a.ts packages/ui/src/b.ts packages/envoy/infra/c.go \
+  .github/workflows/fork-envoy-image.yaml .github/scripts/fork-envoy-base.sh README.md
+run pr-app "$work/pr-app" "$head" "[{\"id\":18,$ok}]"
+go pull_request
+check "a pull request that changes none of upstream's image inputs builds on main's image" \
+  "$image_printed"' && grep -q "^docker .*ghcr.io/owner/legion/envoy:$head " "$STUB/calls"'
+
+pull_request_of pr-upstream packages/tl-dispatch/src/a.ts packages/envoy/cmd/dispatch/main.go
+run pr-upstream "$work/pr-upstream" "$head" "[{\"id\":19,$ok}]"
+go pull_request
+check "a pull request that changes upstream's image inputs fails" \
+  '[ "$status" = 1 ] && [ -z "$out" ] && grep -q "^::error::.*cannot test the pull request.s own upstream change.*packages/envoy/cmd/dispatch/main.go" <<<"$err" && ! grep -q "tl-dispatch/src" <<<"$err"'
+
+mkdir "$work/no-paths" && git -C "$work/no-paths" init -q
+commit "$work/no-paths" c1
+mkdir -p "$work/no-paths/.github/workflows" && echo "on: push" >"$work/no-paths/$listener"
+run no-paths "$work/no-paths" "$(git -C "$work/no-paths" rev-parse HEAD)" "[{\"id\":20,$ok}]"
+go pull_request
+check "a listener with no path list fails" '[ "$status" = 1 ] && grep -q "^::error::.*has no on.push.paths list" <<<"$err"'
 
 git clone -q --depth 2 "file://$work/repo" "$work/shallow"
 run shallow "$work/shallow"
