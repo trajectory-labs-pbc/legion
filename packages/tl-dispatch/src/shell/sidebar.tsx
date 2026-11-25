@@ -1,4 +1,3 @@
-import { Count } from "@legion/ui/components/count";
 import { Heading } from "@legion/ui/components/heading";
 import { NavRow } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
@@ -8,9 +7,11 @@ import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import type { ReactNode } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
+import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
+import { RowCount } from "./row-count";
 import {
   type SidebarAgent,
   type SidebarData,
@@ -51,7 +52,7 @@ function PinnedAgentRow({
         sessionId={agent.sessionId}
         storedTitle={undefined}
       />
-      <Count needsYou title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
+      <RowCount title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
       <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
       <PinButton label={`Unpin ${name} from the sidebar`} onClick={unpin} pinned quiet />
     </NavRow>
@@ -77,7 +78,7 @@ function ItemRows({
           >
             <span className="shrink-0 font-medium">{item.key}</span>
             <span className="truncate text-muted-foreground">{item.text}</span>
-            <Count className="ml-auto" value={item.openAsks} />
+            <RowCount className="ml-auto" value={item.openAsks} />
           </NavRow>
         </li>
       ))}
@@ -104,12 +105,11 @@ export function SidebarView({
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
-              <Count
-                className="ml-auto"
-                needsYou={count?.needsYou}
-                title={count?.label}
-                value={count?.count ?? 0}
-              />
+              {count?.needsYou ? (
+                <NeedsYouMark className="ml-auto" count={count.count ?? 0} />
+              ) : (
+                <RowCount className="ml-auto" title={count?.label} value={count?.count ?? 0} />
+              )}
             </NavRow>
           );
           return (

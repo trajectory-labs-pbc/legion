@@ -96,7 +96,7 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   const unread = totalUnreadReplies(agentState);
   const counts: Partial<Record<NavName, SidebarCount>> = {
     inbox: { count: inboxCount, needsYou: true },
-    agents: { count: unread, label: unreadRepliesLabel(unread), needsYou: true },
+    agents: { count: unread, label: unreadRepliesLabel(unread) },
     priorities: { count: priorityFaults },
   };
   return {

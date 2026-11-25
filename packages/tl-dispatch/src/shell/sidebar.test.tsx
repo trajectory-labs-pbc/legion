@@ -134,11 +134,11 @@ describe("the sidebar", () => {
     ]);
   });
 
-  test("counts at the row's edge: muted, and the needs-you mark only for what waits on the reader", () => {
+  test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {
     const data: SidebarData = {
       destinations: [
         destination("inbox", { count: 7, needsYou: true }),
-        destination("agents", { count: 0, needsYou: true }),
+        destination("agents", { count: 2, label: "2 unread replies" }),
         destination("priorities", { count: 3 }),
       ],
       pinnedAgents: [],
@@ -154,16 +154,17 @@ describe("the sidebar", () => {
       </QueryClientProvider>
     );
     mounted.push(view);
-    const counts = [...view.container.querySelectorAll('[data-slot="count"]')];
-    expect(counts.map((count) => count.textContent)).toEqual(["7", "3", "4"]);
-    expect(counts.map((count) => count.hasAttribute("data-needs-you"))).toEqual([
-      true,
-      false,
-      false,
-    ]);
-    for (const count of counts) {
-      expect(count.className).toContain("ml-auto");
-      expect(count.parentElement?.lastElementChild).toBe(count);
+    const edges = [...view.container.querySelectorAll("a")].map((row) => row.lastElementChild);
+    expect(edges.map((edge) => edge?.textContent)).toEqual(["7", "2", "3", "4"]);
+    for (const edge of edges) expect(edge?.className).toContain("ml-auto");
+    const marks = [...view.container.querySelectorAll('[data-slot="attention-mark"]')];
+    expect(marks).toHaveLength(1);
+    expect(edges[0]).toBe(marks[0]);
+    expect(marks[0]?.getAttribute("aria-label")).toBe("Needs you: 7");
+    for (const edge of edges.slice(1)) {
+      expect(edge?.className).toContain("text-muted-foreground");
+      expect(edge?.className).not.toContain("warning");
     }
+    expect(edges[1]?.getAttribute("title")).toBe("2 unread replies");
   });
 });
