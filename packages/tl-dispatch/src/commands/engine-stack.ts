@@ -51,9 +51,10 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
     notify();
     let popped = false;
     return () => {
-      pop();
+      // Upstream's pop removes the last entry of the scope, whoever pushed it.
       if (popped) return;
       popped = true;
+      pop();
       upstream.splice(upstream.lastIndexOf(scope), 1);
       notify();
     };
