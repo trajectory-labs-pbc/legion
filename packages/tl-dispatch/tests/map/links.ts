@@ -1,4 +1,4 @@
-import { firstMatch } from "../navigation/router-path";
+import { firstMatch } from "@/navigation/router-path";
 import { type PageEntry, type RouteEntry, readPages, routeMapFiles } from "./source";
 
 export interface ForkRoute extends RouteEntry {

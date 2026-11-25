@@ -14,7 +14,7 @@ Every address of the app is declared in a page file. Links and moves are typed f
 3. A command never navigates by itself. It takes a callback (`goTo`), and the shell wires the callback to `usePageNavigate`. See `.agents/skills/commands/SKILL.md`.
 4. The URL is the state a reader reloads into or shares: the page, its tab, its filters, its selection, its peek and an open create form. Keep that state in the path or the search keys, not in component state.
 5. A filter or a view change replaces the history entry. A new destination pushes one.
-6. Every URL form upstream's app accepts still opens the same page. The link test in `src/map/links.test.ts` checks it.
+6. Every URL form upstream's app accepts still opens the same page. The link test in `tests/map/links.test.ts` checks it.
 
 ## Why only one folder imports the router
 
@@ -53,7 +53,7 @@ A route is `pageRoute({ path, element, search?, prefetch? })`:
 2. Add the page to `pages` in `src/navigation/route-tree.tsx`, the route map.
 3. If the sidebar lists the page, add a row to `NAV_DESTINATIONS` (`src/commands/nav.ts`) and its route to `NAV_PAGES` (`src/shell/nav-pages.ts`). Both are typed by the destination's name, so a missing row fails `tsc`.
 4. If upstream serves the same address, keep upstream's path. Run the link test.
-5. Run `bun test src/navigation src/map` and `bun run typecheck` in `packages/tl-dispatch`.
+5. Run `bun test src/navigation tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
 
 ## Links and moves
 
@@ -78,5 +78,5 @@ A wrong route, a missing param or an unknown search key fails the type check.
 
 - `src/navigation/*.test.ts(x)`: the grammar, typed links, hooks, the route tree and prefetch.
 - `tests/layering.test.ts`: the router rule, through every import the build resolves.
-- `src/map/links.test.ts`: every upstream route, reference form and server-written address opens the same page here.
+- `tests/map/links.test.ts`: every upstream route, reference form and server-written address opens the same page here.
 - A reviewer checks that a diff adds no path string literal outside `src/pages` and no router import outside `src/navigation`.

@@ -4,11 +4,12 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 
-import { packageRoot, routeTargets, upstreamAppFile } from "./source";
+import { REPO_ROOT } from "../source";
+import { parseScript } from "../typescript";
+import { routeTargets, upstreamAppFile } from "./source";
 
-export const repoRoot = join(packageRoot, "../..");
 const pinsFile = join(import.meta.dir, "copies.json");
-const appFile = relative(repoRoot, upstreamAppFile);
+const appFile = relative(REPO_ROOT, upstreamAppFile);
 
 export interface Copy {
   /** Upstream's file, from the repository root. */
@@ -64,11 +65,6 @@ function tokenText(node: ts.Node, source: ts.SourceFile): string {
   return node.getText(source);
 }
 
-function parse(file: string, text: string): ts.SourceFile {
-  const kind = file.endsWith(".ts") ? ts.ScriptKind.TS : ts.ScriptKind.TSX;
-  return ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind);
-}
-
 /** Where an import binds `name`: its module and the name it takes from it. */
 function importBinding(source: ts.SourceFile, name: string): string | undefined {
   for (const statement of source.statements) {
@@ -121,19 +117,19 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
 export function partText(
   file: string,
   part: string,
-  text = readFileSync(join(repoRoot, file), "utf8")
+  text = readFileSync(join(REPO_ROOT, file), "utf8")
 ): string | undefined {
   if (part === "script") {
     const scripts = [...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
     if (scripts.length === 0) return undefined;
     return scripts
       .map((match) => {
-        const source = parse("script.ts", match[1] ?? "");
+        const source = parseScript("script.ts", match[1] ?? "");
         return canonical(source, source);
       })
       .join("\n");
   }
-  const source = parse(file, text);
+  const source = parseScript(file, text);
   return part === "*" ? canonical(source, source) : declarationText(source, part);
 }
 
@@ -150,7 +146,7 @@ export function copyProblems(pins: readonly Copy[] = readPins(), read = partText
     if (text !== undefined && hash(text) === pin.sha256) return [];
     const change = text === undefined ? "no longer has" : "changed";
     return [
-      `${pin.file} ${change} ${pin.part} since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun src/map/copies.ts --update\``,
+      `${pin.file} ${change} ${pin.part} since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun tests/map/copies.ts --update\``,
     ];
   });
 }
@@ -165,12 +161,12 @@ export function unpinnedRouteTargets(
     .filter((name) => !pinned.has(name))
     .map(
       (name) =>
-        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun src/map/copies.ts --update\``
+        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update\``
     );
 }
 
 function lastCommit(file: string): string {
-  const run = Bun.spawnSync(["git", "log", "-1", "--format=%H", "--", file], { cwd: repoRoot });
+  const run = Bun.spawnSync(["git", "log", "-1", "--format=%H", "--", file], { cwd: REPO_ROOT });
   const commit = run.stdout.toString().trim();
   if (run.exitCode !== 0 || commit === "") throw new Error(`git log found no commit for ${file}`);
   return commit;
@@ -178,7 +174,7 @@ function lastCommit(file: string): string {
 
 /** The upstream diff behind a problem, for the log. */
 export function upstreamDiff(pin: Copy): string {
-  const run = Bun.spawnSync(["git", "diff", pin.commit, "--", pin.file], { cwd: repoRoot });
+  const run = Bun.spawnSync(["git", "diff", pin.commit, "--", pin.file], { cwd: REPO_ROOT });
   return run.exitCode === 0
     ? run.stdout.toString()
     : `git diff ${pin.commit} failed (a shallow checkout lacks it): ${run.stderr.toString().trim()}`;

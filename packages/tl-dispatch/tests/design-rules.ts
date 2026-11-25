@@ -7,8 +7,9 @@ import ts from "typescript";
 import { CHECK_SIZES, CONTROL_HEIGHTS, GLYPH_SIZES, TOUCH_MIN_HEIGHT } from "./control-scale";
 import { type CssDeclaration, importedPath, lineAt, parseCss } from "./css";
 import { CONTROL_FILES, EXEMPT } from "./design-config";
-import { filesWith, importsOf, ownFiles, resolutionCache, UPSTREAM_WEB } from "./imports";
-import { PACKAGE_ROOT, type SourceFile } from "./source";
+import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
+import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 
 export interface DesignViolation {
   file: string;
@@ -393,8 +394,7 @@ function scriptViolations(
   file: SourceFile,
   upstreamThemeLines: readonly number[]
 ): DesignViolation[] {
-  const kind = /\.[cm]?jsx?$/.test(file.path) ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
-  const source = ts.createSourceFile(file.path, file.text, ts.ScriptTarget.Latest, true, kind);
+  const source = parseScript(file.path, file.text);
   const violations: DesignViolation[] = upstreamThemeLines.map((line) => ({
     file: file.path,
     line,

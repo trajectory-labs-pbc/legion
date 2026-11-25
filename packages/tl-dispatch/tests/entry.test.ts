@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 
-import { filesWith, importsOf, resolutionCache, UPSTREAM_WEB } from "./imports";
-import { PACKAGE_ROOT, sourceFiles } from "./source";
+import { filesWith, importsOf, resolutionCache } from "./imports";
+import { PACKAGE_ROOT, sourceFiles, UPSTREAM_WEB } from "./source";
 
 /** The names main.tsx calls in its top-level statements, in order. */
 function topLevelCalls(): string[] {

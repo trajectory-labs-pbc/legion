@@ -4,9 +4,9 @@ import { join } from "node:path";
 import {
   type KeyRegistration,
   keyRegistrations,
-  UPSTREAM_WEB,
   upstreamKeyRegistrations,
 } from "../../tests/key-registrations";
+import { UPSTREAM_WEB } from "../../tests/source";
 import { APP_CONTEXTS } from "./app-catalog";
 import { clashes, keyChecker, refuses } from "./keys";
 import type { CommandContext } from "./schema";

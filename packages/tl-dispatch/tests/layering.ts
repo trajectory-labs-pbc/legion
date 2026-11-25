@@ -7,9 +7,8 @@ import {
   ownFiles,
   packageRelative,
   resolutionCache,
-  UPSTREAM_WEB,
 } from "./imports";
-import { PACKAGE_ROOT, type SourceFile } from "./source";
+import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
 
 export interface LayerViolation {
   file: string;

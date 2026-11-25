@@ -1,6 +1,6 @@
 ---
 name: porting-upstream
-description: "Use when you work a port issue, port an upstream commit to a page packages/tl-dispatch has rebuilt, close a port issue, or a view map, copy or link check in packages/tl-dispatch/src/map fails after a sync from upstream."
+description: "Use when you work a port issue, port an upstream commit to a page packages/tl-dispatch has rebuilt, close a port issue, or a view map, copy or link check in packages/tl-dispatch/tests/map fails after a sync from upstream."
 ---
 
 # Port an upstream commit
@@ -32,7 +32,7 @@ tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no lon
 
 Never edit an upstream file to make a port easier. Every file this repository changes in upstream's tree is on `.github/fork-allowlist.txt`, and `.github/scripts/check-fork-allowlist.sh` fails on any other.
 
-## The gates in src/map
+## The gates in tests/map
 
 `bun run test` runs them. Each failure message says what to change.
 
@@ -46,7 +46,7 @@ Never edit an upstream file to make a port easier. Every file this repository ch
 
 For a page upstream still draws, the same findings print as notes and do not fail.
 
-**The copies** (`copies.ts`, `copies.json`). Each part of upstream code this app copied (a shell function, a route's lazy import, an inline script) is pinned by a hash of its tokens, so a reformat does not trip it. When upstream changes or removes a pinned part, the test names the part and the command that shows upstream's diff since the copy. Port the change, then run `bun src/map/copies.ts --update`. Every name a `<Route>` element of upstream's `app.tsx` refers to must have a pin.
+**The copies** (`copies.ts`, `copies.json`). Each part of upstream code this app copied (a shell function, a route's lazy import, an inline script) is pinned by a hash of its tokens, so a reformat does not trip it. When upstream changes or removes a pinned part, the test names the part and the command that shows upstream's diff since the copy. Port the change, then run `bun tests/map/copies.ts --update`. Every name a `<Route>` element of upstream's `app.tsx` refers to must have a pin.
 
 **The links** (`links.ts`, `links.test.ts`). This app serves every upstream route. A page upstream draws renders exactly upstream's element, props included. A page this app draws keeps the path. A page this app draws lists in `linkForms` each query key and fragment form (`b-` block anchors) that the server or a reference writes to it; an unread one fails.
 

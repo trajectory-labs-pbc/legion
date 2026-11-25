@@ -3,7 +3,8 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 import { importedPath, lineAt, parseCss } from "./css";
-import { PACKAGE_ROOT, type SourceFile } from "./source";
+import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 
 export type ImportKind = "static" | "type" | "dynamic" | "require" | "css";
 
@@ -31,7 +32,6 @@ export interface Files {
   exists(path: string): boolean;
 }
 
-export const UPSTREAM_WEB = resolve(PACKAGE_ROOT, "../dispatch/web/src");
 const ALIASES: readonly [string, string][] = [["@upstream-dispatch", UPSTREAM_WEB]];
 
 const config = ts.readConfigFile(join(PACKAGE_ROOT, "tsconfig.json"), ts.sys.readFile);
@@ -136,8 +136,7 @@ function literal(node: ts.Node | undefined): string | undefined {
 type Written = Omit<Import, "file" | "pkg" | "resolved">;
 
 function scriptImports(path: string, text: string): Written[] {
-  const kind = /\.[cm]?jsx?$/.test(path) ? ts.ScriptKind.JSX : ts.ScriptKind.TSX;
-  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
+  const source = parseScript(path, text);
   const found: Written[] = [];
   const add = (
     node: ts.Node,

@@ -8,6 +8,9 @@ export interface SourceFile {
 }
 
 export const PACKAGE_ROOT = join(import.meta.dir, "..");
+export const REPO_ROOT = join(PACKAGE_ROOT, "../..");
+/** Upstream's web app, whose pages this app shows and whose code the checks read. */
+export const UPSTREAM_WEB = join(PACKAGE_ROOT, "../dispatch/web/src");
 
 const SOURCE = /\.(tsx?|[cm]?jsx?|css)$/;
 

@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
-import { PACKAGE_ROOT } from "./source";
+import { PACKAGE_ROOT, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 
 /** A key binding written in source: an object literal with `keys` beside a `label` or a `run`. */
 export interface KeyRegistration {
@@ -16,8 +17,6 @@ export interface KeyRegistration {
   label: string | undefined;
   keys: string;
 }
-
-export const UPSTREAM_WEB = join(PACKAGE_ROOT, "../dispatch/web/src");
 
 function literalText(node: ts.Expression): string | undefined {
   return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
@@ -101,7 +100,7 @@ export function keyRegistrations(
   path: string,
   text = readFileSync(path, "utf8")
 ): KeyRegistration[] {
-  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+  const source = parseScript(path, text);
   const file = relative(PACKAGE_ROOT, path).split(sep).join("/");
   const found: KeyRegistration[] = [];
   const visit = (node: ts.Node) => {

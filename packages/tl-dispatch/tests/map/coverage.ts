@@ -1,7 +1,8 @@
 import { basename, relative } from "node:path";
 
-import { sharedViews, shellViews, widgetViews } from "../views";
-import { featureViews, forkSrc, readPages, upstreamWebSrc, viewImporters } from "./source";
+import { sharedViews, shellViews, widgetViews } from "@/views";
+import { UPSTREAM_WEB } from "../source";
+import { featureViews, forkSrc, readPages, viewImporters } from "./source";
 
 export interface Owner {
   name: string;
@@ -92,7 +93,7 @@ export function importGraph(): Map<string, string[]> {
     graph.set(
       view,
       files.map((file) =>
-        file.startsWith(forkSrc) ? (pageOf.get(file) ?? "shell") : relative(upstreamWebSrc, file)
+        file.startsWith(forkSrc) ? (pageOf.get(file) ?? "shell") : relative(UPSTREAM_WEB, file)
       )
     );
   }

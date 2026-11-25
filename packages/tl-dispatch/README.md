@@ -14,7 +14,6 @@ replaces them one page at a time.
 | `src/writes` | What a surface says of a failed write | upstream's write modules |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
-| `src/map` | The checks' readers of the route map, the view map (`src/views.ts`) and the copied upstream code; the app loads none of it | no page module: it reads the sources as text |
 
 `tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
 tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
@@ -174,7 +173,8 @@ bun install            # in this directory; it links the root packages
 
 ## Route map, view map and copied code
 
-`src/map` holds three checks on what upstream changes:
+`tests/map` holds three checks on what upstream changes. They read the sources as text and
+load no page module:
 
 - `links.ts`: the app serves every route of upstream's `app.tsx`, drawing upstream's element as
   written. `OWN_ELEMENTS` names each route written with this app's own part and upstream's
@@ -182,7 +182,7 @@ bun install            # in this directory; it links the root packages
 - `coverage.ts`: every view file under upstream's `features/` has one owner: a page's `views`, or
   a list in `src/views.ts`.
 - `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash. When
-  upstream changes one, port the change, then run `bun src/map/copies.ts --update`.
+  upstream changes one, port the change, then run `bun tests/map/copies.ts --update`.
 
 ## Checks
 

@@ -32,7 +32,7 @@ export const widgetViews: Readonly<Record<string, readonly string[]>> = {
  * Views more than one owner renders. A change to one is ported to every rebuilt page, shell or
  * widget that loads it, which the import graph names. Only the files two owners load directly are
  * listed: a page's file that only its page and shared files load is shared too
- * (src/map/coverage.ts, effectiveOwners).
+ * (tests/map/coverage.ts, effectiveOwners).
  */
 export const sharedViews: Readonly<Record<string, readonly string[]>> = {
   // Reference links, previews, Markdown bodies and timestamps: drawn on nearly every page.

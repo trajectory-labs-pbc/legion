@@ -3,10 +3,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 
-export const packageRoot = resolve(import.meta.dir, "../..");
-export const upstreamWebSrc = resolve(packageRoot, "../dispatch/web/src");
-export const upstreamAppFile = join(upstreamWebSrc, "app.tsx");
-export const forkSrc = join(packageRoot, "src");
+import { PACKAGE_ROOT, UPSTREAM_WEB } from "../source";
+import { parseScript } from "../typescript";
+
+export const upstreamAppFile = join(UPSTREAM_WEB, "app.tsx");
+export const forkSrc = join(PACKAGE_ROOT, "src");
 export const pagesDir = join(forkSrc, "pages");
 /** The route map: its `pages` list names every page file. */
 export const routeMapFile = join(pagesDir, "index.ts");
@@ -36,20 +37,10 @@ export interface PageEntry {
   linkForms?: LinkForms;
 }
 
-function parse(file: string, text?: string): ts.SourceFile {
-  return ts.createSourceFile(
-    file,
-    text ?? readFileSync(file, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX
-  );
-}
-
 function resolveModule(from: string, specifier: string): string {
   let base: string;
   if (specifier.startsWith(UPSTREAM_ALIAS)) {
-    base = join(upstreamWebSrc, specifier.slice(UPSTREAM_ALIAS.length));
+    base = join(UPSTREAM_WEB, specifier.slice(UPSTREAM_ALIAS.length));
   } else if (specifier.startsWith(OWN_ALIAS)) {
     base = join(forkSrc, specifier.slice(OWN_ALIAS.length));
   } else if (specifier.startsWith(".")) {
@@ -89,7 +80,7 @@ function stringConstant(source: ts.SourceFile, name: string): string {
       for (const element of statement.importClause.namedBindings.elements) {
         if (element.name.text === name) {
           const target = resolveModule(source.fileName, statement.moduleSpecifier.text);
-          return stringConstant(parse(target), (element.propertyName ?? element.name).text);
+          return stringConstant(parseScript(target), (element.propertyName ?? element.name).text);
         }
       }
     }
@@ -137,7 +128,7 @@ const tagName = (source: ts.SourceFile, node: ts.Node): string | undefined =>
 
 /** Every `<Route>` of upstream's app, its path constants resolved. */
 export function upstreamRoutes(file = upstreamAppFile, text?: string): RouteEntry[] {
-  const source = parse(file, text);
+  const source = parseScript(file, text);
   const routes: RouteEntry[] = [];
   const visit = (node: ts.Node): void => {
     if (tagName(source, node) === "Route") {
@@ -215,7 +206,7 @@ export function topLevelNames(source: ts.SourceFile): Set<string> {
 
 /** Each top-level name of app.tsx that a `<Route>`'s element refers to, such as a page's lazy. */
 export function routeTargets(file = upstreamAppFile, text?: string): string[] {
-  const source = parse(file, text);
+  const source = parseScript(file, text);
   const declared = topLevelNames(source);
   const found = new Set<string>();
   const collect = (node: ts.Node): void => {
@@ -253,8 +244,8 @@ export function routingProblems(
 ): string[] {
   const problems: string[] = [];
   for (const { file, text } of files) {
-    const source = parse(file, text);
-    const where = relative(upstreamWebSrc, file);
+    const source = parseScript(file, text);
+    const where = relative(UPSTREAM_WEB, file);
     const visit = (node: ts.Node): void => {
       if (
         ts.isCallExpression(node) &&
@@ -286,7 +277,7 @@ export function routingProblems(
 
 /** Upstream's web sources, tests and fixtures aside. */
 function upstreamSources(): { file: string; text: string }[] {
-  return sourceFiles(upstreamWebSrc, ["__tests__", "__fixtures__"]).map((file) => ({
+  return sourceFiles(UPSTREAM_WEB, ["__tests__", "__fixtures__"]).map((file) => ({
     file,
     text: readFileSync(file, "utf8"),
   }));
@@ -377,7 +368,7 @@ function readRoutes(source: ts.SourceFile, node: ts.Expression): RouteEntry[] {
 }
 
 function readPage(file: string): PageEntry {
-  const source = parse(file);
+  const source = parseScript(file);
   for (const statement of source.statements) {
     if (!ts.isVariableStatement(statement)) {
       continue;
@@ -434,7 +425,7 @@ function listOf(source: ts.SourceFile, node: ts.Expression): ts.NodeArray<ts.Exp
 
 /** The page files the route map (`src/pages/index.ts`) lists in `pages`. */
 export function routeMapFiles(file = routeMapFile): string[] {
-  const source = parse(file);
+  const source = parseScript(file);
   const imports = new Map<string, string>();
   for (const statement of source.statements) {
     if (
@@ -500,7 +491,7 @@ function importTarget(from: string, specifier: string, webSrc: string): string |
 
 /** The modules a file loads at run time: its imports and re-exports, type-only ones aside, and each `import()`. */
 export function runtimeImports(file: string, text: string): string[] {
-  const source = parse(file, text);
+  const source = parseScript(file, text);
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
@@ -540,11 +531,11 @@ export function runtimeImports(file: string, text: string): string[] {
  * For each view file under upstream's `features/`, the files that load it at run time: upstream's
  * own feature files and this app's sources.
  */
-export function viewImporters(webSrc = upstreamWebSrc): Map<string, string[]> {
+export function viewImporters(webSrc = UPSTREAM_WEB): Map<string, string[]> {
   const importers = new Map<string, string[]>();
   const files = [
     ...sourceFiles(join(webSrc, "features"), ["__tests__", "__fixtures__"]),
-    ...sourceFiles(forkSrc, ["map"]),
+    ...sourceFiles(forkSrc, []),
   ];
   for (const file of files) {
     for (const specifier of runtimeImports(file, readFileSync(file, "utf8"))) {
@@ -560,7 +551,7 @@ export function viewImporters(webSrc = upstreamWebSrc): Map<string, string[]> {
 }
 
 /** Every view file under upstream's `features/`: each `.tsx` that is not a test or a fixture. */
-export function featureViews(webSrc = upstreamWebSrc): string[] {
+export function featureViews(webSrc = UPSTREAM_WEB): string[] {
   const found: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

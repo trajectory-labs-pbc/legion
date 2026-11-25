@@ -3,8 +3,9 @@ import { join } from "node:path";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
 import { UNDER_OVERLAY } from "@/commands/bindings";
-import { keyRegistrations, UPSTREAM_WEB } from "../../tests/key-registrations";
+import { keyRegistrations } from "../../tests/key-registrations";
 import { render, settle } from "../../tests/react";
+import { UPSTREAM_WEB } from "../../tests/source";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";
 
 function Harness({ actions }: { actions: GlobalActions }) {

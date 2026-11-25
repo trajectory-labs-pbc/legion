@@ -1,18 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-
-import {
-  copyProblems,
-  partText,
-  readPins,
-  repoRoot,
-  unpinnedRouteTargets,
-  upstreamDiff,
-} from "./copies";
+import { REPO_ROOT } from "../source";
+import { copyProblems, partText, readPins, unpinnedRouteTargets, upstreamDiff } from "./copies";
 
 const APP = "packages/dispatch/web/src/app.tsx";
-const appText = () => readFileSync(join(repoRoot, APP), "utf8");
+const appText = () => readFileSync(join(REPO_ROOT, APP), "utf8");
 const pin = (part: string) => {
   const found = readPins().find((entry) => entry.file === APP && entry.part === part);
   if (!found) throw new Error(`no pin for ${part}`);
@@ -41,7 +34,7 @@ describe("copied upstream code", () => {
   test("each pin names a file of this app that holds the copy", () => {
     const missing = readPins()
       .map((entry) => entry.copy)
-      .filter((copy) => !existsSync(join(repoRoot, "packages/tl-dispatch", copy)));
+      .filter((copy) => !existsSync(join(REPO_ROOT, "packages/tl-dispatch", copy)));
     expect(missing).toEqual([]);
   });
 
@@ -51,8 +44,8 @@ describe("copied upstream code", () => {
     const changed = { ...first, sha256: "0".repeat(64) };
     const removed = { ...first, part: "NoSuchPart" };
     expect(copyProblems([changed, removed])).toEqual([
-      `${first.file} changed ${first.part} since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun src/map/copies.ts --update\``,
-      `${first.file} no longer has NoSuchPart since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun src/map/copies.ts --update\``,
+      `${first.file} changed ${first.part} since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun tests/map/copies.ts --update\``,
+      `${first.file} no longer has NoSuchPart since ${first.commit.slice(0, 12)}, which ${first.copy} copies: port the change (git diff ${first.commit.slice(0, 12)} -- ${first.file}), then run \`bun tests/map/copies.ts --update\``,
     ]);
   });
 
@@ -74,7 +67,7 @@ describe("copied upstream code", () => {
 
   test("names a route target no pin covers", () => {
     expect(unpinnedRouteTargets([], ["IssuePage"])).toEqual([
-      `${APP}: a route element refers to IssuePage, which copies.json does not pin: add {"file": "${APP}", "part": "IssuePage", "copy": <the page file that draws it>} and run \`bun src/map/copies.ts --update\``,
+      `${APP}: a route element refers to IssuePage, which copies.json does not pin: add {"file": "${APP}", "part": "IssuePage", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update\``,
     ]);
   });
 
