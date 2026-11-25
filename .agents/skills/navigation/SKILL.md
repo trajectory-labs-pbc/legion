@@ -22,7 +22,7 @@ The app keeps React Router while it still draws upstream's pages, because each o
 
 - `router-path.ts`: the path grammar written in the router's syntax.
 - `provider.tsx`: the router provider for the app. Tests use `MemoryNavigationProvider` from `tests/navigation.tsx`.
-- `route-tree.tsx`: the route tree, `pageAt` and `useCurrentPage`.
+- `route-tree.tsx`: `createRouteTree`, which builds the outlet, `pageAt` and `useCurrentPage` from the pages it is handed.
 - `page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
 
@@ -39,18 +39,19 @@ Each page has one file in `src/pages/`. It exports a `Page`:
 | `routes` | Named routes, each written with `pageRoute`. A link names the route it opens. |
 | `views` | The upstream view files the page replaces, as paths under upstream's `web/src`. See `.agents/skills/porting-upstream/SKILL.md`. |
 
-A route is `pageRoute({ path, element, search?, prefetch? })`:
+A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
 
 - `path` uses navigation's grammar, which only `path.ts` reads: `/`-separated text, a `:name` segment for a param, and a last `*` for the rest of the address. `"/issues/:key/*"` binds `key`.
 - `search` lists the search keys the page reads, as literals.
 - `prefetch(params)` returns the page's first reads, each `prefetchOf(queryOptions)`.
+- `layout` says how the shell frames the page: a `PageLayout` (`src/pages/page.ts`), or a function of the address.
 
 `pageRoute` keeps the path and search keys as literal types, so every link to the route is typed.
 
 ## Add a page or a route
 
 1. Write or extend the page file in `src/pages/`, with a `pageRoute` for each address.
-2. Add the page to `pages` in `src/navigation/route-tree.tsx`, the route map.
+2. Add the page to `pages` in `src/pages/index.ts`, the route map. `src/navigation` imports no page: `tests/layering.test.ts` refuses it.
 3. If the sidebar lists the page, add a row to `NAV_DESTINATIONS` (`src/commands/nav.ts`) and its route to `NAV_PAGES` (`src/shell/nav-pages.ts`). Both are typed by the destination's name, so a missing row fails `tsc`.
 4. If upstream serves the same address, keep upstream's path. Run the link test.
 5. Run `bun test src/navigation tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
@@ -65,7 +66,7 @@ A route is `pageRoute({ path, element, search?, prefetch? })`:
 | `usePageNavigate()` | A move in code: `navigate(route, { params, search, replace })`. |
 | `usePageParams(route)` | The params of the page the address is on. It throws on another page. |
 | `usePageSearch(route)` | The search keys the route declares, from the address. |
-| `useCurrentPage()` | The page and route the address opens, as the router ranks them. |
+| `useCurrentPage()`, from `src/pages/index.ts` | The page, the route and the layout the address opens, as the router ranks them. |
 | `useAddress()` | The address as text, for upstream helpers that read it. |
 
 A wrong route, a missing param or an unknown search key fails the type check.
@@ -76,7 +77,8 @@ A wrong route, a missing param or an unknown search key fails the type check.
 
 ## Checks
 
-- `src/navigation/*.test.ts(x)`: the grammar, typed links, hooks, the route tree and prefetch.
+- `src/navigation/*.test.ts(x)`: the grammar, typed links, hooks and prefetch.
+- `src/pages/index.test.ts`: the route tree, and each page's layout against upstream's rules for the frame.
 - `tests/layering.test.ts`: the router rule, through every import the build resolves.
 - `tests/map/links.test.ts`: every upstream route, reference form and server-written address opens the same page here.
 - A reviewer checks that a diff adds no path string literal outside `src/pages` and no router import outside `src/navigation`.

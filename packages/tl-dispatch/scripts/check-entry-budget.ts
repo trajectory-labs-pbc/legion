@@ -4,7 +4,7 @@ import { gzipSync } from "node:zlib";
 
 /**
  * The entry chunk's limit in bytes. Raise it in the change that needs it, saying why; a page
- * belongs in its own lazy chunk. The entry measured 1,211,637 bytes on 2026-11-25.
+ * belongs in its own lazy chunk. The entry measured 1,211,418 bytes on 2026-11-25.
  */
 export const ENTRY_BUDGET_BYTES =
   1_200_092 + // the package's first commit measured 1,142,944 on 2026-11-24, plus 5%

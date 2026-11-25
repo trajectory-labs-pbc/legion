@@ -58,7 +58,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 ## Scopes and overlays
 
-The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`). `src/commands/engine-stack.ts` follows the engine's scope stack and the open overlays.
+The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`). `src/commands/engine-stack.ts` follows the engine's scope stack and the open overlays, and `bindings.ts` writes a context's commands as the engine's bindings.
 
 - Only the top overlay's commands run. Each open dialog, alert dialog, sheet, drawer, menu, popover or select adds a layer (`src/ui/overlay-layer.tsx`). A tooltip or hover card adds none.
 - A global command runs under an overlay only where `GLOBAL_COMMANDS_RUN_UNDER` lets that kind through. Today only a drawer does.
@@ -70,7 +70,7 @@ The app compiles the catalog to upstream's key engine (`@upstream-dispatch/featu
 
 `?` opens `ShortcutsSheet` anywhere but under an alert dialog. It lists the keys that run where `?` was pressed: the catalog's commands by group, each once with all its keys, and upstream's bindings by scope. It hides `Escape` and disabled commands. While it is open, only `?` and Escape act: they close it. Its code loads on the first `?`.
 
-`UPSTREAM_LABELS` in `app-catalog.ts` relabels an upstream binding whose own label does not fit the sheet, by `scope:id`.
+`UPSTREAM_LABELS` in `upstream-labels.ts` relabels an upstream binding whose own label does not fit the sheet, by `scope:id`.
 
 ## Checks
 

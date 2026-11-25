@@ -191,6 +191,8 @@ load no page module:
   engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   Among them: nothing scales and no class sets the pointer cursor.
+  `tests/skill-paths.test.ts` fails on a path that a skill under `.agents/skills` or this
+  package's `AGENTS.md` names and that does not exist.
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
   outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
