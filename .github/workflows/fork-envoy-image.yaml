@@ -19,9 +19,10 @@ name: Fork envoy image
 # run, then its own run of this workflow. A dispatch does not do that: it builds the ref's tip.
 #
 # A pull request builds only the smoke stage, on the image of the newest ancestor on main that
-# has one, and fails when it changes an input of upstream's image, which that image cannot show.
-# One that changes only release-envoy-listener.yaml among those inputs builds nothing and says so in
-# its summary: the push run on main tests that change.
+# has one. When the listener's inputs changed since that ancestor, its image cannot show the pull
+# request's change: the job builds nothing, says so in a notice and in its summary, and ends
+# green, and the push run on main tests the image. A failed listener run or a base image whose
+# attestation does not hold still fails the job.
 on:
   pull_request:
   push:
