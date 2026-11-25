@@ -92,7 +92,31 @@ const appliesFont = (node: ChildNode): boolean =>
   node instanceof Rule &&
   node.nodes.some((child) => child instanceof AtRule && /\bfont-/.test(child.params));
 
-const fontItems = (): RegistryItem[] => [
+// theme.css holds the tokens; globals.css adds the dark variant and the base rules.
+const stylesheet = (name: string): Root =>
+  postcss.parse(readFileSync(join(pkg, "src/styles", name), "utf8"));
+
+function themeVariable(tokens: Root, name: string): string {
+  const found = (atRule(tokens, "theme", "inline").nodes ?? []).find(
+    (node) => node.type === "decl" && node.prop === name
+  );
+  if (found?.type !== "decl") throw new Error(`the theme has no ${name}`);
+  return found.value;
+}
+
+/** The selector of the base rule that applies `utility`, on one line. */
+function baseSelector(css: Root, utility: string): string {
+  const found = (atRule(css, "layer", "base").nodes ?? []).find(
+    (node) =>
+      node instanceof Rule &&
+      node.nodes.some((child) => child instanceof AtRule && child.params === utility)
+  );
+  if (!(found instanceof Rule)) throw new Error(`no base rule applies ${utility}`);
+  return found.selectors.join(", ");
+}
+
+// The font stacks and the mono selector are the stylesheets' own, so an installed font matches.
+const fontItems = (tokens: Root, css: Root): RegistryItem[] => [
   {
     name: "font-geist",
     type: "registry:font",
@@ -101,7 +125,7 @@ const fontItems = (): RegistryItem[] => [
       `@fontsource-variable/geist@${manifest.dependencies["@fontsource-variable/geist"]}`,
     ],
     font: {
-      family: '"Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+      family: themeVariable(tokens, "--font-sans"),
       provider: "google",
       import: "Geist",
       variable: "--font-sans",
@@ -116,20 +140,17 @@ const fontItems = (): RegistryItem[] => [
       `@fontsource-variable/geist-mono@${manifest.dependencies["@fontsource-variable/geist-mono"]}`,
     ],
     font: {
-      family: '"Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      family: themeVariable(tokens, "--font-mono"),
       provider: "google",
       import: "Geist_Mono",
       variable: "--font-mono",
-      selector: "code, kbd, samp, pre",
+      selector: baseSelector(css, "font-mono"),
       dependency: "@fontsource-variable/geist-mono",
     },
   },
 ];
 
-function themeItem(): RegistryItem {
-  // theme.css holds the tokens; globals.css adds the dark variant and the base rules.
-  const tokens = postcss.parse(readFileSync(join(pkg, "src/styles/theme.css"), "utf8"));
-  const css = postcss.parse(readFileSync(join(pkg, "src/styles/globals.css"), "utf8"));
+function themeItem(tokens: Root, css: Root): RegistryItem {
   const theme = Object.fromEntries(
     (atRule(tokens, "theme", "inline").nodes ?? []).flatMap((node) =>
       node.type === "decl" && !node.prop.startsWith("--font-")
@@ -218,13 +239,15 @@ export function buildRegistry() {
       .filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
       .map((file) => file.slice(0, -".tsx".length))
       .sort();
+  const tokens = stylesheet("theme.css");
+  const css = stylesheet("globals.css");
   return {
     $schema: "https://ui.shadcn.com/schema/registry.json",
     name: "legion",
     homepage: "https://github.com/<owner>/<repo>",
     items: [
-      themeItem(),
-      ...fontItems(),
+      themeItem(tokens, css),
+      ...fontItems(tokens, css),
       ...named("ui").map((name) => componentItem(name)),
       ...named("blocks").map((name) => componentItem(name, readSource, "blocks")),
     ],
