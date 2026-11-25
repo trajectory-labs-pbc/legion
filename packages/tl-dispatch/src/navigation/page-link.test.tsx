@@ -134,6 +134,40 @@ describe("PageLink", () => {
     expect(read.log).toEqual(["start"]);
   });
 
+  test("a quick click with no focus, as Safari's, keeps the read the wait then starts", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    fire(link, "click");
+    await wait(PREFETCH_INTENT_MS + 50);
+    fire(link, "pointerout");
+    await wait(0);
+    expect(read.log).toEqual(["start"]);
+  });
+
+  test("control: a click on an earlier visit does not keep a later visit's read", async () => {
+    const { read, page, client } = setup();
+    const link = mount(
+      client,
+      <PageLink page={page} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fire(link, "pointerover");
+    fire(link, "click");
+    fire(link, "pointerout");
+    fire(link, "pointerover");
+    await wait(PREFETCH_INTENT_MS + 50);
+    fire(link, "pointerout");
+    await wait(0);
+    expect(read.log).toEqual(["start", "abort"]);
+  });
+
   test("control: the pointer leaving with no click stops a read nothing else watches", async () => {
     const { read, page, client } = setup();
     const link = mount(

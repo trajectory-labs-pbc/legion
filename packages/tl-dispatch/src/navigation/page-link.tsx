@@ -45,7 +45,6 @@ export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined
   };
   const start = () => {
     stopWaiting();
-    clicked.current = false;
     started.current = (latest.current?.() ?? []).map((prefetch) => {
       void prefetch.start(client);
       return prefetch.queryKey;
@@ -67,6 +66,8 @@ export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined
   useEffect(() => () => clearTimeout(timer.current), []);
   return {
     onPointerEnter: () => {
+      // A visit starts unclicked; a click before the wait ends still keeps the read it starts.
+      clicked.current = false;
       if (latest.current === undefined || timer.current !== undefined) return;
       timer.current = setTimeout(start, PREFETCH_INTENT_MS);
     },
