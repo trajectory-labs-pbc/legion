@@ -1,6 +1,6 @@
 import { Button } from "@legion/ui/components/button";
 import type { ReactNode } from "react";
-import { writeFailureNote } from "@/writes/write-failure-note";
+import { WriteFailure } from "@/writes/write-failure";
 import {
   apiErrorMessage,
   type DecisionResponse,
@@ -9,7 +9,7 @@ import {
   type SubmitGuard,
 } from "./upstream";
 
-/** Approve and Deny for a pending machine login; with no `approve`, only Deny shows. */
+/** Approve and Deny for a pending machine login; with no `approve`, only Deny shows. One decision is out at a time. */
 export function DecisionButtons({
   approve,
   deny,
@@ -19,17 +19,21 @@ export function DecisionButtons({
   deny: KeyedWrite<StateResponse>;
   submitGuard: SubmitGuard;
 }): ReactNode {
-  const deciding = approve?.isPending === true || deny.isPending;
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
         {approve === undefined ? null : (
-          <Button disabled={deciding} onClick={() => submitGuard.guard(() => approve.mutate())}>
+          <Button
+            disabled={deny.isPending}
+            loading={approve.isPending}
+            onClick={() => submitGuard.guard(() => approve.mutate())}
+          >
             Approve
           </Button>
         )}
         <Button
-          disabled={deciding}
+          disabled={approve?.isPending === true}
+          loading={deny.isPending}
           onClick={() => submitGuard.guard(() => deny.mutate())}
           variant="outline"
         >
@@ -38,22 +42,20 @@ export function DecisionButtons({
       </div>
       {/* A stopped decision may have been made; pressing again sends a new one. */}
       {approve?.isError ? (
-        <p className="text-sm text-danger">
-          {writeFailureNote(approve.error, {
-            what: "the approval",
-            anew: "Pressing Approve again sends a new approval.",
-            refused: (error) => apiErrorMessage(error, "Could not approve this request."),
-          })}
-        </p>
+        <WriteFailure
+          anew="Pressing Approve again sends a new approval."
+          error={approve.error}
+          refused={(error) => apiErrorMessage(error, "Could not approve this request.")}
+          what="the approval"
+        />
       ) : null}
       {deny.isError ? (
-        <p className="text-sm text-danger">
-          {writeFailureNote(deny.error, {
-            what: "the denial",
-            anew: "Pressing Deny again sends a new denial.",
-            refused: (error) => apiErrorMessage(error, "Could not deny this request."),
-          })}
-        </p>
+        <WriteFailure
+          anew="Pressing Deny again sends a new denial."
+          error={deny.error}
+          refused={(error) => apiErrorMessage(error, "Could not deny this request.")}
+          what="the denial"
+        />
       ) : null}
     </div>
   );
