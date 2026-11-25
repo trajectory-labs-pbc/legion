@@ -43,6 +43,9 @@ import { cn } from "@legion/ui/lib/utils";
 - `src/tokens.css` holds the two rules the app adds: the theme's typeface on `:root`, which
   upstream's stylesheet would otherwise set, and the package's edge and focus colours on its
   parts (`[data-slot]`), which its base rules would otherwise give.
+- `src/repaint.css` maps the Tailwind shades and the literal colours upstream's pages use onto
+  the theme's tokens, so those pages take the theme with no edit to them.
+  `tests/repaint.test.ts` checks it. The file lasts while the app shows upstream's pages.
 
 ## Commands
 
