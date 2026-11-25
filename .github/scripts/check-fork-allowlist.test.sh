@@ -153,4 +153,14 @@ run_check "$root"
 check "passes" "$(is "$status" 0)"
 check "counts no file" "$(is "$out" "0 changed files, 0 allowlist entries")"
 
+echo "case: a path that holds a comma or a colon"
+root=$(fixture property)
+change "$root" fork "docs/a,b:c.md"
+list "$root" "packages/app/index.ts"
+change "$root" more packages/app/index.ts
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "the annotation's file property holds neither" \
+  "$(contains "$out" "^::error file=docs/abc.md::docs/a,b:c.md differs")"
+
 summary "check-fork-allowlist.sh"
