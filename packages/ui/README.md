@@ -1,15 +1,17 @@
 # @legion/ui
 
 React components on [Base UI](https://base-ui.com), styled with Tailwind CSS 4, in
-[shadcn's monorepo layout](https://ui.shadcn.com/docs/monorepo): `src/components`, `src/lib`,
-`src/hooks` and `src/styles`, with a `components.json`.
+[shadcn's monorepo layout](https://ui.shadcn.com/docs/monorepo): `src/components`, `src/lib`
+and `src/styles`, with a `components.json`.
 
 ## Use it from a package in this repository
 
 The package installs on its own, outside the root workspaces, and links React and the test tools
-from the root install (`scripts/link-root-packages.ts`). React, React DOM, `@base-ui/react`,
-`class-variance-authority`, `cn` and `lucide-react` are peer dependencies, so an app that imports
-the package bundles one copy of each.
+from the root install (`bun scripts/link-root-packages.ts <package directory>`, which another
+package can run on its own directory). `@base-ui/react`, `class-variance-authority`, `cn` and
+`lucide-react` are peer dependencies and also dev dependencies, so `packages/ui/node_modules` has
+its own copy of each. An app that imports the package from source must dedupe these packages
+(Vite `resolve.dedupe`) and check that its build has one copy of each.
 
 ```css
 @import "@legion/ui/globals.css";
@@ -25,9 +27,9 @@ The root `registry.json` is a shadcn GitHub registry. Its items point at this pa
 so `shadcn add` copies them as they are here:
 
 ```sh
-bunx --bun shadcn@4.23.0 add --yes trajectory-labs-pbc/legion/theme#<ref>
-bunx --bun shadcn@4.23.0 add trajectory-labs-pbc/legion/font-geist#<ref> trajectory-labs-pbc/legion/font-geist-mono#<ref>
-bunx --bun shadcn@4.23.0 add trajectory-labs-pbc/legion/button#<ref> trajectory-labs-pbc/legion/dialog#<ref>
+bunx --bun shadcn@4.23.0 add --yes <owner>/<repo>/theme#<ref>
+bunx --bun shadcn@4.23.0 add <owner>/<repo>/font-geist#<ref> <owner>/<repo>/font-geist-mono#<ref>
+bunx --bun shadcn@4.23.0 add <owner>/<repo>/button#<ref> <owner>/<repo>/dialog#<ref>
 ```
 
 shadcn asks before a theme item replaces CSS variables; `--yes` answers it.
@@ -42,8 +44,11 @@ installs from the default branch, not from the ref you asked for.
 - After you change a component's imports or the stylesheet, run `bun run registry` to rewrite
   `registry.json`. A test fails while the file differs from what the script writes.
 - `bun run registry:validate` runs `shadcn registry validate` on it.
-- The colours are in `src/styles/globals.css`, light in `:root` and dark in `.dark` and in the
-  `prefers-color-scheme: dark` block, which must match. `src/styles/styles.test.ts` holds the
-  design rules: one focus outline, no shadows, opacity fades of 150 to 200 ms only, square corners
-  except dots and avatars, and the contrast of the focus colour, a field's edge and the highlight
-  step (`--accent`).
+- The colours are in `src/styles/globals.css`: light in `:root`, dark in `.dark` and in the
+  `prefers-color-scheme: dark` block, which must match. A `.light` class on the root keeps light
+  when the OS is dark.
+- `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
+  checks the CSS it generates: no shadow but the 1px inset edge, opacity fades of 150 to 200 ms
+  only, square corners except dots and avatars, no pointer cursor, no arbitrary properties, one
+  set of dark values. It also checks the contrast of each text colour on each surface the
+  components draw it on, and of the focus outline and the field and state edges.
