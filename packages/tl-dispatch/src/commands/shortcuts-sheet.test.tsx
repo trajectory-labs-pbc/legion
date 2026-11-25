@@ -169,7 +169,7 @@ describe("ShortcutsSheet", () => {
     mount(["create"]);
     press("?", { shiftKey: true });
     expect(rows().some((row) => row.startsWith("Create issue"))).toBe(false);
-    expect(rows().some((row) => row.startsWith("Command menu"))).toBe(true);
+    expect(rows()).toContain("Search or run commands: Ctrl+K | /");
   });
 
   test("the filter narrows the rows and says when none match", () => {

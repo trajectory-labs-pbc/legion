@@ -64,7 +64,7 @@ describe("CommandButton", () => {
     expect(create?.querySelector("svg")).not.toBeNull();
     expect(create?.dataset.variant).toBe("default");
     expect(search?.textContent).toBe("");
-    expect(search?.getAttribute("aria-label")).toBe("Command menu");
+    expect(search?.getAttribute("aria-label")).toBe("Search or run commands");
     expect(search?.dataset.variant).toBe("ghost");
   });
 
@@ -131,7 +131,9 @@ describe("HotkeyTooltip", () => {
         </HotkeyTooltip>
       </>
     );
-    expect(button(on.container)?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
+    expect(button(on.container)?.getAttribute("aria-keyshortcuts")).toMatch(
+      /^(Meta|Control)\+K \/$/
+    );
     on.unmount();
     mounted.length = 0;
     const off = mount(

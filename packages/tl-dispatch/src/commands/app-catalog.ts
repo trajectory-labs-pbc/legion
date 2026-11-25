@@ -24,20 +24,13 @@ export const APP_CONTEXTS = [
     parent: null,
     scope: "global",
     commands: [
+      // Both keys open the same palette; a slash typed into a field stays a slash.
       {
         name: "search",
-        label: "Command menu",
-        keys: ["$mod+k"],
+        label: "Search or run commands",
+        keys: ["$mod+k", "/"],
         icon: SearchIcon,
         inEditable: true,
-      },
-      // A slash typed into a field stays a slash.
-      {
-        name: "search-only",
-        label: "Search issues",
-        keys: ["/"],
-        icon: SearchIcon,
-        hideFrom: ["palette"],
       },
       {
         name: "help",
