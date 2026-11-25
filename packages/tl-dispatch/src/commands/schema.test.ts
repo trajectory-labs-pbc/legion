@@ -178,8 +178,9 @@ describe("the catalog refuses, when it loads", () => {
   });
 
   test("a key the engine cannot read", () => {
-    expect(problemsOf([global([go("a", ["Hyper+x"])])])).toEqual([
+    expect(problemsOf([global([go("a", ["Hyper+x"]), go("b", ["$mod++"])])])).toEqual([
       `"global.a": Keymap: unknown modifier "Hyper" in "Hyper+x"`,
+      `"global.b": Keymap: "$mod++" has no key`,
     ]);
   });
 

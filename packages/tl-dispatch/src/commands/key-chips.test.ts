@@ -15,7 +15,6 @@ describe("chips", () => {
     ["$mod+Alt+m", true, ["⌘⌥M"]],
     ["Ctrl+x", true, ["⌃X"]],
     ["Ctrl+x", false, ["Ctrl+X"]],
-    ["$mod++", false, ["Ctrl++"]],
   ] as const)("%s on a Mac: %p", (keys, mac, chips) => {
     expect(chipsOf(keys, mac)).toEqual(chips);
   });
