@@ -22,7 +22,7 @@ const FIRST_SEGMENTS = new Set([
   "web",
   ...OWNED_SKILLS,
 ]);
-const FILE_NAME = /^[\w.-]+\.(tsx?|json|md|css|sh|ya?ml|txt)$/;
+const FILE_NAME = /^[\w.-]+\.(tsx?|json|md|css|sh|ya?ml|txt|html|toml)$/;
 const PATH = /^[\w.@-]+(\/[\w.@-]+)+\/?$/;
 const UPSTREAM_ALIAS = "@upstream-dispatch/";
 
@@ -70,6 +70,12 @@ function named(span: string): { path: string; bare: boolean } | undefined {
     : undefined;
 }
 
+/** The paths a span names: the span itself, or each path among the words of a command. */
+function namedIn(span: string): { path: string; bare: boolean }[] {
+  const words = /\s/.test(span) ? span.split(/\s+/).filter((word) => word.includes("/")) : [span];
+  return words.flatMap((word) => named(word) ?? []);
+}
+
 /**
  * Each repository path a document names that does not exist. A path is read from the repository
  * root, this package, upstream's web app or its source, the skills folder, or the document's
@@ -94,19 +100,21 @@ export function missingPaths(
       dirname(file),
     ];
     for (const span of new Set(codeSpans(text))) {
-      const name = named(span);
-      if (name === undefined) continue;
-      const exists = name.path.startsWith(UPSTREAM_ALIAS)
-        ? ["", ".ts", ".tsx"].some((extension) =>
-            existsSync(join(UPSTREAM_WEB, name.path.slice(UPSTREAM_ALIAS.length) + extension))
-          )
-        : name.bare
-          ? own.has(name.path) ||
-            [REPO_ROOT, UPSTREAM_WEB, dirname(file)].some((root) =>
-              existsSync(join(root, name.path))
+      for (const name of namedIn(span)) {
+        const exists = name.path.startsWith(UPSTREAM_ALIAS)
+          ? ["", ".ts", ".tsx"].some((extension) =>
+              existsSync(join(UPSTREAM_WEB, name.path.slice(UPSTREAM_ALIAS.length) + extension))
             )
-          : roots.some((root) => existsSync(join(root, name.path)));
-      if (!exists) missing.push(`${relative(REPO_ROOT, file)} names ${span}, which does not exist`);
+          : name.bare
+            ? own.has(name.path) ||
+              [REPO_ROOT, UPSTREAM_WEB, dirname(file)].some((root) =>
+                existsSync(join(root, name.path))
+              )
+            : roots.some((root) => existsSync(join(root, name.path)));
+        if (!exists) {
+          missing.push(`${relative(REPO_ROOT, file)} names ${name.path}, which does not exist`);
+        }
+      }
     }
   }
   return missing;
