@@ -23,4 +23,34 @@ describe("Alert", () => {
     await userEvent.keyboard("{Enter}");
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  it("is a status unless it reports a failure", () => {
+    render(
+      <>
+        <Alert>Saved.</Alert>
+        <Alert variant="warning">Waiting on you.</Alert>
+        <Alert variant="success">Merged.</Alert>
+        <Alert variant="danger">Could not load the logins.</Alert>
+      </>
+    );
+    expect(screen.getAllByRole("status").map((alert) => alert.textContent)).toEqual([
+      "Saved.",
+      "Waiting on you.",
+      "Merged.",
+    ]);
+    expect(screen.getByRole("alert").textContent).toBe("Could not load the logins.");
+  });
+
+  it.each<"default" | "compact">([
+    "default",
+    "compact",
+  ])("wraps a %s alert's title, which is never cut", (size) => {
+    render(
+      <Alert size={size} variant="danger">
+        <AlertTitle>Could not approve: the request expired a minute ago.</AlertTitle>
+      </Alert>
+    );
+    const alert = screen.getByRole("alert");
+    expect(`${alert.className} ${alert.firstElementChild?.className}`).not.toContain("line-clamp");
+  });
 });

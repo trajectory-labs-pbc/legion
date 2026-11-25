@@ -2,16 +2,18 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { cn } from "cn";
 import { popupMotion } from "#registry/legion/lib/overlay-styles";
 
-function TooltipProvider({ delay = 0, ...props }: TooltipPrimitive.Provider.Props) {
-  return <TooltipPrimitive.Provider delay={delay} {...props} />;
+// The trigger's own delay wins over a provider's, so the provider takes none.
+function TooltipProvider(props: Omit<TooltipPrimitive.Provider.Props, "delay">) {
+  return <TooltipPrimitive.Provider {...props} />;
 }
 
 function Tooltip(props: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root {...props} />;
 }
 
-function TooltipTrigger(props: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+// The pointer rests half a second before a tooltip shows (KB6); focus shows it at once.
+function TooltipTrigger({ delay = 500, ...props }: TooltipPrimitive.Trigger.Props) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" delay={delay} {...props} />;
 }
 
 // No arrow: on a bordered surface an arrow's seam shows the border; the offset and the motion

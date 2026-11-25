@@ -423,6 +423,9 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["secondary-foreground", "secondary"],
   ["secondary-foreground", "secondary/80 background"],
   ["secondary-foreground", "secondary/90 background"],
+  // A hovered table row's cells.
+  ["foreground", "secondary"],
+  ["muted-foreground", "secondary"],
   ["destructive-foreground", "destructive"],
   ["destructive-foreground", "destructive/90 background"],
   ["foreground", "danger-tint"],

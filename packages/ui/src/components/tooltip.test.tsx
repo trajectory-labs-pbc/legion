@@ -1,5 +1,5 @@
-import { describe, expect, it } from "bun:test";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, jest } from "bun:test";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { Button } from "#registry/legion/ui/button";
@@ -25,5 +25,28 @@ describe("Tooltip", () => {
     await screen.findByText("Copy the link");
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByText("Copy the link")).toBeNull());
+  });
+
+  it("shows on hover after half a second", async () => {
+    jest.useFakeTimers();
+    try {
+      render(
+        <Tooltip>
+          <TooltipTrigger render={<Button size="icon" aria-label="Copy" />} />
+          <TooltipContent>Copy the link</TooltipContent>
+        </Tooltip>
+      );
+      // userEvent waits on timers, so the pointer comes as plain events on the fake clock.
+      const button = screen.getByRole("button", { name: "Copy" });
+      fireEvent.pointerEnter(button, { pointerType: "mouse" });
+      fireEvent.mouseEnter(button);
+      fireEvent.mouseMove(button);
+      act(() => jest.advanceTimersByTime(450));
+      expect(screen.queryByText("Copy the link")).toBeNull();
+      act(() => jest.advanceTimersByTime(100));
+      expect(screen.queryByText("Copy the link")).not.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

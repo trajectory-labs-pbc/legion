@@ -716,18 +716,6 @@
       ]
     },
     {
-      "name": "native-select",
-      "type": "registry:ui",
-      "dependencies": ["cn@0.2.6", "lucide-react@1.70.0"],
-      "files": [
-        {
-          "path": "packages/ui/src/components/native-select.tsx",
-          "type": "registry:ui",
-          "target": "@ui/native-select.tsx"
-        }
-      ]
-    },
-    {
       "name": "nav",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
