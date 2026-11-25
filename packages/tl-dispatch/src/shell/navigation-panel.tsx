@@ -20,7 +20,7 @@ export function NavigationPanel({
   compact: boolean;
   onClose: () => void;
   /** Held by the shell, so a refusal outlives the narrow screen's menu. */
-  signOut: SignOut;
+  signOut: Pick<SignOut, "start" | "pending" | "error">;
   user: AuthenticatedUser;
 }) {
   return (
