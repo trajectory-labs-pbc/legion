@@ -31,18 +31,17 @@ for entry in "${entries[@]}"; do
 done
 for file in "${changed[@]}"; do
   [ -n "$file" ] || continue
-  hit=""
+  listed=false
+  # Every line that matches is in use, so a file line under a directory line is not stale.
   for entry in "${entries[@]}"; do
     if [[ $entry == */ && $file == "$entry"* ]] || [[ $file == "$entry" ]]; then
-      hit=$entry
-      break
+      listed=true
+      used[$entry]=1
     fi
   done
-  if [ -z "$hit" ]; then
+  if ! $listed; then
     echo "::error file=$file::$file differs from upstream's main and is not on $list"
     fail=1
-  else
-    used[$hit]=1
   fi
 done
 for entry in "${entries[@]}"; do
