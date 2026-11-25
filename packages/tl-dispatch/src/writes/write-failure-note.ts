@@ -1,6 +1,6 @@
 import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
 
-interface WriteFailure {
+export interface WriteFailureText {
   /** The write, as the sentence names it: `the approval`. */
   what: string;
   /** What pressing the surface's control again sends, since a stopped write may have been made. */
@@ -10,7 +10,10 @@ interface WriteFailure {
 }
 
 /** What a surface says of its failed write: one the reader stopped may have been made. */
-export function writeFailureNote(error: unknown, { what, anew, refused }: WriteFailure): string {
+export function writeFailureNote(
+  error: unknown,
+  { what, anew, refused }: WriteFailureText
+): string {
   return error instanceof SendStoppedError
     ? stoppedWriteNote(what, "made", { anew })
     : refused(error);

@@ -37,6 +37,14 @@ export interface SignOut {
   pending: boolean;
   /** Why the last sign-out failed, while it is this person's. */
   error: string | undefined;
+  /** The question asked before changes are discarded; kept while it closes. */
+  question: string | undefined;
+  /** The question is open. */
+  asking: boolean;
+  /** Answers the question with Sign out. */
+  confirm: () => void;
+  /** Closes the question; the session stays. */
+  dismiss: () => void;
 }
 
 /** Signs `login` out, asking first while this tab or another holds unsent changes. */
@@ -65,6 +73,12 @@ export function useSignOut(login: string): SignOut {
   // A refusal belongs to the person who pressed sign-out.
   const refused = useRefusalOfSubject(write, (signingOut) => signingOut === login);
   const [askingTabs, setAskingTabs] = useState(false);
+  const [question, setQuestion] = useState<{ text: string; open: boolean }>();
+  const send = () => {
+    signIns.signingOut(login);
+    write.mutate(login);
+  };
+  const dismiss = () => setQuestion((asked) => asked && { ...asked, open: false });
   return {
     start: () => {
       if (askingTabs) return;
@@ -73,13 +87,19 @@ export function useSignOut(login: string): SignOut {
         setAskingTabs(false);
         const here = unsentChanges(writesOf(queryClient).rows(), login);
         const unsent = unsentLabels(here, elsewhere.unsent);
-        const ask = unsent.length > 0 || elsewhere.unanswered;
-        if (ask && !window.confirm(signOutQuestion(unsent, elsewhere.unanswered))) return;
-        signIns.signingOut(login);
-        write.mutate(login);
+        if (unsent.length > 0 || elsewhere.unanswered) {
+          setQuestion({ text: signOutQuestion(unsent, elsewhere.unanswered), open: true });
+        } else send();
       });
     },
     pending: write.isPending || askingTabs,
     error: refused && write.error !== null ? signOutFailure(write.error) : undefined,
+    question: question?.text,
+    asking: question?.open === true,
+    confirm: () => {
+      dismiss();
+      send();
+    },
+    dismiss,
   };
 }

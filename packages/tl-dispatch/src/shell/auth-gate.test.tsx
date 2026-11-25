@@ -5,7 +5,7 @@ import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { http } from "msw";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdReads, holdShellReads } from "../../tests/network";
-import { render } from "../../tests/react";
+import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AuthGate } from "./auth-gate";
 
@@ -42,6 +42,26 @@ describe("AuthGate", () => {
       )
     );
     const container = mount();
+    await waitFor(() => expect(container.textContent).toContain("Sign in"));
+  });
+
+  test("a failed check announces that Dispatch is out of reach, and Retry asks again", async () => {
+    let down = true;
+    answerRequests(
+      http.get("/auth/whoami", () =>
+        down
+          ? Response.json({ error: { code: "INTERNAL" } }, { status: 500 })
+          : Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 })
+      )
+    );
+    const container = mount();
+    await waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Could not reach Dispatch."
+      )
+    );
+    down = false;
+    settle(() => container.querySelector("button")?.click());
     await waitFor(() => expect(container.textContent).toContain("Sign in"));
   });
 
