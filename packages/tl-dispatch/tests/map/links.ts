@@ -1,4 +1,4 @@
-import { firstMatch } from "@/navigation/router-path";
+import { firstMatch, routerPath } from "@/navigation/router-path";
 import { type PageEntry, type RouteEntry, readPages, routeMapFiles } from "./source";
 
 export interface ForkRoute extends RouteEntry {
@@ -29,7 +29,7 @@ export function resolveHref<T extends RouteEntry>(
 ): T | undefined {
   const url = new URL(href, "https://dispatch.invalid");
   const index = firstMatch(
-    routes.map((route) => route.path),
+    routes.map((route) => routerPath(route.path)),
     url.pathname
   );
   return index === undefined ? undefined : routes[index];
