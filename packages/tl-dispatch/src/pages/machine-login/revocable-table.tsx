@@ -1,5 +1,10 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@legion/ui/components/collapsible";
 import { Heading } from "@legion/ui/components/heading";
 import {
   Table,
@@ -52,7 +57,16 @@ export function RevocableTable<Row>({
         <Heading id={headingId} size="section">
           {heading}
         </Heading>
-        <p className="max-w-prose text-sm text-pretty text-muted-foreground">{description}</p>
+        <Collapsible>
+          <CollapsibleTrigger
+            render={<Button className="px-0 underline" size="sm" variant="link" />}
+          >
+            How {noun} work
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className="text-sm text-pretty text-muted-foreground">{description}</p>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">Loading {noun}…</p>
@@ -108,8 +122,9 @@ export function RevocableTable<Row>({
                         aria-label={`Revoke ${rowName(row)}`}
                         disabled={revoke.pending}
                         onClick={() => revoke.press(row)}
+                        className="text-danger hover:text-danger"
                         size="sm"
-                        variant="destructive"
+                        variant="ghost"
                       >
                         Revoke
                       </Button>

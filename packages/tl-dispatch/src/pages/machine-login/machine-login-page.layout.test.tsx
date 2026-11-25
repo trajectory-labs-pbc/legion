@@ -1,0 +1,119 @@
+import { afterEach, expect, spyOn, test } from "bun:test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { MachineLoginPage } from "./machine-login-page";
+import { api, type RecordResponse } from "./upstream";
+
+const record: RecordResponse = {
+  approver: "ada",
+  decided: null,
+  enrollment: null,
+  expires_at: "2026-09-27T01:00:00Z",
+  identifiers: ["worker-7.example.com"],
+  kind: "launcher_credential",
+  lifetime_seconds: 900,
+  reason: "",
+  record_id: "req-2",
+  requested_at: "2026-09-27T00:00:00Z",
+  rules_version: "v3",
+  service: null,
+  session: { enrollment: null, request: null },
+  state: "pending",
+};
+
+const restores: (() => void)[] = [];
+afterEach(() => {
+  cleanup();
+  for (const restore of restores.splice(0)) restore();
+});
+
+function stub() {
+  const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(record);
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({
+    credentials: [
+      {
+        approved_by: "ada@example.com",
+        credential_id: "cred-devbox",
+        expired: false,
+        expires_at: "2026-10-10T12:00:00Z",
+        host: "devbox.example.com",
+        issued_at: "2026-10-03T12:00:00Z",
+        person: null,
+        service: null,
+        subject: null,
+      },
+    ],
+  });
+  restores.push(
+    () => lookup.mockRestore(),
+    () => logins.mockRestore()
+  );
+}
+
+function renderPage() {
+  return render(
+    <MemoryNavigationProvider path="/credentials/machine">
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MachineLoginPage />
+      </QueryClientProvider>
+    </MemoryNavigationProvider>
+  );
+}
+
+const primaries = () =>
+  screen
+    .getAllByRole("button")
+    .filter((button) => button.className.includes("bg-primary"))
+    .map((button) => button.textContent);
+
+async function lookUp() {
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText("Code shown on the machine"));
+  await user.paste("abcd1234");
+  await user.click(screen.getByRole("button", { name: "Look up" }));
+  return screen.findByRole("heading", {
+    name: "worker-7.example.com asks to start agent sessions as you",
+  });
+}
+
+test("one 720 px column with one primary action: Look up, then Approve once a request shows", async () => {
+  stub();
+  const view = renderPage();
+  expect(view.container.querySelector("section")?.className).toContain("max-w-180");
+  expect(primaries()).toEqual(["Look up"]);
+  await lookUp();
+  expect(primaries()).toEqual(["Approve"]);
+  expect(screen.getByRole("button", { name: "Look up" }).className).toContain("border-input");
+});
+
+test("the headline names the machine and what it asks, over two duration rows", async () => {
+  stub();
+  renderPage();
+  await lookUp();
+  const lasts = screen.getByText("Login lasts 15 minutes");
+  const expires = screen.getByText(
+    (_, element) => element?.tagName === "P" && /^Request expires/.test(element.textContent ?? "")
+  );
+  for (const row of [lasts, expires]) expect(row.className).toContain("h-8");
+  expect(screen.queryByText(/Approver|Anyone signed in|Machine login$/)).toBeNull();
+});
+
+test("the policy text sits behind a link, and Revoke is a quiet danger button", async () => {
+  stub();
+  renderPage();
+  const user = userEvent.setup();
+  const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+  const revoke = await section.findByRole("button", {
+    name: "Revoke the machine login for devbox.example.com",
+  });
+  expect(revoke.className).toContain("text-danger");
+  expect(revoke.className).not.toContain("bg-destructive");
+  expect(section.queryByText(/^Every machine and every pod/)).toBeNull();
+  await user.click(section.getByRole("button", { name: "How machine logins work" }));
+  expect(section.getByText(/^Every machine and every pod/)).toBeDefined();
+});
