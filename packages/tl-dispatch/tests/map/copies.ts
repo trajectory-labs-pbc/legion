@@ -153,7 +153,10 @@ export function copyProblems(pins: readonly Copy[] = readPins(), read = partText
   });
 }
 
-/** Each name a route element of app.tsx refers to that no pin covers. */
+/**
+ * Each name a route element of app.tsx refers to that no pin covers, directly or through the
+ * declarations it names: a page's lazy, and the imports a copied page's body draws.
+ */
 export function unpinnedRouteTargets(
   pins: readonly Copy[] = readPins(),
   targets: readonly string[] = routeTargets()
@@ -163,7 +166,7 @@ export function unpinnedRouteTargets(
     .filter((name) => !pinned.has(name))
     .map(
       (name) =>
-        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update ${appFile} ${name}\``
+        `${appFile}: a route element refers to ${name}, itself or through a part it names, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the file of this app that holds its copy>} and run \`bun tests/map/copies.ts --update ${appFile} ${name}\``
     );
 }
 

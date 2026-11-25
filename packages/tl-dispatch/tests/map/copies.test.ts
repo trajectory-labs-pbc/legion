@@ -11,6 +11,7 @@ import {
   unpinnedRouteTargets,
   upstreamDiff,
 } from "./copies";
+import { routeTargets } from "./source";
 
 const APP = "packages/dispatch/web/src/app.tsx";
 const appText = () => readFileSync(join(REPO_ROOT, APP), "utf8");
@@ -91,8 +92,23 @@ describe("copied upstream code", () => {
 
   test("names a route target no pin covers", () => {
     expect(unpinnedRouteTargets([], ["IssuePage"])).toEqual([
-      `${APP}: a route element refers to IssuePage, which copies.json does not pin: add {"file": "${APP}", "part": "IssuePage", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update ${APP} IssuePage\``,
+      `${APP}: a route element refers to IssuePage, itself or through a part it names, which copies.json does not pin: add {"file": "${APP}", "part": "IssuePage", "copy": <the file of this app that holds its copy>} and run \`bun tests/map/copies.ts --update ${APP} IssuePage\``,
     ]);
+  });
+
+  test("an import a copied page's body draws is a route target, and moving it trips its pin", () => {
+    expect(routeTargets()).toContain("Inbox");
+    const moved = appText().replace(
+      'import { Inbox } from "./features/inbox/Inbox"',
+      'import { Inbox } from "./features/inbox/InboxV2"'
+    );
+    expect(moved).not.toEqual(appText());
+    expect(problemsWith(moved, "InboxPage")).toEqual([]);
+    expect(problemsWith(moved, "Inbox")).toHaveLength(1);
+  });
+
+  test("a type a copied page names is no route target", () => {
+    expect(routeTargets()).not.toContain("ReactNode");
   });
 
   test("a page's lazy that loads another module trips its pin", () => {
