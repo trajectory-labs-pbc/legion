@@ -114,7 +114,7 @@
   {
     "file": "packages/dispatch/web/src/main.tsx",
     "part": "*",
-    "copy": "src/main.tsx",
+    "copy": "src/start.tsx",
     "commit": "733bac8101c2769d9ef715c4c28feca38d1e75be",
     "sha256": "33f395a3b807c3c23669e7549d3cbcc81c2985bcfb68baddf2cb46361166b11c"
   },
