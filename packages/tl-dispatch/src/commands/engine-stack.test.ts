@@ -29,6 +29,22 @@ describe("an engine stack", () => {
   });
 });
 
+describe("a scope's cleanup", () => {
+  test("run twice, leaves a second holder of the scope on the engine and in the stack", () => {
+    const keymap = createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {} });
+    const stack = trackEngineStack(keymap, { get: () => [], subscribe: () => () => {} });
+    const fired: string[] = [];
+    keymap.register("issue", [{ id: "x", keys: "x", label: "X", run: () => fired.push("x") }]);
+    keymap.pushScope("issue");
+    const pop = keymap.pushScope("issue");
+    pop();
+    pop();
+    expect(stack.liveScopes()).toEqual(["global", "issue"]);
+    keymap.handleKeyDown(new KeyboardEvent("keydown", { key: "x", cancelable: true }));
+    expect(fired).toEqual(["x"]);
+  });
+});
+
 describe("the app's engine stack", () => {
   test("survives its module running again, as a hot reload runs it: one tracker, one wrap", async () => {
     // A query makes the loader run the module a second time, against the same key engine.
