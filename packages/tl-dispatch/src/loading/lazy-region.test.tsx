@@ -3,7 +3,7 @@ import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 import { act } from "react";
 
 import { render } from "../../tests/react";
-import { lazyRegion } from "./lazy-region";
+import { lazyOverlay, lazyRegion } from "./lazy-region";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -74,5 +74,35 @@ describe("lazyRegion", () => {
     await flush();
     expect(tries).toBe(2);
     expect(view.container.querySelector("[data-piece]")?.textContent).toBe("piece");
+  });
+});
+
+describe("lazyOverlay", () => {
+  function Sheet({ open, word }: { open: boolean; word: string }) {
+    return <p data-sheet={open ? "open" : "closed"}>{word}</p>;
+  }
+
+  test("loads nothing until it first opens, then keeps its view for its close", async () => {
+    let loads = 0;
+    const Lazy = lazyOverlay(
+      "the sheet",
+      () => {
+        loads += 1;
+        return Promise.resolve({ Sheet });
+      },
+      "Sheet"
+    );
+    const view = render(<Lazy open={false} word="keys" />);
+    cleanups.push(() => view.unmount());
+    await flush();
+    expect(loads).toBe(0);
+    expect(view.container.querySelector("[data-sheet]")).toBeNull();
+    view.rerender(<Lazy open word="keys" />);
+    await flush();
+    expect(view.container.querySelector("[data-sheet]")?.getAttribute("data-sheet")).toBe("open");
+    view.rerender(<Lazy open={false} word="keys" />);
+    await flush();
+    expect(view.container.querySelector("[data-sheet]")?.getAttribute("data-sheet")).toBe("closed");
+    expect(loads).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
-import { type ComponentType, Suspense } from "react";
+import { type ComponentType, Suspense, useState } from "react";
 
 import { lazyNamed, type PropsOf } from "./lazy-named";
 
@@ -23,5 +23,19 @@ export function lazyRegion<Module, Name extends keyof Module>(
         </Suspense>
       </ErrorBoundary>
     );
+  };
+}
+
+/** A lazy region that loads the first time it opens and stays drawn for its close. */
+export function lazyOverlay<Module, Name extends keyof Module>(
+  region: string,
+  load: () => Promise<Module>,
+  name: Name
+): ComponentType<PropsOf<Module[Name]> & { open: boolean }> {
+  const View = lazyRegion(region, load, name);
+  return function LazyOverlay(props) {
+    const [opened, setOpened] = useState(false);
+    if (props.open && !opened) setOpened(true);
+    return opened ? <View {...props} /> : null;
   };
 }
