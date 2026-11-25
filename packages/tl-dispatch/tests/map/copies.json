@@ -71,6 +71,13 @@
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
+    "part": "heldWritesOfGoneHolder",
+    "copy": "src/shell/sign-ins.ts",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "dd56662cc1568e6b5271628d5d79efe55487e40b36e7aa67f7df4153b4c67990"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthenticatedApp",
     "copy": "src/shell/auth-gate.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
