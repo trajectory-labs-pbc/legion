@@ -27,9 +27,10 @@ function machineRecord(decided: RecordResponse["decided"] = null): RecordRespons
   };
 }
 
-/** The paragraph whose whole text is `text`; the rebuilt page sets the credential id in its own span. */
-const paragraph = (text: string) => (_: string, element: Element | null) =>
-  element?.tagName === "P" && element.textContent === text;
+/** The paragraph whose whole text matches; the rebuilt page sets the credential id in its own span. */
+const paragraph = (text: string | RegExp) => (_: string, element: Element | null) =>
+  element?.tagName === "P" &&
+  (typeof text === "string" ? element.textContent === text : text.test(element.textContent ?? ""));
 
 async function lookUp() {
   const user = userEvent.setup();
@@ -102,7 +103,7 @@ for (const [id, decided, word] of [
       expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Deny" })).not.toBeInTheDocument();
       if (decided.credential_id === null) {
-        expect(screen.queryByText(/^Credential /)).not.toBeInTheDocument();
+        expect(screen.queryByText(paragraph(/^Credential /))).not.toBeInTheDocument();
       } else {
         expect(screen.getByText(paragraph(`Credential ${decided.credential_id}`))).toBeDefined();
       }
