@@ -96,6 +96,10 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<div className="motion-safe:animate-spin motion-safe:transition-opacity">'],
   ["tsx", '<div className="motion-safe:transition-[opacity] motion-safe:transition-none">'],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }"],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms var(--ease, ease-in); } }",
+  ],
   ["tsx", '<a href="#b-r1">'],
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],

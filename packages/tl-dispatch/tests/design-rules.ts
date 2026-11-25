@@ -103,12 +103,21 @@ const FOCUS_PROPERTY = new Set([
 ]);
 const TEXT_PROPERTY = new Set(["color", "-webkit-text-fill-color"]);
 const MOTION_PROPERTY = /^(transition|animation)(-|$)|^(transform|translate|scale|rotate)$/;
+/** `value` with every parenthesised group taken out, nested ones too. */
+function outsideParentheses(value: string): string {
+  let rest = value;
+  while (/\([^()]*\)/.test(rest)) rest = rest.replace(/\([^()]*\)/g, "");
+  return rest;
+}
+
 /** A transition of opacity alone, or none: `transition-property`, or each item of the shorthand. */
 const fades = (property: string, value: string) =>
   property === "transition-property"
     ? /^(opacity|none)$/.test(value)
     : property !== "transition" ||
-      value.split(",").every((item) => /^(opacity|none)\b/.test(item.trim()));
+      outsideParentheses(value)
+        .split(",")
+        .every((item) => /^(opacity|none)\b/.test(item.trim()));
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
