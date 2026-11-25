@@ -29,7 +29,7 @@ export function ShortcutsSheetView({ open, onOpenChange, sections, mac }: Shortc
   const shown = useMemo(() => shownSections(sections, mac), [sections, mac]);
   return (
     <ShortcutsSheet
-      description="The keys that work here, where you pressed ?"
+      description="The keys that work right now."
       onOpenChange={onOpenChange}
       open={open}
       sections={shown}
