@@ -58,6 +58,12 @@ function variables(rule: Rule): Record<string, string> {
   );
 }
 
+/** A rule without its variables, which the theme item carries as cssVars. */
+const withoutVariables = (rule: Rule): Rule =>
+  rule.clone({
+    nodes: rule.nodes.filter((node) => node.type !== "decl" || !node.prop.startsWith("--")),
+  });
+
 function atRule(css: Root, name: string, params: string): AtRule {
   const found = css.nodes.find(
     (node) => node instanceof AtRule && node.name === name && node.params === params
@@ -128,10 +134,12 @@ function themeItem(): RegistryItem {
     type: "registry:theme",
     title: "Theme",
     description:
-      "Light and dark colours, a focus colour, square corners, and a dark variant that follows the OS setting or a .dark class.",
+      "Light and dark colours, a focus colour, square corners, and a dark variant that follows the OS setting unless the root has .light, or a .dark class.",
     cssVars: { theme, light: variables(light), dark: variables(dark) },
     css: toJson([
       atRule(css, "custom-variant", "dark"),
+      withoutVariables(light),
+      withoutVariables(dark),
       atRule(css, "media", "(prefers-color-scheme: dark)"),
       base.clone({ nodes: (base.nodes ?? []).filter((node) => !appliesFont(node)) }),
     ]),

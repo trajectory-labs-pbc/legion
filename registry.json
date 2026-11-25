@@ -7,7 +7,7 @@
       "name": "theme",
       "type": "registry:theme",
       "title": "Theme",
-      "description": "Light and dark colours, a focus colour, square corners, and a dark variant that follows the OS setting or a .dark class.",
+      "description": "Light and dark colours, a focus colour, square corners, and a dark variant that follows the OS setting unless the root has .light, or a .dark class.",
       "cssVars": {
         "theme": {
           "radius-sm": "calc(var(--radius) * 0.6)",
@@ -159,11 +159,20 @@
             "@slot": {}
           },
           "@media (prefers-color-scheme: dark)": {
-            "@slot": {}
+            "&:where(:root:not(.light), :root:not(.light) *)": {
+              "@slot": {}
+            }
           }
         },
+        ":root": {
+          "color-scheme": "light"
+        },
+        ".dark": {
+          "color-scheme": "dark"
+        },
         "@media (prefers-color-scheme: dark)": {
-          ":root": {
+          ":root:not(.light)": {
+            "color-scheme": "dark",
             "--background": "#1b1a18",
             "--foreground": "#f5f4f2",
             "--card": "#252320",

@@ -6,13 +6,15 @@
 
 @source "../components";
 
-/* Dark follows the OS setting, and a .dark class on an ancestor turns it on too. */
+/* Dark follows the OS setting unless the root has .light; a .dark class on an ancestor turns it on. */
 @custom-variant dark {
   &:where(.dark, .dark *) {
     @slot;
   }
   @media (prefers-color-scheme: dark) {
-    @slot;
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
   }
 }
 
@@ -70,6 +72,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: #eae9e6;
   --foreground: #141414;
   --card: #ffffff;
@@ -120,6 +123,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #1b1a18;
   --foreground: #f5f4f2;
   --card: #252320;
@@ -167,7 +171,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
+    color-scheme: dark;
     --background: #1b1a18;
     --foreground: #f5f4f2;
     --card: #252320;

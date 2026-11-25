@@ -51,7 +51,9 @@ const THEMES = {
   light: block(/^:root\s*\{([^}]*)\}/m),
   dark: block(/^\.dark\s*\{([^}]*)\}/m),
 };
-const OS_DARK = block(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]*)\}/);
+const OS_DARK = block(
+  /@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\.light\)\s*\{([^}]*)\}/
+);
 
 const declarations = (body: string): string[] =>
   body
