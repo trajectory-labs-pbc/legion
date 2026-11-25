@@ -81,6 +81,16 @@ describe("CommandButton", () => {
     expect(fired).toEqual(["global.create"]);
   });
 
+  test("keeps the name its caller gives a button that shows its text", () => {
+    const { container } = mount(
+      <>
+        <Shell fired={[]} />
+        <CommandButton aria-label="Create issue in this project" commandId="global.create" />
+      </>
+    );
+    expect(button(container)?.getAttribute("aria-label")).toBe("Create issue in this project");
+  });
+
   test("a disabled command hides its button, unless asked to show it, and then never runs", () => {
     const fired: string[] = [];
     const hidden = mount(
