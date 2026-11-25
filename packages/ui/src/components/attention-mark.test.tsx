@@ -8,7 +8,13 @@ describe("AttentionMark", () => {
     render(<AttentionMark count={7} label="Waiting: 7" />);
     const mark = screen.getByRole("img", { name: "Waiting: 7" });
     expect(mark.textContent).toBe("7");
-    for (const token of ["bg-warning-tint", "border-warning-border", "text-warning", "h-5"]) {
+    for (const token of [
+      "bg-warning-tint",
+      "border-warning-border",
+      "text-warning",
+      "h-5",
+      "rounded-none",
+    ]) {
       expect(mark.className).toContain(token);
     }
   });

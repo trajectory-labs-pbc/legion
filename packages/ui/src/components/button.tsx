@@ -24,12 +24,13 @@ const buttonVariants = cva(
         // A destructive action beside others: danger text, the danger tint on hover.
         "quiet-danger": "text-danger hover:bg-danger-tint",
       },
-      // One height scale for every control: xs 24px, sm 28px, default 32px, lg 36px.
+      // One height scale for every control: xs 24px, sm 28px, default 32px, lg 36px. A leading
+      // icon takes a little of the padding; a trailing one leaves it.
       size: {
-        default: "h-8 px-3 has-[>svg]:px-2.5",
-        xs: "h-6 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1.5 px-2.5 has-[>svg]:px-2",
-        lg: "h-9 px-4 has-[>svg]:px-3",
+        default: "h-8 px-3 has-[>svg:first-child]:px-2.5",
+        xs: "h-6 gap-1 px-2 text-xs has-[>svg:first-child]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-7 gap-1.5 px-2.5 has-[>svg:first-child]:px-2",
+        lg: "h-9 px-4 has-[>svg:first-child]:px-3",
         icon: "size-8",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",

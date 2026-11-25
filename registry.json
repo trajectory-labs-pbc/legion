@@ -313,12 +313,17 @@
     {
       "name": "attention-mark",
       "type": "registry:ui",
-      "dependencies": ["cn@0.2.6"],
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
       "files": [
         {
           "path": "packages/ui/src/components/attention-mark.tsx",
           "type": "registry:ui",
           "target": "@ui/attention-mark.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/badge.tsx",
+          "type": "registry:ui",
+          "target": "@ui/badge.tsx"
         }
       ]
     },

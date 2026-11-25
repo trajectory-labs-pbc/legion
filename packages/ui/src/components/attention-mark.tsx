@@ -1,6 +1,8 @@
 import { cn } from "cn";
 import type { ComponentProps } from "react";
 
+import { badgeVariants } from "#registry/legion/ui/badge";
+
 /** The one warning-colour mark: a square chip holding a count, and the name a reader hears. */
 function AttentionMark({
   className,
@@ -17,7 +19,8 @@ function AttentionMark({
       data-slot="attention-mark"
       role="img"
       className={cn(
-        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center border border-warning-border bg-warning-tint px-1 text-xs font-medium text-warning tabular-nums",
+        badgeVariants({ variant: "warning" }),
+        "h-5 min-w-5 rounded-none px-1 py-0 tabular-nums",
         className
       )}
       {...props}
