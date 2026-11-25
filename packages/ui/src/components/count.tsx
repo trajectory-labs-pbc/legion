@@ -1,8 +1,8 @@
-import { cn } from "@legion/ui/lib/utils";
+import { cn } from "cn";
 import type { ComponentProps } from "react";
 
-/** A row's count as a muted number; nothing at zero. */
-export function RowCount({
+/** A row's number at its right edge: muted and tabular; none at zero. */
+function Count({
   className,
   value,
   ...props
@@ -10,6 +10,7 @@ export function RowCount({
   if (value === 0) return null;
   return (
     <span
+      data-slot="count"
       className={cn("shrink-0 text-xs text-muted-foreground tabular-nums", className)}
       {...props}
     >
@@ -17,3 +18,5 @@ export function RowCount({
     </span>
   );
 }
+
+export { Count };

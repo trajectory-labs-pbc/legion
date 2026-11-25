@@ -1,4 +1,5 @@
 import { Button } from "@legion/ui/components/button";
+import { Count } from "@legion/ui/components/count";
 import { NavRow, NavSurface } from "@legion/ui/components/nav";
 import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
@@ -9,7 +10,6 @@ import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
-import { RowCount } from "./row-count";
 
 /** The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu. */
 export function CompactHeader({
@@ -47,7 +47,7 @@ export function CompactHeader({
           title={unreadRepliesLabel(unread)}
         >
           Agents
-          <RowCount value={unread} />
+          <Count value={unread} />
         </NavRow>
       )}
       <div className="ml-auto flex items-center gap-1">

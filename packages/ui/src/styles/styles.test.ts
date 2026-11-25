@@ -201,7 +201,6 @@ const tokensOf = (path: string): string[] =>
 
 // The parts drawn round: dots and avatars. Everything else is square.
 const ROUND_SLOTS = [
-  "attention-mark",
   "avatar",
   "avatar-group-count",
   "radio-group-indicator",
