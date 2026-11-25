@@ -26,7 +26,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 ## Type (TY4 to TY8)
 
-**TY4** Type comes only from `Heading` and `Text` (`headingVariants`, `textVariants`). No raw `text-*`, `font-*`, `leading-*` or `tracking-*` class in a page. Body and rows are 14 px; metadata is 12 px; a record's title is 20 px. Linear publishes no app text size (its site uses 13 and 15 px); this app keeps the 14/12 scale. Check: (new) a design-rule test fails on a raw size class outside `packages/ui`.
+**TY4** Type comes only from `SurfaceTitle`, `Heading` and `textVariants`; `tokens.md` lists the recipes. No raw `text-*`, `font-*`, `leading-*` or `tracking-*` class in a page. Body and rows are 14 px; metadata is 12 px; a record's title is 20 px. Linear publishes no app text size (its site uses 13 and 15 px); this app keeps the 14/12 scale. Check: (new) a design-rule test fails on a raw size class outside `packages/ui`.
 
 **TY5** Weights: 400 for body text, 500 for a row's title and a label, 600 for a heading. No 700. Linear: Inter, with Inter Display for headings. Check: reviewer.
 
