@@ -4,6 +4,10 @@ import { basename, dirname, join, relative } from "node:path";
 import { PACKAGE_ROOT, REPO_ROOT, UPSTREAM_WEB } from "./source";
 
 const SKILLS = join(REPO_ROOT, ".agents/skills");
+/** The skill folders this repository adds, which its allowlist names; any other is upstream's. */
+const OWNED_SKILLS = readFileSync(join(REPO_ROOT, ".github/fork-allowlist.txt"), "utf8")
+  .split("\n")
+  .flatMap((line) => /^\.agents\/skills\/([\w-]+)\/$/.exec(line)?.[1] ?? []);
 /** The first segment of a path the documents write from one of the roots below. */
 const FIRST_SEGMENTS = new Set([
   ".agents",
@@ -16,7 +20,7 @@ const FIRST_SEGMENTS = new Set([
   "src",
   "tests",
   "web",
-  ...readdirSync(SKILLS),
+  ...OWNED_SKILLS,
 ]);
 const FILE_NAME = /^[\w.-]+\.(tsx?|json|md|css|sh|ya?ml|txt)$/;
 const PATH = /^[\w.@-]+(\/[\w.@-]+)+\/?$/;
@@ -24,9 +28,11 @@ const UPSTREAM_ALIAS = "@upstream-dispatch/";
 
 /** Every Markdown file the agents read for this app: the skills, and this package's AGENTS.md. */
 export function agentDocuments(): string[] {
-  const skills = readdirSync(SKILLS, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .map((entry) => join(entry.parentPath, entry.name));
+  const skills = OWNED_SKILLS.flatMap((skill) =>
+    readdirSync(join(SKILLS, skill), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => join(entry.parentPath, entry.name))
+  );
   return [join(PACKAGE_ROOT, "AGENTS.md"), ...skills].sort();
 }
 
