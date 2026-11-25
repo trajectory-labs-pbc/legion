@@ -144,9 +144,11 @@ export function copyProblems(pins: readonly Copy[] = readPins(), read = partText
   return pins.flatMap((pin) => {
     const text = read(pin.file, pin.part);
     if (text !== undefined && hash(text) === pin.sha256) return [];
-    const change = text === undefined ? "no longer has" : "changed";
+    const since = `since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file})`;
     return [
-      `${pin.file} ${change} ${pin.part} since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file}), then run \`bun tests/map/copies.ts --update\``,
+      text === undefined
+        ? `${pin.file} no longer has ${pin.part} ${since}, then remove or rename its entry in copies.json`
+        : `${pin.file} changed ${pin.part} ${since}, then run \`bun tests/map/copies.ts --update ${pin.file} ${pin.part}\``,
     ];
   });
 }
@@ -161,7 +163,7 @@ export function unpinnedRouteTargets(
     .filter((name) => !pinned.has(name))
     .map(
       (name) =>
-        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update\``
+        `${appFile}: a route element refers to ${name}, which copies.json does not pin: add {"file": "${appFile}", "part": "${name}", "copy": <the page file that draws it>} and run \`bun tests/map/copies.ts --update ${appFile} ${name}\``
     );
 }
 
@@ -180,13 +182,34 @@ export function upstreamDiff(pin: Copy): string {
     : `git diff ${pin.commit} failed (a shallow checkout lacks it): ${run.stderr.toString().trim()}`;
 }
 
-if (import.meta.main && process.argv.includes("--update")) {
-  const pins = readPins().map((pin) => {
-    const text = partText(pin.file, pin.part);
-    if (text === undefined)
-      throw new Error(`${pin.file} has no ${pin.part}: update copies.json by hand`);
-    return { ...pin, commit: lastCommit(pin.file), sha256: hash(text) };
+/**
+ * `pins` with the pin of `file` and `part` hashed again. The other pins keep their hash and
+ * commit, so a part upstream also changed still fails until its own change is ported.
+ */
+export function repin(
+  pins: readonly Copy[],
+  file: string,
+  part: string,
+  read = partText,
+  commitOf = lastCommit
+): Copy[] {
+  if (!pins.some((pin) => pin.file === file && pin.part === part)) {
+    throw new Error(`copies.json has no pin for ${part} of ${file}`);
+  }
+  return pins.map((pin) => {
+    if (pin.file !== file || pin.part !== part) return pin;
+    const text = read(file, part);
+    if (text === undefined) throw new Error(`${file} has no ${part}: update copies.json by hand`);
+    return { ...pin, commit: commitOf(file), sha256: hash(text) };
   });
-  writeFileSync(pinsFile, `${JSON.stringify(pins, null, 2)}\n`);
-  console.log(`${relative(process.cwd(), pinsFile)}: ${pins.length} parts pinned`);
+}
+
+if (import.meta.main) {
+  const [flag, file, part, ...rest] = process.argv.slice(2);
+  if (flag !== "--update" || file === undefined || part === undefined || rest.length > 0) {
+    console.error("usage: bun tests/map/copies.ts --update <upstream file> <part>");
+    process.exit(1);
+  }
+  writeFileSync(pinsFile, `${JSON.stringify(repin(readPins(), file, part), null, 2)}\n`);
+  console.log(`${relative(process.cwd(), pinsFile)}: pinned ${part} of ${file}`);
 }
