@@ -1,6 +1,7 @@
 # Every file this fork changes against upstream's main. .github/scripts/check-fork-allowlist.sh
 # fails on a changed file not listed here, and on a line the fork no longer changes. A line ending
-# in / is a directory the fork owns. Add a file here in the same change that first edits it.
+# in / is a directory the fork owns, where upstream has no file. Add a file here in the same change
+# that first edits it.
 
 # The fork's checks.
 .github/fork-allowlist.txt
