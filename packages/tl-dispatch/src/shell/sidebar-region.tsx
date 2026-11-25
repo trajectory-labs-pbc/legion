@@ -1,8 +1,7 @@
 import { NavSurface } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
-import type { ComponentProps, ReactNode } from "react";
-import { CommandButton } from "@/commands/command-button";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 import { useInboxRowCount } from "./inbox-count";
 
 /** Upstream's icon rail with the Inbox's number; only this branch reads it. */
@@ -10,7 +9,7 @@ function IssueRail(props: Omit<ComponentProps<typeof IconRail>, "inboxCount">) {
   return <IconRail inboxCount={useInboxRowCount().count ?? 0} {...props} />;
 }
 
-/** The issue frame's icon rail, the folded sidebar's rail, or the sidebar; none in a drawer. */
+/** The issue frame's icon rail or the sidebar; none in a drawer or while folded. */
 export function SidebarRegion({
   children,
   folded,
@@ -19,10 +18,11 @@ export function SidebarRegion({
   navigationOpen,
   onOpenNavigation,
   project,
+  sidebarRef,
   user,
 }: {
   children: ReactNode;
-  /** The reader folded the sidebar to its rail. */
+  /** The reader folded the sidebar away; the content panel's top row shows it again. */
   folded: boolean;
   /** The navigation is a drawer, so no sidebar is drawn. */
   inDrawer: boolean;
@@ -31,6 +31,7 @@ export function SidebarRegion({
   navigationOpen: boolean;
   onOpenNavigation: () => void;
   project: string | undefined;
+  sidebarRef: RefObject<HTMLElement | null>;
   user: AuthenticatedUser;
 }) {
   if (issueRail) {
@@ -43,25 +44,13 @@ export function SidebarRegion({
       />
     );
   }
-  if (inDrawer) return null;
-  return folded ? (
-    <NavSurface
-      aria-label="Collapsed sidebar"
-      className="fixed inset-y-0 left-0 z-10 flex w-14 justify-center p-2"
-      data-testid="sidebar-rail"
-    >
-      <CommandButton
-        commandId="global.toggle-sidebar"
-        label="Show sidebar"
-        size="icon-sm"
-        tooltipSide="right"
-      />
-    </NavSurface>
-  ) : (
+  if (inDrawer || folded) return null;
+  return (
     <NavSurface
       aria-label="Navigation"
       className="relative order-1 w-60 shrink-0 [overflow-anchor:none]"
       data-testid="sidebar"
+      ref={sidebarRef}
     >
       <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto p-2">{children}</div>
     </NavSurface>

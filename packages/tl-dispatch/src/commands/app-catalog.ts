@@ -1,7 +1,7 @@
 import {
+  EyeIcon,
   FileTextIcon,
   FolderIcon,
-  InboxIcon,
   KeyboardIcon,
   PanelLeftIcon,
   PanelRightIcon,
@@ -62,9 +62,9 @@ export const APP_CONTEXTS = [
       },
       {
         name: "inbox-drawer",
-        label: "Open the inbox",
+        label: "Peek inbox",
         keys: ["i"],
-        icon: InboxIcon,
+        icon: EyeIcon,
         group: COMMAND_GROUPS.layout,
       },
       {

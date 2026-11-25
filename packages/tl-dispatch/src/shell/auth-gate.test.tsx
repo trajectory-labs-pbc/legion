@@ -34,6 +34,19 @@ describe("AuthGate", () => {
     const container = mount();
     const skeleton = container.querySelector('[aria-busy="true"]');
     expect(skeleton?.querySelector('[data-testid="content-panel"] main')).not.toBeNull();
+    // Nothing in it reads or goes anywhere before sign-in is known.
+    expect(skeleton?.querySelector("a, button")).toBeNull();
+    expect(skeleton?.textContent).toContain("Dispatch");
+    // The navigation's rows are 28 px, in the skeleton's own colour.
+    const rows = [
+      ...(skeleton?.querySelectorAll('[aria-label="Loading navigation"] [data-slot="skeleton"]') ??
+        []),
+    ];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.className).toContain("h-7");
+      expect(row.className).not.toContain("bg-sidebar");
+    }
   });
 
   test("a 401 draws the sign-in page", async () => {

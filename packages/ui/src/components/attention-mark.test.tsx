@@ -13,7 +13,7 @@ describe("AttentionMark", () => {
       "border-warning-border",
       "text-warning",
       "h-5",
-      "rounded-none",
+      "min-w-5",
     ]) {
       expect(mark.className).toContain(token);
     }

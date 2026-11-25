@@ -7,24 +7,49 @@
   }
 }
 
+/* Under a mouse the navigation and the panel's top row keep their own size too. */
 @media (max-width: 1279px) and (pointer: fine) {
-  [data-slot="nav-surface"] :is(button, a:not(.prose a)) {
+  :is([data-slot="nav-surface"], [data-testid="panel-header"]) :is(button, a:not(.prose a)) {
     min-width: revert-layer;
     min-height: revert-layer;
   }
 }
 
-/* Upstream's sticky margin sheet stays inside the panel's inset and its 1 px border. */
+/* Upstream's sticky margin sheet stays under the panel's top border, or its stuck top row. */
 @media (min-width: 80rem) {
   [data-testid="content-panel"] [data-testid="margin-sheet"] {
-    top: calc(var(--panel-inset) + 1px);
-    height: calc(100dvh - 2 * var(--panel-inset) - 2px);
-    max-height: calc(100dvh - 2 * var(--panel-inset) - 2px);
+    top: calc(var(--panel-inset) + max(var(--panel-row, 0px), 1px));
+    height: calc(100dvh - 2 * var(--panel-inset) - max(var(--panel-row, 0px), 1px) - 1px);
+    max-height: calc(100dvh - 2 * var(--panel-inset) - max(var(--panel-row, 0px), 1px) - 1px);
   }
+}
+
+/* A field the focus moves to scrolls clear of the folded sidebar's stuck row: the inset and 44 px. */
+html:has([data-testid="panel-header"]) {
+  scroll-padding-top: calc(var(--spacing) * 13);
 }
 
 /* Fields that name a border colour but draw no border need one on the panel's card. */
 [data-testid="content-panel"]
   :is(input, textarea, select)[class~="border-slate-300"]:not([class~="border"]) {
   border-width: 1px;
+}
+
+/* Upstream's form grids: each field keeps its height, so a hint does not move the input beside it. */
+[data-testid="content-panel"] fieldset[class~="grid"] {
+  align-items: start;
+}
+
+/* A field takes its value's weight, not its label's. */
+[data-testid="content-panel"] label :is(input, textarea) {
+  font-weight: normal;
+}
+
+/* A placeholder that is a sentence, not a sample value, is body text; a cut one ends in "…". */
+[data-testid="content-panel"] input[placeholder*=" "] {
+  text-overflow: ellipsis;
+}
+
+[data-testid="content-panel"] :is(input, textarea)[placeholder*=" "]::placeholder {
+  font-family: var(--font-sans);
 }

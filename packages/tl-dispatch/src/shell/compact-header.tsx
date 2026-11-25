@@ -1,16 +1,14 @@
 import { Button } from "@legion/ui/components/button";
-import { Count } from "@legion/ui/components/count";
 import { NavRow, NavSurface } from "@legion/ui/components/nav";
-import { useQuery } from "@tanstack/react-query";
-import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
-import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
+import { ReadFailure } from "@/features/read-failure";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
+import { AppName } from "./app-name";
 import { useInboxRowCount } from "./inbox-count";
 import { PeekButton } from "./peek-button";
-import { ReadLine } from "./read-line";
 import { RowCountMark } from "./row-count";
+import { useAgentsRowCount } from "./sidebar-data";
 
 /**
  * The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu.
@@ -26,17 +24,12 @@ export function CompactHeader({
   onOpenNavigation: () => void;
 }) {
   const inboxCount = useInboxRowCount();
-  const unread = totalUnreadReplies(useQuery(userAgentStateQuery()).data);
+  const agentsCount = useAgentsRowCount();
   return (
     <>
       <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>
         {/* On a phone the Inbox link, which goes to the same page, leaves room for the row. */}
-        <PageLink
-          className="shrink-0 px-2 text-sm font-semibold max-sm:hidden"
-          page={inbox.routes.home}
-        >
-          Dispatch
-        </PageLink>
+        <AppName className="max-sm:hidden" />
         <NavRow
           aria-current={onInbox ? "page" : undefined}
           className="shrink-0"
@@ -45,21 +38,20 @@ export function CompactHeader({
           Inbox
           <RowCountMark count={inboxCount} title={inboxCount.label} />
         </NavRow>
-        {unread === 0 ? null : (
+        {(agentsCount.count ?? 0) === 0 ? null : (
           <NavRow
             className="shrink-0"
             render={<PageLink page={agents.routes.list} />}
-            title={unreadRepliesLabel(unread)}
+            title={agentsCount.label}
           >
             Agents
-            <Count value={unread} />
+            <RowCountMark count={agentsCount} />
           </NavRow>
         )}
         <div className="ml-auto flex items-center gap-1">
           {onInbox ? null : <PeekButton />}
           <Button
             aria-expanded={navigationOpen}
-            aria-label="Open navigation"
             onClick={onOpenNavigation}
             size="sm"
             variant="ghost"
@@ -68,9 +60,9 @@ export function CompactHeader({
           </Button>
         </div>
       </NavSurface>
-      {inboxCount.retry === undefined ? null : (
+      {inboxCount.fault === undefined ? null : (
         <NavSurface className="px-2 pb-1" render={<div />}>
-          <ReadLine noun="the Inbox count" retry={inboxCount.retry} />
+          <ReadFailure fault={inboxCount.fault} noun="the Inbox count" />
         </NavSurface>
       )}
     </>
