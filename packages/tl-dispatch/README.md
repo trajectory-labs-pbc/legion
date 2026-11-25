@@ -10,8 +10,8 @@ replaces them one page at a time.
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
 
-`tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
-tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
+`tests/layering.test.ts` holds the router rules of `src/navigation`; what `src/loading` imports
+is a convention. The test resolves every import as the build does (the tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
 refuses an import it cannot resolve or a non-literal `import()`. Upstream's code keeps its own
 router imports. No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
 
