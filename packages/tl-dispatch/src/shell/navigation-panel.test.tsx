@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, type ReactNode } from "react";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
-import { stubFetch } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { NavigationPanel } from "./navigation-panel";
 import type { SignOut } from "./use-sign-out";
@@ -18,13 +18,13 @@ afterEach(() => {
 });
 
 function mount(children: ReactNode) {
-  const fetch = stubFetch(() => undefined);
+  holdShellReads();
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path="/agents">{children}</MemoryNavigationProvider>
     </QueryClientProvider>
   );
-  cleanups.push(fetch.restore, () => view.unmount());
+  cleanups.push(() => view.unmount());
   return view.container;
 }
 

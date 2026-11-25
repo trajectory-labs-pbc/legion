@@ -1,7 +1,7 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 
-import { stubFetch } from "../tests/fetch";
+import { holdReads } from "../tests/network";
 import { start } from "./start";
 
 const cleanups: (() => void)[] = [];
@@ -10,8 +10,8 @@ afterEach(() => {
 });
 
 test("installs the stale-chunk recovery before React takes the root for its first render", async () => {
-  // No read answers: the app stays on its loading screen.
-  cleanups.push(stubFetch(() => undefined).restore);
+  // The sign-in check never answers: the app stays on its loading screen.
+  holdReads("/auth/whoami");
   const root = document.createElement("div");
   document.body.append(root);
   cleanups.push(() => root.remove());

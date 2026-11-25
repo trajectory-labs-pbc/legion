@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act } from "react";
+import { waitFor } from "@testing-library/react";
+import { answerRequests } from "@upstream-dispatch/__tests__/network";
+import { http } from "msw";
 
-import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { render, settle } from "../../tests/react";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";
 
@@ -29,10 +30,15 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-
-function mount(logout: Response) {
-  const fetch = stubFetch((url) => (url.endsWith("/auth/logout") ? logout : undefined));
+/** Mounts the hook with Dispatch answering each sign-out with `logout`; `asked` counts them. */
+function mount(logout: () => Response) {
+  const sent = { asked: 0 };
+  answerRequests(
+    http.post("/auth/logout", () => {
+      sent.asked += 1;
+      return logout();
+    })
+  );
   const client = new QueryClient();
   let current: SignOut | undefined;
   function Probe() {
@@ -44,29 +50,27 @@ function mount(logout: Response) {
       <Probe />
     </QueryClientProvider>
   );
-  cleanups.push(fetch.restore, () => view.unmount());
-  return { client, fetch, signOut: () => current };
+  cleanups.push(() => view.unmount());
+  return { client, sent, signOut: () => current };
 }
 
 describe("useSignOut", () => {
   test("a refused sign-out says so and keeps this tab's reads", async () => {
-    const { client, signOut } = mount(json({}, 403));
+    const { client, signOut } = mount(() => Response.json({}, { status: 403 }));
     client.setQueryData(["inbox"], "kept");
     settle(() => signOut()?.start());
     expect(signOut()?.pending).toBe(true);
-    await waitFor(() => signOut()?.error !== undefined, sleep);
-    expect(signOut()?.error).toContain("did not go through");
+    await waitFor(() => expect(signOut()?.error).toContain("did not go through"));
     expect(signOut()?.pending).toBe(false);
     expect(client.getQueryData<string>(["inbox"])).toBe("kept");
   });
 
   test("a sign-out that goes through drops every read but who is here", async () => {
-    const { client, fetch, signOut } = mount(json({ ok: true }));
+    const { client, sent, signOut } = mount(() => Response.json({ ok: true }));
     client.setQueryData(["inbox"], "dropped");
     settle(() => signOut()?.start());
-    await waitFor(() => client.getQueryData(["inbox"]) === undefined, sleep);
-    expect(fetch.asked.filter((url) => url.endsWith("/auth/logout"))).toHaveLength(1);
-    expect(client.getQueryData(["inbox"])).toBeUndefined();
+    await waitFor(() => expect(client.getQueryData(["inbox"])).toBeUndefined());
+    expect(sent.asked).toBe(1);
     expect(signOut()?.error).toBeUndefined();
   });
 });
