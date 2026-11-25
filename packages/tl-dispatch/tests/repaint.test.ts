@@ -381,6 +381,61 @@ function contrastProblems(declarations: readonly CssDeclaration[]): string[] {
   return problems;
 }
 
+/** The least OKLab distance between a colour and the one that must differ from it. The theme's
+ *  own smallest step between two grounds, a card to `muted`, is 0.048 in light and 0.045 in dark. */
+const STEP = 0.035;
+const distance = (a: Colour, b: Colour) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+type Shades = readonly [light: string, dark: string];
+/** Upstream's hover states (`theme/classes.ts`): the shade at rest and the one under the pointer,
+ *  and the rule whose element they are drawn inside, where it sets a shade of its own. */
+const HOVERS: Record<string, { rest: Shades; hover: Shades; inside?: string }> = {
+  "card border": { hover: ["sky-400", "sky-300"], rest: ["slate-200", "slate-800"] },
+  "close button text": { hover: ["slate-900", "slate-100"], rest: ["slate-700", "slate-300"] },
+  "danger text": { hover: ["rose-900", "rose-300"], rest: ["rose-700", "rose-400"] },
+  "disclosure chevron": { hover: ["slate-700", "slate-300"], rest: ["slate-400", "slate-600"] },
+  "field border": { hover: ["slate-300", "slate-700"], rest: ["slate-200", "slate-800"] },
+  "icon rail entry": {
+    hover: ["icon-rail-active", "icon-rail-active"],
+    rest: ["icon-rail", "icon-rail"],
+  },
+  "issue page row": { hover: ["page-mark", "page-mark"], rest: ["page-paper", "page-paper"] },
+  link: { hover: ["sky-900", "sky-300"], rest: ["sky-700", "sky-400"] },
+  "muted surface": { hover: ["slate-100", "slate-800"], rest: ["white", "slate-900"] },
+  "muted text": { hover: ["slate-700", "slate-300"], rest: ["slate-500", "slate-400"] },
+  "primary button": { hover: ["sky-800", "sky-800"], rest: ["sky-700", "sky-700"] },
+  "rail entry": {
+    hover: ["slate-800", "slate-800"],
+    inside: ".bg-slate-950",
+    rest: ["slate-950", "slate-950"],
+  },
+  "secondary button border": { hover: ["sky-500", "sky-400"], rest: ["slate-300", "slate-700"] },
+  "success text": { hover: ["emerald-900", "emerald-300"], rest: ["emerald-700", "emerald-400"] },
+};
+
+/** Each hover state of `HOVERS` that is less than a step from its resting colour. */
+function hoverProblems(declarations: readonly CssDeclaration[]): string[] {
+  const problems: string[] = [];
+  SCHEMES.forEach((scheme, at) => {
+    const root = rootValues(declarations, scheme);
+    for (const [name, { rest, hover, inside }] of Object.entries(HOVERS)) {
+      // What the rule at `inside` sets on its own element, over what the root holds.
+      const variables = new Map(root);
+      for (const { property, value, context } of declarations) {
+        if (context.join() === inside) variables.set(property, value);
+      }
+      const [from, to] = [rest, hover].map((shades) =>
+        evaluate(`var(--color-${shades[at]})`, scheme, variables)
+      );
+      if (from === undefined || to === undefined) problems.push(`${name} (${scheme}): no colour`);
+      else if (distance(from, to) < STEP) {
+        problems.push(`${name} (${scheme}): ${distance(from, to).toFixed(3)} from its rest`);
+      }
+    }
+  });
+  return problems;
+}
+
 const LITERAL = /#[0-9a-f]{3,8}\b|\b(?:oklch|oklab|rgba?)\([^()]*\)/gi;
 const SHORTHANDS = new Set(["background", "border", "outline"]);
 const withoutWhere = (selector: string) => /^:where\((.*)\)$/.exec(selector)?.[1] ?? selector;
@@ -482,6 +537,19 @@ describe("the repaint of upstream's pages", async () => {
     expect(contrastProblems(await generate(broken))).toContainEqual(
       expect.stringContaining("link on canvas (light)")
     );
+  });
+
+  test("moves every hover state a step from its resting colour", () => {
+    expect(hoverProblems(declarations)).toEqual([]);
+  });
+
+  test("fails when a hover shade is its resting one", async () => {
+    const shade = /--color-rose-900:[^;]*;/;
+    expect(repaintText).toMatch(shade);
+    const broken = repaintText.replace(shade, "--color-rose-900: var(--color-rose-700);");
+    expect(hoverProblems(await generate(broken))).toEqual([
+      "danger text (light): 0.000 from its rest",
+    ]);
   });
 
   test("underlines a link in a document and in a comment at rest", () => {
