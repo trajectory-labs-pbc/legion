@@ -161,7 +161,8 @@ load no page module:
 - `coverage.ts`: every view file under upstream's `features/` has one owner: a page's `views`, or
   a list in `src/views.ts`.
 - `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash. When
-  upstream changes one, port the change, then run `bun tests/map/copies.ts --update`.
+  upstream changes one, port the change, then run
+  `bun tests/map/copies.ts --update <upstream file> <part>`, which pins that part and no other.
 
 ## Checks
 
