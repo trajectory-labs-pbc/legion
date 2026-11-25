@@ -51,7 +51,7 @@ installs from the default branch, not from the ref you asked for.
 - `bun run test`, `bun run typecheck` and `bun run lint` check the package.
 - After you change a component's imports or the stylesheet, run `bun run registry` to rewrite
   `registry.json`. A test fails while the file differs from what the script writes.
-- `bun run registry:validate` runs `shadcn registry validate` on it.
+- `bun run registry:validate` runs `shadcn registry validate` on it. A test runs the same check.
 - The colours are in `src/styles/theme.css`: light in `:root`, dark in `.dark` and in the
   `prefers-color-scheme: dark` block, which must match. A `.light` class on the root keeps light
   when the OS is dark.
