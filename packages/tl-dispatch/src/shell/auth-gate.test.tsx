@@ -30,9 +30,10 @@ function mount(whoami: Response | undefined) {
 const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 describe("AuthGate", () => {
-  test("draws the skeleton while Dispatch has not said who is here", () => {
+  test("draws the skeleton while Dispatch has not said who is here, in the shell's own panel", () => {
     const container = mount(undefined);
-    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-busy="true"]');
+    expect(skeleton?.querySelector('[data-testid="content-panel"] main')).not.toBeNull();
   });
 
   test("a 401 draws the sign-in page", async () => {
