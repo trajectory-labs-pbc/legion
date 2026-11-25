@@ -9,8 +9,7 @@ export const modalPopupMotion =
   "motion-safe:transition-opacity motion-safe:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /** A modal backdrop. A nested modal renders none, so one scrim dims the page. */
-export const scrimClass =
-  "fixed inset-0 z-50 bg-scrim/50 motion-safe:transition-opacity motion-safe:duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0";
+export const scrimClass = `fixed inset-0 z-50 bg-scrim/50 ${modalPopupMotion}`;
 
 /** A modal popup that dims while a modal nested in it is open. */
 export const coveredClass =
