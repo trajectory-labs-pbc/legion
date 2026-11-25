@@ -63,13 +63,13 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 - Control heights: `h-6` (24 px), `h-7` (28 px), `h-8` (32 px, the default), `h-9` (36 px). On a coarse pointer every control reaches 44 px. A test refuses any other control height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
-- Type comes from `Heading` and `Text` (or `headingVariants` and `textVariants`), never from raw `text-*` or `font-*` classes:
+- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. `SurfaceTitle` is the page's `h1`. `Heading` starts at `h2` and takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`.
 
 | Recipe | Classes | Use |
 | --- | --- | --- |
-| Heading `page` | `text-xl font-semibold` | A record's title on its own page. |
-| Heading `section` | `text-base font-semibold` | A section of a record or a settings page. |
-| Heading `group` | `text-sm font-semibold` | A list's title in the header, a group header row. |
+| Heading `page` | `text-xl font-semibold tracking-tight` | A record's title on its own page. |
+| Heading `section` | `text-base font-semibold tracking-tight` | A section of a record or a settings page. |
+| Heading `group` | `text-sm font-semibold tracking-tight` | A list's title in the header, a group header row. |
 | Heading `label` | `text-xs font-medium` | A property's label, a menu section label. |
-| Text `body` | `text-sm` | Rows, body text, controls. |
-| Text `caption` | `text-xs` | Metadata in a row, a hint under a field. |
+| `textVariants` `body` | `text-sm` | Rows, body text, controls. |
+| `textVariants` `caption` | `text-xs` | Metadata in a row, a hint under a field. |
