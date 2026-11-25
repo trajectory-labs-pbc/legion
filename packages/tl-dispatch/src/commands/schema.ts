@@ -102,15 +102,18 @@ function chainOf(contexts: ReadonlyMap<string, CommandContext>, name: string): s
   return chain;
 }
 
-/** Each pair of a key of `held` and a key of `incoming` that clash, as the key engine compares them. */
+/**
+ * Each pair of a key of `held` and a key of `incoming` that clash, as the key engine matches
+ * them. Two keys of one command clash only when one starts the other, which then never runs.
+ */
 function clashesBetween(
   held: readonly CatalogKey[],
   incoming: readonly CatalogKey[],
-  clash: (held: string, keys: string) => boolean
+  clash: (held: string, keys: string, startsOnly?: boolean) => boolean
 ): [CatalogKey, CatalogKey][] {
   return held.flatMap((other) =>
     incoming
-      .filter((key) => other.command !== key.command && clash(other.keys, key.keys))
+      .filter((key) => clash(other.keys, key.keys, other.command === key.command))
       .map((key): [CatalogKey, CatalogKey] => [other, key])
   );
 }
