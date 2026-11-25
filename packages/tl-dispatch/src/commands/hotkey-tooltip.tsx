@@ -1,4 +1,13 @@
-import { cloneElement, type ReactElement, useEffect, useSyncExternalStore } from "react";
+import {
+  cloneElement,
+  type ReactElement,
+  type Ref,
+  type RefCallback,
+  useCallback,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import type { CommandId } from "./app-catalog";
 import { ariaKeyShortcuts } from "./chips";
@@ -25,10 +34,38 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/**
+ * The control's ref, which also keeps the focus on it when the tooltip's code arrives: the control
+ * is drawn again then, and the new one takes the focus if the old one held it.
+ */
+function useKeptFocus(own: Ref<HTMLElement> | undefined): RefCallback<HTMLElement> {
+  const held = useRef<HTMLElement | null>(null);
+  const hadFocus = useRef(false);
+  return useCallback(
+    (node: HTMLElement | null) => {
+      // React detaches the old control's ref before it removes the control, and attaches the
+      // new one's in the same commit; a later attach never takes the focus.
+      if (node === null) {
+        hadFocus.current = document.activeElement === held.current;
+        queueMicrotask(() => {
+          hadFocus.current = false;
+        });
+      } else if (hadFocus.current) {
+        hadFocus.current = false;
+        node.focus();
+      }
+      held.current = node;
+      if (typeof own === "function") own(node);
+      else if (own !== null && own !== undefined) own.current = node;
+    },
+    [own]
+  );
+}
+
 export interface HotkeyTooltipProps {
   commandId: CommandId;
   /** The control to wrap; it becomes the tooltip's trigger. */
-  children: ReactElement<{ "aria-keyshortcuts"?: string }>;
+  children: ReactElement<{ "aria-keyshortcuts"?: string; ref?: Ref<HTMLElement> }>;
   /** The wrapped control's own label, when it says more than the catalog's. */
   label?: string;
   side?: "top" | "right" | "bottom" | "left";
@@ -44,19 +81,20 @@ export function HotkeyTooltip({ commandId, children, label, side }: HotkeyToolti
   const chips = useCommandShortcut(commandId);
   const reaches = useKeysReach(commandId);
   const Popup = useSyncExternalStore(subscribe, () => popup);
+  const ref = useKeptFocus(children.props.ref);
   useEffect(() => {
     void loadHotkeyTooltip();
   }, []);
-  if (view === undefined) return children;
+  if (view === undefined) return cloneElement(children, { ref });
   const keys = view.enabled && reaches ? ariaKeyShortcuts(view.command.keys ?? []) : undefined;
-  if (Popup === undefined) return cloneElement(children, { "aria-keyshortcuts": keys });
+  if (Popup === undefined) return cloneElement(children, { "aria-keyshortcuts": keys, ref });
   return (
     <Popup
       ariaKeyShortcuts={keys}
       chips={chips}
       label={label ?? view.label}
       side={side}
-      trigger={children}
+      trigger={cloneElement(children, { ref })}
     />
   );
 }
