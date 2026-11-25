@@ -122,9 +122,8 @@ export function RevocableTable<Row>({
                         aria-label={`Revoke ${rowName(row)}`}
                         disabled={revoke.pending}
                         onClick={() => revoke.press(row)}
-                        className="text-danger hover:text-danger"
                         size="sm"
-                        variant="ghost"
+                        variant="quiet-danger"
                       >
                         Revoke
                       </Button>

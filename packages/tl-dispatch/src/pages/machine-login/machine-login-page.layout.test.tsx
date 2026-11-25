@@ -111,8 +111,7 @@ test("the policy text sits behind a link, and Revoke is a quiet danger button", 
   const revoke = await section.findByRole("button", {
     name: "Revoke the machine login for devbox.example.com",
   });
-  expect(revoke.className).toContain("text-danger");
-  expect(revoke.className).not.toContain("bg-destructive");
+  expect(revoke.getAttribute("data-variant")).toBe("quiet-danger");
   expect(section.queryByText(/^Every machine and every pod/)).toBeNull();
   await user.click(section.getByRole("button", { name: "How machine logins work" }));
   expect(section.getByText(/^Every machine and every pod/)).toBeDefined();

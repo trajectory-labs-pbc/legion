@@ -21,6 +21,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-foreground underline-offset-4 hover:underline",
+        // A destructive action beside others: danger text, the danger tint on hover.
+        "quiet-danger": "text-danger hover:bg-danger-tint",
       },
       // One height scale for every control: xs 24px, sm 28px, default 32px, lg 36px.
       size: {

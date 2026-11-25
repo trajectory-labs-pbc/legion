@@ -31,6 +31,14 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("hovers a quiet-danger button on the danger tint, never the accent", () => {
+    render(<Button variant="quiet-danger">Revoke</Button>);
+    const tokens = screen.getByRole("button", { name: "Revoke" }).className.split(" ");
+    expect(tokens).toContain("text-danger");
+    expect(tokens).toContain("hover:bg-danger-tint");
+    expect(tokens.filter((token) => token.includes("accent"))).toEqual([]);
+  });
+
   it("leaves the tab order when disabled", async () => {
     render(
       <>

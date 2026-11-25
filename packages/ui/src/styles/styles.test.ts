@@ -415,6 +415,9 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["muted-foreground", "popover"],
   ["danger", "popover"],
   ["danger", "background"],
+  // A quiet-danger button on a card and in a hovered table row; its hover is danger-tint, below.
+  ["danger", "card"],
+  ["danger", "muted"],
   ["accent-foreground", "accent"],
   ["foreground", "accent"],
   ["muted-foreground", "accent"],
