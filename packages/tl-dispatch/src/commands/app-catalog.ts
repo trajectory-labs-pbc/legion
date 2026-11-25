@@ -15,7 +15,8 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
- * binds and no other, with the same behaviour; the pages with no letter are palette commands only.
+ * binds and no other; the pages with no letter are palette commands only. The keys run as
+ * upstream's do, except that an open overlay of this app stops them unless it lets them through.
  * Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [
