@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import { agentDocuments, missingPaths } from "./skill-paths";
-import { PACKAGE_ROOT } from "./source";
+import { PACKAGE_ROOT, REPO_ROOT } from "./source";
 
 describe("the skills and AGENTS.md", () => {
   test("name only paths that exist", () => {
-    expect(agentDocuments().length).toBeGreaterThan(5);
+    const documents = agentDocuments().map((file) => relative(REPO_ROOT, file));
+    expect(documents).toContain(".agents/skills/commands/SKILL.md");
+    expect(documents).toContain(".agents/skills/ui-design-system/references/tokens.md");
+    expect(documents).toContain("packages/tl-dispatch/AGENTS.md");
     expect(missingPaths()).toEqual([]);
   });
 
