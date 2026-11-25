@@ -5,7 +5,7 @@ description: "Use when you build or review a page, a layout, a list, a menu, an 
 
 # The design system
 
-tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, square corners, Geist, colour for meaning only, no shadows, and a 2 px focus outline. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another rule you find disagrees with these, these hold. A check marked (new) in a reference is a test to write with the first page that needs it.
+tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, square corners, Geist, colour for meaning only, no shadows, and a 2 px focus outline. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another written rule disagrees with these, these hold. Where a test disagrees with a rule here, never weaken the test: say so in the pull request. A check marked (new) in a reference is a test that does not exist yet; write it with the first change that needs it.
 
 ## Read first
 
@@ -45,6 +45,7 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 
 ## Checks
 
-- `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, and a control height outside the scale. The contrast tests check every text pair, the focus colour and the control borders in both schemes.
+- `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, and a control height outside the scale.
+- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, and of the focus outline and the field and state edges. In the components it also refuses a shadow other than the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
 - A reviewer checks each rule in the references that no test holds. Each rule there says how it is checked.
 - A change to a visible surface comes with a light and a dark screenshot of each page it changes.

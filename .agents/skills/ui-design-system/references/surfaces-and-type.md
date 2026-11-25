@@ -4,7 +4,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 ## Surfaces (SU)
 
-**SU1** No shadow on any surface: a control, a row, a card, a panel, a menu, a dialog, a toast. Surfaces separate by a background step or a 1 px border. A modal overlay adds the scrim. Linear: surfaces that step in lightness for elevation; Linear still draws a soft shadow under floating layers, which this theme leaves out. Pages: all. Check: (new) a design-rule test fails on any `shadow-*` class and any `box-shadow` but `none`.
+**SU1** No shadow on any surface: a control, a row, a card, a panel, a menu, a dialog, a toast. Surfaces separate by a background step or a 1 px border. A modal overlay adds the scrim. Linear: surfaces that step in lightness for elevation; Linear still draws a soft shadow under floating layers, which this theme leaves out. Pages: all. Check: the design-rule tests refuse a Tailwind shadow class (`shadow-sm`) as a raw colour; `packages/ui`'s style test refuses any shadow but the 1 px inset edge in the components; reviewer for a shadow drawn from a token.
 
 **SU2** No coloured stripe on the left of a card, a row or a block (`border-l-2`, `border-l-4` with a colour). A state shows by its glyph and its word. Upstream draws 21 such stripes in 18 files, for example `features/inbox/AskCard.tsx`; a rebuilt page draws none. Pages: all. Check: (new) a design-rule test fails on a `border-l-*` width.
 
