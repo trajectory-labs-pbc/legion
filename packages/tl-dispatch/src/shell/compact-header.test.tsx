@@ -141,6 +141,8 @@ describe("CompactHeader", () => {
     const count = () => header.querySelector('a[href="/"] [data-slot="count"]');
     await waitFor(() => retry() !== undefined, sleep);
     expect(header.textContent).toContain("Could not load the Inbox count.");
+    // The 44 px bar has no room for the sentence: it takes the line below.
+    expect(header.querySelector("header")?.textContent).not.toContain("Could not load");
     expect(count()).toBeNull();
     asked.length = 0;
     failing = false;

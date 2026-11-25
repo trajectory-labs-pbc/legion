@@ -12,7 +12,10 @@ import { PeekButton } from "./peek-button";
 import { ReadLine } from "./read-line";
 import { RowCountMark } from "./row-count";
 
-/** The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu. */
+/**
+ * The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu.
+ * A failed Inbox count says so on a line below it, since the row has no room for the sentence.
+ */
 export function CompactHeader({
   navigationOpen,
   onInbox,
@@ -25,47 +28,51 @@ export function CompactHeader({
   const inboxCount = useInboxRowCount();
   const unread = totalUnreadReplies(useQuery(userAgentStateQuery()).data);
   return (
-    <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>
-      {/* On a phone the Inbox link, which goes to the same page, leaves room for the row. */}
-      <PageLink
-        className="shrink-0 px-2 text-sm font-semibold max-sm:hidden"
-        page={inbox.routes.home}
-      >
-        Dispatch
-      </PageLink>
-      <NavRow
-        aria-current={onInbox ? "page" : undefined}
-        className="shrink-0"
-        render={<PageLink page={inbox.routes.home} />}
-      >
-        Inbox
-        <RowCountMark count={inboxCount} title={inboxCount.label} />
-      </NavRow>
-      {inboxCount.retry === undefined ? null : (
-        <ReadLine noun="the Inbox count" retry={inboxCount.retry} />
-      )}
-      {unread === 0 ? null : (
+    <>
+      <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>
+        {/* On a phone the Inbox link, which goes to the same page, leaves room for the row. */}
+        <PageLink
+          className="shrink-0 px-2 text-sm font-semibold max-sm:hidden"
+          page={inbox.routes.home}
+        >
+          Dispatch
+        </PageLink>
         <NavRow
+          aria-current={onInbox ? "page" : undefined}
           className="shrink-0"
-          render={<PageLink page={agents.routes.list} />}
-          title={unreadRepliesLabel(unread)}
+          render={<PageLink page={inbox.routes.home} />}
         >
-          Agents
-          <Count value={unread} />
+          Inbox
+          <RowCountMark count={inboxCount} title={inboxCount.label} />
         </NavRow>
+        {unread === 0 ? null : (
+          <NavRow
+            className="shrink-0"
+            render={<PageLink page={agents.routes.list} />}
+            title={unreadRepliesLabel(unread)}
+          >
+            Agents
+            <Count value={unread} />
+          </NavRow>
+        )}
+        <div className="ml-auto flex items-center gap-1">
+          {onInbox ? null : <PeekButton />}
+          <Button
+            aria-expanded={navigationOpen}
+            aria-label="Open navigation"
+            onClick={onOpenNavigation}
+            size="sm"
+            variant="ghost"
+          >
+            Menu
+          </Button>
+        </div>
+      </NavSurface>
+      {inboxCount.retry === undefined ? null : (
+        <NavSurface className="px-2 pb-1" render={<div />}>
+          <ReadLine noun="the Inbox count" retry={inboxCount.retry} />
+        </NavSurface>
       )}
-      <div className="ml-auto flex items-center gap-1">
-        {onInbox ? null : <PeekButton />}
-        <Button
-          aria-expanded={navigationOpen}
-          aria-label="Open navigation"
-          onClick={onOpenNavigation}
-          size="sm"
-          variant="ghost"
-        >
-          Menu
-        </Button>
-      </div>
-    </NavSurface>
+    </>
   );
 }
