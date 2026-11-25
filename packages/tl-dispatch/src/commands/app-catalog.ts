@@ -15,8 +15,8 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
- * binds and no other, with the same behaviour; the pages with no letter are palette commands only.
- * Page contexts join as their pages are rebuilt.
+ * binds, with the same behaviour, and `[` for the sidebar (FR5); the pages with no letter are
+ * palette commands only. Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [
   {
@@ -67,7 +67,7 @@ export const APP_CONTEXTS = [
       {
         name: "toggle-sidebar",
         label: "Toggle sidebar",
-        keys: ["Shift+S"],
+        keys: ["Shift+S", "["],
         icon: PanelLeftIcon,
         group: COMMAND_GROUPS.layout,
       },

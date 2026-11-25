@@ -98,12 +98,16 @@ describe("upstream's key registrations", () => {
 });
 
 describe("upstream's shell keys", () => {
-  test("are the catalog's global keys, so the shell on the catalog changes no key", () => {
+  test("are the catalog's global keys, with only the frame's own besides", () => {
     const live = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
     const global = APP_CONTEXTS.find((context) => context.name === "global");
-    const catalog = (global?.commands ?? []).flatMap((command) => command.keys ?? []);
+    // FR5: `[` folds the sidebar beside Shift+S.
+    const own = ["["];
+    const catalog = (global?.commands ?? [])
+      .flatMap((command) => command.keys ?? [])
+      .filter((keys) => !own.includes(keys));
     expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
     expect(live.filter((keys) => !catalog.includes(keys))).toEqual([]);
   });

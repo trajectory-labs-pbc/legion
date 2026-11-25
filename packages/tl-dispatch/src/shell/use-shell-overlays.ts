@@ -73,7 +73,7 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
     toggleMargin:
       detailsDrawer !== undefined
         ? { label: "Open or close Details", run: () => detailsDrawer.setOpen(!detailsDrawer.open) }
-        : !shell.compact && shell.hasMargin
+        : shell.marginBeside && shell.hasMargin
           ? { run: () => preferences.setMarginHidden(!preferences.marginHidden) }
           : undefined,
   });

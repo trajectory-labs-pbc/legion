@@ -13,8 +13,8 @@ export function ShellFrame({
     <div
       className={cn(
         fillsViewport
-          ? "flex h-screen flex-col supports-[height:100dvh]:h-dvh xl:flex-row"
-          : "xl:flex",
+          ? "flex h-screen flex-col supports-[height:100dvh]:h-dvh md:flex-row"
+          : "md:flex",
         "text-foreground"
       )}
       data-testid="app-shell"

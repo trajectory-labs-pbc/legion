@@ -47,7 +47,7 @@ describe("AuthGate", () => {
     await waitFor(() => shell() !== null, sleep);
     await shellChunksArrive();
     expect(shell()).not.toBeNull();
-    // A narrow screen: the account is behind the menu.
-    expect(container.querySelector('[aria-label="Open navigation"]')).not.toBeNull();
+    // From 768 px the sidebar names the account.
+    expect(container.textContent).toContain("Signed in as reader");
   });
 });

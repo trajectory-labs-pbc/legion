@@ -52,9 +52,13 @@ const globalBindings = () =>
     .filter((binding) => binding.scope === "global" && !binding.id.endsWith(UNDER_OVERLAY));
 
 describe("the shell's global commands", () => {
-  test("bind upstream's shell keys and no other, so moving the shell onto the catalog changes no key", () => {
+  test("bind upstream's shell keys and only the frame's own besides, so no upstream key changes", () => {
     setup();
-    const ours = globalBindings().flatMap((binding) => binding.keys);
+    // FR5: `[` folds the sidebar beside Shift+S.
+    const own = ["["];
+    const ours = globalBindings()
+      .flatMap((binding) => binding.keys)
+      .filter((keys) => !own.includes(keys));
     const upstream = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
@@ -74,6 +78,7 @@ describe("the shell's global commands", () => {
     }
     press("i");
     press("S", { shiftKey: true });
+    press("[");
     press("M", { shiftKey: true });
     expect(calls).toEqual([
       "search",
@@ -84,6 +89,7 @@ describe("the shell's global commands", () => {
       "go agents",
       "go settings",
       "inbox drawer",
+      "sidebar",
       "sidebar",
       "margin",
     ]);

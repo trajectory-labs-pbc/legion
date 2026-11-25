@@ -185,7 +185,7 @@ describe("ShortcutsSheet", () => {
         input.dispatchEvent(new Event("input", { bubbles: true }));
       });
     type("sidebar");
-    expect(rows()).toEqual(["Toggle sidebar: Shift+S"]);
+    expect(rows()).toEqual(["Toggle sidebar: Shift+S | ["]);
     type("zzz");
     expect(rows()).toEqual([]);
     expect(sheet()?.textContent).toContain("No shortcut matches “zzz”.");

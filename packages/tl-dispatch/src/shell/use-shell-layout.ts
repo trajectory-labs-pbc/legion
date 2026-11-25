@@ -18,8 +18,10 @@ import { type ShellPreferences, useShellPreferences } from "./use-shell-preferen
 export interface ShellLayout {
   pathname: string;
   preferences: ShellPreferences;
-  /** A narrow viewport: a top bar, and the navigation in a drawer. */
+  /** Below 768 px: a top bar, and the navigation in a drawer (FR5). */
   compact: boolean;
+  /** 1280 px and wider: the margin is a column beside main, as upstream draws it. */
+  marginBeside: boolean;
   /** The issue frame's icon rail fits beside the page. */
   railFits: boolean;
   /** The outline issue page frames itself. */
@@ -47,7 +49,8 @@ export function useShellLayout(): ShellLayout {
   const [issuePageChoice] = useIssuePageChoice();
   const issueFrame = issuePageChoice === "outline" && layout.outlineFrame === true;
   const railFits = useMediaQuery(MD_VIEWPORT_QUERY);
-  const compact = useMediaQuery(COMPACT_VIEWPORT_QUERY);
+  const compact = !railFits;
+  const marginBeside = !useMediaQuery(COMPACT_VIEWPORT_QUERY);
   const readingPaneShown = useMediaQuery(READING_PANE_QUERY);
   const detailsDrawer = useDetailsDrawer(issueFrame, layout.issue);
   const fillsViewport =
@@ -59,6 +62,7 @@ export function useShellLayout(): ShellLayout {
     pathname,
     preferences,
     compact,
+    marginBeside,
     railFits,
     issueFrame,
     inDrawer: compact || issueFrame,

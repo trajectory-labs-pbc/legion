@@ -28,8 +28,19 @@ afterAll(() => {
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
-  for (const view of mounted.splice(0)) view.unmount();
+  // The shell goes first, so no media query redraws it.
+  for (const view of mounted.splice(0).reverse()) view.unmount();
 });
+
+const browser = (window as unknown as { happyDOM: { setViewport(size: { width: number }): void } })
+  .happyDOM;
+
+/** Draws the next mount at `width`, and restores the width after the shell is gone. */
+function viewport(width: number) {
+  const before = window.innerWidth;
+  browser.setViewport({ width });
+  mounted.push({ unmount: () => browser.setViewport({ width: before }) });
+}
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
 async function mount(path = "/no-such-page") {
@@ -49,6 +60,7 @@ async function mount(path = "/no-such-page") {
 
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
+    viewport(375);
     await mount();
     // The menu is a sheet, drawn in a portal on the body.
     const click = (label: string) =>
@@ -95,27 +107,19 @@ describe("AppShell", () => {
     await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
   });
 
-  test("Shift+S folds the sidebar to its rail and gives main the full width, and again unfolds it", async () => {
-    // A wide viewport, where the sidebar is a column and can fold.
-    const browser = (
-      window as unknown as { happyDOM: { setViewport(size: { width: number }): void } }
-    ).happyDOM;
-    const narrow = window.innerWidth;
-    browser.setViewport({ width: 1440 });
+  test.each([
+    ["Shift+S", { key: "S", shiftKey: true }],
+    ["[", { key: "[" }],
+  ] as const)("%s folds the sidebar to its rail and gives main the full width, and again unfolds it", async (_key, init) => {
+    // A viewport where the sidebar is a column and can fold.
+    viewport(768);
     const view = await mount();
-    // After the shell is gone, so no media query redraws it.
-    mounted.push({ unmount: () => browser.setViewport({ width: narrow }) });
     const main = () => view.container.querySelector('[data-testid="main-content"]');
     const rail = () => view.container.querySelector('[data-testid="sidebar-rail"]');
     const fold = () =>
       settle(() => {
         document.body.dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "S",
-            shiftKey: true,
-            bubbles: true,
-            cancelable: true,
-          })
+          new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
         );
       });
     const panel = () => view.container.querySelector('[data-testid="content-panel"]');
@@ -123,31 +127,36 @@ describe("AppShell", () => {
     expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
     expect(rail()).toBeNull();
     expect(sidebar()?.className).toContain("w-60");
-    expect(panel()?.className).toContain("xl:ml-0");
+    expect(panel()?.className).toContain("md:ml-0");
     fold();
     expect(main()?.getAttribute("data-shell-layout")).toBe("full-width");
     expect(rail()).not.toBeNull();
     expect(sidebar()).toBeNull();
-    expect(panel()?.className).toContain("xl:ml-14");
+    expect(panel()?.className).toContain("md:ml-14");
     fold();
     expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
     expect(rail()).toBeNull();
   });
 
-  test("draws the inverted L: the sidebar on the window's ground, main in an inset card", async () => {
-    const browser = (
-      window as unknown as { happyDOM: { setViewport(size: { width: number }): void } }
-    ).happyDOM;
-    const narrow = window.innerWidth;
-    browser.setViewport({ width: 1440 });
+  test.each([
+    767, 768,
+  ])("below 768 px the navigation is a drawer under a top bar, and from 768 px a column: %i px", async (width) => {
+    viewport(width);
     const view = await mount();
-    mounted.push({ unmount: () => browser.setViewport({ width: narrow }) });
+    const column = view.container.querySelector('[data-testid="sidebar"]');
+    const menu = view.container.querySelector('[aria-label="Open navigation"]');
+    expect([column !== null, menu !== null]).toEqual(width < 768 ? [false, true] : [true, false]);
+  });
+
+  test("draws the inverted L: the sidebar on the window's ground, main in an inset card", async () => {
+    viewport(1440);
+    const view = await mount();
     const sidebar = view.container.querySelector('[data-testid="sidebar"]');
     const panel = view.container.querySelector('[data-testid="content-panel"]');
     expect(sidebar?.className).toContain("bg-background");
     expect(sidebar?.className).not.toContain("border-r");
     expect(panel?.contains(view.container.querySelector("main"))).toBe(true);
-    for (const name of ["bg-card", "md:border", "md:mx-2", "md:mb-2", "xl:mt-2"]) {
+    for (const name of ["bg-card", "md:border", "md:mx-2", "md:mb-2", "md:mt-2"]) {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");
@@ -175,6 +184,7 @@ describe("AppShell", () => {
       }
     };
     const openMenu = async () => {
+      viewport(375);
       await mount();
       settle(() => {
         document.body.querySelector<HTMLElement>('[aria-label="Open navigation"]')?.click();
