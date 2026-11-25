@@ -12,7 +12,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **SU4** No divider between rows of a list. A 1 px `border-border` line separates the header from the content, the properties panel from the main column, and one section from the next. Linear: the 2026 refresh's fewer separators. Check: reviewer.
 
-**SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, sheet, drawer) adds `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
+**SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, sheet, drawer) is `bg-background` with `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
 
 **SU6** Square corners everywhere. Only a dot or an avatar is round. Linear's corners are round; this theme's are not. Check: the design-rule radius tests.
 
