@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@upstream-dispatch/api/client";
 import {
-  inboxQuery,
   prioritySummaryQuery,
   projectsQuery,
   userAgentStateQuery,
@@ -108,7 +107,6 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   const { pathname } = useAddress();
   const open = openOf(useCurrentPage()?.layout ?? {});
   const inboxCount = useInboxRowCount();
-  const inbox = useQuery(inboxQuery());
   const agents = useQuery(userAgentStateQuery());
   const agentState = agents.data;
   const summaryRead = useQuery(prioritySummaryQuery());
@@ -124,7 +122,7 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       ? undefined
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
   const counts: Partial<Record<NavName, SidebarCount>> = {
-    inbox: { count: inboxCount.count, needsYou: inboxCount.needsYou, retry: retryOf(inbox) },
+    inbox: inboxCount,
     agents: { count: totalUnreadReplies(agentState), retry: retryOf(agents) },
     priorities: { count: priorityFaults, retry: retryOf(summaryRead) },
   };

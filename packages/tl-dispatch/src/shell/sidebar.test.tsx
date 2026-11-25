@@ -7,7 +7,7 @@ import { act } from "react";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
-import { INBOX_TWO_FOR_READER, inboxReads } from "../../tests/inbox";
+import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
@@ -380,6 +380,35 @@ describe("the sidebar", () => {
     const inboxRow = await mountInbox(() => json({ error: { code: "INTERNAL" } }, 500), 3);
     expect(numberOf(inboxRow)).toBeNull();
     expect(inboxRow?.closest("li")?.textContent).toContain("Could not load the Inbox count.");
+  });
+
+  test("the Inbox count's Retry asks every read the count needs again", async () => {
+    const asked: string[] = [];
+    let failing = true;
+    const answer = inboxReads(
+      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
+      3
+    );
+    const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) => {
+        asked.push(url);
+        return answer(url);
+      },
+    });
+    const retry = () =>
+      [
+        ...(container.querySelector('nav a[href="/"]')?.closest("li")?.querySelectorAll("button") ??
+          []),
+      ].find((button) => button.textContent === "Retry");
+    const mark = () => container.querySelector('[data-slot="attention-mark"]');
+    await waitFor(() => retry() !== undefined, sleep);
+    asked.length = 0;
+    failing = false;
+    settle(() => retry()?.click());
+    await waitFor(() => mark() !== null, sleep);
+    expect(unasked(asked)).toEqual([]);
+    expect(mark()?.getAttribute("aria-label")).toBe("Needs you: 2");
   });
 
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {

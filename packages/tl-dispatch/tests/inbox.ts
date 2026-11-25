@@ -29,3 +29,17 @@ export function inboxReads(inbox: () => Response | undefined, unread: number) {
     return undefined;
   };
 }
+
+/** The reads the Inbox count needs, as their addresses start. */
+export const INBOX_COUNT_READS = [
+  "/auth/whoami",
+  "/api/v1/inbox",
+  "/api/v1/credential-requests",
+  "/api/v1/me/replies",
+];
+
+/** Which of the Inbox count's reads no address in `asked` names. */
+export const unasked = (asked: readonly string[]) =>
+  INBOX_COUNT_READS.filter(
+    (read) => !asked.some((url) => new URL(url, "http://x").pathname === read)
+  );

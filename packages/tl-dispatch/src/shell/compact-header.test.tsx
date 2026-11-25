@@ -4,7 +4,7 @@ import { act, type ReactNode } from "react";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
-import { INBOX_TWO_FOR_READER, inboxReads } from "../../tests/inbox";
+import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
@@ -20,11 +20,12 @@ afterEach(() => {
 
 function mount(
   children: ReactNode,
-  answer: (url: string) => Response | undefined = () => undefined
+  answer: (url: string) => Response | undefined = () => undefined,
+  client = new QueryClient()
 ) {
   const fetch = stubFetch(answer);
   const view = render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryNavigationProvider path="/agents">
         <GlobalCommands />
         {children}
@@ -120,6 +121,35 @@ describe("CompactHeader", () => {
     await waitFor(() => count() !== null, sleep);
     expect(count()?.textContent).toBe("3");
     expect(header.querySelector('[data-slot="attention-mark"]')).toBeNull();
+  });
+
+  test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {
+    const asked: string[] = [];
+    let failing = true;
+    const answer = inboxReads(
+      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json([])),
+      3
+    );
+    const header = mount(
+      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+      (url) => {
+        asked.push(url);
+        return answer(url);
+      },
+      new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    );
+    const retry = () =>
+      [...header.querySelectorAll("button")].find((b) => b.textContent === "Retry");
+    const count = () => header.querySelector('a[href="/"] [data-slot="count"]');
+    await waitFor(() => retry() !== undefined, sleep);
+    expect(header.textContent).toContain("Could not load the Inbox count.");
+    expect(count()).toBeNull();
+    asked.length = 0;
+    failing = false;
+    settle(() => retry()?.click());
+    await waitFor(() => count() !== null, sleep);
+    expect(unasked(asked)).toEqual([]);
+    expect(count()?.textContent).toBe("3");
   });
 
   test("Menu says whether the navigation is open and opens it", () => {

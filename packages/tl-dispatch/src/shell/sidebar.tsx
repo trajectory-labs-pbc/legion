@@ -6,7 +6,7 @@ import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import { ChevronDownIcon, ChevronRightIcon, PinIcon } from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
@@ -15,6 +15,7 @@ import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
 import { PeekButton } from "./peek-button";
+import { ReadLine } from "./read-line";
 
 import {
   type SectionRead,
@@ -35,35 +36,6 @@ function SectionHeading({ children }: { children: ReactNode }) {
     <Heading className="px-2 pb-1" size="label" tone="muted">
       {children}
     </Heading>
-  );
-}
-
-/** How long a read may take before its loading line shows, so a quick one draws none (ES4). */
-const LOADING_DELAY_MS = 200;
-
-/** Whether `ms` have passed since the caller mounted. */
-function useAfter(ms: number): boolean {
-  const [after, setAfter] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setAfter(true), ms);
-    return () => clearTimeout(timer);
-  }, [ms]);
-  return after;
-}
-
-/** A read with nothing to show yet: a quiet loading line after a moment, or the failure and Retry. */
-function ReadLine({ noun, retry }: { noun: string; retry: (() => void) | undefined }) {
-  const late = useAfter(LOADING_DELAY_MS);
-  if (retry === undefined) {
-    return late ? <p className="px-2 py-1 text-xs text-muted-foreground">Loading {noun}…</p> : null;
-  }
-  return (
-    <p className="flex items-center gap-1 py-0.5 pl-2 text-xs text-danger">
-      <span className="min-w-0 flex-1">Could not load {noun}.</span>
-      <Button onClick={retry} size="xs" variant="link">
-        Retry
-      </Button>
-    </p>
   );
 }
 

@@ -10,6 +10,7 @@ import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
 import { useInboxRowCount } from "./inbox-count";
 import { PeekButton } from "./peek-button";
+import { ReadLine } from "./read-line";
 
 /** The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu. */
 export function CompactHeader({
@@ -44,6 +45,9 @@ export function CompactHeader({
           <Count title={inboxCount.label} value={inboxCount.count ?? 0} />
         )}
       </NavRow>
+      {inboxCount.retry === undefined ? null : (
+        <ReadLine noun="the Inbox count" retry={inboxCount.retry} />
+      )}
       {unread === 0 ? null : (
         <NavRow
           className="shrink-0"
