@@ -21,8 +21,9 @@ import { PACKAGE_ROOT } from "./source";
 // `src/repaint.css` maps the palette upstream's pages paint with onto the theme's tokens. These
 // tests compile the app's stylesheet as the build does, resolve each colour as the cascade does
 // in light and in dark, and hold these things: nothing upstream paints with is blue, each text
-// pair upstream registers keeps its contrast, each blue literal in a rule has a rule here, and a
-// link in a document or a comment is underlined at rest.
+// pair upstream registers keeps its contrast, each blue literal in a rule of the app's stylesheet
+// or the editor's has a rule here, each hover state and each urgency pill is a step from the
+// colour it must differ from, and a link in a document or a comment is underlined at rest.
 
 type Scheme = "light" | "dark";
 /** A colour in OKLab, with its opacity. */
@@ -465,20 +466,31 @@ function stepProblems(
 }
 
 const LITERAL = /#[0-9a-f]{3,8}\b|\b(?:oklch|oklab|rgba?)\([^()]*\)/gi;
-const SHORTHANDS = new Set(["background", "border", "outline"]);
+const SHORTHANDS = new Set(["background", "border", "border-bottom", "outline"]);
 const withoutWhere = (selector: string) => /^:where\((.*)\)$/.exec(selector)?.[1] ?? selector;
 const selectorKey = (selector: string) => selector.replace(/\s+/g, " ").replace(/"/g, "'");
 
-/** Blue literals this stylesheet cannot reach, each with why it stays. */
+/** Blue literals this stylesheet does not replace, each with why it stays. A key is the start of
+ *  a rule's selector, or of `selector { property }`. */
 const UNREACHED: Record<string, string> = {
   ".bg-\\[color\\:\\#123456\\]": "a class upstream's own tests write; no page draws it",
+  ".markdown-link-action-card": "a card of the editor's library that no code makes",
+  ".milkdown pre code .token.":
+    "the editor's code theme, kept whole: its hues mark syntax, on a ground dark in both schemes",
+  ".proof-editor { --a4-color }": "a provenance colour; the editor Dispatch mounts draws none",
+  ".proof-editor { --ai-color }": "a provenance colour; the editor Dispatch mounts draws none",
   ".shadow-\\[0_0_0_1px_\\#123456\\]": "a class upstream's own tests write; no page draws it",
   ".shadow-\\[0_-8px_24px_rgba\\(15\\,23\\,42\\,0\\.08\\)\\]":
     "the margin sheet's shadow, a slate at 8%, written in upstream's component",
 };
 
-/** Each blue literal in a rule that no rule of `src/repaint.css` replaces. */
-function literalProblems(declarations: readonly CssDeclaration[], repaint: string): string[] {
+/** Each blue literal in a rule of `declarations` that no rule of `src/repaint.css` replaces. A
+ *  rule there replaces one when it has the same selector after `scope`, and the same property. */
+function literalProblems(
+  declarations: readonly CssDeclaration[],
+  repaint: string,
+  scope = ""
+): string[] {
   const own = new Set(
     parseCss(repaint).declarations.flatMap(({ property, context }) =>
       split(withoutWhere(place(context).selector), ",").map(
@@ -487,8 +499,8 @@ function literalProblems(declarations: readonly CssDeclaration[], repaint: strin
     )
   );
   const replaced = (selector: string, property: string) =>
-    own.has(`${selectorKey(selector)} { ${property} }`) ||
-    (SHORTHANDS.has(property) && own.has(`${selectorKey(selector)} { ${property}-color }`));
+    own.has(`${selectorKey(scope + selector)} { ${property} }`) ||
+    (SHORTHANDS.has(property) && own.has(`${selectorKey(scope + selector)} { ${property}-color }`));
   // Tailwind writes a `color-mix()` under `@supports`, after a fallback in the same rule.
   const fallbacks = new Set<CssDeclaration>();
   declarations.forEach(({ property, context }, index) => {
@@ -500,18 +512,30 @@ function literalProblems(declarations: readonly CssDeclaration[], repaint: strin
       if (before.property === property) fallbacks.add(before);
     }
   });
+  /** The rules that run the animation `name`: a keyframe's colour is theirs to replace. */
+  const animated = (name: string) =>
+    declarations
+      .filter(
+        ({ property, value }) =>
+          /^animation(-name)?$/.test(property) && value.split(/\s+/).includes(name)
+      )
+      .map(({ context }) => place(context).selector);
   const problems = new Set<string>();
   for (const declaration of declarations) {
-    const { property, value, context } = declaration;
-    const { selector } = place(context);
+    const { value, context } = declaration;
     if (fallbacks.has(declaration)) continue;
     const blue = (value.replace(/url\([^)]*\)/g, "").match(LITERAL) ?? []).filter((text) => {
       const colour = literal(text);
       return colour !== undefined && isBlue(colour);
     });
     if (blue.length === 0) continue;
-    for (const part of split(selector, ",")) {
-      if (part === ":host" || UNREACHED[part] !== undefined || replaced(part, property)) continue;
+    const keyframes = /^@keyframes (.*)$/.exec(context[0] ?? "")?.[1];
+    const property = keyframes === undefined ? declaration.property : "animation-name";
+    const selectors = keyframes === undefined ? [place(context).selector] : animated(keyframes);
+    for (const part of selectors.flatMap((selector) => split(selector, ","))) {
+      const rule = `${selectorKey(part)} { ${property} }`;
+      const stays = Object.keys(UNREACHED).some((key) => rule.startsWith(key));
+      if (part === ":host" || stays || replaced(part, property)) continue;
       problems.add(`${part} { ${property}: ${blue.join(" ")} }`);
     }
   }
@@ -614,6 +638,24 @@ describe("the repaint of upstream's pages", async () => {
 
   test("replaces every blue literal a rule of the compiled stylesheet holds", () => {
     expect(literalProblems(declarations, repaintText)).toEqual([]);
+  });
+
+  test("replaces every blue literal a rule of the editor's stylesheet holds", () => {
+    expect(literalProblems(editorCss, repaintText, ".dispatch-doc ")).toEqual([]);
+  });
+
+  test("fails when a rule for one of the editor's literals is removed", () => {
+    const rule = /\.dispatch-doc span\[data-dispatch="ask"\] \{[^}]*\}/;
+    expect(repaintText).toMatch(rule);
+    expect(literalProblems(editorCss, repaintText.replace(rule, ""), ".dispatch-doc ")).toEqual([
+      'span[data-dispatch="ask"] { background-color: rgba(168, 85, 247, 0.18) }',
+      'span[data-dispatch="ask"] { border-bottom: #a855f7 }',
+    ]);
+    const pulse = /\.dispatch-doc \.dispatch-mark-pulse \{\s*animation-name:[^}]*\}/;
+    expect(repaintText).toMatch(pulse);
+    expect(literalProblems(editorCss, repaintText.replace(pulse, ""), ".dispatch-doc ")).toEqual([
+      ".dispatch-mark-pulse { animation-name: rgba(168, 85, 247, 0.45) }",
+    ]);
   });
 
   test("fails when a rule for one of upstream's literals is removed", () => {

@@ -436,6 +436,42 @@
   text-underline-offset: 3px;
 }
 
+/* The editor's own stylesheet (proof-editor's `lib.css`) loads after this one on a document page.
+   Each rule below is one of its selectors under `.dispatch-doc`, which outranks it. An ask's
+   anchor is a ground one step above the page, not a hue. */
+.dispatch-doc span[data-dispatch="ask"] {
+  background-color: var(--accent);
+  border-bottom-color: var(--muted-foreground);
+}
+
+.dispatch-doc .milkdown .editor.ProseMirror > p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+}
+
+@keyframes repaint-mark-pulse {
+  0% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dispatch-doc .dispatch-mark-pulse {
+    animation-name: repaint-mark-pulse;
+  }
+}
+
+/* Without motion a mark does not pulse. Only `!important` outranks the editor's animation, which
+   takes the place of the mark's own shadow while it runs, as this does. */
+@media (prefers-reduced-motion: reduce) {
+  .dispatch-doc .dispatch-mark-pulse {
+    /* biome-ignore lint/complexity/noImportantStyles: an animation yields to nothing else */
+    box-shadow: none !important;
+  }
+}
+
 ::highlight(dispatch-search) {
   background-color: var(--warning-border);
   color: var(--foreground);
