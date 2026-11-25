@@ -1,8 +1,7 @@
+import { Button } from "@legion/ui/components/button";
+import { SurfaceTitle } from "@legion/ui/components/heading";
+import { Input } from "@legion/ui/components/input";
 import type { ReactNode } from "react";
-
-import { Button } from "@/ui/button";
-import { SurfaceTitle } from "@/ui/heading";
-import { Input } from "@/ui/input";
 import { writeFailureNote } from "@/writes/write-failure-note";
 import { DecisionButtons } from "./decision-buttons";
 import { MachineLogins } from "./machine-logins";

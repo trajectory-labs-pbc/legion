@@ -7,7 +7,6 @@ replaces them one page at a time.
 
 | Folder | Holds | May import |
 | --- | --- | --- |
-| `src/ui` | The registry's components and theme, as `shadcn add` wrote them: no data, no router | packages and `src/ui` only |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
@@ -18,39 +17,28 @@ replaces them one page at a time.
 `tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
 tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
 refuses an import it cannot resolve or a non-literal `import()`. Upstream's code keeps its own
-router imports.
+router imports. No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
 
-## Registry components
+## Components and theme
 
-Every file in `src/ui` comes from the shared registry, written by `shadcn add`:
+The components, the tokens and the typeface are `packages/ui` (`@legion/ui`), imported from its
+sources:
 
-```sh
-bunx --bun shadcn@4.23.0 add <path to the registry>/<item>.json
+```tsx
+import { Button } from "@legion/ui/components/button";
+import { cn } from "@legion/ui/lib/utils";
 ```
 
-They stay as the registry wrote them: `biome.json` neither formats nor lints `src/ui`, and the
-design rules skip it. Their lint and tests live in the registry. Fix a registry component there,
-then add it again. This app's own tokens are in `src/tokens.css`.
-
-## Theme
-
-`src/ui/theme.css` is a shadcn registry theme item, written by `shadcn add` into the file
-`components.json` names. Never edit it by hand. To take a new version of the item, from this
-directory:
-
-```sh
-bunx --bun shadcn@4.23.0 add <path to the item>/theme-system.json
-```
-
-The first line of `theme.css`, `@custom-variant dark (@media (prefers-color-scheme: dark));`, makes
-the dark scheme follow the operating system; keep it when the file is written again.
-
-`src/tokens.css` holds this app's own tokens beside the theme:
-
-- `--focus` (`outline-focus`), the focus indicator: `--chart-5` in light, where `--ring` is below
-  3:1 on the light surfaces, and `--ring` in dark.
-- `--input`, the control border: in each scheme, the least ink mixed into the page that reaches
-  3:1 on the page, a card and a muted surface. `--border` keeps the theme's value.
+- `tsconfig.json` and `vite.config.ts` point `@legion/ui/components` and `@legion/ui/lib` at
+  `packages/ui/src`. `src/styles.css` imports the package's stylesheet after upstream's.
+- The package's components import `@base-ui/react`, `class-variance-authority`, `cn` and
+  `lucide-react` (`uiPackages` in `package.json`). Both packages install them, so the build takes
+  this app's copy of each (`resolve.dedupe`), and `scripts/one-copy-each.ts` fails a build that
+  holds two copies or the package's own.
+- A component the app needs and the package lacks is added to the package, with its test and
+  its registry entry. Never copy one here.
+- `src/tokens.css` holds the two rules the app adds: the theme's typeface on `:root`, which
+  upstream's stylesheet would otherwise set, and upstream's canvas under upstream's pages.
 
 ## Commands
 
@@ -82,8 +70,9 @@ The files of `src/commands`, one role each:
   `upstream-labels.ts`: the sheet's labels for upstream's bindings.
 - `schema.ts`: what a command, a context and a catalog are; `createCatalog` checks a catalog.
 - `keys.ts`: the checks the catalog runs on a key. `key-chips.ts`: the chips a key shows as.
-- `engine-stack.ts`: upstream's key engine's scope stack under our overlays. `bindings.ts`: the
-  bindings a context registers with it.
+- `focused-overlay.ts`: the overlays over the page, read from the DOM: each open modal one and
+  each one the focus is inside. `engine-stack.ts`: upstream's key engine's scope stack under
+  them. `bindings.ts`: the bindings a context registers with it.
 - `actions.ts`: `defineActions`. `command-store.ts`: the mounted commands.
   `use-register-commands.ts` and `use-command.ts`: the hooks that register and read them.
 - `live-shortcuts.ts`: the keys that run now, as rows. `use-shortcuts-sheet.ts`: the sheet's
@@ -164,11 +153,13 @@ React Router context around them. Before then, a swap means running both routers
 ## Install
 
 The app is outside the root workspaces. It takes React and the other libraries upstream's web app
-also loads from the root install (`rootPackages` in `package.json`), so each has one copy:
+also loads from the root install (`rootPackages` in `package.json`), so each has one copy, and
+it imports `packages/ui` from source, so that package is installed too:
 
 ```sh
 bun install            # at the repository root
-bun install            # in this directory; it links the root packages
+bun install            # in packages/ui
+bun install            # in this directory; packages/ui's script links the root packages
 ```
 
 ## Route map, view map and copied code
@@ -186,11 +177,11 @@ load no page module:
 
 ## Checks
 
-- `bun run test`: the layers, the design rules, the contrast of every text pair, of focus and of
-  control borders, the catalog and its components, navigation, the shell's hooks, the key
+- `bun run test`: the layers, the design rules, the catalog and its components, navigation, the shell's hooks, the key
   engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
-  Among them: nothing scales and no class sets the pointer cursor.
+  Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
+  checked in `packages/ui`.
   `tests/skill-paths.test.ts` fails on a path that a skill under `.agents/skills` or this
   package's `AGENTS.md` names and that does not exist.
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React

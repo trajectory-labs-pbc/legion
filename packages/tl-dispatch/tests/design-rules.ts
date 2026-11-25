@@ -8,7 +8,7 @@ import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale"
 import { type CssDeclaration, importedPath, lineAt, parseCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
-import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
+import { PACKAGE_ROOT, type SourceFile, UI_STYLESHEET, UPSTREAM_WEB } from "./source";
 import { parseScript } from "./typescript";
 
 export interface DesignViolation {
@@ -520,9 +520,6 @@ function scriptViolations(
 
 const UPSTREAM_THEME = join(UPSTREAM_WEB, "theme") + sep;
 
-/** The registry's components, as `shadcn add` wrote them: the registry lints and tests them. */
-export const REGISTRY_FOLDER = "src/ui/";
-
 export interface DesignOptions {
   /** The files left out, by path; the config's list unless a test passes another. */
   exempt?: Readonly<Record<string, string>>;
@@ -534,12 +531,10 @@ export async function designViolations(
   { exempt = EXEMPT }: DesignOptions = {}
 ): Promise<DesignViolation[]> {
   const tokens = themeTokens(
-    readFileSync(join(PACKAGE_ROOT, "src/ui/theme.css"), "utf8"),
+    readFileSync(UI_STYLESHEET, "utf8"),
     readFileSync(join(PACKAGE_ROOT, "src/tokens.css"), "utf8")
   );
-  const checked = files.filter(
-    (file) => !file.path.startsWith(REGISTRY_FOLDER) && exempt[file.path] === undefined
-  );
+  const checked = files.filter((file) => exempt[file.path] === undefined);
   const stylesheets = checked.filter((file) => file.path.endsWith(".css"));
   const scripts = checked.filter((file) => /\.(tsx?|[cm]?jsx?|html)$/.test(file.path));
   const disk = filesWith(ownFiles(files));

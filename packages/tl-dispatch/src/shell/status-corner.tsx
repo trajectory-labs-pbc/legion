@@ -1,11 +1,10 @@
+import { Button } from "@legion/ui/components/button";
+import { cn } from "@legion/ui/lib/utils";
 import { useLiveSocketPill } from "@upstream-dispatch/api/live-socket";
 import { DraftsNotKept } from "@upstream-dispatch/features/inbox/DraftsNotKept";
 import { PendingWritesIndicator } from "@upstream-dispatch/features/writes/PendingWritesIndicator";
 import { FOOT_STATUS_INSET_PROPERTY, useFootInset } from "@upstream-dispatch/hooks/useFootInset";
 import { useRef } from "react";
-
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/lib/utils";
 
 const PILL = "flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium";
 

@@ -38,19 +38,13 @@ describe("layers", () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the control is source text that holds a template
     ["src/shell/x.tsx", "const name = 'app'; import(`@upstream-dispatch/${name}`);", "non-literal"],
     ["src/shell/x.tsx", "const pages = import.meta.glob('../pages/*.tsx');", "import.meta.glob"],
-    ["src/ui/x.tsx", 'import { appCatalog } from "@/commands/app-catalog";', "outside src/ui"],
-    ["src/ui/x.tsx", 'import { y } from "@/nowhere/y";', "resolves to no file"],
-    ["src/ui/x.tsx", 'import { appCatalog } from "../commands/app-catalog";', "outside src/ui"],
+    ["src/shell/x.tsx", 'import { y } from "@/nowhere/y";', "resolves to no file"],
+    ["src/shell/x.css", "/* a note */ @import url('../pages/extra.css');", "resolves to no file"],
     [
-      "src/ui/x.tsx",
-      'import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";',
-      "outside src/ui",
+      "src/pages/x.tsx",
+      'import { Dialog } from "@base-ui/react/dialog";',
+      "Base UI comes through packages/ui",
     ],
-    ["src/ui/x.tsx", 'import { Link } from "react-router-dom";', "no router"],
-    ["src/ui/x.tsx", 'import { useRouter } from "@tanstack/react-router";', "no router"],
-    ["src/ui/x.tsx", 'import { useQuery } from "@tanstack/react-query";', "no data"],
-    ["src/ui/x.css", '@import "../../../dispatch/web/src/styles.css";', "outside src/ui"],
-    ["src/ui/x.css", "/* a note */ @import url('../shell/extra.css');", "resolves to no file"],
     [
       "src/commands/x.ts",
       'import { useNavigate } from "react-router-dom";',
@@ -70,13 +64,12 @@ describe("layers", () => {
     expect(rulesOf([{ path, text }]).join("\n")).toContain(rule);
   });
 
-  test("matches the ui folder by path segment, so src/ui-anything is outside it", () => {
+  test("matches a folder by path segment, so src/navigation-anything is outside navigation", () => {
     const files = [
-      { path: "src/ui/x.tsx", text: 'import { y } from "../ui-anything/y";' },
-      { path: "src/ui-anything/y.ts", text: "export const y = 1;" },
+      { path: "src/navigation-anything/x.tsx", text: 'import { Link } from "react-router-dom";' },
     ];
     expect(rulesOf(files)).toEqual([
-      "src/ui holds components only: it imports nothing outside src/ui",
+      "only src/navigation imports the router, so a router move changes one folder",
     ]);
   });
 
@@ -92,16 +85,21 @@ describe("layers", () => {
   });
 
   test.each([
-    ["src/ui/x.tsx", 'import { y } from "./y";', ["src/ui/y.ts", "export const y = 1;"]],
-    ["src/ui/x.tsx", 'import { useState } from "react";', undefined],
+    ["src/shell/x.tsx", 'import { y } from "./y";', ["src/shell/y.ts", "export const y = 1;"]],
+    ["src/shell/x.tsx", 'import { useState } from "react";', undefined],
+    ["src/shell/x.tsx", 'import { Button } from "@legion/ui/components/button";', undefined],
     ["src/navigation/x.tsx", 'import { Link } from "react-router-dom";', undefined],
     [
       "src/shell/x.tsx",
       'import { Sidebar } from "@upstream-dispatch/features/sidebar/Sidebar";',
       undefined,
     ],
-    ["src/ui/x.tsx", '// import { App } from "@upstream-dispatch/app";', undefined],
-    ["src/ui/x.tsx", "const text = \"import { App } from '@upstream-dispatch/app'\";", undefined],
+    ["src/shell/x.tsx", '// import { App } from "@upstream-dispatch/app";', undefined],
+    [
+      "src/shell/x.tsx",
+      "const text = \"import { App } from '@upstream-dispatch/app'\";",
+      undefined,
+    ],
   ] as const)("allows %s: %s", (path, text, sibling) => {
     const files = [
       { path, text },

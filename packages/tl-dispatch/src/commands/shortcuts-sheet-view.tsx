@@ -1,11 +1,16 @@
+import { Heading } from "@legion/ui/components/heading";
+import { Input } from "@legion/ui/components/input";
+import { KbdSequence } from "@legion/ui/components/kbd";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@legion/ui/components/sheet";
+import { textVariants } from "@legion/ui/lib/typography";
+import { cn } from "@legion/ui/lib/utils";
 import { useMemo, useRef, useState } from "react";
-
-import { Heading } from "@/ui/heading";
-import { Input } from "@/ui/input";
-import { KbdSequence } from "@/ui/kbd";
-import { textVariants } from "@/ui/lib/typography";
-import { cn } from "@/ui/lib/utils";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/ui/sheet";
 import { rowChips } from "./key-chips";
 import type { ShortcutSection } from "./live-shortcuts";
 

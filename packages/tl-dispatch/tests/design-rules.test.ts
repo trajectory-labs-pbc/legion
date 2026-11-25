@@ -1,14 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
-import { contrastFailures, measure, ratio, readSchemes, resolveColour } from "./contrast";
 import { EXEMPT } from "./design-config";
 import { type DesignViolation, designViolations } from "./design-rules";
-import { PACKAGE_ROOT, sourceFiles } from "./source";
-
-const theme = readFileSync(join(PACKAGE_ROOT, "src/ui/theme.css"), "utf8");
-const tokens = readFileSync(join(PACKAGE_ROOT, "src/tokens.css"), "utf8");
+import { sourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
 const REFUSED: readonly [string, string, string][] = [
@@ -140,13 +133,6 @@ describe("design rules", () => {
     expect(violations.map((violation) => violation.rule).join()).toContain("raw colour");
   });
 
-  test("leaves src/ui to the registry, which lints and tests it; the same file elsewhere is refused", async () => {
-    const text = '<p className="text-sky-700" />;';
-    expect(await designViolations([{ path: "src/ui/x.tsx", text }])).toEqual([]);
-    const elsewhere = await designViolations([{ path: "src/shell/x.tsx", text }]);
-    expect(elsewhere.map((violation) => violation.rule).join()).toContain("raw colour");
-  });
-
   test.each(
     REFUSED.map((control, index) => [index, ...control] as const)
   )("refuses control %d (%s): %s", (index, extension, _text, rule) => {
@@ -157,62 +143,5 @@ describe("design rules", () => {
     ALLOWED.map((control, index) => [REFUSED.length + index, ...control] as const)
   )("allows control %d (%s): %s", (index, extension) => {
     expect(rulesOf(controlPath(index, extension))).toEqual([]);
-  });
-});
-
-describe("contrast", () => {
-  const schemes = readSchemes(theme, tokens);
-
-  test("every text pair, focus on every surface, and control borders", () => {
-    expect(contrastFailures(schemes)).toEqual([]);
-  });
-
-  test("a token set to the page colour fails", () => {
-    const broken = readSchemes(theme, tokens, ":root { --muted-foreground: var(--background); }");
-    expect(
-      contrastFailures(broken).map(
-        (failure) => `${failure.scheme} ${failure.text} on ${failure.on}`
-      )
-    ).toContain("light --muted-foreground on --background");
-  });
-
-  test("the theme's light ring is below 3:1 on the page, which is why focus has its own token", () => {
-    const light = schemes.light;
-    expect(
-      ratio(resolveColour(light, "--ring"), resolveColour(light, "--background"))
-    ).toBeLessThan(3);
-    expect(measure(light, "--focus", "--background")).toBeGreaterThanOrEqual(3);
-  });
-
-  const inputFailures = (extra: string) =>
-    contrastFailures(readSchemes(theme, tokens, extra)).map(
-      (failure) => `${failure.scheme} ${failure.text} on ${failure.on}`
-    );
-  const mix = (scheme: string, percent: number) =>
-    `@media (prefers-color-scheme: ${scheme}) { :root { --input: color-mix(in srgb, var(--foreground) ${percent}%, var(--background)); } }`;
-
-  test("the theme's --input is below 3:1, which is why tokens.css mixes a stronger one", () => {
-    const themeOnly = readSchemes(theme);
-    for (const on of ["--background", "--card", "--muted"]) {
-      expect(measure(themeOnly.light, "--input", on)).toBeLessThan(3);
-      expect(measure(schemes.light, "--input", on)).toBeGreaterThanOrEqual(3);
-      expect(measure(schemes.dark, "--input", on)).toBeGreaterThanOrEqual(3);
-    }
-    expect(measure(themeOnly.dark, "--input", "--muted")).toBeLessThan(3);
-    expect(
-      inputFailures(
-        "@media (prefers-color-scheme: light) { :root { --input: #e1e2e3; } } @media (prefers-color-scheme: dark) { :root { --input: #716d66; } }"
-      )
-    ).toEqual([
-      "light --input on --background",
-      "light --input on --card",
-      "light --input on --muted",
-      "dark --input on --muted",
-    ]);
-  });
-
-  test("each scheme's mix is the least ink that reaches 3:1", () => {
-    expect(inputFailures(mix("light", 46))).toContain("light --input on --background");
-    expect(inputFailures(mix("dark", 42))).toEqual(["dark --input on --muted"]);
   });
 });

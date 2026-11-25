@@ -1,8 +1,7 @@
+import { Button } from "@legion/ui/components/button";
+import { Heading } from "@legion/ui/components/heading";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-
-import { Button } from "@/ui/button";
-import { Heading } from "@/ui/heading";
 import { writeFailureNote } from "@/writes/write-failure-note";
 import {
   refusedNote,

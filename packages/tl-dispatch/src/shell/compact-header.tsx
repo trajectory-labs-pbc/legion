@@ -1,13 +1,12 @@
+import { Button } from "@legion/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
-
 import { CommandButton } from "@/commands/command-button";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
-import { Button } from "@/ui/button";
 
 const CHIP =
   "rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-focus";

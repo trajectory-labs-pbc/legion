@@ -16,24 +16,3 @@ export const EXEMPT: Readonly<Record<string, string>> = {
     "copied from upstream; the shell phase rebuilds the loading and sign-in screens",
   "src/pages/inbox.tsx": "maps upstream's Inbox with its link colours; the Inbox phase rebuilds it",
 };
-
-/**
- * Every file in `src/ui`, each written by `shadcn add` from the registry. The design rules and
- * biome leave that folder to the registry's own lint and tests, so a file joins it only here.
- */
-export const REGISTRY_FILES: readonly string[] = [
-  "button.tsx",
-  "dialog.tsx",
-  "heading.tsx",
-  "input.tsx",
-  "kbd.tsx",
-  "lib/typography.ts",
-  "lib/utils.ts",
-  "modal-surface-context.tsx",
-  "overlay-layer.tsx",
-  "popover.tsx",
-  "sheet.tsx",
-  "spinner.tsx",
-  "theme.css",
-  "tooltip.tsx",
-].map((name) => `src/ui/${name}`);

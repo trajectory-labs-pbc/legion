@@ -1,9 +1,9 @@
+import { cn } from "@legion/ui/lib/utils";
 import { MountedLiveViews } from "@upstream-dispatch/features/agent-view/MountedLiveViews";
 import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { type RefObject, Suspense } from "react";
 import { PageRoutes } from "@/pages/index";
-import { cn } from "@/ui/lib/utils";
 import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
 
 /** Main: the page outlet, and the live views that outlive the route that opened them. */

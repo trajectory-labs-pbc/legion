@@ -1,6 +1,5 @@
+import { Button } from "@legion/ui/components/button";
 import type { ReactNode } from "react";
-
-import { Button } from "@/ui/button";
 import { writeFailureNote } from "@/writes/write-failure-note";
 import {
   apiErrorMessage,

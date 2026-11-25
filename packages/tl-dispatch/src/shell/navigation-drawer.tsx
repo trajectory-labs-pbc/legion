@@ -1,5 +1,5 @@
+import { cn } from "@legion/ui/lib/utils";
 import type { ReactNode, RefObject } from "react";
-import { cn } from "@/ui/lib/utils";
 import { SIDEBAR_SURFACE } from "./sidebar-surface";
 
 /** The navigation as a modal drawer over a scrim. */

@@ -1,10 +1,9 @@
+import { Button } from "@legion/ui/components/button";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import type { RefObject } from "react";
-
 import { CommandButton } from "@/commands/command-button";
 import { PageLink } from "@/navigation/page-link";
 import { inbox } from "@/pages/inbox";
-import { Button } from "@/ui/button";
 import { Sidebar } from "./sidebar";
 import type { SignOut } from "./use-sign-out";
 

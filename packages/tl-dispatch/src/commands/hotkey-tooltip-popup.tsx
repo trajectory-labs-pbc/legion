@@ -1,7 +1,6 @@
+import { KbdSequence } from "@legion/ui/components/kbd";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/tooltip";
 import type { ReactElement } from "react";
-
-import { KbdSequence } from "@/ui/kbd";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import type { ShortcutChips } from "./key-chips";
 
 interface HotkeyTooltipPopupProps {

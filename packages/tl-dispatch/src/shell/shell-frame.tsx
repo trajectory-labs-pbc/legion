@@ -1,5 +1,5 @@
+import { cn } from "@legion/ui/lib/utils";
 import type { ReactNode } from "react";
-import { cn } from "@/ui/lib/utils";
 
 /** The frame's box, which a page that fills the viewport makes exactly the viewport. */
 export function ShellFrame({

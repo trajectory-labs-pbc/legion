@@ -19,7 +19,7 @@ export interface LayerViolation {
 
 const SRC = join(PACKAGE_ROOT, "src");
 const ROUTERS = /^(react-router(-dom)?|@tanstack\/[a-z-]*router[a-z-]*)$/;
-const DATA = /^@tanstack\/react-query$/;
+const BASE_UI = /^@base-ui\//;
 /** Upstream's app opens a second sign-in channel when it loads; its entry loads the app. */
 const NEVER_LOADED = new Map([
   [join(UPSTREAM_WEB, "app.tsx"), "app.tsx"],
@@ -30,7 +30,7 @@ const RUNTIME = new Set(["static", "dynamic", "require"]);
 const own = (path: string) => path.startsWith(SRC + sep);
 const followed = (path: string) => own(path) || path.startsWith(UPSTREAM_WEB + sep);
 
-/** The folder under `src/` a file sits in, by path segment: `src/ui/button.tsx` is in `ui`. */
+/** The folder under `src/` a file sits in, by path segment: `src/shell/sidebar.tsx` is in `shell`. */
 export function layerOf(path: string): string | undefined {
   const segments = packageRelative(path).split("/");
   return segments[0] === "src" && segments.length > 2 ? segments[1] : undefined;
@@ -49,13 +49,8 @@ function rulesFor(entry: Import): string[] {
     rules.push("the specifier resolves to no file and no package, so no rule can read it");
   }
   const target = entry.file === undefined ? undefined : layerOf(entry.file);
-  if (layer === "ui") {
-    if (entry.file !== undefined && (!own(entry.file) || target !== "ui")) {
-      rules.push("src/ui holds components only: it imports nothing outside src/ui");
-    }
-    if (entry.pkg !== undefined && (ROUTERS.test(entry.pkg) || DATA.test(entry.pkg))) {
-      rules.push("src/ui holds components only: no router, no data");
-    }
+  if (entry.pkg !== undefined && BASE_UI.test(entry.pkg)) {
+    rules.push("Base UI comes through packages/ui: import its component, or add one there");
   }
   if (layer !== "navigation" && entry.pkg !== undefined && ROUTERS.test(entry.pkg)) {
     rules.push("only src/navigation imports the router, so a router move changes one folder");

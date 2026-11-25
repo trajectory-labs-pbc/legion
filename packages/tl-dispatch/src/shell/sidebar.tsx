@@ -1,16 +1,15 @@
+import { Heading } from "@legion/ui/components/heading";
+import { KbdSequence } from "@legion/ui/components/kbd";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import type { ReactNode } from "react";
-
 import { type NavName, navCommandName } from "@/commands/nav";
 import { useCommandShortcut } from "@/commands/use-command";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
-import { Heading } from "@/ui/heading";
-import { KbdSequence } from "@/ui/kbd";
 import {
   type SidebarAgent,
   type SidebarData,

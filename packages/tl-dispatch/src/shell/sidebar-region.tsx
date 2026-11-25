@@ -1,9 +1,9 @@
+import { cn } from "@legion/ui/lib/utils";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
 import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
 import type { ReactNode } from "react";
 import { CommandButton } from "@/commands/command-button";
-import { cn } from "@/ui/lib/utils";
 import { SIDEBAR_SURFACE } from "./sidebar-surface";
 
 /** The issue frame's icon rail, the folded sidebar's rail, or the sidebar; none in a drawer. */

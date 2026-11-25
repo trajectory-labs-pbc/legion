@@ -1,4 +1,4 @@
-import { Button, type ButtonProps } from "@/ui/button";
+import { Button, type ButtonProps } from "@legion/ui/components/button";
 import type { CommandId } from "./app-catalog";
 import { type CommandView, commandStore } from "./command-store";
 import { HotkeyTooltip, type HotkeyTooltipProps } from "./hotkey-tooltip";
