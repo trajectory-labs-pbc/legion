@@ -75,7 +75,7 @@
   --color-sky-50: color-mix(in oklab, var(--muted) var(--repaint-light), var(--foreground));
   --color-sky-100: color-mix(
     in oklab,
-    var(--muted) var(--repaint-light),
+    var(--accent) var(--repaint-light),
     color-mix(in oklab, var(--foreground) 80%, var(--muted-foreground))
   );
   --color-sky-200: color-mix(
@@ -131,6 +131,8 @@
   /* A state's scale: its tint and border are the grounds, its own token the text, a dot or a
      bar. The theme swaps each token with the scheme, so the scale runs the other way in dark.
      Text under the pointer (900 in light, 300 in dark) is the token a step toward the foreground.
+     A pill on a tinted card takes 100 in light, so 100 is the tint a step toward its border, and
+     the text on it (800 and 950) a step darker than the token.
      The warning tint is made for a badge. A card takes amber-50 in light and amber-950 in dark,
      so each is the tint mixed into the page's ground. */
   --color-amber-50: color-mix(
@@ -138,7 +140,11 @@
     color-mix(in oklab, var(--warning-tint) 50%, var(--card)) var(--repaint-light),
     var(--warning)
   );
-  --color-amber-100: color-mix(in oklab, var(--warning-tint) var(--repaint-light), var(--warning));
+  --color-amber-100: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--warning-tint) 65%, var(--warning-border)) var(--repaint-light),
+    var(--warning)
+  );
   --color-amber-200: color-mix(
     in oklab,
     var(--warning-border) var(--repaint-light),
@@ -182,7 +188,11 @@
   );
 
   --color-rose-50: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
-  --color-rose-100: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
+  --color-rose-100: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--danger-tint) 65%, var(--danger-border)) var(--repaint-light),
+    var(--danger)
+  );
   --color-rose-200: color-mix(in oklab, var(--danger-border) var(--repaint-light), var(--danger));
   --color-rose-300: color-mix(
     in oklab,
@@ -201,13 +211,21 @@
     color-mix(in oklab, var(--danger) 50%, var(--danger-border))
   );
   --color-rose-700: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
-  --color-rose-800: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
+  --color-rose-800: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--danger) 85%, var(--foreground)) var(--repaint-light),
+    var(--danger-border)
+  );
   --color-rose-900: color-mix(
     in oklab,
     color-mix(in oklab, var(--danger) 65%, var(--foreground)) var(--repaint-light),
     color-mix(in oklab, var(--danger-border) 50%, var(--danger-tint))
   );
-  --color-rose-950: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-tint));
+  --color-rose-950: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--danger) 65%, var(--foreground)) var(--repaint-light),
+    var(--danger-tint)
+  );
 
   --color-red-50: var(--color-rose-50);
   --color-red-100: var(--color-rose-100);
