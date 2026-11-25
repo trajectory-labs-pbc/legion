@@ -14,11 +14,14 @@ cd "$(dirname "$0")/../.."
 base=${1:?usage: check-fork-allowlist.sh <upstream main commit>}
 list=.github/fork-allowlist.txt
 
-entries_text=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$list" | grep -v '^$')
+entries_text=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$list")
 # Without quotePath, git prints a path that holds a non-ASCII byte in quotes, and no line matches it.
 changed_text=$(git -c core.quotePath=false diff --name-only --no-renames "$base...HEAD")
-mapfile -t entries <<< "$entries_text"
-mapfile -t changed <<< "$changed_text"
+# A here-string of an empty text is one empty line, which is not an entry.
+entries=()
+changed=()
+[ -z "$entries_text" ] || mapfile -t entries <<< "$entries_text"
+[ -z "$changed_text" ] || mapfile -t changed <<< "$changed_text"
 
 declare -A used=()
 fail=0
@@ -31,7 +34,6 @@ for entry in "${entries[@]}"; do
   fi
 done
 for file in "${changed[@]}"; do
-  [ -n "$file" ] || continue
   listed=false
   # Every line that matches is in use, so a file line under a directory line is not stale.
   for entry in "${entries[@]}"; do
