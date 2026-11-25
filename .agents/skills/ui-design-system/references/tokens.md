@@ -1,6 +1,6 @@
 # Theme tokens
 
-The theme is a shadcn theme on CSS variables. Never edit the theme file by hand, and never write a raw colour (`#hex`, `rgb()`, a named colour, a Tailwind palette class such as `bg-slate-100`). The design-rule tests refuse each one. Use the Tailwind utility of a token: `bg-card`, `text-muted-foreground`, `border-border`, `outline-focus`.
+The theme is a shadcn theme on CSS variables. Change a token only in `packages/ui/src/styles/theme.css`, in the light block and in both dark blocks, and run `packages/ui`'s tests. Never write a raw colour (`#hex`, `rgb()`, a named colour, a Tailwind palette class such as `bg-slate-100`). The design-rule tests refuse each one. Use the Tailwind utility of a token: `bg-card`, `text-muted-foreground`, `border-border`, `outline-focus`.
 
 ## The fixed choices
 
@@ -14,14 +14,14 @@ The theme is a shadcn theme on CSS variables. Never edit the theme file by hand,
 
 | Token | Use |
 | --- | --- |
-| `background` | The frame: the window behind the content panel, the sidebar and its header. |
+| `background` | The frame: the window behind the content panel, the sidebar and its header. Also the panel of a dialog, an alert dialog, a sheet and a drawer. |
 | `sidebar` | In light, the same colour as `background`. In dark it is `card`'s colour, so the frame draws the sidebar on `background` (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
-| `accent` | Hover inside a menu or a popover. In light it is near white, so a hover on a white popover cannot be seen today: a defect to fix in `packages/ui`'s tokens, never with a class in a page. Do not use it on the content panel. |
+| `accent` | Hover inside a menu or a popover. Do not use it on the content panel. |
 | `sidebar-accent` | The hovered and the current row in the sidebar. |
-| `popover` | A menu, popover, combobox, tooltip, hover card, dialog, sheet, command menu or toast. |
+| `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast. |
 | `field` | The inside of an input. |
 | `scrim` | The backdrop of a modal overlay, at 50 %. |
 
