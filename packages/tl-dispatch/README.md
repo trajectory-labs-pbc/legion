@@ -11,7 +11,7 @@ replaces them one page at a time.
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom` |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
-| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps | the same as `src/shell` |
+| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
 | `src/map` | The checks' readers of the route map, the view map (`src/views.ts`) and the copied upstream code; the app loads none of it | no page module: it reads the sources as text |
 
 `tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
@@ -174,6 +174,9 @@ bun install            # in this directory; it links the root packages
   control borders, the catalog and its components, navigation, the shell's hooks, the key
   engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
+  Among them: nothing scales and no class sets the pointer cursor.
+  The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
+  outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
 - `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget. The
   shortcuts sheet and the tooltips are their own chunks for it.

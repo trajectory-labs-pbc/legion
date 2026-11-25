@@ -26,6 +26,9 @@ export const RULES = {
     "radius outside the theme: 0, a theme radius no larger than `--radius`, or `rounded-full` for a circle",
   round: "only a dot or an avatar is round: `rounded-full` goes with a numeric `size-N`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
+  scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
+  cursor:
+    "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
   styleProp: "a style prop must be an object literal, so the rule can read it",
   style: "set in a style, out of the compile check's sight; use classes",
@@ -98,6 +101,8 @@ const FOCUS_PROPERTY = new Set([
 ]);
 const TEXT_PROPERTY = new Set(["color", "-webkit-text-fill-color"]);
 const MOTION_PROPERTY = /^(transition|animation)(-|$)|^(transform|translate|scale|rotate)$/;
+/** A transition that names a scale, alone or inside a transform. */
+const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
 function rawColour(property: string, value: string): boolean {
   const code = value.replace(/(["'])(?:\\.|(?!\1).)*\1/g, '""').replace(/#0{4}(0{4})?\b/g, "");
@@ -170,6 +175,10 @@ export function declarationProblems(
   if (MOTION_PROPERTY.test(property) && !context.some((prelude) => MOTION_GUARD.test(prelude))) {
     problems.push(RULES.motion);
   }
+  if (property === "scale" || (/^transition(-property)?$/.test(property) && SCALES.test(value))) {
+    problems.push(RULES.scale);
+  }
+  if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
   return problems;
 }
 
@@ -306,6 +315,8 @@ function styleKeyKind(key: string): string | undefined {
   if (/radius$/i.test(camel)) return "a radius";
   if (/^(min|max)?(height|blockSize)$/i.test(camel)) return "a height";
   if (/^(animation|transition)/i.test(camel)) return "motion";
+  if (camel === "scale") return "a scale";
+  if (camel === "cursor") return "a cursor";
   return undefined;
 }
 
