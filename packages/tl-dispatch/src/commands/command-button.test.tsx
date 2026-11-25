@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
+import { act } from "react";
+
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./catalog";
@@ -158,7 +160,7 @@ describe("HotkeyTooltip", () => {
       trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
       trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
     });
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
     settle(() => {});
     const popup = document.querySelector('[data-slot="tooltip-content"]');
     expect(popup?.textContent).toBe("Create issueC");

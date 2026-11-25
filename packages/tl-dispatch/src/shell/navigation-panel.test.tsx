@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { act, type ReactNode } from "react";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { MemoryNavigationProvider } from "@/navigation/provider";
@@ -99,7 +99,7 @@ describe("NavigationPanel", () => {
         trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
         trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
       });
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
       settle(() => {});
       const popup = document.querySelector('[data-slot="tooltip-content"]');
       expect(popup?.textContent?.startsWith(name)).toBe(true);
