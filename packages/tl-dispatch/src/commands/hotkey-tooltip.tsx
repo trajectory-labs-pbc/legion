@@ -12,7 +12,7 @@ import {
 
 import type { CommandId } from "./app-catalog";
 import { ariaKeyShortcuts } from "./chips";
-import { useCommand, useCommandShortcut, useKeysReach } from "./hooks";
+import { useCommand, useCommandShortcut } from "./hooks";
 import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
 
 let popup: typeof HotkeyTooltipPopup | undefined;
@@ -91,15 +91,15 @@ export interface HotkeyTooltipProps {
  */
 export function HotkeyTooltip({ commandId, children, label, side }: HotkeyTooltipProps) {
   const view = useCommand(commandId);
+  // No chips while the command is off or an overlay masks its keys: then no aria keys either.
   const chips = useCommandShortcut(commandId);
-  const reaches = useKeysReach(commandId);
   const Popup = useSyncExternalStore(subscribe, () => popup);
   const ref = useKeptFocus(children.props.ref);
   useEffect(() => {
     void loadHotkeyTooltip();
   }, []);
   if (view === undefined) return cloneElement(children, { ref });
-  const keys = view.enabled && reaches ? ariaKeyShortcuts(view.command.keys ?? []) : undefined;
+  const keys = chips === null ? undefined : ariaKeyShortcuts(view.command.keys ?? []);
   if (Popup === undefined) return cloneElement(children, { "aria-keyshortcuts": keys, ref });
   return (
     <Popup
