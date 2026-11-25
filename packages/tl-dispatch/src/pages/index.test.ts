@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildInboxPath,
   liveViewSessionOf,
   parseIssuePath,
   routeFillsViewport,
@@ -7,7 +8,9 @@ import {
   routeIsInbox,
   routeProjectOf,
 } from "@upstream-dispatch/features/refs/routes";
+import { pageHref } from "@/navigation/page-route";
 import { pageAt, pages } from "@/pages/index";
+import { inbox } from "./inbox";
 import type { PageLayout } from "./page";
 
 describe("the route tree", () => {
@@ -34,6 +37,12 @@ describe("the route tree", () => {
       { key: "AB", slug: "spec" },
     ]);
     expect(at("/nowhere/at/all")?.[0]).toBe("not-found");
+  });
+
+  test("the old Replies address lands where upstream's builder sends it", () => {
+    expect(pageHref(inbox.routes.home, {}, { type: "reply" })).toBe(
+      buildInboxPath({ filters: { type: ["reply"] } })
+    );
   });
 });
 
