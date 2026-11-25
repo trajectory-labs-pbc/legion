@@ -62,13 +62,13 @@ The app compiles the catalog to upstream's key engine (`@upstream-dispatch/featu
 
 - `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup, in the order the page stacks them: each open dialog, alert dialog and sheet, then each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
 - An overlay is one of three kinds. A `passthrough` one lets the global commands run: a popup with the `data-global-keys` attribute, as the navigation drawer's has. An `alert-dialog` stops every command. Any other stops all but the `under-all` ones.
-- `overlays: "under-all"` lets a global command run under every overlay but an alert dialog. `help` (`?`) uses it.
+- `overlays: "under-all"` lets a global command run under every overlay but an alert dialog. No command of the catalog runs while one of upstream's own dialogs is open. `help` (`?`) uses it.
 - Never turn a command off in a component by checking focus or DOM roles: the engine does it once, for every command. Never deactivate a scope when an overlay opens. Closing the overlay brings the scope back, and focus returns to where it was.
 - A key that a focused text control takes (letters, `/`) does not fire there. `inEditable: true` is for the few commands that must, such as `$mod+k`.
 
 ## The shortcuts sheet
 
-`?` opens `ShortcutsSheet` anywhere but under an alert dialog. It lists the keys that run where `?` was pressed: the catalog's commands by group, each once with all its keys, and upstream's bindings by scope. It hides `Escape` and disabled commands. While it is open, only `?` and Escape act: they close it. Its code loads on the first `?`.
+`?` opens `ShortcutsSheet` anywhere but under an alert dialog or one of upstream's own dialogs. It lists the keys that run where `?` was pressed: the catalog's commands by group, each once with all its keys, and upstream's bindings by scope. It hides `Escape` and disabled commands. While it is open, only `?` and Escape act: they close it. Its code loads on the first `?`.
 
 `UPSTREAM_LABELS` in `upstream-labels.ts` relabels an upstream binding whose own label does not fit the sheet, by `scope:id`.
 
