@@ -20,6 +20,8 @@ name: Fork envoy image
 #
 # A pull request builds only the smoke stage, on the image of the newest ancestor on main that
 # has one, and fails when it changes an input of upstream's image, which that image cannot show.
+# One that changes only release-envoy-listener.yaml among those inputs builds nothing and says so in
+# its summary: the push run on main tests that change.
 on:
   pull_request:
   push:
