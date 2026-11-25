@@ -78,6 +78,69 @@
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
+    "part": "ANSWERS_PATH",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "d71043e638b511b08a4b2fcc73b6d308383160ee7f9038d1e93e157e3d0fa8d3"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "Inbox",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "5096142f28773eeaf838ef57f77aac7d8c71e08fe95a86d912f7d38e4eca9dd1"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "Link",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "7c8c42396d418b4cd23028019818414dd5e870bda90041c558f91231422b0b9a"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "READING_PANE_QUERY",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "771fd7f0d476b3fd29b8a22929a858096075fc9a84f03d9b90536e001fd98af4"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "lazy",
+    "copy": "src/loading/lazy-named.ts",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "3b271e94b5e6a3b7faaec217b3c8cd1bd7c0dc4fbd935c849b0c1be433d68727"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "linkHoverText",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "92db9a3c38362b435645ed5980fd681cfd2bbc11fca73bf38d0687e4e62d31e8"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "linkText",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "99b310d3e2f1e4b5332eb230b9bfd1dad46e28fe83bad7f53fb58bff7a375081"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "useDocumentTitle",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "b38637be150b440b92022f5236fa635bce2d92eda4e6c21f52f73ae80d9a9761"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "useMediaQuery",
+    "copy": "src/pages/inbox.tsx",
+    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
+    "sha256": "f05ea4a32c0a427e0dabac2a8e911f42a67ccf1e3add5c34d899c429a9b80c15"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
     "part": "AgentArtifactPage",
     "copy": "src/pages/agents.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
