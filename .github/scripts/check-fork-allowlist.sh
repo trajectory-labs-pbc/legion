@@ -14,7 +14,7 @@ cd "$(dirname "$0")/../.."
 base=${1:?usage: check-fork-allowlist.sh <upstream main commit>}
 list=.github/fork-allowlist.txt
 
-entries_text=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$list")
+entries_text=$(sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$list")
 # Without quotePath, git prints a path that holds a non-ASCII byte in quotes, and no line matches it.
 changed_text=$(git -c core.quotePath=false diff --name-only --no-renames "$base...HEAD")
 # A here-string of an empty text is one empty line, which is not an entry.
