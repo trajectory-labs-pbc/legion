@@ -36,7 +36,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 `COMMAND_GROUPS` in `groups.ts` holds the sheet's sections. Declare a group once there.
 
-`NAV_DESTINATIONS` in `nav.ts` is the table of pages the sidebar lists and `g` chords open. One row gives the label, icon, path and the letter after `g`. The sidebar and the chords read the same row.
+`NAV_DESTINATIONS` in `nav.ts` is the table of pages the sidebar lists and `g` chords open. One row gives the name, label, icon and the letter after `g`; its route is in `NAV_PAGES` (`src/shell/nav-pages.ts`). The sidebar and the chords read the same row. A row adds a `go-<name>` command to the global context.
 
 ## Add a command
 
