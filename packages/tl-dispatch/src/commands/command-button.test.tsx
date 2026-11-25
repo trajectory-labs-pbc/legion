@@ -2,12 +2,12 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
 import { render, settle } from "../../tests/react";
+import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
 import { CommandButton, commandButtonVariant } from "./command-button";
 import { useCommandShortcut } from "./hooks";
 import { HotkeyTooltip, loadHotkeyTooltip } from "./hotkey-tooltip";
-import { specsFor } from "./specs";
 
 const globalSpecs = (fired: string[], enabled: boolean) =>
   specsFor(appCatalog, "global", (command) => ({ enabled, run: () => fired.push(command.id) }));

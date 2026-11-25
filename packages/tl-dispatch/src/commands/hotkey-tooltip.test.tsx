@@ -2,10 +2,10 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act, createRef } from "react";
 
 import { render, settle } from "../../tests/react";
+import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
 import { useRegisterCommands } from "./bindings";
 import type { HotkeyTooltip as HotkeyTooltipType } from "./hotkey-tooltip";
-import { specsFor } from "./specs";
 
 function Shell() {
   useRegisterCommands(

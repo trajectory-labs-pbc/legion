@@ -30,7 +30,7 @@ const useIssueActions = defineActions(catalog, "issue", (issue: Issue, _options:
 
 describe("actions", () => {
   test("every member is always present, gated or not", () => {
-    expect(useIssueActions({ closed: true }, null).list.map((spec) => spec.command.name)).toEqual([
+    expect(useIssueActions({ closed: true }, null).map((spec) => spec.command.name)).toEqual([
       "open",
       "pin",
       "copy-ref",
@@ -50,9 +50,10 @@ describe("actions", () => {
 
   test("a shut gate stops the run on every surface", () => {
     ran.length = 0;
-    const specs = useIssueActions({ closed: true }, null);
-    expect(runCommand(specs.get("pin"))).toBe(false);
-    expect(runCommand(specs.get("open"))).toBe(true);
+    const [open, pin] = useIssueActions({ closed: true }, null);
+    if (open === undefined || pin === undefined) throw new Error("the issue lost its commands");
+    expect(runCommand(pin)).toBe(false);
+    expect(runCommand(open)).toBe(true);
     expect(ran).toEqual(["open"]);
   });
 });

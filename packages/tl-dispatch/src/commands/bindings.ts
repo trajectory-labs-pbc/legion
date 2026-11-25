@@ -32,7 +32,7 @@ function toBinding(spec: CommandSpec, gate: () => boolean): KeyBinding {
 
 /** The key engine's bindings for a set of specs; the gate is read on every press. */
 export function toBindings(specs: CommandSpecs, gate: () => boolean = () => true): KeyBinding[] {
-  return specs.list.map((spec) => toBinding(spec, gate));
+  return specs.map((spec) => toBinding(spec, gate));
 }
 
 export interface ContextBindings {
@@ -58,7 +58,7 @@ export function contextBindings(
   const own = toBindings(specs, layer === undefined ? undefined : () => stack.top() === layer);
   const underOverlays =
     scope === "global"
-      ? specs.list
+      ? specs
           .filter((spec) => (spec.command.keys ?? []).length > 0)
           .map((spec) => {
             const reach = spec.command.overlays ?? "under-most";
@@ -114,12 +114,11 @@ function useEngineBindings(scope: KeymapScope, bindings: readonly KeyBinding[]):
 
 /** Holds the specs in the store while mounted, with the last commit's state. */
 function useStoredSpecs(store: CommandStore, specs: CommandSpecs): void {
-  const { list } = specs;
-  const latest = useRef(list);
+  const latest = useRef(specs);
   useLayoutEffect(() => {
-    latest.current = list;
+    latest.current = specs;
   });
-  const ids = list.map((spec) => spec.command.id).join("\n");
+  const ids = specs.map((spec) => spec.command.id).join("\n");
   // biome-ignore lint/correctness/useExhaustiveDependencies: `ids` stands in for the specs, read through `latest`
   useLayoutEffect(() => {
     const releases = latest.current.map((spec) => store.register(spec));
@@ -128,7 +127,7 @@ function useStoredSpecs(store: CommandStore, specs: CommandSpecs): void {
     };
   }, [store, ids]);
   useLayoutEffect(() => {
-    for (const spec of list) store.update(spec);
+    for (const spec of specs) store.update(spec);
   });
 }
 

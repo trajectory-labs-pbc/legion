@@ -1,6 +1,6 @@
 import { appCatalog } from "@/commands/app-catalog";
 import { useRegisterCommands } from "@/commands/bindings";
-import { specsFor } from "@/commands/specs";
+import { specsFor } from "./specs";
 
 /** Mounts every global command, each recording its id when it runs. */
 export function GlobalCommands({ fired = [] }: { fired?: string[] }) {

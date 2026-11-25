@@ -18,43 +18,13 @@ export interface CommandSpec {
 }
 
 /** A context's specs: each of its commands once, in the catalog's order. */
-export interface CommandSpecs<Name extends string = string> {
-  readonly list: readonly CommandSpec[];
-  /** One command's spec, by its name in the context. */
-  get(name: Name): CommandSpec;
-}
+export type CommandSpecs = readonly CommandSpec[];
 
 /** The names of a context's commands, read from the catalog's ids. */
 export type CommandNamesIn<
   Id extends string,
   Context extends string,
 > = Id extends `${Context}.${infer Name}` ? Name : never;
-
-function specsOf(
-  context: string,
-  commands: readonly CatalogCommand[],
-  stateOf: (command: CatalogCommand) => CommandState | undefined
-): CommandSpecs {
-  const list = commands.map((command): CommandSpec => {
-    const state = stateOf(command);
-    if (state === undefined) throw new Error(`actions of "${context}" lost "${command.name}"`);
-    return {
-      command,
-      label: state.label ?? command.label,
-      enabled: state.enabled ?? true,
-      run: state.run,
-    };
-  });
-  const byName = new Map(list.map((spec) => [spec.command.name, spec]));
-  return {
-    list,
-    get(name) {
-      const spec = byName.get(name);
-      if (spec === undefined) throw new Error(`"${context}" has no command "${name}"`);
-      return spec;
-    },
-  };
-}
 
 /**
  * Declares a feature's actions hook for one context, `useXActions(record, opts)`. `build` returns
@@ -68,7 +38,7 @@ export function defineActions<Id extends string, const Context extends string, R
     record: Record_,
     options: Options
   ) => { readonly [Name in CommandNamesIn<Id, Context>]: CommandState }
-): (record: Record_, options: Options) => CommandSpecs<CommandNamesIn<Id, Context>> {
+): (record: Record_, options: Options) => CommandSpecs {
   const commands = catalog.commandsOf(context);
   const names = new Set(commands.map((command) => command.name));
   let checked = false;
@@ -84,17 +54,17 @@ export function defineActions<Id extends string, const Context extends string, R
       }
       checked = true;
     }
-    return specsOf(context, commands, (command) => states[command.name]);
+    return commands.map((command): CommandSpec => {
+      const state = states[command.name];
+      if (state === undefined) throw new Error(`actions of "${context}" lost "${command.name}"`);
+      return {
+        command,
+        label: state.label ?? command.label,
+        enabled: state.enabled ?? true,
+        run: state.run,
+      };
+    });
   };
-}
-
-/** A context's specs from one function of the command, for states that follow a rule. */
-export function specsFor(
-  catalog: Catalog,
-  context: string,
-  stateOf: (command: CatalogCommand) => CommandState
-): CommandSpecs {
-  return specsOf(context, catalog.commandsOf(context), stateOf);
 }
 
 /** Runs the command unless its gate is shut. Every surface runs a command through this. */
