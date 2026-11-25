@@ -9,7 +9,7 @@ replaces them one page at a time.
 | --- | --- | --- |
 | `src/ui` | The registry's components and theme, as `shadcn add` wrote them: no data, no router | packages and `src/ui` only |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
-| `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom` |
+| `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
 | `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
 | `src/writes` | What a surface says of a failed write | upstream's write modules |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
@@ -110,13 +110,17 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
 - `<PageLink>` starts the route's `prefetch` reads when the pointer rests on it for 100 ms or it
   takes focus. The pointer leaving with no click stops a read nothing else watches; losing focus
   and a click stop nothing, since the page that opens reads it.
-- `route-tree.tsx` builds the route tree from the page files, through `routerPath`.
+- `route-tree.tsx` builds a route tree from the pages it is handed, through `routerPath`.
 
-A route also declares its `layout` (`PageLayout` in `page-route.ts`): whether the page fills the
-viewport, has the margin and frames itself as the outline issue page, and which issue, project and
-live view it shows. Where upstream's parsers decide, the layout is a function of the address.
-`useCurrentPage()` returns it with the page, and the shell reads the address only through it.
-`route-tree.test.ts` holds every declaration to upstream's route rules.
+A route also declares its `layout`, whose type is the app's: navigation carries it and reads none
+of it. `PageLayout` in `src/pages/page.ts` says whether the page fills the viewport, has the
+margin and frames itself as the outline issue page, and which issue, project and live view it
+shows. Where upstream's parsers decide, the layout is a function of the address.
+
+`src/pages/index.ts` lists the pages and hands them to `createRouteTree`, which gives the outlet
+(`PageRoutes`), `pageAt` and `useCurrentPage()`. The shell reads the address only through the
+layout `useCurrentPage()` returns. `src/pages/index.test.ts` holds every declaration to upstream's
+route rules.
 
 ### Changing the router
 
@@ -125,7 +129,7 @@ A move to another router (TanStack Router, say) changes these files of this pack
 - `src/navigation/router-path.ts`: the grammar written in the router's syntax (TanStack: `$name`
   for `:name` and `$` for `*`).
 - `src/navigation/provider.tsx`: the router provider, for the app and for tests.
-- `src/navigation/route-tree.tsx`: the route tree, its outlet, `pageAt` and `useCurrentPage`.
+- `src/navigation/route-tree.tsx`: `createRouteTree`: the outlet, `pageAt` and `useCurrentPage`.
   Each route's `element` becomes the new router's component there.
 - `src/navigation/page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `src/navigation/hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.

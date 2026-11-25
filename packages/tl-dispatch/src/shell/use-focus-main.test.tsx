@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { parseIssuePath, parseProjectPath } from "@upstream-dispatch/features/refs/routes";
 import { useRef } from "react";
 
-import { pageAt } from "@/navigation/route-tree";
+import { pageAt } from "@/pages/index";
 import { render } from "../../tests/react";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 

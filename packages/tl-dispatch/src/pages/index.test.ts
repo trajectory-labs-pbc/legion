@@ -7,9 +7,8 @@ import {
   routeIsInbox,
   routeProjectOf,
 } from "@upstream-dispatch/features/refs/routes";
-
-import type { PageLayout } from "./page-route";
-import { pageAt, pages } from "./route-tree";
+import { pageAt, pages } from "@/pages/index";
+import type { PageLayout } from "./page";
 
 describe("the route tree", () => {
   test("holds each path once", () => {

@@ -2,7 +2,7 @@ import { MountedLiveViews } from "@upstream-dispatch/features/agent-view/Mounted
 import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { type RefObject, Suspense } from "react";
-import { PageRoutes } from "@/navigation/route-tree";
+import { PageRoutes } from "@/pages/index";
 import { cn } from "@/ui/lib/utils";
 import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
 

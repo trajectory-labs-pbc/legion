@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useNavigationType } from "react-router-dom";
-
+import { PageRoutes, useCurrentPage } from "@/pages/index";
 import { render, settle } from "../../tests/react";
 import { useAddress, usePageNavigate, usePageParams, usePageSearch } from "./hooks";
 import { pageRoute } from "./page-route";
 import { MemoryNavigationProvider } from "./provider";
-import { PageRoutes, useCurrentPage } from "./route-tree";
 
 const machine = pageRoute({ path: "/machines/:machine", element: null, search: ["tab"] });
 

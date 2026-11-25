@@ -15,9 +15,10 @@ import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
 import { useAddress } from "@/navigation/hooks";
-import type { PageLayout, PageRoute } from "@/navigation/page-route";
+import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
-import { useCurrentPage } from "@/navigation/route-tree";
+import { useCurrentPage } from "@/pages/index";
+import type { PageLayout } from "@/pages/page";
 import { NAV_PAGES } from "./nav-pages";
 
 /** A count beside a row, with what it counts; none at zero. */

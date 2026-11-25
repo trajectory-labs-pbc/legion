@@ -9,7 +9,7 @@ import {
 import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
 import { type RefObject, useRef } from "react";
 import { useAddress } from "@/navigation/hooks";
-import { useCurrentPage } from "@/navigation/route-tree";
+import { useCurrentPage } from "@/pages/index";
 import { useDetailsDrawer } from "./use-details-drawer";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 import { type ShellPreferences, useShellPreferences } from "./use-shell-preferences";

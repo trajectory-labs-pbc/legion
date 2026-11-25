@@ -5,7 +5,7 @@ import {
   parseProjectPath,
 } from "@upstream-dispatch/features/refs/routes";
 
-import { pageAt } from "@/navigation/route-tree";
+import { pageAt } from "@/pages/index";
 import { openOf } from "./sidebar-data";
 
 describe("openOf", () => {

@@ -61,6 +61,14 @@ function rulesFor(entry: Import): string[] {
   if (layer !== "navigation" && entry.pkg !== undefined && ROUTERS.test(entry.pkg)) {
     rules.push("only src/navigation imports the router, so a router move changes one folder");
   }
+  if (
+    layer === "navigation" &&
+    entry.file !== undefined &&
+    own(entry.file) &&
+    (target === "pages" || target === "shell")
+  ) {
+    rules.push("navigation names no page and no shell: the app hands it its pages");
+  }
   if (layer === "commands") {
     if (entry.pkg !== undefined && ROUTERS.test(entry.pkg)) {
       rules.push("a command takes callbacks named for what they do; it never imports navigation");

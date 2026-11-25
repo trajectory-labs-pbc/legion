@@ -18,27 +18,6 @@ export function prefetchOf<TQueryFnData, TError, TData, TQueryKey extends QueryK
   return { queryKey: options.queryKey, start: (client) => client.prefetchQuery(options) };
 }
 
-/** How the shell frames a page. Every field is off when left out. */
-export interface PageLayout {
-  /**
-   * The page owns its scroller and gets exactly the viewport; `"reading-pane"`: only while the
-   * Inbox's reading pane shows.
-   */
-  readonly fillsViewport?: boolean | "reading-pane";
-  /** The page has the margin column. */
-  readonly margin?: boolean;
-  /** Drawn as the outline issue page, the page frames itself: the navigation goes into a drawer. */
-  readonly outlineFrame?: boolean;
-  /** The issue the page shows, whose Details drawer it holds in its own frame. */
-  readonly issue?: string;
-  /** The project the page belongs to. */
-  readonly project?: string;
-  /** The page is the Inbox, so the inbox drawer has nothing to add. */
-  readonly inbox?: boolean;
-  /** The session whose live view the page brings to the front. */
-  readonly liveView?: string;
-}
-
 /** The address a route is open at, as text: upstream's parsers read it. */
 export interface PageAddress {
   readonly pathname: string;
@@ -47,25 +26,37 @@ export interface PageAddress {
 
 /**
  * One address of a page: its path in navigation's grammar (`path.ts`), what it draws, its search
- * keys, its first reads and its layout.
+ * keys, its first reads, and its layout, which is the app's to define and to read.
  */
-export interface PageRoute<Path extends string = string, Search extends string = string> {
+export interface PageRoute<
+  Path extends string = string,
+  Search extends string = string,
+  Layout = unknown,
+> {
   readonly path: Path;
   readonly element: ReactNode;
   readonly search?: readonly Search[];
   prefetch?(params: PathParams<Path>): readonly Prefetch[];
-  readonly layout?: PageLayout | ((address: PageAddress) => PageLayout);
+  readonly layout?: Layout | ((address: PageAddress) => Layout);
 }
 
-/** The layout a route declares for the address. */
-export function layoutAt(route: PageRoute, address: PageAddress): PageLayout {
-  return typeof route.layout === "function" ? route.layout(address) : (route.layout ?? {});
+/** The layout a route declares for the address, if it declares one. */
+export function layoutAt<Layout>(
+  route: PageRoute<string, string, Layout>,
+  address: PageAddress
+): Layout | undefined {
+  const { layout } = route;
+  return typeof layout === "function"
+    ? (layout as (address: PageAddress) => Layout)(address)
+    : layout;
 }
 
 /** Keeps the path and the search keys as literals, so links to the route are typed. */
-export function pageRoute<const Path extends string, const Search extends string = never>(
-  route: PageRoute<Path, Search>
-): PageRoute<Path, Search> {
+export function pageRoute<
+  const Path extends string,
+  const Search extends string = never,
+  Layout = never,
+>(route: PageRoute<Path, Search, Layout>): PageRoute<Path, Search, Layout> {
   return route;
 }
 

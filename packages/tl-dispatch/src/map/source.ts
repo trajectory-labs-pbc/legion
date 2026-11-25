@@ -9,7 +9,7 @@ export const upstreamAppFile = join(upstreamWebSrc, "app.tsx");
 export const forkSrc = join(packageRoot, "src");
 export const pagesDir = join(forkSrc, "pages");
 /** The route map: its `pages` list names every page file. */
-export const routeMapFile = join(forkSrc, "navigation/route-tree.tsx");
+export const routeMapFile = join(pagesDir, "index.ts");
 
 const UPSTREAM_ALIAS = "@upstream-dispatch/";
 const OWN_ALIAS = "@/";
@@ -412,11 +412,11 @@ function readPage(file: string): PageEntry {
   throw new Error(`${file}: no \`const <name> = {...} satisfies Page\``);
 }
 
-/** Every page file: each file in `src/pages` but the `Page` type. */
+/** Every page file: each file in `src/pages` but the route map and the `Page` type. */
 export function pageFiles(dir = pagesDir): string[] {
   return readdirSync(dir)
     .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
-    .filter((name) => name !== "page.ts")
+    .filter((name) => name !== "index.ts" && name !== "page.ts")
     .sort()
     .map((name) => join(dir, name));
 }
@@ -432,7 +432,7 @@ function listOf(source: ts.SourceFile, node: ts.Expression): ts.NodeArray<ts.Exp
     : arrayOf(source, node);
 }
 
-/** The page files the route map (`src/navigation/route-tree.tsx`) lists in `pages`. */
+/** The page files the route map (`src/pages/index.ts`) lists in `pages`. */
 export function routeMapFiles(file = routeMapFile): string[] {
   const source = parse(file);
   const imports = new Map<string, string>();
@@ -440,7 +440,7 @@ export function routeMapFiles(file = routeMapFile): string[] {
     if (
       ts.isImportDeclaration(statement) &&
       ts.isStringLiteral(statement.moduleSpecifier) &&
-      statement.moduleSpecifier.text.startsWith(`${OWN_ALIAS}pages/`) &&
+      statement.moduleSpecifier.text.startsWith("./") &&
       statement.importClause?.namedBindings &&
       ts.isNamedImports(statement.importClause.namedBindings)
     ) {
