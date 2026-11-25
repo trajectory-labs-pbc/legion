@@ -163,4 +163,11 @@ check "fails" "$(is "$status" 1)"
 check "the annotation's file property holds neither" \
   "$(contains "$out" "^::error file=docs/abc.md::docs/a,b:c.md differs")"
 
+echo "case: a line with white space before the path"
+root=$(fixture indented)
+change "$root" fork packages/app/index.ts
+list "$root" "  packages/app/index.ts"
+run_check "$root"
+check "matches the file" "$(is "$status" 0)"
+
 summary "check-fork-allowlist.sh"
