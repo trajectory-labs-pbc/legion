@@ -4,6 +4,7 @@ import { act } from "react";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render } from "../../tests/react";
+import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AuthGate } from "./auth-gate";
 
 const cleanups: (() => void)[] = [];
@@ -16,7 +17,8 @@ function mount(whoami: Response | undefined) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path="/agents">
+      {/* An address whose page has no chunk, so none arrives while a test waits or after it. */}
+      <MemoryNavigationProvider path="/no-such-page">
         <AuthGate />
       </MemoryNavigationProvider>
     </QueryClientProvider>
@@ -43,6 +45,7 @@ describe("AuthGate", () => {
     const container = mount(json({ kind: "user", login: "reader", event_head: "0" }));
     const shell = () => container.querySelector('[data-testid="app-shell"]');
     await waitFor(() => shell() !== null, sleep);
+    await shellChunksArrive();
     expect(shell()).not.toBeNull();
     // A narrow screen: the account is behind the menu.
     expect(container.querySelector('[aria-label="Open navigation"]')).not.toBeNull();

@@ -5,6 +5,7 @@ import { act } from "react";
 
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
+import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AppShell } from "./app-shell";
 
 const realFetch = globalThis.fetch;
@@ -30,7 +31,8 @@ afterEach(() => {
   for (const view of mounted.splice(0)) view.unmount();
 });
 
-function mount(path = "/agents") {
+// An address whose page has no chunk, so none arrives while a test waits or after it.
+async function mount(path = "/no-such-page") {
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path={path}>
@@ -41,12 +43,13 @@ function mount(path = "/agents") {
     </QueryClientProvider>
   );
   mounted.push(view);
+  await shellChunksArrive();
   return view;
 }
 
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
-    const view = mount();
+    const view = await mount();
     const click = (label: string) =>
       settle(() => {
         view.container.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.click();
@@ -67,7 +70,7 @@ describe("AppShell", () => {
   });
 
   test("? anywhere on the shell opens the shortcuts sheet, whose code loads then", async () => {
-    mount();
+    await mount();
     settle(() => {
       document.body.dispatchEvent(
         new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true, cancelable: true })
@@ -80,14 +83,14 @@ describe("AppShell", () => {
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
   });
 
-  test("Shift+S folds the sidebar to its rail and gives main the full width, and again unfolds it", () => {
+  test("Shift+S folds the sidebar to its rail and gives main the full width, and again unfolds it", async () => {
     // A wide viewport, where the sidebar is a column and can fold.
     const browser = (
       window as unknown as { happyDOM: { setViewport(size: { width: number }): void } }
     ).happyDOM;
     const narrow = window.innerWidth;
     browser.setViewport({ width: 1440 });
-    const view = mount();
+    const view = await mount();
     // After the shell is gone, so no media query redraws it.
     mounted.push({ unmount: () => browser.setViewport({ width: narrow }) });
     const main = () => view.container.querySelector('[data-testid="main-content"]');
@@ -113,8 +116,8 @@ describe("AppShell", () => {
     expect(rail()).toBeNull();
   });
 
-  test("$mod+k opens the search palette at once: a key typed next is the palette's", () => {
-    mount();
+  test("$mod+k opens the search palette at once: a key typed next is the palette's", async () => {
+    await mount();
     const press = (init: KeyboardEventInit) =>
       settle(() => {
         document.body.dispatchEvent(
