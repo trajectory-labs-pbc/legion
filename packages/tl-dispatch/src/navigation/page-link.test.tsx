@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { useLocation, useNavigationType } from "react-router-dom";
 
 import { render, settle } from "../../tests/react";
-import { PageLink, PREFETCH_INTENT_MS } from "./page-link";
+import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
 import { pageRoute, prefetchOf } from "./page-route";
 import { MemoryNavigationProvider } from "./provider";
 
@@ -242,5 +243,53 @@ describe("PageLink", () => {
     expect(link.getAttribute("href")).toBe("/");
     // @ts-expect-error the route binds :machine
     expect(() => render(<PageLink page={page}>Box</PageLink>)).toThrow();
+  });
+});
+
+/** Where the router is, and how it got there: `PUSH /a` or `REPLACE /a`. */
+function Place() {
+  const kind = useNavigationType();
+  const { pathname } = useLocation();
+  return <output>{`${String(kind)} ${pathname}`}</output>;
+}
+
+function place(path: string, children: ReactNode) {
+  const view = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryNavigationProvider path={path}>
+        {children}
+        <Place />
+      </MemoryNavigationProvider>
+    </QueryClientProvider>
+  );
+  mounted.push(view);
+  return view.container;
+}
+
+describe("replace", () => {
+  const machine = pageRoute({ path: "/machines/:machine", element: null });
+
+  test.each([
+    [true, "REPLACE /machines/m"],
+    [false, "PUSH /machines/m"],
+  ] as const)("a PageLink with replace %p moves by %p", (replace, moved) => {
+    const container = place(
+      "/",
+      <PageLink page={machine} params={{ machine: "m" }} replace={replace}>
+        Box
+      </PageLink>
+    );
+    settle(() => container.querySelector("a")?.click());
+    expect(container.querySelector("output")?.textContent).toBe(moved);
+  });
+
+  test("a Redirect replaces the address, so Back skips it", () => {
+    function AtOld() {
+      return useLocation().pathname === "/old" ? (
+        <Redirect page={machine} params={{ machine: "m" }} />
+      ) : null;
+    }
+    const container = place("/old", <AtOld />);
+    expect(container.querySelector("output")?.textContent).toBe("REPLACE /machines/m");
   });
 });
