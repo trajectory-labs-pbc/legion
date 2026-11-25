@@ -22,8 +22,9 @@ export const RULES = {
   outside: "colour outside the theme's tokens",
   focus: "focus is drawn in the focus token alone (`outline-focus`), at full strength",
   textOpacity: "text at reduced opacity loses its contrast; use a text token",
-  radius: "radius outside the theme: 0, a theme radius, or `rounded-full` for a circle",
-  round: "only a dot or an avatar is round: `rounded-full` goes with a `size-*`",
+  radius:
+    "radius outside the theme: 0, a theme radius no larger than `--radius`, or `rounded-full` for a circle",
+  round: "only a dot or an avatar is round: `rounded-full` goes with a numeric `size-N`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
   styleProp: "a style prop must be an object literal, so the rule can read it",
@@ -41,13 +42,23 @@ export interface ThemeTokens {
   radii: ReadonlySet<string>;
 }
 
+/** How many times `--radius` a theme radius is: `var(--radius)` is 1, `calc(var(--radius) * 0.6)` 0.6. */
+function radiusScale(value: string): number | undefined {
+  if (value === "var(--radius)") return 1;
+  const scaled = /^calc\(var\(--radius\)\s*\*\s*(\d+(\.\d+)?)\)$/.exec(value);
+  return scaled === null ? undefined : Number(scaled[1]);
+}
+
+/** The theme's colours, and its radii no larger than `--radius`: a larger one draws a pill. */
 export function themeTokens(...stylesheets: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   for (const css of stylesheets) {
-    for (const { property, context } of parseCss(css).declarations) {
-      if (/^--radius(-|$)/.test(property)) radii.add(property);
-      else if (property.startsWith("--") && context.at(-1)?.startsWith(":root"))
+    for (const { property, value, context } of parseCss(css).declarations) {
+      if (/^--radius(-|$)/.test(property)) {
+        const scale = property === "--radius" ? 1 : radiusScale(value);
+        if (scale !== undefined && scale <= 1) radii.add(property);
+      } else if (property.startsWith("--") && context.at(-1)?.startsWith(":root"))
         colours.add(property);
     }
   }
@@ -106,8 +117,12 @@ function varNames(value: string): string[] {
   return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1] as string);
 }
 
-function radiusAllowed(value: string, radii: ReadonlySet<string>): boolean {
-  if (value === "0" || value === "0px" || value === "calc(infinity * 1px)") return true;
+function radiusAllowed(value: string, radii: ReadonlySet<string>, circle: boolean): boolean {
+  if (value === "0" || value === "0px") return true;
+  if (value === "calc(infinity * 1px)") return circle;
+  // The theme's radii compile inline, as `--radius` times their scale.
+  const scale = radiusScale(value);
+  if (scale !== undefined) return scale <= 1;
   const references = [...value.matchAll(/var\(\s*(--[\w-]+)\s*(,[^)]*)?\)/g)];
   if (references.length === 0) return false;
   if (references.some((match) => !radii.has(match[1] as string) || match[2] !== undefined)) {
@@ -116,10 +131,14 @@ function radiusAllowed(value: string, radii: ReadonlySet<string>): boolean {
   return !/\d(px|r?em|%|vh|vw|ch|ex|pt)\b|var\(/i.test(value.replace(/var\([^)]*\)/g, ""));
 }
 
-/** The rules one declaration breaks. */
+/**
+ * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
+ * size the script rule checks; no other class or stylesheet sets an infinite radius.
+ */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
-  tokens: ThemeTokens
+  tokens: ThemeTokens,
+  { circle = false }: { circle?: boolean } = {}
 ): string[] {
   const { property, value, context } = declaration;
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
@@ -145,7 +164,9 @@ export function declarationProblems(
       problems.push(RULES.textOpacity);
     }
   }
-  if (/radius$/.test(property) && !radiusAllowed(value, tokens.radii)) problems.push(RULES.radius);
+  if (/radius$/.test(property) && !radiusAllowed(value, tokens.radii, circle)) {
+    problems.push(RULES.radius);
+  }
   if (MOTION_PROPERTY.test(property) && !context.some((prelude) => MOTION_GUARD.test(prelude))) {
     problems.push(RULES.motion);
   }
@@ -213,9 +234,10 @@ async function classViolations(
   const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
   const violations: DesignViolation[] = [];
   for (const declaration of parseCss(compiler.build([...classes.keys()])).declarations) {
-    const problems = declarationProblems(declaration, tokens);
-    if (problems.length === 0) continue;
     const name = sourceClass(declaration.context, classes);
+    const circle = name !== undefined && utilityOf(name) === "rounded-full";
+    const problems = declarationProblems(declaration, tokens, { circle });
+    if (problems.length === 0) continue;
     const where =
       name === undefined ? [{ file: "(compiled CSS)", line: 0 }] : (classes.get(name) ?? []);
     for (const { file, line } of where) {
@@ -395,7 +417,7 @@ function scriptViolations(
       const utilities = node.text.split(/\s+/).map(utilityOf);
       if (
         utilities.includes("rounded-full") &&
-        !utilities.some((utility) => utility.startsWith("size-"))
+        !utilities.some((utility) => /^size-\d+(\.\d+)?$/.test(utility))
       ) {
         refuse(node, node.text, RULES.round);
       }
