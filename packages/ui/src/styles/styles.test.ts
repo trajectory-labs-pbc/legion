@@ -288,9 +288,13 @@ describe("the design-rule check fails", () => {
 const HIGHLIGHTS: readonly (readonly [string, string])[] = [
   ["components/combobox.tsx", "data-highlighted:"],
   ["components/dropdown-menu.tsx", "data-highlighted:"],
+  ["components/dropdown-menu.tsx", "data-popup-open:"],
   ["components/select.tsx", "data-highlighted:"],
 ];
-const MARKED: readonly (readonly [string, string])[] = [["components/toggle.tsx", "data-pressed:"]];
+const MARKED: readonly (readonly [string, string])[] = [
+  ["components/tabs.tsx", "group-data-[variant=default]/tabs-list:data-active:"],
+  ["components/toggle.tsx", "data-pressed:"],
+];
 
 describe("the components", () => {
   it("draw focus as one solid outline in the focus colour, offset from the element", () => {
@@ -320,7 +324,7 @@ describe("the components", () => {
     expect(round.sort()).toEqual(ROUND_SLOTS);
   });
 
-  it("mark a highlighted item and a pressed toggle with an edge", () => {
+  it("mark a highlighted item, an open submenu, an active tab and a pressed toggle with an edge", () => {
     for (const [path, state] of HIGHLIGHTS) {
       expect(tokensOf(path), path).toContain(`${state}bg-accent`);
       expect(tokensOf(path), path).toContain(`${state}text-accent-foreground`);

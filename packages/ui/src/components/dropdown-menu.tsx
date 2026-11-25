@@ -194,7 +194,11 @@ function DropdownMenuSubTrigger({
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
-      className={cn(ITEM_CLASS, "data-popup-open:bg-muted", className)}
+      className={cn(
+        ITEM_CLASS,
+        "data-popup-open:bg-accent data-popup-open:text-accent-foreground data-popup-open:inset-ring data-popup-open:inset-ring-muted-foreground",
+        className
+      )}
       {...props}
     >
       {children}
