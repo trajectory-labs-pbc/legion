@@ -1,3 +1,4 @@
+import { Button } from "@legion/ui/components/button";
 import { Count } from "@legion/ui/components/count";
 import { Heading } from "@legion/ui/components/heading";
 import { NavRow } from "@legion/ui/components/nav";
@@ -14,6 +15,7 @@ import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
 
 import {
+  type SectionRead,
   type SidebarAgent,
   type SidebarData,
   type SidebarItem,
@@ -31,6 +33,21 @@ function SectionHeading({ children }: { children: ReactNode }) {
     <Heading className="px-2 pb-1" size="label" tone="muted">
       {children}
     </Heading>
+  );
+}
+
+/** A read with nothing to show yet: a quiet loading line, or the failure and Retry. */
+function ReadLine({ noun, retry }: { noun: string; retry: (() => void) | undefined }) {
+  if (retry === undefined) {
+    return <p className="px-2 py-1 text-xs text-muted-foreground">Loading {noun}…</p>;
+  }
+  return (
+    <p className="flex items-center gap-1 py-0.5 pl-2 text-xs text-danger">
+      <span className="min-w-0 flex-1">Could not load {noun}.</span>
+      <Button onClick={retry} size="xs" variant="link">
+        Retry
+      </Button>
+    </p>
   );
 }
 
@@ -87,6 +104,35 @@ function ItemRows({
   );
 }
 
+/** Issues or projects under a heading, or the read's line; none when `hideEmpty` and empty. */
+function ItemSection({
+  heading,
+  hideEmpty = false,
+  noun,
+  onNavigate,
+  page,
+  read,
+}: {
+  heading: string;
+  hideEmpty?: boolean;
+  noun: string;
+  onNavigate: (() => void) | undefined;
+  page: typeof issue.routes.issue | typeof project.routes.overview;
+  read: SectionRead<SidebarItem>;
+}) {
+  if (hideEmpty && read.status === "success" && read.rows.length === 0) return null;
+  return (
+    <section>
+      <SectionHeading>{heading}</SectionHeading>
+      {read.status === "success" ? (
+        <ItemRows items={read.rows} onNavigate={onNavigate} page={page} />
+      ) : (
+        <ReadLine noun={noun} retry={read.status === "error" ? read.retry : undefined} />
+      )}
+    </section>
+  );
+}
+
 /** The sidebar's rows as `data` holds them. */
 export function SidebarView({
   data,
@@ -122,6 +168,9 @@ export function SidebarView({
               ) : (
                 row
               )}
+              {count?.retry === undefined ? null : (
+                <ReadLine noun={`the ${label} count`} retry={count.retry} />
+              )}
             </li>
           );
         })}
@@ -141,18 +190,21 @@ export function SidebarView({
           </ul>
         </section>
       )}
-      {data.pinnedIssues === undefined || data.pinnedIssues.length === 0 ? null : (
-        <section>
-          <SectionHeading>Pinned</SectionHeading>
-          <ItemRows items={data.pinnedIssues} onNavigate={onNavigate} page={issue.routes.issue} />
-        </section>
-      )}
-      {data.projects === undefined ? null : (
-        <section>
-          <SectionHeading>Projects</SectionHeading>
-          <ItemRows items={data.projects} onNavigate={onNavigate} page={project.routes.overview} />
-        </section>
-      )}
+      <ItemSection
+        heading="Pinned"
+        hideEmpty
+        noun="pinned issues"
+        onNavigate={onNavigate}
+        page={issue.routes.issue}
+        read={data.pinnedIssues}
+      />
+      <ItemSection
+        heading="Projects"
+        noun="projects"
+        onNavigate={onNavigate}
+        page={project.routes.overview}
+        read={data.projects}
+      />
     </nav>
   );
 }

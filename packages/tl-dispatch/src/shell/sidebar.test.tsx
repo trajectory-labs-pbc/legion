@@ -55,14 +55,21 @@ function Commands({ enabled }: { enabled: boolean }) {
 
 function mount(
   path: string,
-  withCommands = true,
-  answer: ((url: string) => Response | undefined) | undefined = undefined
+  {
+    answer,
+    client = new QueryClient(),
+    commands = true,
+  }: {
+    answer?: (url: string) => Response | undefined;
+    client?: QueryClient;
+    commands?: boolean;
+  } = {}
 ) {
   if (answer !== undefined) mounted.push({ unmount: stubFetch(answer).restore });
   const view = render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryNavigationProvider path={path}>
-        {withCommands ? <Commands enabled /> : null}
+        {commands ? <Commands enabled /> : null}
         <Sidebar user={user as AuthenticatedUser} />
       </MemoryNavigationProvider>
     </QueryClientProvider>
@@ -92,6 +99,18 @@ const destination = (name: string, count?: SidebarData["destinations"][number]["
     count,
   };
 };
+
+function mountView(data: SidebarData) {
+  const view = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryNavigationProvider path="/">
+        <SidebarView data={data} onNavigate={undefined} />
+      </MemoryNavigationProvider>
+    </QueryClientProvider>
+  );
+  mounted.push(view);
+  return view.container;
+}
 
 describe("the sidebar", () => {
   test("draws a 28 px row per nav destination, with its address and icon", () => {
@@ -133,7 +152,7 @@ describe("the sidebar", () => {
   });
 
   test("control: with no command mounted, no row has a tooltip to give", () => {
-    expect(mount("/", false).querySelectorAll("kbd")).toHaveLength(0);
+    expect(mount("/", { commands: false }).querySelectorAll("kbd")).toHaveLength(0);
   });
 
   test("marks the open destination, and keeps it lit on the pages under it", () => {
@@ -144,16 +163,69 @@ describe("the sidebar", () => {
   });
 
   test("the Inbox counts the asks waiting on the reader, not the unread threads", async () => {
-    const container = mount("/agents", true, (url) => {
-      if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
-      if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
-      if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
-      return undefined;
+    const container = mount("/agents", {
+      answer: (url) => {
+        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+        if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
+        if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
+        return undefined;
+      },
     });
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => mark() !== null, sleep);
     expect(mark()?.getAttribute("aria-label")).toBe("Needs you: 2");
     expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
+  });
+
+  test("a read still out draws a quiet line; a failed one says so beside Retry", () => {
+    const asked: string[] = [];
+    const container = mountView({
+      destinations: [
+        destination("inbox", {
+          count: undefined,
+          needsYou: true,
+          retry: () => asked.push("inbox"),
+        }),
+      ],
+      pinnedAgents: [],
+      inLiveView: false,
+      pinnedIssues: { status: "pending" },
+      projects: { status: "error", retry: () => asked.push("projects") },
+    });
+    const lines = [...container.querySelectorAll("p")];
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "Could not load the Inbox count.Retry",
+      "Loading pinned issues…",
+      "Could not load projects.Retry",
+    ]);
+    expect(lines[1]?.className).toContain("text-muted-foreground");
+    for (const failed of [lines[0], lines[2]]) {
+      expect(failed?.className).toContain("text-danger");
+      settle(() => failed?.querySelector("button")?.click());
+    }
+    expect(asked).toEqual(["inbox", "projects"]);
+  });
+
+  test("Retry asks a failed section's read again and draws its rows", async () => {
+    let projectReads = 0;
+    const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) => {
+        if (!url.endsWith("/api/v1/projects")) return undefined;
+        projectReads += 1;
+        return projectReads === 1
+          ? json({ error: { code: "INTERNAL" } }, 500)
+          : json([{ key: "CORE", name: "Core", open_asks: 0 }]);
+      },
+    });
+    const retry = () =>
+      [...container.querySelectorAll("button")].find((button) => button.textContent === "Retry");
+    await waitFor(() => retry() !== undefined, sleep);
+    expect(container.textContent).toContain("Could not load projects.");
+    settle(() => retry()?.click());
+    await waitFor(() => container.querySelector('a[href="/projects/CORE"]') !== null, sleep);
+    expect(container.querySelector('a[href="/projects/CORE"]')?.textContent).toContain("Core");
+    expect(retry()).toBeUndefined();
   });
 
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {
@@ -165,21 +237,17 @@ describe("the sidebar", () => {
       ],
       pinnedAgents: [],
       inLiveView: false,
-      pinnedIssues: undefined,
-      projects: [{ key: "CORE", text: "Core", openAsks: 4, current: false }],
+      pinnedIssues: { status: "success", rows: [] },
+      projects: {
+        status: "success",
+        rows: [{ key: "CORE", text: "Core", openAsks: 4, current: false }],
+      },
     };
-    const view = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryNavigationProvider path="/">
-          <SidebarView data={data} onNavigate={undefined} />
-        </MemoryNavigationProvider>
-      </QueryClientProvider>
-    );
-    mounted.push(view);
-    const edges = [...view.container.querySelectorAll("a")].map((row) => row.lastElementChild);
+    const container = mountView(data);
+    const edges = [...container.querySelectorAll("a")].map((row) => row.lastElementChild);
     expect(edges.map((edge) => edge?.textContent)).toEqual(["7", "2", "3", "4"]);
     for (const edge of edges) expect(edge?.className).toContain("ml-auto");
-    const marks = [...view.container.querySelectorAll('[data-slot="attention-mark"]')];
+    const marks = [...container.querySelectorAll('[data-slot="attention-mark"]')];
     expect(marks).toHaveLength(1);
     expect(edges[0]).toBe(marks[0]);
     expect(marks[0]?.getAttribute("aria-label")).toBe("Needs you: 7");

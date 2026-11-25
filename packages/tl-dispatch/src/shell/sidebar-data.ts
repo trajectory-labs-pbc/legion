@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@upstream-dispatch/api/client";
 import {
+  inboxQuery,
   prioritySummaryQuery,
   projectsQuery,
   userAgentStateQuery,
@@ -27,6 +28,8 @@ interface SidebarCount {
   label?: string;
   /** What it counts waits on the reader, so it takes the "needs you" mark. */
   needsYou?: boolean;
+  /** Its read failed with nothing to show: asks again. */
+  retry?: () => void;
 }
 
 interface SidebarDestination {
@@ -36,6 +39,29 @@ interface SidebarDestination {
   page: PageRoute<string, string>;
   current: boolean;
   count: SidebarCount | undefined;
+}
+
+/** A section's read: still out, failed with a way to ask again, or its rows. */
+export type SectionRead<T> =
+  | { status: "pending" }
+  | { status: "error"; retry: () => void }
+  | { status: "success"; rows: readonly T[] };
+
+interface Read<T> {
+  data: T | undefined;
+  isError: boolean;
+  refetch: () => Promise<unknown>;
+}
+
+/** Asks `query` again; undefined unless it failed with nothing to show. */
+function retryOf<T>(query: Read<T>): (() => void) | undefined {
+  return query.data === undefined && query.isError ? () => void query.refetch() : undefined;
+}
+
+function sectionOf<T, R>(query: Read<readonly T[]>, row: (item: T) => R): SectionRead<R> {
+  if (query.data !== undefined) return { status: "success", rows: query.data.map(row) };
+  const retry = retryOf(query);
+  return retry === undefined ? { status: "pending" } : { status: "error", retry };
 }
 
 export interface SidebarItem {
@@ -57,8 +83,8 @@ export interface SidebarData {
   pinnedAgents: readonly SidebarAgent[];
   /** A live view is open: a pinned agent's link replaces it rather than stacking on it. */
   inLiveView: boolean;
-  pinnedIssues: readonly SidebarItem[] | undefined;
-  projects: readonly SidebarItem[] | undefined;
+  pinnedIssues: SectionRead<SidebarItem>;
+  projects: SectionRead<SidebarItem>;
 }
 
 /** What the page shows that a sidebar row can name: a live view, an issue, a project's own page. */
@@ -80,13 +106,14 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   const { pathname } = useAddress();
   const open = openOf(useCurrentPage()?.layout ?? {});
   const inboxCount = useNeedsYouCount();
+  const inbox = useQuery(inboxQuery());
   const agentState = useQuery(userAgentStateQuery()).data;
   const summary = useQuery(prioritySummaryQuery()).data;
   const pinnedIssues = useQuery({
     queryKey: ["issues", "pinned"],
     queryFn: () => api.listIssues({ pinned: true }),
-  }).data;
-  const projects = useQuery(projectsQuery()).data;
+  });
+  const projects = useQuery(projectsQuery());
   const pinnedAgents = usePinnedAgents();
   // A deployment with no priority yet draws no count; nothing is off a list that does not exist.
   const priorityFaults =
@@ -95,7 +122,7 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
   const unread = totalUnreadReplies(agentState);
   const counts: Partial<Record<NavName, SidebarCount>> = {
-    inbox: { count: inboxCount, needsYou: true },
+    inbox: { count: inboxCount, needsYou: true, retry: retryOf(inbox) },
     agents: { count: unread, label: unreadRepliesLabel(unread) },
     priorities: { count: priorityFaults },
   };
@@ -116,13 +143,13 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       unread: agentState?.[sessionId]?.unread_replies ?? 0,
     })),
     inLiveView: open.liveView !== undefined,
-    pinnedIssues: pinnedIssues?.map((pinned) => ({
+    pinnedIssues: sectionOf(pinnedIssues, (pinned) => ({
       key: pinned.key,
       text: pinned.title,
       openAsks: pinned.open_asks,
       current: pinned.key === open.issue,
     })),
-    projects: projects?.map((shown) => ({
+    projects: sectionOf(projects, (shown) => ({
       key: shown.key,
       text: shown.name,
       openAsks: shown.open_asks,
