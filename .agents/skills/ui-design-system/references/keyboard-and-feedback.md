@@ -8,21 +8,21 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **KB2** Every action is one command in the catalog. Each surface that offers it shows its key: the tooltip, the menu row, the palette row. A page never binds a key outside the catalog. Linear: keys in tooltips and context menus. Check: the catalog's load-time checks; the layering tests.
 
-**KB3** On a list, a peek or a record, one-key commands act on the selection, else the highlighted row, else the record in view: `s` status, `p` priority, `l` labels, `x` select, `$mod+Backspace` archive or delete (with a confirm when it cannot be undone). Linear: issue keys. Pages: project issues, Inbox, agents, priorities, the issue page. Check: a test per key and subject.
+**KB3** On a list, a peek or a record, one-key commands act on the selection, else the highlighted row, else the record in view: `s` status, `p` priority, `l` labels, `x` select, `$mod+Backspace` archive or delete (with a confirm when it cannot be undone). Upstream's keys stay where it has them: `a` approves on the issue page, and on the board `h` and `l` move between columns, so there labels open from the menu or the palette. Linear: issue keys (Linear's `a` assigns). Pages: project issues, Inbox, agents, priorities, the issue page. Check: a test per key and subject.
 
 **KB4** `g` then a letter goes to a page (`NAV_DESTINATIONS`); `o` then a letter opens a picker of records; `c` creates the page's main record; `/` focuses search. Linear: `G` and `O` chords, `C` create, `/` search. Pages: the shell. Check: the navigation command tests.
 
-**KB5** Copy commands: `$mod+.` copies the record's key, `$mod+Shift+,` its link. A toast confirms the copy. Upstream's `y` stays as a second key on the same command. Linear: the same two keys. Pages: lists, peek, records. Check: a test for each key.
+**KB5** Copy commands: `$mod+.` copies the record's key, with upstream's `Shift+Y` as a second key; `$mod+Shift+,` copies its link, with upstream's `y`. One command holds both keys. A toast confirms the copy. Linear: `$mod+.` and `$mod+Shift+,`. Pages: lists, peek, records. Check: a test for each key.
 
 **KB6** A tooltip shows on hover after about 500 ms and at once on keyboard focus. It holds the action's name and its key, on one line. An icon-only button always has one. Linear: tooltips with key hints. Check: the HotkeyTooltip tests.
 
 **KB7** `?` opens the shortcuts sheet, which lists every command with a key in this scope, grouped, from the catalog. Linear: the keyboard help (`?`). Check: the sheet tests.
 
-**KB8** Undo is not yet designed. Until it is, a toast's Undo is the only undo, and `$mod+z` stays the browser's in a field. Linear: `$mod+z` undoes almost every write and returns to its page. Check: reviewer.
+**KB8** A toast's Undo is the only undo. `$mod+z` stays the browser's in a field and has no app command; a global undo is later work. Linear: `$mod+z` undoes almost every write and returns to its page. Check: reviewer.
 
 ## Context menus (CX)
 
-**CX1** Right-click on a row, a board card, a link to a record or a record's header opens the same menu as its `⋯` button: the same rows, sections and key hints. Sections, in order: open, change (the property pickers first, as submenus), create, other, copy (one submenu), destructive. Linear: the issue context menu. Pages: every list, board and record. Check: a test compares the two menus.
+**CX1** Right-click on a row, a board card, a link to a record or a record's header opens the record's menu: the same rows, sections and key hints as the record header's `⋯` button. Sections, in order: open, change (the property pickers first, as submenus), create, other, copy (one submenu), destructive. Linear: the issue context menu. Pages: every list, board and record. Check: a test compares the two menus.
 
 **CX2** On a selected row the menu acts on the whole selection and names its count in the first row. Linear: the context menu with a selection. Check: a test with two selected rows.
 
@@ -38,7 +38,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **ES3** An empty Inbox says the person is done ("You have no open asks") with no action. Check: reviewer.
 
-**ES4** While data loads, a list shows skeleton rows at the row height, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Check: reviewer.
+**ES4** While data loads, a list shows still skeleton rows at the row height, with no shimmer, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Check: reviewer.
 
 ## Toasts (TO)
 
@@ -54,9 +54,9 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **MO1** Row hover and highlight change with no transition, in and out. Linear: the hover with no fade-out. Check: reviewer.
 
-**MO2** A popover, menu or tooltip fades in about 150 ms. A dialog, sheet or peek fades and moves in about 200 ms. Nothing animates longer than 250 ms. Check: (new) a design-rule test for durations.
+**MO2** Motion is a fade of 150 to 200 ms, opacity only: about 150 ms for a popover, menu or tooltip, about 200 ms for a dialog, sheet or peek. An exit is a fade no longer than the entry. Check: (new) a design-rule test for durations and animated properties.
 
-**MO3** No stagger on lists, no blur, no scale on press, no bounce, no pulse. Linear: removed its pulsing animation. Check: reviewer.
+**MO3** No stagger on lists, no blur, no move or scale when an overlay opens, no scale on press, no bounce, no pulse or shimmer. Linear: removed its pulsing animation. Check: reviewer.
 
 **MO4** Every animation is `motion-safe:`, so the system's reduced-motion setting stops it. Linear: reduced motion follows the system. Check: the design-rule tests.
 

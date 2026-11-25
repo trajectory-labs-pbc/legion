@@ -5,7 +5,7 @@ description: "Use when you build or review a page, a layout, a list, a menu, an 
 
 # The design system
 
-tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, square corners, Geist, colour for meaning only, no shadows, and a 2 px focus outline. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. A check marked (new) in a reference is a test to write with the first page that needs it.
+tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, square corners, Geist, colour for meaning only, no shadows, and a 2 px focus outline. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another rule you find disagrees with these, these hold. A check marked (new) in a reference is a test to write with the first page that needs it.
 
 ## Read first
 
@@ -41,6 +41,7 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 4. Add a component to `packages/ui` when it renders from props alone (no query, no router, no command store, no app state) and it is a control, an overlay, a layout part or a value display. Add it with `shadcn add` or write it in the same style, give it a test file beside it, and run the package's `registry` script, which writes the root `registry.json`.
 5. Keep a component that reads data, the router or the command store in tl-dispatch, beside the page or the shell that uses it.
 6. Fix a `packages/ui` component in `packages/ui`. Never copy it into tl-dispatch to change it.
+7. The components follow these rules too: no shadow (SU1) and fades only (MO2). Remove a shadow or a scale animation you find there.
 
 ## Checks
 

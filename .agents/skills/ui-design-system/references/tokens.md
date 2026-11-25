@@ -18,7 +18,7 @@ The theme is a shadcn theme on CSS variables. Never edit the theme file by hand,
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
-| `accent` | Hover inside a menu or a popover. In light it is almost white, so do not use it on the content panel. |
+| `accent` | Hover inside a menu or a popover. In light it is near white, so a hover on a white popover cannot be seen today: a defect to fix in `packages/ui`'s tokens, never with a class in a page. Do not use it on the content panel. |
 | `sidebar-accent` | The hovered and the current row in the sidebar. |
 | `popover` | A menu, popover, combobox, tooltip, hover card, dialog, sheet, command menu or toast. |
 | `field` | The inside of an input. |
