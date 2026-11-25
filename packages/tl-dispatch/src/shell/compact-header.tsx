@@ -52,7 +52,12 @@ export function CompactHeader({
       )}
       <div className="ml-auto flex items-center gap-1">
         {onInbox ? null : (
-          <CommandButton commandId="global.inbox-drawer" label="Peek at the inbox" size="icon-sm" />
+          <CommandButton
+            aria-label="Peek at the inbox without leaving this page"
+            commandId="global.inbox-drawer"
+            label="Peek"
+            size="icon-sm"
+          />
         )}
         <Button
           aria-expanded={navigationOpen}

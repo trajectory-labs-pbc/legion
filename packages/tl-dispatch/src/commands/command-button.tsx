@@ -41,8 +41,8 @@ export function CommandButton({
   return (
     <HotkeyTooltip commandId={commandId} label={shown} side={tooltipSide}>
       <Button
-        {...rest}
         aria-label={onlyIcon ? shown : undefined}
+        {...rest}
         disabled={!view.enabled}
         onClick={() => commandStore.run(commandId)}
         size={size}

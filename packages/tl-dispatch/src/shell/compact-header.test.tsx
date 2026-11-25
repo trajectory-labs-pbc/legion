@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, type ReactNode } from "react";
+import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
+
+const PEEK = "Peek at the inbox without leaving this page";
 
 const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
@@ -47,7 +50,7 @@ describe("CompactHeader", () => {
     );
     const current = home.querySelector('[aria-current="page"]');
     expect(current?.textContent).toBe("Inbox");
-    expect(home.querySelector('[aria-label="Peek at the inbox"]')).toBeNull();
+    expect(home.querySelector(`[aria-label="${PEEK}"]`)).toBeNull();
   });
 
   test("elsewhere the Inbox links home, beside a Peek at the inbox", () => {
@@ -59,7 +62,33 @@ describe("CompactHeader", () => {
     );
     expect(links).toEqual(["Dispatch /", "Inbox /"]);
     expect(away.querySelector('[aria-current="page"]')).toBeNull();
-    expect(away.querySelector('[aria-label="Peek at the inbox"]')).not.toBeNull();
+    expect(away.querySelector(`[aria-label="${PEEK}"]`)).not.toBeNull();
+  });
+
+  test("Peek is named for what it does, and its tooltip says Peek with its key", async () => {
+    await loadHotkeyTooltip();
+    const away = mount(
+      <CompactHeader navigationOpen={false} onInbox={false} onOpenNavigation={() => {}} />
+    );
+    const peek = away.querySelector<HTMLButtonElement>(`[aria-label="${PEEK}"]`);
+    if (peek === null) throw new Error("no Peek");
+    expect(peek.textContent).toBe("");
+    settle(() => {
+      peek.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }));
+      peek.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+      peek.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    });
+    await sleep(700);
+    const popup = document.querySelector('[data-slot="tooltip-content"]');
+    expect(popup?.textContent).toStartWith("Peek");
+    expect(popup?.textContent).not.toContain("inbox");
+    expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
+      "I",
+    ]);
+    settle(() => {
+      peek.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" }));
+      peek.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    });
   });
 
   test("the Inbox counts what waits on the reader in the mark; unread agents are muted", async () => {
