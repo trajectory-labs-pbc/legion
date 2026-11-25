@@ -7,7 +7,7 @@
 # request, which that workflow does not run for, it is the image of the newest first-parent
 # ancestor that has one, and the script fails when upstream's inputs of that image differ between
 # the ancestor and <commit>. The tag can move, so the digest is used only once its attestation
-# shows that workflow built it on main.
+# shows that workflow built it on main from the commit the tag names.
 set -euo pipefail
 event=$1
 commit=$2
@@ -96,8 +96,9 @@ if ! manifest=$(docker buildx imagetools inspect "$image:$commit" --format '{{js
   exit 1
 fi
 if ! gh attestation verify "oci://$image@$digest" --repo "$GITHUB_REPOSITORY" \
-  --signer-workflow "$GITHUB_REPOSITORY/$listener" --source-ref refs/heads/main >&2; then
-  echo "::error::$image@$digest, tagged $commit, has no attestation from $listener on main, so this workflow will not build on it" >&2
+  --signer-workflow "$GITHUB_REPOSITORY/$listener" --source-ref refs/heads/main \
+  --source-digest "$commit" --deny-self-hosted-runners >&2; then
+  echo "::error::$image@$digest, tagged $commit, has no attestation from $listener on main for that commit, so this workflow will not build on it" >&2
   exit 1
 fi
 echo "$image@$digest"
