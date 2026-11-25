@@ -69,7 +69,7 @@ A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
 | `useCurrentPage()`, from `src/pages/index.ts` | The page, the route and the layout the address opens, as the router ranks them. |
 | `useAddress()` | The address as text, for upstream helpers that read it. |
 
-A wrong route, a missing param or an unknown search key fails the type check.
+A wrong route, a wrong param name or an unknown search key fails the type check. `PageLink`, `Redirect` and `usePageNavigate` also refuse a call with no `params` where the path binds one. `pageHref` takes `params` as optional: `pageHref(route)` on such a path passes the type check and throws when it runs.
 
 ## Prefetch on intent
 
