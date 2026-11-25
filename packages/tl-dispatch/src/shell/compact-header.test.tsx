@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, type ReactNode } from "react";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
+import { INBOX_TWO_FOR_READER } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
@@ -61,20 +62,23 @@ describe("CompactHeader", () => {
     expect(away.querySelector('[aria-label="Peek at the inbox"]')).not.toBeNull();
   });
 
-  test("the Inbox count takes the needs-you mark; unread agents are a muted number", async () => {
+  test("the Inbox counts what waits on the reader in the mark; unread agents are muted", async () => {
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
       (url) => {
         if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+        if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
         if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
         if (url.includes("/api/v1/me/agents/state")) return json({ one: { unread_replies: 2 } });
         return undefined;
       }
     );
     const agentsLink = () => header.querySelector('a[href="/agents"]');
-    await waitFor(() => agentsLink() !== null && header.textContent?.includes("3") === true, sleep);
+    const mark = () => header.querySelector('[data-slot="attention-mark"]');
+    await waitFor(() => agentsLink() !== null && mark() !== null, sleep);
+    // Two asks wait on the reader; the third waits on someone else, and unread threads are not counted.
     const marks = [...header.querySelectorAll('[data-slot="attention-mark"]')];
-    expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual(["Needs you: 3"]);
+    expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual(["Needs you: 2"]);
     expect(marks[0]?.closest("a")?.getAttribute("href")).toBe("/");
     const unread = agentsLink()?.lastElementChild;
     expect(unread?.textContent).toBe("2");

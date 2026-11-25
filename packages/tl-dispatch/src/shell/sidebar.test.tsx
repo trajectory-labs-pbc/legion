@@ -6,6 +6,8 @@ import { act } from "react";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
+import { json, stubFetch, waitFor } from "../../tests/fetch";
+import { INBOX_TWO_FOR_READER } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
@@ -23,6 +25,8 @@ beforeAll(() => {
 afterAll(() => {
   globalThis.fetch = realFetch;
 });
+
+const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -49,7 +53,12 @@ function Commands({ enabled }: { enabled: boolean }) {
   return null;
 }
 
-function mount(path: string, withCommands = true) {
+function mount(
+  path: string,
+  withCommands = true,
+  answer: ((url: string) => Response | undefined) | undefined = undefined
+) {
+  if (answer !== undefined) mounted.push({ unmount: stubFetch(answer).restore });
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryNavigationProvider path={path}>
@@ -132,6 +141,19 @@ describe("the sidebar", () => {
     expect(rows.filter((row) => row.current === "page").map((row) => row.label)).toEqual([
       "Priorities",
     ]);
+  });
+
+  test("the Inbox counts the asks waiting on the reader, not the unread threads", async () => {
+    const container = mount("/agents", true, (url) => {
+      if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+      if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
+      if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
+      return undefined;
+    });
+    const mark = () => container.querySelector('[data-slot="attention-mark"]');
+    await waitFor(() => mark() !== null, sleep);
+    expect(mark()?.getAttribute("aria-label")).toBe("Needs you: 2");
+    expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
   });
 
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {

@@ -4,7 +4,7 @@ import { NavRow, NavSurface } from "@legion/ui/components/nav";
 import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
+import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { CommandButton } from "@/commands/command-button";
 import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
@@ -21,7 +21,7 @@ export function CompactHeader({
   onInbox: boolean;
   onOpenNavigation: () => void;
 }) {
-  const inboxCount = useInboxCount();
+  const inboxCount = useNeedsYouCount();
   const unread = totalUnreadReplies(useQuery(userAgentStateQuery()).data);
   return (
     <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>

@@ -1,6 +1,6 @@
 import { NavSurface } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
+import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
 import type { ReactNode } from "react";
 import { CommandButton } from "@/commands/command-button";
@@ -28,7 +28,7 @@ export function SidebarRegion({
   project: string | undefined;
   user: AuthenticatedUser;
 }) {
-  const inboxCount = useInboxCount();
+  const inboxCount = useNeedsYouCount();
   if (issueRail) {
     return (
       <IconRail

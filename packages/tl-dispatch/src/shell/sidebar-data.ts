@@ -9,7 +9,7 @@ import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
 import { useAgentPinWrite, usePinnedAgents } from "@upstream-dispatch/features/agents/pins";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
+import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
@@ -79,7 +79,7 @@ export function openOf(layout: PageLayout): {
 export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarData {
   const { pathname } = useAddress();
   const open = openOf(useCurrentPage()?.layout ?? {});
-  const inboxCount = useInboxCount();
+  const inboxCount = useNeedsYouCount();
   const agentState = useQuery(userAgentStateQuery()).data;
   const summary = useQuery(prioritySummaryQuery()).data;
   const pinnedIssues = useQuery({
