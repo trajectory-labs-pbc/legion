@@ -16,6 +16,13 @@ packages/tl-dispatch/
 packages/ui/
 registry.json
 
+# The skills any coding agent reads for the fork's web app; packages/tl-dispatch/AGENTS.md names them.
+.agents/skills/commands/
+.agents/skills/navigation/
+.agents/skills/porting-upstream/
+.agents/skills/react-quality/
+.agents/skills/ui-design-system/
+
 # The fork's checks.
 .github/fork-allowlist.txt
 .github/scripts/check-fork-allowlist.sh
