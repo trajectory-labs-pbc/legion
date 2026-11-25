@@ -5,6 +5,7 @@
 # The fork's checks.
 .github/fork-allowlist.txt
 .github/scripts/check-fork-allowlist.sh
+.github/scripts/check-fork-allowlist.test.sh
 .github/workflows/fork-checks.yaml
 
 # The weekly sync from upstream.
