@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "bun:test";
 import { render, screen } from "@testing-library/react";
 
-import { Heading, HeadingSection, OverlayOutline } from "#registry/legion/ui/heading";
+import { Heading, HeadingSection, OverlayOutline, SurfaceTitle } from "#registry/legion/ui/heading";
 
 describe("Heading", () => {
   it("takes its level from the sections around it", () => {
@@ -19,6 +19,23 @@ describe("Heading", () => {
     expect(screen.getByRole("heading", { name: "Page" }).tagName).toBe("H2");
     expect(screen.getByRole("heading", { name: "Section" }).tagName).toBe("H3");
     expect(screen.getByRole("heading", { name: "Group" }).tagName).toBe("H4");
+  });
+
+  it("draws a page's title as the one h1 and an overlay's as an h2, in the size it is given", () => {
+    render(
+      <>
+        <SurfaceTitle size="page">Machines</SurfaceTitle>
+        <HeadingSection>
+          <OverlayOutline>
+            <SurfaceTitle size="section">Rename</SurfaceTitle>
+          </OverlayOutline>
+        </HeadingSection>
+      </>
+    );
+    const page = screen.getByRole("heading", { name: "Machines" });
+    expect(page.tagName).toBe("H1");
+    expect(page.getAttribute("data-slot")).toBe("heading");
+    expect(screen.getByRole("heading", { name: "Rename" }).tagName).toBe("H2");
   });
 
   it("ranks an overlay's body under the overlay's title, whatever level opened it", () => {

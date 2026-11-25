@@ -60,9 +60,27 @@ function SurfaceTitleElement(props: ComponentProps<"h2">) {
   return <Tag {...props} />;
 }
 
+/** The surface's title: a page's h1, or a dialog's or a sheet's h2. */
+function SurfaceTitle({ size, tone, className, ...props }: HeadingProps) {
+  return (
+    <SurfaceTitleElement
+      data-slot="heading"
+      className={cn(headingVariants({ size, tone }), className)}
+      {...props}
+    />
+  );
+}
+
 /** Starts an overlay body's outline, whatever the level that opened the overlay. */
 function OverlayOutline({ children }: { children: ReactNode }) {
   return <OutlineContext.Provider value={OVERLAY_OUTLINE}>{children}</OutlineContext.Provider>;
 }
 
-export { Heading, type HeadingProps, HeadingSection, OverlayOutline, SurfaceTitleElement };
+export {
+  Heading,
+  type HeadingProps,
+  HeadingSection,
+  OverlayOutline,
+  SurfaceTitle,
+  SurfaceTitleElement,
+};
