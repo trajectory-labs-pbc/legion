@@ -129,8 +129,14 @@
   --color-blue-950: var(--color-sky-950);
 
   /* A state's scale: its tint and border are the grounds, its own token the text, a dot or a
-     bar. The theme swaps each token with the scheme, so the scale runs the other way in dark. */
-  --color-amber-50: color-mix(in oklab, var(--warning-tint) var(--repaint-light), var(--warning));
+     bar. The theme swaps each token with the scheme, so the scale runs the other way in dark.
+     The warning tint is made for a badge. A card takes amber-50 in light and amber-950 in dark,
+     so each is the tint mixed into the page's ground. */
+  --color-amber-50: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--warning-tint) 50%, var(--card)) var(--repaint-light),
+    var(--warning)
+  );
   --color-amber-100: color-mix(in oklab, var(--warning-tint) var(--repaint-light), var(--warning));
   --color-amber-200: color-mix(
     in oklab,
@@ -168,7 +174,11 @@
     var(--warning) var(--repaint-light),
     color-mix(in oklab, var(--warning-border) 50%, var(--warning-tint))
   );
-  --color-amber-950: color-mix(in oklab, var(--warning) var(--repaint-light), var(--warning-tint));
+  --color-amber-950: color-mix(
+    in oklab,
+    var(--warning) var(--repaint-light),
+    color-mix(in oklab, var(--warning-tint) 40%, var(--background))
+  );
 
   --color-rose-50: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
   --color-rose-100: color-mix(in oklab, var(--danger-tint) var(--repaint-light), var(--danger));
