@@ -105,6 +105,8 @@ check "asks for the commit's runs on main, of any event" \
   'grep -q "head_sha=$head&branch=main" "$STUB/calls" && ! grep -q "event=" "$STUB/calls"'
 check "verifies the attestation against the listener on main" \
   'grep -q "attestation verify oci://ghcr.io/owner/legion/envoy@$digest .*--signer-workflow owner/legion/.github/workflows/release-envoy-listener.yaml .*--source-ref refs/heads/main" "$STUB/calls"'
+check "ties the attestation to the commit and to a hosted runner" \
+  'grep -q "attestation verify .*--source-digest $head " "$STUB/calls" && grep -q "attestation verify .*--deny-self-hosted-runners" "$STUB/calls"'
 
 run waits "$work/repo" "$head" "[{\"id\":11,$going}]"
 after_watch "$head" "[{\"id\":11,$ok}]"
@@ -157,6 +159,7 @@ run pr-walk "$work/repo" "$parent" "[{\"id\":15,$failed}]" "$grandparent" "[{\"i
 go pull_request
 check "a pull request walks past ancestors with no image" \
   "$image_printed"' && grep -q "^docker .*ghcr.io/owner/legion/envoy:$grandparent " "$STUB/calls"'
+check "and ties the attestation to the ancestor" 'grep -q "attestation verify .*--source-digest $grandparent " "$STUB/calls"'
 check "and does not wait on a run that has ended" '! grep -q "run watch" "$STUB/calls"'
 
 # pull_request_of <name> <file>...: a clone whose HEAD changes the files on top of $head.
