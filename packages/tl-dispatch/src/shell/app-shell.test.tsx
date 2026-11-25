@@ -179,5 +179,13 @@ describe("AppShell", () => {
       await until(() => menu() === null);
       expect(menu()).toBeNull();
     });
+
+    test("i closes the menu and opens the inbox drawer", async () => {
+      await openMenu();
+      press({ key: "i", code: "KeyI" });
+      await until(() => menu() === null);
+      expect(menu()).toBeNull();
+      expect(document.body.querySelector('[data-testid="inbox-drawer"]')).not.toBeNull();
+    });
   });
 });
