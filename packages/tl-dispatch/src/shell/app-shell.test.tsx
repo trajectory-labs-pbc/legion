@@ -47,6 +47,13 @@ async function mount(path = "/no-such-page") {
   return view;
 }
 
+/** Waits, a step at a time, for the menu's sheet, whose code loads when it first opens. */
+async function until(done: () => boolean) {
+  for (let tries = 0; tries < 40 && !done(); tries += 1) {
+    await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
+  }
+}
+
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
     await mount();
@@ -57,12 +64,6 @@ describe("AppShell", () => {
       });
     const button = (text: string) =>
       [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
-    /** Waits, a step at a time, for the menu's sheet, whose code loads when it first opens. */
-    const until = async (done: () => boolean) => {
-      for (let tries = 0; tries < 40 && !done(); tries += 1) {
-        await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
-      }
-    };
     click("Open navigation");
     await until(() => button("Sign out") !== undefined);
     settle(() => button("Sign out")?.click());
@@ -144,11 +145,6 @@ describe("AppShell", () => {
 
   describe("in the narrow screen's menu", () => {
     const menu = () => document.body.querySelector('[data-slot="sheet-content"][data-open]');
-    const until = async (done: () => boolean) => {
-      for (let tries = 0; tries < 40 && !done(); tries += 1) {
-        await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
-      }
-    };
     const openMenu = async () => {
       await mount();
       settle(() => {
