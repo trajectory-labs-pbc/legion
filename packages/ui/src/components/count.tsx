@@ -1,6 +1,8 @@
 import { cn } from "cn";
 import type { ComponentProps } from "react";
 
+import { textVariants } from "#registry/legion/lib/typography";
+
 /** A row's number at its right edge: muted and tabular; none at zero. */
 function Count({
   className,
@@ -11,7 +13,11 @@ function Count({
   return (
     <span
       data-slot="count"
-      className={cn("shrink-0 text-xs text-muted-foreground tabular-nums", className)}
+      className={cn(
+        textVariants({ size: "caption", tone: "muted" }),
+        "shrink-0 tabular-nums",
+        className
+      )}
       {...props}
     >
       {value}

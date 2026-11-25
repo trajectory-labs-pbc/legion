@@ -508,12 +508,17 @@
     {
       "name": "count",
       "type": "registry:ui",
-      "dependencies": ["cn@0.2.6"],
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
       "files": [
         {
           "path": "packages/ui/src/components/count.tsx",
           "type": "registry:ui",
           "target": "@ui/count.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -706,12 +711,17 @@
     {
       "name": "kbd",
       "type": "registry:ui",
-      "dependencies": ["cn@0.2.6"],
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
       "files": [
         {
           "path": "packages/ui/src/components/kbd.tsx",
           "type": "registry:ui",
           "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
