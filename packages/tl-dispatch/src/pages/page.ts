@@ -9,7 +9,10 @@ export interface PageLayout {
   readonly fillsViewport?: boolean | "reading-pane";
   /** The page has the margin column. */
   readonly margin?: boolean;
-  /** Drawn as the outline issue page, the page frames itself: the navigation goes into a drawer. */
+  /**
+   * The address can take the outline issue page's frame, where the page frames itself and the
+   * navigation goes into a drawer. The shell applies it only when the reader chose the outline page.
+   */
   readonly outlineFrame?: boolean;
   /** The issue the page shows, whose Details drawer it holds in its own frame. */
   readonly issue?: string;
