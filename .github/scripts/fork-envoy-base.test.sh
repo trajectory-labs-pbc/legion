@@ -26,10 +26,12 @@ case "$1 $2" in
   *) echo "unexpected: gh $*" >&2; exit 99 ;;
 esac
 EOF
+# docker: prints $STUB/manifest when the case wrote one, and exits with $STUB/docker-exit.
 cat >"$work/bin/docker" <<EOF
 #!/usr/bin/env bash
 echo "docker \$*" >>"\$STUB/calls"
-echo '{"digest":"$digest"}'
+if [ -f "\$STUB/manifest" ]; then cat "\$STUB/manifest"; else echo '{"digest":"$digest"}'; fi
+exit "\$(cat "\$STUB/docker-exit")"
 EOF
 chmod +x "$work/bin/gh" "$work/bin/docker"
 
@@ -62,6 +64,7 @@ run() {
   : >"$GITHUB_STEP_SUMMARY"
   echo 0 >"$STUB/watch-exit"
   echo 0 >"$STUB/verify-exit"
+  echo 0 >"$STUB/docker-exit"
   while [ $# -gt 0 ]; do
     echo "$2" >"$STUB/runs/$1"
     shift 2
@@ -136,6 +139,19 @@ run unverified "$work/repo" "$head" "[{\"id\":10,$ok}]"
 echo 1 >"$STUB/verify-exit"
 go push
 check "refuses an image with no attestation" '[ "$status" = 1 ] && [ -z "$out" ] && grep -q "::error::.*$digest" <<<"$err"'
+
+image_unread='[ "$status" = 1 ] && [ -z "$out" ] && grep -q "^::error::could not read the digest of ghcr.io/owner/legion/envoy:$head" <<<"$err" &&
+  ! grep -q "attestation" "$STUB/calls"'
+
+run no-image "$work/repo" "$head" "[{\"id\":21,$ok}]"
+echo 1 >"$STUB/docker-exit"
+go push
+check "names the tag when the image cannot be read" "$image_unread"
+
+run no-digest "$work/repo" "$head" "[{\"id\":22,$ok}]"
+echo '{}' >"$STUB/manifest"
+go push
+check "names the tag when the image has no digest" "$image_unread"
 
 run pr-walk "$work/repo" "$parent" "[{\"id\":15,$failed}]" "$grandparent" "[{\"id\":16,$cancelled},{\"id\":17,$ok}]"
 go pull_request
