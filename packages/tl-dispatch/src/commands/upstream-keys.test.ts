@@ -145,4 +145,20 @@ describe("our labels for upstream's bindings", () => {
     });
     expect(drift).toEqual([]);
   });
+
+  test("give every row the sheet can name by scope and id a label of four words at most", () => {
+    // One id with two labels on two pages, or a label that is a condition: no one label fits.
+    const unkeyed = new Set(["issue:tree-edit", "issue:tree-link", "inbox:dismiss"]);
+    const ours = new Map(Object.entries(UPSTREAM_LABELS));
+    const shown = [
+      ...APP_CONTEXTS.flatMap((context) => context.commands.map((command) => command.label)),
+      ...upstream.flatMap((binding) => {
+        const key = `${scopeOf(binding)}:${binding.id}`;
+        if (binding.id === undefined || unkeyed.has(key)) return [];
+        return [ours.get(key)?.label ?? binding.label ?? ""];
+      }),
+    ];
+    const words = (label: string) => label.split(/\s+/).filter((word) => word !== "/").length;
+    expect([...new Set(shown)].filter((label) => words(label) > 4)).toEqual([]);
+  });
 });

@@ -4,16 +4,16 @@ import { ariaKeyShortcuts, chipsOf, rowChips } from "./key-chips";
 
 describe("chips", () => {
   test.each([
-    ["$mod+k", true, ["⌘K"]],
-    ["$mod+k", false, ["Ctrl+K"]],
-    ["Shift+S", true, ["⇧S"]],
-    ["Shift+S", false, ["Shift+S"]],
+    ["$mod+k", true, ["⌘", "K"]],
+    ["$mod+k", false, ["Ctrl", "K"]],
+    ["Shift+S", true, ["⇧", "S"]],
+    ["Shift+S", false, ["Shift", "S"]],
     ["g i", false, ["G", "I"]],
     ["?", true, ["?"]],
     ["ArrowDown", false, ["↓"]],
     ["Escape", false, ["Esc"]],
-    ["$mod+Alt+m", true, ["⌘⌥M"]],
-    ["$mod++", false, ["Ctrl++"]],
+    ["$mod+Alt+m", true, ["⌘", "⌥", "M"]],
+    ["$mod++", false, ["Ctrl", "+"]],
   ] as const)("%s on a Mac: %p", (keys, mac, chips) => {
     expect(chipsOf(keys, mac)).toEqual(chips);
   });

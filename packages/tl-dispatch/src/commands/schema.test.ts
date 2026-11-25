@@ -25,9 +25,9 @@ const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
 
 /** The keys the shell binds today (`src/shell/global-commands.ts`), as the engine sees them. */
 const LIVE_KEYS: readonly CommandDefinition[] = [
-  { name: "search", keys: ["$mod+k"], label: "Search and actions", inEditable: true },
-  { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
-  { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
+  { name: "search", keys: ["$mod+k"], label: "Command menu", inEditable: true },
+  { name: "search-only", keys: ["/"], label: "Search issues", hideFrom: ["palette"] },
+  { name: "help", keys: ["?"], label: "Show keyboard shortcuts" },
   { name: "create", keys: ["c"], label: "Create issue" },
   { name: "go-inbox", keys: ["g i"], label: "Go to Inbox" },
   { name: "go-agents", keys: ["g a"], label: "Go to Agents" },

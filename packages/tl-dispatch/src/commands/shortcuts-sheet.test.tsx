@@ -83,7 +83,7 @@ describe("ShortcutsSheet", () => {
     expect(headings()).toEqual(["General", "Help", "Navigation", "Layout"]);
     expect(rows()).toContain("Create issue: C");
     expect(rows()).toContain("Go to Inbox: G+I");
-    expect(rows()).toContain("Keyboard shortcuts: ?");
+    expect(rows()).toContain("Show keyboard shortcuts: ?");
   });
 
   // A browser sends a key to the focused element, and the window's listener reads it there.
@@ -128,7 +128,7 @@ describe("ShortcutsSheet", () => {
     press("?", { shiftKey: true });
     expect(sheet()).not.toBeNull();
     // Under our dialog only `under-all` commands run, so the global keys that stop there are not listed.
-    expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
+    expect(rows()).toEqual(["Show keyboard shortcuts: ?"]);
   });
 
   test("while it is open, no global key but ? runs: $mod+k opens no palette", () => {
@@ -156,7 +156,7 @@ describe("ShortcutsSheet", () => {
     mount();
     openLayer("overlay");
     press("?", { shiftKey: true });
-    expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
+    expect(rows()).toEqual(["Show keyboard shortcuts: ?"]);
   });
 
   test("control: under an alert dialog ? does nothing", () => {
@@ -170,7 +170,7 @@ describe("ShortcutsSheet", () => {
     mount(["create"]);
     press("?", { shiftKey: true });
     expect(rows().some((row) => row.startsWith("Create issue"))).toBe(false);
-    expect(rows().some((row) => row.startsWith("Search and actions"))).toBe(true);
+    expect(rows().some((row) => row.startsWith("Command menu"))).toBe(true);
   });
 
   test("the filter narrows the rows and says when none match", () => {

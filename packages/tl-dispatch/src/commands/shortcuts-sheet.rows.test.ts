@@ -173,9 +173,9 @@ describe("the sheet's filter", () => {
       {
         id: "layout",
         label: "Layout",
-        rows: [{ id: "c", label: "Toggle sidebar", keys: [["Shift+S"]] }],
+        rows: [{ id: "c", label: "Toggle sidebar", keys: [["Shift", "S"]] }],
       },
     ]);
-    expect(shownSections(sections, true)[1]?.rows[0]?.keys).toEqual([["⇧S"]]);
+    expect(shownSections(sections, true)[1]?.rows[0]?.keys).toEqual([["⇧", "S"]]);
   });
 });

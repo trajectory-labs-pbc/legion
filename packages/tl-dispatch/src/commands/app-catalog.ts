@@ -26,7 +26,7 @@ export const APP_CONTEXTS = [
     commands: [
       {
         name: "search",
-        label: "Search and actions",
+        label: "Command menu",
         keys: ["$mod+k"],
         icon: SearchIcon,
         inEditable: true,
@@ -34,14 +34,14 @@ export const APP_CONTEXTS = [
       // A slash typed into a field stays a slash.
       {
         name: "search-only",
-        label: "Search",
+        label: "Search issues",
         keys: ["/"],
         icon: SearchIcon,
         hideFrom: ["palette"],
       },
       {
         name: "help",
-        label: "Keyboard shortcuts",
+        label: "Show keyboard shortcuts",
         keys: ["?"],
         icon: KeyboardIcon,
         group: COMMAND_GROUPS.help,

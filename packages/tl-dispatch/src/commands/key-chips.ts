@@ -2,7 +2,7 @@ import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
 
 import { keySteps } from "./keys";
 
-/** One display chip per step of a key: `["⌘K"]` for a press, `["G", "I"]` for a chord. */
+/** One display chip per key pressed: `["⌘", "K"]` for a press, `["G", "I"]` for a chord. */
 export type ShortcutChips = readonly string[];
 
 /** The platform the key engine matches `$mod` for, so the chips and the engine agree. */
@@ -44,12 +44,12 @@ function modifier(name: string): { mac: string; other: string; aria: string } {
   return found;
 }
 
-/** The chips of a key in the engine's syntax: `⌘K` on a Mac, `Ctrl+K` elsewhere. */
+/** The chips of a key in the engine's syntax, one per key: `⌘` `K` on a Mac, `Ctrl` `K` elsewhere. */
 export function chipsOf(keys: string, mac: boolean = IS_MAC): ShortcutChips {
-  return keySteps(keys).map((step) => {
+  return keySteps(keys).flatMap((step) => {
     const { modifiers, key } = splitStep(step);
     const names = modifiers.map((name) => (mac ? modifier(name).mac : modifier(name).other));
-    return mac ? [...names, keyName(key)].join("") : [...names, keyName(key)].join("+");
+    return [...names, keyName(key)];
   });
 }
 

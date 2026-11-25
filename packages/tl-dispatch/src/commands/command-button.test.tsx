@@ -64,7 +64,7 @@ describe("CommandButton", () => {
     expect(create?.querySelector("svg")).not.toBeNull();
     expect(create?.dataset.variant).toBe("default");
     expect(search?.textContent).toBe("");
-    expect(search?.getAttribute("aria-label")).toBe("Search and actions");
+    expect(search?.getAttribute("aria-label")).toBe("Command menu");
     expect(search?.dataset.variant).toBe("ghost");
   });
 

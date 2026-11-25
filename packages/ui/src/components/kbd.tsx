@@ -14,7 +14,7 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   );
 }
 
-/** One chip per step: `["⌘K"]` for a key press, `["G", "I"]` for a two-key sequence. */
+/** One chip per key: `["⌘", "K"]` for a key press, `["G", "I"]` for a two-key sequence. */
 function KbdSequence({ chips, className }: { chips: readonly string[]; className?: string }) {
   if (chips.length === 0) return null;
   if (chips.length === 1) return <Kbd className={className}>{chips[0]}</Kbd>;

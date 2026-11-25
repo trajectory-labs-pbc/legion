@@ -12,7 +12,7 @@ import {
   SheetTitle,
 } from "#registry/legion/ui/sheet";
 
-/** One action and each key that runs it, a key as its chips: `["Ctrl+K"]`, or `["G", "I"]`. */
+/** One action and each key that runs it, a key as its chips: `["Ctrl", "K"]`, or `["G", "I"]`. */
 interface ShortcutRow {
   id: string;
   label: string;
