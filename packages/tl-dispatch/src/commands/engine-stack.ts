@@ -5,24 +5,8 @@ import {
   type KeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
 
-import {
-  focusedOverlays,
-  type LayerSource,
-  type OverlayKind,
-  type OverlayLayer,
-} from "./focused-overlay";
+import { focusedOverlays, type LayerSource, type OverlayLayer } from "./focused-overlay";
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";
-
-/** The overlay kinds a global command still runs under. Under the shortcuts sheet only `?` acts. */
-const GLOBAL_COMMANDS_RUN_UNDER: Readonly<Record<OverlayKind, boolean>> = {
-  dialog: false,
-  "alert-dialog": false,
-  sheet: false,
-  drawer: true,
-  menu: false,
-  popover: false,
-  select: false,
-};
 
 /** A dialog that upstream's code opened (its palette, a `useDialog` sheet), not one of our layers. */
 export const UPSTREAM = "upstream";
@@ -30,11 +14,15 @@ export const UPSTREAM = "upstream";
 type DialogOwner = OverlayLayer | typeof UPSTREAM;
 
 export interface EngineStack {
-  /** The dialog on top of the key engine's stack, or undefined when none is open. */
+  /**
+   * What is on top: `UPSTREAM` while one of upstream's dialogs is open, else the top overlay of
+   * ours, else undefined.
+   */
   top(): DialogOwner | undefined;
   /**
-   * Whether global commands of this reach run now: dialogs are open, each ours, and each lets
-   * them through. One of ours is open while it holds the focus. `under-all` passes every kind but an alert dialog, which waits for a decision.
+   * Whether global commands of this reach run under what is open: overlays are open, each ours,
+   * and each lets them through. `under-most` runs under a `passthrough` overlay alone;
+   * `under-all` under every kind but an alert dialog, which waits for a decision.
    */
   passes(reach: OverlayReach): boolean;
   /** The scopes whose bindings can fire now, innermost last: `dialog` alone while one is open. */
@@ -51,105 +39,87 @@ globalThis.__tlDispatchEngineStacks ??= new WeakMap();
 const trackers = globalThis.__tlDispatchEngineStacks;
 
 /**
- * Follows the key engine's scope stack, in order. Each overlay of ours that holds the focus
- * pushes one dialog scope, so the page's keys and the global ones stop under it;
- * every other push is upstream's, seen by wrapping the engine's `pushScope`, which upstream's
- * hooks call. The wrap happens once per engine: a second call returns the first tracker.
+ * Follows the key engine's scope stack and the overlays over the page. While an overlay of ours
+ * is open, one dialog scope is on the engine's stack, so the page's keys and the global ones
+ * stop under it. Every other push is upstream's, seen by wrapping the engine's `pushScope`,
+ * which upstream's hooks call. The wrap happens once per engine: a second call returns the
+ * first tracker.
  */
 export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineStack {
   const existing = trackers.get(keymap);
   if (existing !== undefined) return existing;
-  const stack: { scope: KeymapScope; owner: DialogOwner | null }[] = [];
+  const upstream: KeymapScope[] = [];
   const listeners = new Set<() => void>();
-  // A read brings the stack up to date without telling the listeners: it may run in a render.
-  let quiet = false;
   const notify = () => {
-    if (quiet) return;
     for (const listener of listeners) listener();
   };
   const push = keymap.pushScope;
-  const pushEntry = (scope: KeymapScope, owner: DialogOwner | null) => {
+  keymap.pushScope = (scope) => {
     const pop = push(scope);
-    const entry = { scope, owner };
-    stack.push(entry);
+    const entry = [scope] as const;
+    upstream.push(...entry);
     notify();
+    let popped = false;
     return () => {
       pop();
-      const index = stack.indexOf(entry);
-      if (index === -1) return;
-      stack.splice(index, 1);
+      if (popped) return;
+      popped = true;
+      upstream.splice(upstream.lastIndexOf(scope), 1);
       notify();
     };
   };
-  keymap.pushScope = (scope) => pushEntry(scope, scope === DIALOG_SCOPE ? UPSTREAM : null);
 
-  const pops = new Map<OverlayLayer, () => void>();
-  // A listener may read the stack while it changes; that read waits for the change to end.
-  let syncing = false;
-  const sync = () => {
-    if (syncing) return;
+  let ours: readonly OverlayLayer[] = [];
+  let popOurs: (() => void) | undefined;
+  /**
+   * Reads the overlays again and tells nobody: a read may run in a render. It says whether
+   * they changed. Removing an overlay fires no event, so every read of the stack starts here.
+   */
+  const read = (): boolean => {
     const open = layers.get();
-    if (open.length === pops.size && open.every((layer) => pops.has(layer))) return;
-    syncing = true;
-    const loud = !quiet;
-    quiet = true;
-    try {
-      for (const [layer, pop] of pops) {
-        if (!open.includes(layer)) {
-          pops.delete(layer);
-          pop();
-        }
-      }
-      for (const layer of open) {
-        if (!pops.has(layer)) pops.set(layer, pushEntry(DIALOG_SCOPE, layer));
-      }
-    } finally {
-      syncing = false;
-      quiet = !loud;
+    if (open.length === ours.length && open.every((layer, index) => layer === ours[index])) {
+      return false;
     }
-    notify();
+    ours = open;
+    if (open.length > 0 && popOurs === undefined) popOurs = push(DIALOG_SCOPE);
+    if (open.length === 0 && popOurs !== undefined) {
+      popOurs();
+      popOurs = undefined;
+    }
+    return true;
   };
-  sync();
+  const sync = () => {
+    if (read()) notify();
+  };
+  read();
   layers.subscribe(sync);
-  // Removing an overlay with the focus in it fires no focus event. So each key press reads the
-  // overlays again before the engine picks the scopes it consults, and so does each read below.
+  // Before the engine picks the scopes a key press consults.
   const handleKeyDown = keymap.handleKeyDown;
   keymap.handleKeyDown = (event) => {
     sync();
     return handleKeyDown(event);
   };
-  const refresh = () => {
-    quiet = true;
-    try {
-      sync();
-    } finally {
-      quiet = false;
-    }
-  };
 
-  const dialogs = () => {
-    refresh();
-    return stack.flatMap(({ owner }) => (owner === null ? [] : [owner]));
-  };
+  const upstreamDialog = () => upstream.includes(DIALOG_SCOPE);
   const tracker: EngineStack = {
-    top: () => dialogs().at(-1),
+    top() {
+      read();
+      return upstreamDialog() ? UPSTREAM : ours.at(-1);
+    },
     passes(reach) {
-      const open = dialogs();
+      read();
       return (
-        open.length > 0 &&
-        open.every(
-          (owner) =>
-            owner !== UPSTREAM &&
-            (reach === "under-all"
-              ? owner.kind !== "alert-dialog"
-              : GLOBAL_COMMANDS_RUN_UNDER[owner.kind])
+        !upstreamDialog() &&
+        ours.length > 0 &&
+        ours.every(({ kind }) =>
+          reach === "under-all" ? kind !== "alert-dialog" : kind === "passthrough"
         )
       );
     },
     liveScopes() {
-      refresh();
-      if (stack.some(({ scope }) => scope === DIALOG_SCOPE)) return [DIALOG_SCOPE];
-      return [...new Set<KeymapScope>(["global", ...stack.map(({ scope }) => scope)])];
+      read();
+      if (upstreamDialog() || ours.length > 0) return [DIALOG_SCOPE];
+      return [...new Set<KeymapScope>(["global", ...upstream])];
     },
     subscribe(listener) {
       listeners.add(listener);

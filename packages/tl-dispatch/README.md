@@ -70,8 +70,8 @@ The files of `src/commands`, one role each:
   `upstream-labels.ts`: the sheet's labels for upstream's bindings.
 - `schema.ts`: what a command, a context and a catalog are; `createCatalog` checks a catalog.
 - `keys.ts`: the checks the catalog runs on a key. `key-chips.ts`: the chips a key shows as.
-- `focused-overlay.ts`: the overlays over the page, read from the DOM: each open modal one and
-  each one the focus is inside. `engine-stack.ts`: upstream's key engine's scope stack under
+- `focused-overlay.ts`: the overlays over the page, read from the DOM in the order the page
+  stacks them: each open modal one, then each other one the focus is inside. `engine-stack.ts`: upstream's key engine's scope stack under
   them. `bindings.ts`: the bindings a context registers with it.
 - `actions.ts`: `defineActions`. `command-store.ts`: the mounted commands.
   `use-register-commands.ts` and `use-command.ts`: the hooks that register and read them.

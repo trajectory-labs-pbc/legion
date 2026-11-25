@@ -136,7 +136,7 @@ describe("the shortcuts sheet's rows", () => {
     keymap.register("inbox", [page("archive", "e", "Archive")]);
     keymap.pushScope("inbox");
     keymap.register(DIALOG_SCOPE, [page("save", "$mod+Enter", "Save")]);
-    layers.open("drawer");
+    layers.open("passthrough");
     expect(sheet()).toEqual([
       ["General", ["Create issue: c", "Next: j | ArrowDown"]],
       ["Layout", ["Open the inbox: i"]],

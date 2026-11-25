@@ -124,7 +124,7 @@ describe("ShortcutsSheet", () => {
 
   test("opens under a dialog or a sheet of ours, and not under an alert dialog", () => {
     mount();
-    openLayer("dialog");
+    openLayer("overlay");
     press("?", { shiftKey: true });
     expect(sheet()).not.toBeNull();
     // Under our dialog only `under-all` commands run, so the global keys that stop there are not listed.
@@ -154,7 +154,7 @@ describe("ShortcutsSheet", () => {
 
   test("under a sheet of ours only ? is listed, as only ? runs there", () => {
     mount();
-    openLayer("sheet");
+    openLayer("overlay");
     press("?", { shiftKey: true });
     expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
   });

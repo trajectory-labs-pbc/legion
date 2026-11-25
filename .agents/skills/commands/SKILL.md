@@ -60,8 +60,8 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`). `src/commands/engine-stack.ts` follows the engine's scope stack and the overlays over the page, and `bindings.ts` writes a context's commands as the engine's bindings.
 
-- Only the top overlay's commands run. `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup: each open dialog, alert dialog and sheet, and each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
-- A global command runs under an overlay only where `GLOBAL_COMMANDS_RUN_UNDER` lets that kind through. Today only a drawer does: a sheet whose popup has the `data-global-keys` attribute, as the navigation drawer's has.
+- Only the top overlay's commands run. `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup, in the order the page stacks them: each open dialog, alert dialog and sheet, then each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
+- An overlay is one of three kinds. A `passthrough` one lets the global commands run: a popup with the `data-global-keys` attribute, as the navigation drawer's has. An `alert-dialog` stops every command. Any other stops all but the `under-all` ones.
 - `overlays: "under-all"` lets a global command run under every overlay but an alert dialog. `help` (`?`) uses it.
 - Never turn a command off in a component by checking focus or DOM roles: the engine does it once, for every command. Never deactivate a scope when an overlay opens. Closing the overlay brings the scope back, and focus returns to where it was.
 - A key that a focused text control takes (letters, `/`) does not fire there. `inEditable: true` is for the few commands that must, such as `$mod+k`.

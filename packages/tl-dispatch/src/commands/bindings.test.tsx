@@ -1,5 +1,17 @@
 import { describe, expect, test } from "bun:test";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+} from "@legion/ui/components/alert-dialog";
 import { Dialog, DialogContent, DialogTitle } from "@legion/ui/components/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@legion/ui/components/select";
 import {
   appKeymap,
   createKeymap,
@@ -115,9 +127,9 @@ describe("global commands under overlays", () => {
     expect(fired).toEqual(["global.create", "global.go-inbox"]);
   });
 
-  test("run under a drawer of ours, and stop under a sheet, a dialog or a menu", () => {
+  test("run under an overlay of ours that passes them, and stop under any other", () => {
     const { keymap, layers, fired } = setup();
-    for (const kind of ["sheet", "drawer", "dialog", "menu", "alert-dialog"] as const) {
+    for (const kind of ["overlay", "passthrough", "alert-dialog"] as const) {
       const layer = layers.open(kind);
       press(keymap, "c");
       layer.close();
@@ -127,7 +139,7 @@ describe("global commands under overlays", () => {
 
   test("the help key reaches under every overlay of ours but an alert dialog, and not upstream's", () => {
     const { keymap, layers, fired } = setup();
-    for (const kind of ["dialog", "menu", "popover", "select", "sheet", "alert-dialog"] as const) {
+    for (const kind of ["overlay", "passthrough", "alert-dialog"] as const) {
       const layer = layers.open(kind);
       press(keymap, "?", { shiftKey: true });
       layer.close();
@@ -135,7 +147,7 @@ describe("global commands under overlays", () => {
     const close = keymap.pushScope(DIALOG_SCOPE);
     press(keymap, "?", { shiftKey: true });
     close();
-    expect(fired).toEqual(Array(5).fill("global.help"));
+    expect(fired).toEqual(Array(2).fill("global.help"));
   });
 
   test("only a global command reaches under overlays", () => {
@@ -154,13 +166,13 @@ describe("global commands under overlays", () => {
 
   test("stop under a drawer once one of upstream's dialogs is open, above it or below", () => {
     const { keymap, layers, fired } = setup();
-    const sheet = layers.open("drawer");
+    const sheet = layers.open("passthrough");
     const closeAbove = keymap.pushScope(DIALOG_SCOPE);
     press(keymap, "c");
     closeAbove();
     sheet.close();
     const closeBelow = keymap.pushScope(DIALOG_SCOPE);
-    const above = layers.open("drawer");
+    const above = layers.open("passthrough");
     press(keymap, "c");
     above.close();
     closeBelow();
@@ -170,7 +182,7 @@ describe("global commands under overlays", () => {
 
   test("leave `$mod+k` to upstream's palette when it opens above a drawer of ours", () => {
     const { keymap, layers, fired } = setup();
-    const sheet = layers.open("drawer");
+    const sheet = layers.open("passthrough");
     press(keymap, "k", { ctrlKey: true });
     const closePalette = openUpstreamPalette(keymap, fired);
     press(keymap, "k", { ctrlKey: true });
@@ -183,11 +195,11 @@ describe("global commands under overlays", () => {
 describe("an overlay's own commands", () => {
   test("run only while its layer is on top of every dialog of ours", () => {
     const { keymap, layers, dialogs, fired } = setup();
-    const sheet = layers.open("sheet");
+    const sheet = layers.open("overlay");
     const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
     keymap.register(own.scope, own.own);
     press(keymap, "j");
-    const menu = layers.open("menu");
+    const menu = layers.open("overlay");
     press(keymap, "j");
     menu.close();
     press(keymap, "j");
@@ -197,7 +209,7 @@ describe("an overlay's own commands", () => {
 
   test("stop while one of upstream's dialogs is above the layer", () => {
     const { keymap, layers, dialogs, fired } = setup();
-    const sheet = layers.open("sheet");
+    const sheet = layers.open("overlay");
     const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
     keymap.register(own.scope, own.own);
     const close = keymap.pushScope(DIALOG_SCOPE);
@@ -213,7 +225,7 @@ describe("an overlay's own commands", () => {
     expect(() => contextBindings(catalog, "sheet", recorder("sheet", []), dialogs)).toThrow(
       "takes its layer"
     );
-    const layer = layers.open("sheet");
+    const layer = layers.open("overlay");
     expect(() =>
       contextBindings(catalog, "global", recorder("global", []), dialogs, layer)
     ).toThrow("takes its layer");
@@ -252,7 +264,7 @@ describe("useRegisterCommands on the app's engine", () => {
     tap("c");
     let sheet: ReturnType<typeof openAppLayer> | undefined;
     settle(() => {
-      sheet = openAppLayer("drawer");
+      sheet = openAppLayer("passthrough");
     });
     tap("?", { shiftKey: true });
     const palette = render(<UpstreamPalette fired={fired} />);
@@ -309,6 +321,56 @@ describe("useRegisterCommands on the app's engine", () => {
     }
   });
 
+  test("? does not run with the focus in a select that is open over an alert dialog", async () => {
+    const fired: string[] = [];
+    const items = [
+      { value: "open", label: "Open" },
+      { value: "done", label: "Done" },
+    ];
+    const view = render(
+      <>
+        <Shell fired={fired} />
+        <AlertDialog open>
+          <AlertDialogContent>
+            <AlertDialogTitle>Delete the issue?</AlertDialogTitle>
+            <Select defaultValue="open" items={items} open>
+              <SelectTrigger aria-label="Status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+    try {
+      const popup = (slot: string) =>
+        document.body.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
+      const option = () => popup("select-content")?.querySelector<HTMLElement>('[role="option"]');
+      for (let tries = 0; tries < 40 && option() === undefined; tries += 1) {
+        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      }
+      settle(() => option()?.focus());
+      // The select's popup is in a portal: the focus is in it, and outside the alert dialog's.
+      expect(popup("select-content")?.contains(document.activeElement)).toBe(true);
+      expect(popup("alert-dialog-content")?.contains(document.activeElement)).toBe(false);
+      settle(() => {
+        appKeymap.handleKeyDown(
+          new KeyboardEvent("keydown", { key: "?", shiftKey: true, cancelable: true })
+        );
+      });
+      expect(fired).toEqual([]);
+    } finally {
+      view.unmount();
+    }
+  });
+
   test("a new label reaches the engine's list, which copies a label when it registers", () => {
     const labelled = (label: string) => {
       return specsFor(appCatalog, "global", (command) => ({
@@ -346,7 +408,7 @@ describe("useRegisterCommands on the app's engine", () => {
     // Control: under a drawer of ours the copies are there.
     let drawer: ReturnType<typeof openAppLayer> | undefined;
     settle(() => {
-      drawer = openAppLayer("drawer");
+      drawer = openAppLayer("passthrough");
     });
     expect(copies()).toContain(`global.go-inbox${UNDER_OVERLAY}`);
     settle(() => drawer?.close());
