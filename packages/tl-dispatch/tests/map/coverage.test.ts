@@ -195,8 +195,33 @@ describe("the view map on ordinary upstream churn", () => {
     expect(
       failing(["features/b/Added.tsx"], [["features/b/Added.tsx", ["features/b/B.tsx"]]])
     ).toEqual([
-      "features/b/Added.tsx is new upstream, and only page:b loads it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+      "features/b/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
     ]);
+  });
+
+  test("a file upstream adds under a view of that page a shared file also loads is named", () => {
+    const shared: Owner[] = [
+      ...map,
+      { name: "shared:refs", globs: ["features/refs/**"], list: "src/views.ts sharedViews.refs" },
+    ];
+    const graph: [string, string[]][] = [
+      ["features/b/B.tsx", ["page:b", "features/refs/Ref.tsx"]],
+      ["features/refs/Ref.tsx", ["shell"]],
+      ["features/b/Panel.tsx", ["features/b/B.tsx"]],
+      ["features/b/Row.tsx", ["features/b/Panel.tsx"]],
+    ];
+    const more = ["features/refs/Ref.tsx", "features/b/Panel.tsx", "features/b/Row.tsx"];
+    expect(failing(more, graph, shared)).toEqual([
+      "features/b/Panel.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+      "features/b/Row.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+    ]);
+  });
+
+  test("a new file a page this app serves and another owner both load is not that page's", () => {
+    const graph: [string, string[]][] = [
+      ["features/new/New.tsx", ["features/b/B.tsx", "features/shell/Shell.tsx"]],
+    ];
+    expect(failing(["features/new/New.tsx"], graph)).toEqual([]);
   });
 
   test("a renamed file of a page this app serves is named", () => {
