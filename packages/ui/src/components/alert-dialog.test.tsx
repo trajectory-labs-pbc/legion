@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "bun:test";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createRef } from "react";
 
 import {
   AlertDialog,
@@ -60,21 +61,22 @@ describe("AlertDialog", () => {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 
-  it("opens with the focus on Cancel, wherever Cancel sits", async () => {
+  it("opens with the focus on Cancel, wherever Cancel sits and whatever ref it is given", async () => {
+    const ref = createRef<HTMLButtonElement>();
     render(
       <AlertDialog defaultOpen>
         <AlertDialogContent>
           <AlertDialogTitle>Archive the issue?</AlertDialogTitle>
           <AlertDialogFooter>
             <AlertDialogAction>Archive</AlertDialogAction>
-            <AlertDialogCancel>Keep</AlertDialogCancel>
+            <AlertDialogCancel ref={ref}>Keep</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     );
-    await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep" }))
-    );
+    const keep = await screen.findByRole("button", { name: "Keep" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    expect(ref.current?.isSameNode(keep)).toBe(true);
   });
 
   it("closes after its action runs, unless the action prevents it", async () => {

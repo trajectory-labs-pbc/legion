@@ -15,7 +15,6 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
         "group/input-group relative flex h-8 w-full min-w-0 items-center rounded-md border border-input bg-field",
         "has-[[data-slot=input-group-control]:focus-visible]:outline-2 has-[[data-slot=input-group-control]:focus-visible]:outline-offset-2 has-[[data-slot=input-group-control]:focus-visible]:outline-focus",
         "has-[[data-slot][aria-invalid=true]]:border-danger",
-        "in-data-[slot=combobox-content]:has-[[data-slot=input-group-control]:focus-visible]:outline-0",
         "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>textarea]:h-auto",
         "has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=inline-start]]:[&>input]:pl-1.5",
         className

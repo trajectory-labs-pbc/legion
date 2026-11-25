@@ -119,16 +119,18 @@ function AlertDialogAction({
   );
 }
 
+// The caller's ref goes on the rendered button, so it does not replace the one focus starts from.
 function AlertDialogCancel({
   variant = "outline",
   size = "default",
+  ref,
   ...props
 }: AlertDialogPrimitive.Close.Props & ButtonVariants) {
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       ref={useContext(CancelRefContext)}
-      render={<Button variant={variant} size={size} />}
+      render={<Button ref={ref} variant={variant} size={size} />}
       {...props}
     />
   );
