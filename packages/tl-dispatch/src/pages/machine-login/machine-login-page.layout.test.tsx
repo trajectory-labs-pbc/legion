@@ -91,7 +91,7 @@ test("one 720 px column with one primary action: Look up, then Approve once a re
   expect(screen.getByRole("button", { name: "Look up" }).className).toContain("border-input");
 });
 
-test("the headline names the machine and what it asks, over two duration rows", async () => {
+test("the headline names the machine and what it asks, over its durations and its approver", async () => {
   stub();
   renderPage();
   await lookUp();
@@ -99,8 +99,9 @@ test("the headline names the machine and what it asks, over two duration rows", 
   const expires = screen.getByText(
     (_, element) => element?.tagName === "P" && /^Request expires/.test(element.textContent ?? "")
   );
-  for (const row of [lasts, expires]) expect(row.className).toContain("h-8");
-  expect(screen.queryByText(/Approver|Anyone signed in|Machine login$/)).toBeNull();
+  const approver = screen.getByText("Approver: ada");
+  for (const row of [lasts, expires, approver]) expect(row.className).toContain("h-8");
+  expect(screen.queryByText(/Machine login$/)).toBeNull();
 });
 
 test("the policy text sits behind a link, and Revoke is a quiet danger button", async () => {

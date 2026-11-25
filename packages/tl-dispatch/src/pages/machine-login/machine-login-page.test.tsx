@@ -156,6 +156,7 @@ test("MLP-04 a pending service login offers Deny alone", async () => {
     );
     expect(await screen.findByRole("button", { name: "Deny" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.getByText("Approver: Anyone signed in to Dispatch")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Deny" }));
     await waitFor(() =>

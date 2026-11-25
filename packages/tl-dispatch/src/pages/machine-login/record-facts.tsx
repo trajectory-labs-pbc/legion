@@ -20,7 +20,10 @@ function formatLifetime(seconds: number | null): string {
   return `${seconds} second${seconds === 1 ? "" : "s"}`;
 }
 
-/** A looked-up machine login: what it asks as the headline, its two durations, and its reason. */
+// The approver a record names when any signed-in person may decide it.
+const ANYONE_APPROVER = "anyone";
+
+/** A looked-up machine login: what it asks, its durations, its approver and its reason. */
 export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
   const pending = record.state === "pending";
   return (
@@ -40,6 +43,10 @@ export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
             <Timestamp at={record.expires_at} className="tabular-nums" />
           </p>
         ) : null}
+        <p className="flex h-8 items-center">
+          Approver:{" "}
+          {record.approver === ANYONE_APPROVER ? "Anyone signed in to Dispatch" : record.approver}
+        </p>
         <p className="text-xs text-muted-foreground">
           Requested <Timestamp at={record.requested_at} className="tabular-nums" /> · Policy{" "}
           <span className="font-mono">{record.rules_version}</span>
