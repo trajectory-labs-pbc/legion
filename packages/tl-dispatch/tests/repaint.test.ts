@@ -286,15 +286,15 @@ function specificity(selector: string): number {
   const attributes = take(/\[[^\]]*\]/g);
   const elements = take(/::[\w-]+/g);
   const ids = take(/#(?:\\.|[\w-])+/g);
-  const classes = take(/[.:](?:\\.|[\w-])+/g);
-  return total + ids * 1e6 + (classes + attributes) * 1e3 + elements + take(/[a-z][\w-]*/gi);
+  const marks = attributes + take(/[.:](?:\\.|[\w-])+/g);
+  return total + ids * 1e6 + marks * 1e3 + elements + take(/[a-z][\w-]*/gi);
 }
 
-/** The first element `html` holds that matches `selector`. */
-function element(html: string, selector: string): Element {
+/** The link `html` holds. */
+function link(html: string): Element {
   const host = document.createElement("div");
   host.innerHTML = html;
-  return host.querySelector(selector) as Element;
+  return host.querySelector("a") as Element;
 }
 
 const UNDERLINE = {
@@ -557,7 +557,7 @@ function stepProblems(
     for (const [name, { from, to, inside }] of Object.entries(steps)) {
       // What the rule at `inside` sets on its own element, over what the root holds.
       const variables = new Map(root);
-      for (const { property, value, context } of declarations) {
+      for (const { property, value, context } of inside === undefined ? [] : declarations) {
         if (context.join() === inside) variables.set(property, value);
       }
       const [a, b] = [from, to].map((pair) =>
@@ -736,7 +736,7 @@ describe("the repaint of upstream's pages", async () => {
 
   test("underlines a link in a document and in a comment at rest", () => {
     for (const html of [DOCUMENT_LINK, COMMENT_LINK]) {
-      expect(underline(documentPage, element(html, "a"))).toEqual({
+      expect(underline(documentPage, link(html))).toEqual({
         "text-decoration-color": "var(--muted-foreground)",
         "text-decoration-line": "underline",
         "text-decoration-thickness": "1px",
@@ -759,7 +759,7 @@ describe("the repaint of upstream's pages", async () => {
       declaration.property === "text-decoration-line";
     expect(documentPage.filter(own)).toHaveLength(1);
     const without = documentPage.filter((declaration) => !own(declaration));
-    expect(underline(without, element(DOCUMENT_LINK, "a"))["text-decoration-line"]).toBe("none");
+    expect(underline(without, link(DOCUMENT_LINK))["text-decoration-line"]).toBe("none");
   });
 
   test("replaces every blue literal a rule of the compiled stylesheet holds", () => {
