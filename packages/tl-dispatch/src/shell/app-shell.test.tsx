@@ -1,29 +1,27 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
+import { http } from "msw";
 import { act } from "react";
 
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AppShell } from "./app-shell";
 
-const realFetch = globalThis.fetch;
 const realConfirm = window.confirm;
 beforeAll(() => {
-  // Reads never answer; a sign-out is refused.
-  globalThis.fetch = Object.assign(
-    (input: RequestInfo | URL) =>
-      String(input).includes("/auth/logout")
-        ? Promise.resolve(new Response("{}", { status: 403 }))
-        : new Promise<Response>(() => {}),
-    { preconnect: realFetch.preconnect }
-  );
   window.confirm = () => true;
 });
 afterAll(() => {
-  globalThis.fetch = realFetch;
   window.confirm = realConfirm;
+});
+beforeEach(() => {
+  holdShellReads();
+  // A sign-out is refused.
+  answerRequests(http.post("/auth/logout", () => Response.json({}, { status: 403 })));
 });
 
 const mounted: { unmount(): void }[] = [];
