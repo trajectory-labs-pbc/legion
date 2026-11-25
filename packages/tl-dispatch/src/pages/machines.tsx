@@ -1,18 +1,15 @@
-import { lazy } from "react";
-
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const MachinesPage = lazy(() =>
-  import("@upstream-dispatch/features/machines/MachinesPage").then((module) => ({
-    default: module.MachinesPage,
-  }))
+const MachinesPage = lazyNamed(
+  () => import("@upstream-dispatch/features/machines/MachinesPage"),
+  "MachinesPage"
 );
-const MachinePage = lazy(() =>
-  import("@upstream-dispatch/features/machines/MachinePage").then((module) => ({
-    default: module.MachinePage,
-  }))
+const MachinePage = lazyNamed(
+  () => import("@upstream-dispatch/features/machines/MachinePage"),
+  "MachinePage"
 );
 
 export const machines = {

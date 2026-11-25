@@ -1,18 +1,15 @@
-import { lazy } from "react";
-
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const DeliveryPage = lazy(() =>
-  import("@upstream-dispatch/features/delivery/DeliveryPage").then((module) => ({
-    default: module.DeliveryPage,
-  }))
+const DeliveryPage = lazyNamed(
+  () => import("@upstream-dispatch/features/delivery/DeliveryPage"),
+  "DeliveryPage"
 );
-const PipelinePage = lazy(() =>
-  import("@upstream-dispatch/features/delivery/PipelinePage").then((module) => ({
-    default: module.PipelinePage,
-  }))
+const PipelinePage = lazyNamed(
+  () => import("@upstream-dispatch/features/delivery/PipelinePage"),
+  "PipelinePage"
 );
 
 export const delivery = {

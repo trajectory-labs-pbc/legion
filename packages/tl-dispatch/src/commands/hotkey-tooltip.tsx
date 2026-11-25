@@ -1,4 +1,3 @@
-import { importWhenOnline } from "@upstream-dispatch/features/shell/DeploymentResilience";
 import {
   cloneElement,
   type ReactElement,
@@ -10,6 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { loadNamed } from "@/loading/lazy-named";
 import type { CommandId } from "./app-catalog";
 import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
 import { ariaKeyShortcuts } from "./key-chips";
@@ -28,9 +28,9 @@ export function loadHotkeyTooltip(
   load: () => Promise<{ HotkeyTooltipPopup: typeof HotkeyTooltipPopup }> = () =>
     import("./hotkey-tooltip-popup")
 ): Promise<void> {
-  loading ??= importWhenOnline(load).then(
-    (module) => {
-      popup = module.HotkeyTooltipPopup;
+  loading ??= loadNamed(load, "HotkeyTooltipPopup").then(
+    (loaded) => {
+      popup = loaded;
       for (const listener of listeners) listener();
     },
     (error: unknown) => {

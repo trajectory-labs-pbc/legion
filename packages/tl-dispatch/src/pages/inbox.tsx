@@ -4,17 +4,17 @@ import { ANSWERS_PATH } from "@upstream-dispatch/features/refs/routes";
 import { READING_PANE_QUERY, useMediaQuery } from "@upstream-dispatch/features/shell/useDialog";
 import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 import { linkHoverText, linkText } from "@upstream-dispatch/theme/classes";
-import { lazy, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink, Redirect } from "@/navigation/page-link";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const AnswersPage = lazy(() =>
-  import("@upstream-dispatch/features/answers/AnswersPage").then((module) => ({
-    default: module.AnswersPage,
-  }))
+const AnswersPage = lazyNamed(
+  () => import("@upstream-dispatch/features/answers/AnswersPage"),
+  "AnswersPage"
 );
 
 export function InboxPage(): ReactNode {

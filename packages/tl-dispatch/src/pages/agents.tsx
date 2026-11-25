@@ -5,31 +5,27 @@ import {
   AGENT_LIVE_PATH,
   liveViewSessionOf,
 } from "@upstream-dispatch/features/refs/routes";
-import { lazy } from "react";
 
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const AgentsPage = lazy(() =>
-  import("@upstream-dispatch/features/agents/AgentsPage").then((module) => ({
-    default: module.AgentsPage,
-  }))
+const AgentsPage = lazyNamed(
+  () => import("@upstream-dispatch/features/agents/AgentsPage"),
+  "AgentsPage"
 );
-const BroadcastsPage = lazy(() =>
-  import("@upstream-dispatch/features/agents/BroadcastsPage").then((module) => ({
-    default: module.BroadcastsPage,
-  }))
+const BroadcastsPage = lazyNamed(
+  () => import("@upstream-dispatch/features/agents/BroadcastsPage"),
+  "BroadcastsPage"
 );
-const BroadcastPage = lazy(() =>
-  import("@upstream-dispatch/features/agents/BroadcastPage").then((module) => ({
-    default: module.BroadcastPage,
-  }))
+const BroadcastPage = lazyNamed(
+  () => import("@upstream-dispatch/features/agents/BroadcastPage"),
+  "BroadcastPage"
 );
-const AgentArtifactPage = lazy(() =>
-  import("@upstream-dispatch/features/artifacts/AgentArtifactPage").then((module) => ({
-    default: module.AgentArtifactPage,
-  }))
+const AgentArtifactPage = lazyNamed(
+  () => import("@upstream-dispatch/features/artifacts/AgentArtifactPage"),
+  "AgentArtifactPage"
 );
 
 export const agents = {

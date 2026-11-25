@@ -1,14 +1,13 @@
 import { routeHasMargin, routeProjectOf } from "@upstream-dispatch/features/refs/routes";
-import { lazy } from "react";
 
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const DocumentPage = lazy(() =>
-  import("@upstream-dispatch/features/document/DocumentPage").then((module) => ({
-    default: module.DocumentPage,
-  }))
+const DocumentPage = lazyNamed(
+  () => import("@upstream-dispatch/features/document/DocumentPage"),
+  "DocumentPage"
 );
 
 export const projectDocument = {

@@ -1,13 +1,11 @@
-import { lazy } from "react";
-
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const SettingsPage = lazy(() =>
-  import("@upstream-dispatch/features/settings/SettingsPage").then((module) => ({
-    default: module.SettingsPage,
-  }))
+const SettingsPage = lazyNamed(
+  () => import("@upstream-dispatch/features/settings/SettingsPage"),
+  "SettingsPage"
 );
 
 export const settings = {

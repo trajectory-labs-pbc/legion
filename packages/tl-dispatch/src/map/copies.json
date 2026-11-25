@@ -376,5 +376,12 @@
     "copy": "src/pages/machine-login/revocable-table.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0ee3aa5cad6b6d25af2c57c3ce8d3b0a8d436a154d6f744363ea6a482221bd78"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/shell/NotFoundPage.tsx",
+    "part": "*",
+    "copy": "src/pages/not-found/not-found.tsx",
+    "commit": "8f3d55230c6b7af1cdb6c04b41bdb1697949d41e",
+    "sha256": "f058f5f2a86caab994efe5d57919e0598e126750e9418c93c42309e701a8bb32"
   }
 ]

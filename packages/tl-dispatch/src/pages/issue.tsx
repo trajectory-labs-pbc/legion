@@ -4,16 +4,15 @@ import {
   routeHasMargin,
   routeProjectOf,
 } from "@upstream-dispatch/features/refs/routes";
-import { lazy } from "react";
 
+import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const IssuePage = lazy(() =>
-  import("@upstream-dispatch/features/issue-page/IssuePage").then((module) => ({
-    default: module.IssuePage,
-  }))
+const IssuePage = lazyNamed(
+  () => import("@upstream-dispatch/features/issue-page/IssuePage"),
+  "IssuePage"
 );
 
 export const issue = {

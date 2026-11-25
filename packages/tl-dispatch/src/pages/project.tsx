@@ -1,14 +1,13 @@
 import { routeProjectOf } from "@upstream-dispatch/features/refs/routes";
-import { lazy } from "react";
 
+import { lazyNamed } from "@/loading/lazy-named";
 import { type PageAddress, pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const ProjectPage = lazy(() =>
-  import("@upstream-dispatch/features/project/ProjectPage").then((module) => ({
-    default: module.ProjectPage,
-  }))
+const ProjectPage = lazyNamed(
+  () => import("@upstream-dispatch/features/project/ProjectPage"),
+  "ProjectPage"
 );
 
 const layout = ({ pathname }: PageAddress) => ({ project: routeProjectOf(pathname) });
