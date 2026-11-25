@@ -8,14 +8,13 @@ export type PageSearch<Search extends string> = { readonly [Key in Search]?: str
 
 /** A read a page makes first, which a link may start before the page opens. */
 export interface Prefetch {
-  queryKey: QueryKey;
   start(client: QueryClient): Promise<void>;
 }
 
 export function prefetchOf<TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
   options: FetchQueryOptions<TQueryFnData, TError, TData, TQueryKey>
 ): Prefetch {
-  return { queryKey: options.queryKey, start: (client) => client.prefetchQuery(options) };
+  return { start: (client) => client.prefetchQuery(options) };
 }
 
 /** The address a route is open at, as text: upstream's parsers read it. */
