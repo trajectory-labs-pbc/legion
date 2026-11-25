@@ -78,8 +78,9 @@ The files of `src/commands`, one role each:
 - `live-shortcuts.ts`: the keys that run now, as rows. `use-shortcuts-sheet.ts`: the sheet's
   state. `shortcuts-sheet.tsx`: the sheet, whose view (`shortcuts-sheet-view.tsx`) is a chunk
   that loads on the first `?`: it writes each key as chips and draws the UI package's sheet.
-- `command-button.tsx` and `hotkey-tooltip.tsx`, whose popup is the UI package's `KeyTooltip`,
-  a chunk that loads after the first paint.
+- `command-button.tsx` and `hotkey-tooltip.tsx`, whose popup (`hotkey-tooltip-popup.tsx`) is a
+  chunk that loads after the first paint. `use-kept-focus.ts` keeps the focus on the control
+  when the popup's code arrives and the control is drawn again.
 
 `src/loading` holds the chunk loaders: `lazyNamed(load, name)` draws a module's component once
 its chunk arrives, `lazyRegion` keeps a failed chunk to its own region, and both load again when

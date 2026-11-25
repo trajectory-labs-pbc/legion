@@ -692,33 +692,6 @@
       ]
     },
     {
-      "name": "key-tooltip",
-      "type": "registry:ui",
-      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
-      "files": [
-        {
-          "path": "packages/ui/src/components/key-tooltip.tsx",
-          "type": "registry:ui",
-          "target": "@ui/key-tooltip.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/kbd.tsx",
-          "type": "registry:ui",
-          "target": "@ui/kbd.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/tooltip.tsx",
-          "type": "registry:ui",
-          "target": "@ui/tooltip.tsx"
-        },
-        {
-          "path": "packages/ui/src/lib/overlay-styles.ts",
-          "type": "registry:lib",
-          "target": "@lib/overlay-styles.ts"
-        }
-      ]
-    },
-    {
       "name": "label",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],

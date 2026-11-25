@@ -1,13 +1,13 @@
-import type { KeyTooltip } from "@legion/ui/components/key-tooltip";
 import { cloneElement, type ReactElement, type Ref, useEffect, useSyncExternalStore } from "react";
 
 import { loadNamed } from "@/loading/lazy-named";
 import type { CommandId } from "./app-catalog";
+import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
 import { ariaKeyShortcuts } from "./key-chips";
 import { useCommand, useCommandShortcut } from "./use-command";
 import { useKeptFocus } from "./use-kept-focus";
 
-let popup: typeof KeyTooltip | undefined;
+let popup: typeof HotkeyTooltipPopup | undefined;
 let loading: Promise<void> | undefined;
 const listeners = new Set<() => void>();
 
@@ -17,10 +17,10 @@ const listeners = new Set<() => void>();
  * its keys and no tooltip, and the stale-chunk recovery reloads a page a deploy outdated.
  */
 export function loadHotkeyTooltip(
-  load: () => Promise<{ KeyTooltip: typeof KeyTooltip }> = () =>
-    import("@legion/ui/components/key-tooltip")
+  load: () => Promise<{ HotkeyTooltipPopup: typeof HotkeyTooltipPopup }> = () =>
+    import("./hotkey-tooltip-popup")
 ): Promise<void> {
-  loading ??= loadNamed(load, "KeyTooltip").then(
+  loading ??= loadNamed(load, "HotkeyTooltipPopup").then(
     (loaded) => {
       popup = loaded;
       for (const listener of listeners) listener();
