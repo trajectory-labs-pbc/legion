@@ -63,7 +63,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
         <SidebarRegion
           folded={preferences.sidebarHidden}
           inDrawer={shell.inDrawer}
-          issueRail={shell.issueFrame && shell.railFits}
+          issueRail={shell.issueFrame && !shell.compact}
           navigationOpen={overlays.navigationOpen}
           onOpenNavigation={overlays.openNavigation}
           project={shell.project}

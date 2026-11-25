@@ -107,7 +107,7 @@ export function MachineLoginPage(): ReactNode {
             />
           ) : view.record.state === "pending" ? (
             <DecisionButtons
-              approve={view.record.service === null ? approve : undefined}
+              approve={approvable ? approve : undefined}
               deny={deny}
               submitGuard={submitGuard}
             />

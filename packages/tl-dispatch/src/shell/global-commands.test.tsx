@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { join } from "node:path";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
+import { APP_CONTEXTS } from "@/commands/app-catalog";
 import { UNDER_OVERLAY } from "@/commands/bindings";
-import { keyRegistrations } from "../../tests/key-registrations";
 import { render, settle } from "../../tests/react";
-import { UPSTREAM_WEB } from "../../tests/source";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";
 
 function Harness({ actions }: { actions: GlobalActions }) {
@@ -52,18 +50,15 @@ const globalBindings = () =>
     .filter((binding) => binding.scope === "global" && !binding.id.endsWith(UNDER_OVERLAY));
 
 describe("the shell's global commands", () => {
-  test("bind upstream's shell keys and only the frame's own besides, so no upstream key changes", () => {
+  // The catalog's keys are upstream's shell keys and the frame's own (`upstream-keys.test.ts`).
+  test("bind the catalog's global keys and no other", () => {
     setup();
-    // FR5: `[` folds the sidebar beside Shift+S.
-    const own = ["["];
-    const ours = globalBindings()
-      .flatMap((binding) => binding.keys)
-      .filter((keys) => !own.includes(keys));
-    const upstream = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
-      .filter((registration) => registration.scope === "global")
-      .map((registration) => registration.keys);
-    expect(ours.filter((keys) => !upstream.includes(keys))).toEqual([]);
-    expect(upstream.filter((keys) => !ours.includes(keys))).toEqual([]);
+    const ours = globalBindings().flatMap((binding) => binding.keys);
+    const catalog = (
+      APP_CONTEXTS.find((context) => context.name === "global")?.commands ?? []
+    ).flatMap((command) => command.keys ?? []);
+    expect(ours.filter((keys) => !catalog.includes(keys))).toEqual([]);
+    expect(catalog.filter((keys) => !ours.includes(keys))).toEqual([]);
   });
 
   test("each key runs its action", () => {

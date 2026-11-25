@@ -1,8 +1,21 @@
 import { Button } from "@legion/ui/components/button";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-/** How long a read may take before its loading line shows, so a quick one draws none (ES4). */
+/** How long a read may take before its loading line shows, so a quick one draws none. */
 const LOADING_DELAY_MS = 200;
+
+type Read = Pick<UseQueryResult<unknown>, "isFetching" | "isLoadingError" | "refetch">;
+
+/** Asks every read again; undefined unless one failed with nothing to show and none is asking. */
+export function retryOf(...reads: readonly Read[]): (() => void) | undefined {
+  if (!reads.some((read) => read.isLoadingError) || reads.some((read) => read.isFetching)) {
+    return undefined;
+  }
+  return () => {
+    for (const read of reads) void read.refetch();
+  };
+}
 
 /** Whether `ms` have passed since the caller mounted. */
 function useAfter(ms: number): boolean {

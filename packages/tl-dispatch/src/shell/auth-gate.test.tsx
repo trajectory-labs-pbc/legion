@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act } from "react";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { render } from "../../tests/react";
+import { render, sleep } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AuthGate } from "./auth-gate";
 
@@ -26,8 +25,6 @@ function mount(whoami: Response | undefined) {
   cleanups.push(fetch.restore, () => view.unmount());
   return view.container;
 }
-
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 describe("AuthGate", () => {
   test("draws the skeleton while Dispatch has not said who is here, in the shell's own panel", () => {

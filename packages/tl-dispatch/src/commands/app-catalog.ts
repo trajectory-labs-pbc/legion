@@ -15,7 +15,7 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
- * binds, with the same behaviour, and `[` for the sidebar (FR5); the pages with no letter are
+ * binds, with the same behaviour, and `[` for the sidebar; the pages with no letter are
  * palette commands only. Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [

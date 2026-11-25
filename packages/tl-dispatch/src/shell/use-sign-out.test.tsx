@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act } from "react";
 
 import { json, stubFetch, waitFor } from "../../tests/fetch";
-import { render, settle } from "../../tests/react";
+import { render, settle, sleep } from "../../tests/react";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";
 
 describe("unsentLabels", () => {
@@ -28,8 +27,6 @@ const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
-
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 function mount(logout: Response) {
   const fetch = stubFetch((url) => (url.endsWith("/auth/logout") ? logout : undefined));

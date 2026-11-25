@@ -103,7 +103,7 @@ describe("upstream's shell keys", () => {
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
     const global = APP_CONTEXTS.find((context) => context.name === "global");
-    // FR5: `[` folds the sidebar beside Shift+S.
+    // The frame's own: `[` folds the sidebar beside Shift+S.
     const own = ["["];
     const catalog = (global?.commands ?? [])
       .flatMap((command) => command.keys ?? [])

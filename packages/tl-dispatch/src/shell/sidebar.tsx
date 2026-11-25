@@ -5,16 +5,17 @@ import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import { PinIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
-import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
+import { navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
-import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
 import { ReadLine } from "./read-line";
+import { RowCountMark } from "./row-count";
 
 import {
   type SectionRead,
@@ -24,11 +25,6 @@ import {
   usePinnedAgent,
   useSidebarData,
 } from "./sidebar-data";
-
-/** The destinations a `G` chord opens; their rows show it in a tooltip, never at rest. */
-const KEYED: ReadonlySet<NavName> = new Set(
-  NAV_DESTINATIONS.flatMap((destination) => ("key" in destination ? [destination.name] : []))
-);
 
 function PinnedAgentRow({
   agent,
@@ -40,6 +36,7 @@ function PinnedAgentRow({
   replace: boolean;
 }) {
   const { name, viewState, unpin } = usePinnedAgent(agent.sessionId);
+  const unpinLabel = `Unpin ${name} from the sidebar`;
   return (
     <NavRow aria-current={agent.selected ? "page" : undefined} render={<li />}>
       <AgentName
@@ -52,11 +49,11 @@ function PinnedAgentRow({
       <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
       <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
       <Button
-        aria-label={`Unpin ${name} from the sidebar`}
+        aria-label={unpinLabel}
         aria-pressed
         onClick={unpin}
         size="icon-xs"
-        title={`Unpin ${name} from the sidebar`}
+        title={unpinLabel}
         variant="ghost"
       >
         <PinIcon aria-hidden className="fill-current" />
@@ -92,68 +89,28 @@ function ItemRows({
   );
 }
 
-/** The pinned agents, or the hint that says how to pin one. */
-function PinnedAgents({
-  read,
-  onNavigate,
-  replace,
-}: {
-  read: SectionRead<SidebarAgent>;
-  onNavigate: (() => void) | undefined;
-  replace: boolean;
-}) {
-  return (
-    <FoldSection heading="Pinned agents">
-      {read.status !== "success" ? (
-        <ReadLine noun="pinned agents" retry={read.status === "error" ? read.retry : undefined} />
-      ) : read.rows.length === 0 ? (
-        <p className="px-2 text-xs text-pretty text-muted-foreground">
-          Pin an agent on the Agents page, or in its live view, to keep it here.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-0.5">
-          {read.rows.map((agent) => (
-            <PinnedAgentRow
-              agent={agent}
-              key={agent.sessionId}
-              onNavigate={onNavigate}
-              replace={replace}
-            />
-          ))}
-        </ul>
-      )}
-    </FoldSection>
-  );
-}
-
 /**
- * Issues or projects, or the read's line. With `optional`, nothing until the read has rows, so
- * the section never shows and then leaves; a failed read still says so.
+ * A folded section of rows, or its read's line. With `optional`, nothing while the read is out or
+ * has no rows, so the section never shows and then leaves; a failed read still says so.
  */
-function ItemSection({
+function SidebarSection<T>({
+  children,
   heading,
-  optional = false,
   noun,
-  onNavigate,
-  page,
+  optional = false,
   read,
 }: {
+  children: (rows: readonly T[]) => ReactNode;
   heading: string;
-  optional?: boolean;
   noun: string;
-  onNavigate: (() => void) | undefined;
-  page: typeof issue.routes.issue | typeof project.routes.overview;
-  read: SectionRead<SidebarItem>;
+  optional?: boolean;
+  read: SectionRead<T>;
 }) {
-  const empty = read.status === "pending" || (read.status === "success" && read.rows.length === 0);
-  if (optional && empty) return null;
+  const { rows, retry } = read;
+  if (optional && retry === undefined && (rows?.length ?? 0) === 0) return null;
   return (
     <FoldSection heading={heading}>
-      {read.status === "success" ? (
-        <ItemRows items={read.rows} onNavigate={onNavigate} page={page} />
-      ) : (
-        <ReadLine noun={noun} retry={read.status === "error" ? read.retry : undefined} />
-      )}
+      {rows === undefined ? <ReadLine noun={noun} retry={retry} /> : children(rows)}
     </FoldSection>
   );
 }
@@ -179,7 +136,7 @@ export function SidebarView({
   return (
     <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
-        {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => {
+        {data.destinations.map(({ name, label, icon: Icon, page, current, keyed, count }) => {
           const peekHere = peekable && name === "inbox";
           const row = (
             <NavRow
@@ -189,17 +146,12 @@ export function SidebarView({
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
-              {/* Only the Inbox takes the mark; its key tooltip covers it, so no native title. */}
-              {count?.needsYou ? (
-                <NeedsYouMark className="ml-auto" count={count.count ?? 0} title={undefined} />
-              ) : (
-                <Count className="ml-auto" value={count?.count ?? 0} />
-              )}
+              <RowCountMark className="ml-auto" count={count} />
             </NavRow>
           );
           return (
             <li className={peekHere ? "group/peek relative" : undefined} key={name}>
-              {KEYED.has(name) ? (
+              {keyed ? (
                 <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
                   {row}
                 </HotkeyTooltip>
@@ -214,22 +166,34 @@ export function SidebarView({
           );
         })}
       </ul>
-      <PinnedAgents read={data.pinnedAgents} onNavigate={onNavigate} replace={data.inLiveView} />
-      <ItemSection
-        heading="Pinned"
-        noun="pinned issues"
-        optional
-        onNavigate={onNavigate}
-        page={issue.routes.issue}
-        read={data.pinnedIssues}
-      />
-      <ItemSection
-        heading="Projects"
-        noun="projects"
-        onNavigate={onNavigate}
-        page={project.routes.overview}
-        read={data.projects}
-      />
+      <SidebarSection heading="Pinned agents" noun="pinned agents" read={data.pinnedAgents}>
+        {(agents) =>
+          agents.length === 0 ? (
+            <p className="px-2 text-xs text-pretty text-muted-foreground">
+              Pin an agent on the Agents page, or in its live view, to keep it here.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-0.5">
+              {agents.map((agent) => (
+                <PinnedAgentRow
+                  agent={agent}
+                  key={agent.sessionId}
+                  onNavigate={onNavigate}
+                  replace={data.inLiveView}
+                />
+              ))}
+            </ul>
+          )
+        }
+      </SidebarSection>
+      <SidebarSection heading="Pinned" noun="pinned issues" optional read={data.pinnedIssues}>
+        {(items) => <ItemRows items={items} onNavigate={onNavigate} page={issue.routes.issue} />}
+      </SidebarSection>
+      <SidebarSection heading="Projects" noun="projects" read={data.projects}>
+        {(items) => (
+          <ItemRows items={items} onNavigate={onNavigate} page={project.routes.overview} />
+        )}
+      </SidebarSection>
     </nav>
   );
 }

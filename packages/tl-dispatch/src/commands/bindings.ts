@@ -13,7 +13,7 @@ import {
 export const UNDER_OVERLAY = ":under-overlay";
 
 /** The binding of a typing command's keys that type a character, which stay typing in a field. */
-export const TYPED_KEYS = ":typed-keys";
+const TYPED_KEYS = ":typed-keys";
 
 /** A key that types a character: `/`, `?`, `Shift+A`. */
 const typesCharacter = (keys: string) => /^(Shift\+)?.$/.test(keys);

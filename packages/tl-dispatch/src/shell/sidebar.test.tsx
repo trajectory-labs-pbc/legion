@@ -2,14 +2,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 
-import { act } from "react";
-
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { render, settle } from "../../tests/react";
+import { render, settle, sleep } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
 import { Sidebar, SidebarView } from "./sidebar";
@@ -26,8 +24,6 @@ afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
   for (const view of mounted.splice(0)) view.unmount();
@@ -36,7 +32,7 @@ afterEach(() => {
 
 /** The section headings' fold buttons, by their words. */
 const foldsOf = (container: HTMLElement) => [
-  ...container.querySelectorAll<HTMLButtonElement>("section button[aria-controls]"),
+  ...container.querySelectorAll<HTMLButtonElement>("section button[aria-expanded]"),
 ];
 const headingsOf = (container: HTMLElement) => foldsOf(container).map((fold) => fold.textContent);
 const openOf = (container: HTMLElement) =>
@@ -142,6 +138,7 @@ const destination = (name: string, count?: SidebarData["destinations"][number]["
     icon: found.icon,
     page: NAV_PAGES[found.name],
     current: false,
+    keyed: "key" in found,
     count,
   };
 };
@@ -239,10 +236,10 @@ describe("the sidebar", () => {
   test("a pinned agent's unpin control fits its 28 px row", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { status: "success", rows: [{ sessionId: "s-1", selected: false, unread: 0 }] },
+      pinnedAgents: { rows: [{ sessionId: "s-1", selected: false, unread: 0 }], retry: undefined },
       inLiveView: false,
-      pinnedIssues: { status: "success", rows: [] },
-      projects: { status: "success", rows: [] },
+      pinnedIssues: { rows: [], retry: undefined },
+      projects: { rows: [], retry: undefined },
     });
     const unpin = [...container.querySelectorAll("button")].find((button) =>
       /^Unpin .+ from the sidebar$/.test(button.getAttribute("aria-label") ?? "")
@@ -255,26 +252,21 @@ describe("the sidebar", () => {
   test("pinned agents fold under their heading, and with none it says how to pin one", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { status: "success", rows: [] },
+      pinnedAgents: { rows: [], retry: undefined },
       inLiveView: false,
-      pinnedIssues: { status: "success", rows: [] },
-      projects: { status: "success", rows: [] },
+      pinnedIssues: { rows: [], retry: undefined },
+      projects: { rows: [], retry: undefined },
     });
-    const fold = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Pinned agents"
-    );
-    if (fold === undefined) throw new Error("no fold");
-    const list = document.getElementById(fold.getAttribute("aria-controls") ?? "");
+    const fold = foldOf(container, "Pinned agents");
+    const hint = "Pin an agent on the Agents page, or in its live view, to keep it here.";
+    const list = () => document.getElementById(fold.getAttribute("aria-controls") ?? "");
     expect(fold.getAttribute("aria-expanded")).toBe("true");
-    expect(list?.hidden).toBe(false);
-    expect(list?.textContent).toBe(
-      "Pin an agent on the Agents page, or in its live view, to keep it here."
-    );
+    expect(list()?.textContent).toBe(hint);
     settle(() => fold.click());
     expect(fold.getAttribute("aria-expanded")).toBe("false");
-    expect(list?.hidden).toBe(true);
+    expect(container.textContent).not.toContain(hint);
     settle(() => fold.click());
-    expect(list?.hidden).toBe(false);
+    expect(list()?.textContent).toBe(hint);
   });
 
   test("a read still out draws a quiet line after a moment; a failed one says so beside Retry", async () => {
@@ -286,10 +278,10 @@ describe("the sidebar", () => {
         destination("agents", { count: 0, retry: failed("agents") }),
         destination("priorities", { count: undefined, retry: failed("priorities") }),
       ],
-      pinnedAgents: { status: "error", retry: failed("pinned agents") },
+      pinnedAgents: { rows: undefined, retry: failed("pinned agents") },
       inLiveView: false,
-      pinnedIssues: { status: "error", retry: failed("pinned issues") },
-      projects: { status: "error", retry: failed("projects") },
+      pinnedIssues: { rows: undefined, retry: failed("pinned issues") },
+      projects: { rows: undefined, retry: failed("projects") },
     });
     const lines = () => [...container.querySelectorAll("p")];
     expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned agents…");
@@ -319,10 +311,10 @@ describe("the sidebar", () => {
   test("pinned issues draw nothing while their read is out, so they never show and then leave", async () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: { status: "success", rows: [] },
+      pinnedAgents: { rows: [], retry: undefined },
       inLiveView: false,
-      pinnedIssues: { status: "pending" },
-      projects: { status: "pending" },
+      pinnedIssues: { rows: undefined, retry: undefined },
+      projects: { rows: undefined, retry: undefined },
     });
     await sleep(250);
     expect(headingsOf(container)).toEqual(["Pinned agents", "Projects"]);
@@ -333,13 +325,13 @@ describe("the sidebar", () => {
   test("every section's heading folds it, and this browser keeps the fold", () => {
     const data: SidebarData = {
       destinations: [],
-      pinnedAgents: { status: "success", rows: [] },
+      pinnedAgents: { rows: [], retry: undefined },
       inLiveView: false,
       pinnedIssues: {
-        status: "success",
         rows: [{ key: "CORE-1", text: "One", openAsks: 0, current: false }],
+        retry: undefined,
       },
-      projects: { status: "success", rows: [] },
+      projects: { rows: [], retry: undefined },
     };
     const first = mountView(data);
     expect(headingsOf(first)).toEqual(["Pinned agents", "Pinned", "Projects"]);
@@ -360,10 +352,10 @@ describe("the sidebar", () => {
     try {
       const container = mountView({
         destinations: [],
-        pinnedAgents: { status: "success", rows: [] },
+        pinnedAgents: { rows: [], retry: undefined },
         inLiveView: false,
-        pinnedIssues: { status: "success", rows: [] },
-        projects: { status: "success", rows: [] },
+        pinnedIssues: { rows: [], retry: undefined },
+        projects: { rows: [], retry: undefined },
       });
       settle(() => foldOf(container, "Projects").click());
       expect(openOf(container)).toEqual([true, false]);
@@ -494,12 +486,12 @@ describe("the sidebar", () => {
         destination("agents", { count: 2 }),
         destination("priorities", { count: 3 }),
       ],
-      pinnedAgents: { status: "success", rows: [] },
+      pinnedAgents: { rows: [], retry: undefined },
       inLiveView: false,
-      pinnedIssues: { status: "success", rows: [] },
+      pinnedIssues: { rows: [], retry: undefined },
       projects: {
-        status: "success",
         rows: [{ key: "CORE", text: "Core", openAsks: 4, current: false }],
+        retry: undefined,
       },
     };
     const container = mountView(data);

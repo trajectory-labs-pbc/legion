@@ -42,10 +42,10 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const shellNavigation = useMemo<ShellNavigation | undefined>(
     () =>
-      shell.issueFrame && !shell.railFits
+      shell.issueFrame && shell.compact
         ? { onOpen: () => setNavigationOpen(true), open: navigationOpen }
         : undefined,
-    [shell.issueFrame, navigationOpen, shell.railFits]
+    [shell.issueFrame, navigationOpen, shell.compact]
   );
   const routeProject = shell.project;
   useGlobalCommands({

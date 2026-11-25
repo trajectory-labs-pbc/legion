@@ -1,1 +1,1 @@
-export { NeedsYouMark } from "./needs-you-mark";
+export { NeedsYouMark, needsYouLabel } from "./needs-you-mark";

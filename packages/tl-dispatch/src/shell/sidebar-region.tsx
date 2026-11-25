@@ -1,9 +1,14 @@
 import { NavSurface } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CommandButton } from "@/commands/command-button";
 import { useInboxRowCount } from "./inbox-count";
+
+/** Upstream's icon rail with the Inbox's number; only this branch reads it. */
+function IssueRail(props: Omit<ComponentProps<typeof IconRail>, "inboxCount">) {
+  return <IconRail inboxCount={useInboxRowCount().count ?? 0} {...props} />;
+}
 
 /** The issue frame's icon rail, the folded sidebar's rail, or the sidebar; none in a drawer. */
 export function SidebarRegion({
@@ -28,11 +33,9 @@ export function SidebarRegion({
   project: string | undefined;
   user: AuthenticatedUser;
 }) {
-  const inboxCount = useInboxRowCount().count ?? 0;
   if (issueRail) {
     return (
-      <IconRail
-        inboxCount={inboxCount}
+      <IssueRail
         navigationOpen={navigationOpen}
         onOpenNavigation={onOpenNavigation}
         project={project}

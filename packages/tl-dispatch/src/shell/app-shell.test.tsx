@@ -127,7 +127,7 @@ describe("AppShell", () => {
     expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
     expect(rail()).toBeNull();
     expect(sidebar()?.className).toContain("w-60");
-    expect(panel()?.className).toContain("md:ml-0");
+    expect(panel()?.className).not.toContain("md:ml-14");
     fold();
     expect(main()?.getAttribute("data-shell-layout")).toBe("full-width");
     expect(rail()).not.toBeNull();
@@ -156,7 +156,7 @@ describe("AppShell", () => {
     expect(sidebar?.className).toContain("bg-background");
     expect(sidebar?.className).not.toContain("border-r");
     expect(panel?.contains(view.container.querySelector("main"))).toBe(true);
-    for (const name of ["bg-card", "md:border", "md:mx-2", "md:mb-2", "md:mt-2"]) {
+    for (const name of ["bg-card", "md:border", "md:my-2", "md:mr-2"]) {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");

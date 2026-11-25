@@ -23,11 +23,11 @@ export function ContentPanel({
         issueFrame
           ? "contents"
           : cn(
-              "min-w-0 flex-1 border-border bg-card max-md:border-t md:order-2 md:mx-2 md:mt-2 md:mb-2 md:border",
+              "min-w-0 flex-1 border-border bg-card max-md:border-t md:order-2 md:my-2 md:mr-2 md:border",
               fillsViewport
                 ? "flex min-h-0 flex-col xl:flex-row"
                 : "md:min-h-[calc(100dvh-1rem)] xl:flex",
-              sidebarFolded ? "md:ml-14" : "md:ml-0",
+              sidebarFolded ? "md:ml-14" : null,
               marginRail ? "xl:mr-16" : null
             )
       }

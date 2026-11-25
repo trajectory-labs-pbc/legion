@@ -29,3 +29,7 @@ export function render(element: ReactNode): {
 export function settle(change: () => void): void {
   act(change);
 }
+
+/** Waits `ms` inside React's `act`, so timers and the renders they cause land first. */
+export const sleep = (ms: number) =>
+  act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));

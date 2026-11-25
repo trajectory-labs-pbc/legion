@@ -1,17 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { render, settle } from "../../tests/react";
+import { render, settle, sleep } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
 const PEEK = "Peek at the inbox without leaving this page";
-
-const sleep = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {

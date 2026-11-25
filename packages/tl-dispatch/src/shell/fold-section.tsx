@@ -23,7 +23,7 @@ function keepFolded(heading: string, folded: boolean): void {
   }
 }
 
-/** A sidebar section under a heading that folds it; this browser keeps the fold (FR6). */
+/** A sidebar section under a heading that folds it; this browser keeps the fold. */
 export function FoldSection({ children, heading }: { children: ReactNode; heading: string }) {
   const [open, setOpen] = useState(() => !keptFolded(heading));
   const bodyId = useId();
@@ -31,12 +31,13 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
     <section>
       <Heading className="pb-1" size="label" tone="muted">
         <Button
-          aria-controls={bodyId}
+          aria-controls={open ? bodyId : undefined}
           aria-expanded={open}
           className="has-[>svg]:px-2"
           onClick={() => {
-            setOpen(!open);
-            keepFolded(heading, open);
+            const folding = open;
+            setOpen(!folding);
+            keepFolded(heading, folding);
           }}
           size="xs"
           variant="ghost"
@@ -45,9 +46,7 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
           {open ? <ChevronDownIcon aria-hidden /> : <ChevronRightIcon aria-hidden />}
         </Button>
       </Heading>
-      <div hidden={!open} id={bodyId}>
-        {children}
-      </div>
+      {open ? <div id={bodyId}>{children}</div> : null}
     </section>
   );
 }

@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { api } from "@upstream-dispatch/api/client";
 import {
   prioritySummaryQuery,
   projectsQuery,
   userAgentStateQuery,
 } from "@upstream-dispatch/api/queries";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
+import type { AuthenticatedUser, UserAgentStates } from "@upstream-dispatch/api/types";
 import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
 import { pinnedAgentSessions, useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
 import { totalUnreadReplies } from "@upstream-dispatch/features/agents/unread";
@@ -20,15 +20,8 @@ import { useCurrentPage } from "@/pages/index";
 import type { PageLayout } from "@/pages/page";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
-
-/** A count beside a row; none at zero. Its row's key tooltip names the row. */
-interface SidebarCount {
-  count: number | undefined;
-  /** What it counts waits on the reader, so it takes the "needs you" mark. */
-  needsYou?: boolean;
-  /** Its read failed with nothing to show: asks again. */
-  retry?: () => void;
-}
+import { retryOf } from "./read-line";
+import type { RowCount } from "./row-count";
 
 interface SidebarDestination {
   name: NavName;
@@ -36,33 +29,27 @@ interface SidebarDestination {
   icon: CommandIcon;
   page: PageRoute<string, string>;
   current: boolean;
-  count: SidebarCount | undefined;
+  /** A `G` chord opens it, which its row's tooltip shows. */
+  keyed: boolean;
+  count: RowCount | undefined;
 }
 
-/** A section's read: still out, failed with a way to ask again, or its rows. */
-export type SectionRead<T> =
-  | { status: "pending" }
-  | { status: "error"; retry: () => void }
-  | { status: "success"; rows: readonly T[] };
-
-interface Read<T> {
-  data: T | undefined;
-  isError: boolean;
-  isFetching: boolean;
-  refetch: () => Promise<unknown>;
+/** A section's rows; none while its read is out, and `retry` once it failed with nothing to show. */
+export interface SectionRead<T> {
+  rows: readonly T[] | undefined;
+  retry: (() => void) | undefined;
 }
 
-/** Asks `query` again; undefined unless it failed with nothing to show and is not asking already. */
-function retryOf<T>(query: Read<T>): (() => void) | undefined {
-  return query.data === undefined && query.isError && !query.isFetching
-    ? () => void query.refetch()
-    : undefined;
+function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
+  return { rows: query.data?.map(row), retry: retryOf(query) };
 }
 
-function sectionOf<T, R>(query: Read<readonly T[]>, row: (item: T) => R): SectionRead<R> {
-  if (query.data !== undefined) return { status: "success", rows: query.data.map(row) };
-  const retry = retryOf(query);
-  return retry === undefined ? { status: "pending" } : { status: "error", retry };
+/** The pinned agents, oldest pin first, with their unread replies. */
+function pinnedOf(states: UserAgentStates): readonly { sessionId: string; unread: number }[] {
+  return pinnedAgentSessions(states).map((sessionId) => ({
+    sessionId,
+    unread: states[sessionId]?.unread_replies ?? 0,
+  }));
 }
 
 export interface SidebarItem {
@@ -108,7 +95,8 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   const open = openOf(useCurrentPage()?.layout ?? {});
   const inboxCount = useInboxRowCount();
   const agents = useQuery(userAgentStateQuery());
-  const agentState = agents.data;
+  // Sorted in its own selection, which runs only when the agent state changes.
+  const pinnedAgents = useQuery({ ...userAgentStateQuery(), select: pinnedOf });
   const summaryRead = useQuery(prioritySummaryQuery());
   const summary = summaryRead.data;
   const pinnedIssues = useQuery({
@@ -121,35 +109,27 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
     summary === undefined || (summary.empty ?? "") !== ""
       ? undefined
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
-  const counts: Partial<Record<NavName, SidebarCount>> = {
+  const counts: Partial<Record<NavName, RowCount>> = {
     inbox: inboxCount,
-    agents: { count: totalUnreadReplies(agentState), retry: retryOf(agents) },
+    agents: { count: totalUnreadReplies(agents.data), retry: retryOf(agents) },
     priorities: { count: priorityFaults, retry: retryOf(summaryRead) },
   };
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"
-    ).map(({ name, label, icon }) => ({
-      name,
-      label,
-      icon,
-      page: NAV_PAGES[name],
-      current: pathUnder(NAV_PAGES[name].path, pathname),
-      count: counts[name],
+    ).map((destination) => ({
+      name: destination.name,
+      label: destination.label,
+      icon: destination.icon,
+      page: NAV_PAGES[destination.name],
+      current: pathUnder(NAV_PAGES[destination.name].path, pathname),
+      keyed: "key" in destination,
+      count: counts[destination.name],
     })),
-    pinnedAgents: sectionOf(
-      {
-        data: agentState === undefined ? undefined : pinnedAgentSessions(agentState),
-        isError: agents.isError,
-        isFetching: agents.isFetching,
-        refetch: agents.refetch,
-      },
-      (sessionId) => ({
-        sessionId,
-        selected: sessionId === open.liveView,
-        unread: agentState?.[sessionId]?.unread_replies ?? 0,
-      })
-    ),
+    pinnedAgents: sectionOf(pinnedAgents, (agent) => ({
+      ...agent,
+      selected: agent.sessionId === open.liveView,
+    })),
     inLiveView: open.liveView !== undefined,
     pinnedIssues: sectionOf(pinnedIssues, (pinned) => ({
       key: pinned.key,
