@@ -72,7 +72,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-hidden",
+            "z-50 w-72 rounded-md border bg-popover p-4 text-popover-foreground outline-hidden",
             popupMotion,
             className
           )}

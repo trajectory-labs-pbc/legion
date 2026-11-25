@@ -37,7 +37,7 @@ function BreadcrumbLink({ render, className, ...props }: useRender.ComponentProp
     props: {
       "data-slot": "breadcrumb-link",
       className: cn(
-        "rounded-sm motion-safe:transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        "rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         className
       ),
       ...props,

@@ -63,7 +63,7 @@ function AlertDialogContent({ className, children, ...props }: AlertDialogPrimit
           initialFocus={() => cancelRef.current}
           {...modal.popupProps}
           className={cn(
-            "relative m-auto grid w-full gap-4 rounded-lg border bg-background p-6 shadow-lg outline-hidden sm:max-w-lg",
+            "relative m-auto grid w-full gap-4 rounded-lg border bg-background p-6 outline-hidden sm:max-w-lg",
             modalPopupMotion,
             coveredClass,
             className

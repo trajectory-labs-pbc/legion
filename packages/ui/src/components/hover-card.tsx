@@ -31,7 +31,7 @@ function HoverCardContent({
         <PreviewCardPrimitive.Popup
           data-slot="hover-card-content"
           className={cn(
-            "z-50 w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md outline-hidden",
+            "z-50 w-64 rounded-md border bg-popover p-3 text-popover-foreground outline-hidden",
             popupMotion,
             className
           )}

@@ -44,4 +44,6 @@ installs from the default branch, not from the ref you asked for.
 - `bun run registry:validate` runs `shadcn registry validate` on it.
 - The colours are in `src/styles/globals.css`, light in `:root` and dark in `.dark` and in the
   `prefers-color-scheme: dark` block, which must match. `src/styles/styles.test.ts` holds the
-  focus, motion, corner and contrast rules.
+  design rules: one focus outline, no shadows, opacity fades of 150 to 200 ms only, square corners
+  except dots and avatars, and the contrast of the focus colour, a field's edge and the highlight
+  step (`--accent`).

@@ -5,7 +5,7 @@ import { cn } from "cn";
 
 const badgeVariants = cva(
   [
-    "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent px-1.5 py-0.5 text-xs font-medium whitespace-nowrap motion-safe:transition-colors",
+    "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent px-1.5 py-0.5 text-xs font-medium whitespace-nowrap",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     "[&>svg]:pointer-events-none [&>svg]:size-3",
   ],

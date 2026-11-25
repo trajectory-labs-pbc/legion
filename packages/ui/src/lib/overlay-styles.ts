@@ -2,11 +2,11 @@
 
 /** The open and close motion of a floating popup. */
 export const popupMotion =
-  "origin-(--transform-origin) motion-safe:transition-[opacity,scale] motion-safe:duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0";
+  "motion-safe:transition-opacity motion-safe:duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
-/** The open and close motion of a dialog. */
+/** The open and close motion of a dialog, a sheet or a drawer. */
 export const modalPopupMotion =
-  "motion-safe:transition-[opacity,scale] motion-safe:duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0";
+  "motion-safe:transition-opacity motion-safe:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
 /** A modal backdrop: the scrim, transparent when another modal's scrim is below. */
 export const scrimClass =
@@ -14,7 +14,7 @@ export const scrimClass =
 
 /** A modal popup that dims while another modal covers it. */
 export const coveredClass =
-  "after:pointer-events-none after:absolute after:inset-0 after:bg-scrim after:opacity-0 motion-safe:after:transition-opacity data-[covered]:after:opacity-25";
+  "after:pointer-events-none after:absolute after:inset-0 after:bg-scrim after:opacity-0 motion-safe:after:transition-opacity motion-safe:after:duration-200 data-[covered]:after:opacity-25";
 
 /** The close button in a dialog's or a sheet's corner, a 24px target. */
 export const closeButtonClass =

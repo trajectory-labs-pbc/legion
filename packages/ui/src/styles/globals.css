@@ -82,7 +82,8 @@
   --secondary-foreground: #141414;
   --muted: #f0efec;
   --muted-foreground: #636363;
-  --accent: #f9f9f8;
+  /* The highlight step: 1.3:1 or more on a popover, with text at 4.5:1 or more on it. */
+  --accent: #e1dfda;
   --accent-foreground: #141414;
   --destructive: #9b1c1f;
   --destructive-foreground: #f8d7d8;
@@ -131,7 +132,7 @@
   --secondary-foreground: #f5f4f2;
   --muted: #302e2a;
   --muted-foreground: #b7b3ab;
-  --accent: #38352f;
+  --accent: #3d3a34;
   --accent-foreground: #f5f4f2;
   --destructive: #f8d7d8;
   --destructive-foreground: #9b1c1f;
@@ -179,7 +180,7 @@
     --secondary-foreground: #f5f4f2;
     --muted: #302e2a;
     --muted-foreground: #b7b3ab;
-    --accent: #38352f;
+    --accent: #3d3a34;
     --accent-foreground: #f5f4f2;
     --destructive: #f8d7d8;
     --destructive-foreground: #9b1c1f;

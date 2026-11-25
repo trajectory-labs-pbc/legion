@@ -2,7 +2,12 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 import { XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
-import { closeButtonClass, coveredClass, scrimClass } from "#registry/legion/lib/overlay-styles";
+import {
+  closeButtonClass,
+  coveredClass,
+  modalPopupMotion,
+  scrimClass,
+} from "#registry/legion/lib/overlay-styles";
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
@@ -42,12 +47,10 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 }
 
 const SIDE_CLASS = {
-  right:
-    "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm data-ending-style:translate-x-full data-starting-style:translate-x-full",
-  left: "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm data-ending-style:-translate-x-full data-starting-style:-translate-x-full",
-  top: "inset-x-0 top-0 h-auto border-b data-ending-style:-translate-y-full data-starting-style:-translate-y-full",
-  bottom:
-    "inset-x-0 bottom-0 h-auto border-t data-ending-style:translate-y-full data-starting-style:translate-y-full",
+  right: "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
+  left: "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
+  top: "inset-x-0 top-0 h-auto border-b",
+  bottom: "inset-x-0 bottom-0 h-auto border-t",
 } as const;
 
 function SheetContent({
@@ -71,7 +74,8 @@ function SheetContent({
         data-side={side}
         {...modal.popupProps}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-background shadow-lg outline-hidden motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-in-out",
+          "fixed z-50 flex flex-col gap-4 bg-background outline-hidden",
+          modalPopupMotion,
           SIDE_CLASS[side],
           coveredClass,
           className

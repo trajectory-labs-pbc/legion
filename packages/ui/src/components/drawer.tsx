@@ -1,7 +1,7 @@
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "cn";
 import type { ComponentProps } from "react";
-import { coveredClass } from "#registry/legion/lib/overlay-styles";
+import { coveredClass, modalPopupMotion } from "#registry/legion/lib/overlay-styles";
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
@@ -55,7 +55,8 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
           {...modal.popupProps}
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-xl border-t bg-background pb-[env(safe-area-inset-bottom)] outline-hidden",
-            "transform-[translateY(var(--drawer-swipe-movement-y))] motion-safe:transition-transform motion-safe:duration-200 data-ending-style:transform-[translateY(calc(100%+2px))] data-starting-style:transform-[translateY(calc(100%+2px))] data-swiping:duration-0 data-swiping:select-none",
+            "transform-[translateY(var(--drawer-swipe-movement-y))] data-swiping:duration-0 data-swiping:select-none",
+            modalPopupMotion,
             coveredClass,
             className
           )}

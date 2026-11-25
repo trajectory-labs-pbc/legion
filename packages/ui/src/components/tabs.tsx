@@ -49,7 +49,7 @@ function TabsList({
         <TabsPrimitive.Indicator
           data-slot="tabs-indicator"
           className={cn(
-            "absolute bg-foreground motion-safe:transition-[left,top,width,height] motion-safe:duration-150",
+            "absolute bg-foreground",
             "data-[orientation=horizontal]:-bottom-px data-[orientation=horizontal]:left-(--active-tab-left) data-[orientation=horizontal]:h-0.5 data-[orientation=horizontal]:w-(--active-tab-width)",
             "data-[orientation=vertical]:top-(--active-tab-top) data-[orientation=vertical]:right-0 data-[orientation=vertical]:h-(--active-tab-height) data-[orientation=vertical]:w-0.5"
           )}
@@ -64,11 +64,11 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground motion-safe:transition-colors",
+        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground",
         "group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start",
         "hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
-        "data-active:text-foreground group-data-[variant=default]/tabs-list:data-active:bg-background group-data-[variant=default]/tabs-list:data-active:shadow-xs",
+        "data-active:text-foreground group-data-[variant=default]/tabs-list:data-active:bg-background",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}

@@ -142,8 +142,8 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={anchor !== undefined}
           className={cn(
-            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[chips=true]:min-w-(--anchor-width)",
-            "*:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:shadow-none",
+            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] overflow-hidden rounded-md border bg-popover text-popover-foreground data-[chips=true]:min-w-(--anchor-width)",
+            "*:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0",
             popupMotion,
             className
           )}
@@ -175,7 +175,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
       data-slot="combobox-item"
       className={cn(
         "relative flex h-7 w-full cursor-default items-center gap-2 rounded-sm pr-8 pl-2 text-sm outline-hidden select-none",
-        "data-highlighted:bg-muted data-highlighted:text-foreground data-highlighted:inset-ring data-highlighted:inset-ring-muted-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:inset-ring data-highlighted:inset-ring-muted-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
@@ -239,7 +239,7 @@ function ComboboxChips({ className, ...props }: ComboboxPrimitive.Chips.Props) {
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2.5 py-1 text-sm shadow-xs has-data-[slot=combobox-chip]:px-1",
+        "flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2.5 py-1 text-sm has-data-[slot=combobox-chip]:px-1",
         "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus",
         "has-aria-invalid:border-danger has-aria-invalid:ring-[3px] has-aria-invalid:ring-danger/20",
         className

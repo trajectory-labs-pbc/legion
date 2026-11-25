@@ -12,7 +12,7 @@ function InputGroup({ className, ...props }: ComponentProps<"div">) {
       data-slot="input-group"
       role="group"
       className={cn(
-        "group/input-group relative flex h-8 w-full min-w-0 items-center rounded-md border border-input bg-field shadow-xs",
+        "group/input-group relative flex h-8 w-full min-w-0 items-center rounded-md border border-input bg-field",
         "has-[[data-slot=input-group-control]:focus-visible]:outline-2 has-[[data-slot=input-group-control]:focus-visible]:outline-offset-2 has-[[data-slot=input-group-control]:focus-visible]:outline-focus",
         "has-[[data-slot][aria-invalid=true]]:border-danger has-[[data-slot][aria-invalid=true]]:ring-[3px] has-[[data-slot][aria-invalid=true]]:ring-danger/20",
         "in-data-[slot=combobox-content]:has-[[data-slot=input-group-control]:focus-visible]:outline-0",
@@ -76,15 +76,7 @@ function InputGroupButton({
   size = "icon-xs",
   ...props
 }: ButtonProps) {
-  return (
-    <Button
-      type={type}
-      variant={variant}
-      size={size}
-      className={cn("shadow-none", className)}
-      {...props}
-    />
-  );
+  return <Button type={type} variant={variant} size={size} className={className} {...props} />;
 }
 
 function InputGroupText({ className, ...props }: ComponentProps<"span">) {
@@ -104,7 +96,7 @@ function InputGroupInput({ className, ...props }: ComponentProps<"input">) {
     <Input
       data-slot="input-group-control"
       className={cn(
-        "h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:outline-0 aria-invalid:ring-0",
+        "h-full flex-1 rounded-none border-0 bg-transparent focus-visible:outline-0 aria-invalid:ring-0",
         className
       )}
       {...props}
@@ -117,7 +109,7 @@ function InputGroupTextarea({ className, ...props }: ComponentProps<"textarea">)
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        "flex-1 resize-none rounded-none border-0 bg-transparent shadow-none focus-visible:outline-0 aria-invalid:ring-0",
+        "flex-1 resize-none rounded-none border-0 bg-transparent focus-visible:outline-0 aria-invalid:ring-0",
         className
       )}
       {...props}

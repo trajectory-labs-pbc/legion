@@ -106,11 +106,37 @@ describe("the components", () => {
     }
   });
 
-  it("move only when the reader allows motion", () => {
+  it("draw no shadow: a surface stands apart by a border or a background step", () => {
+    expect(
+      everyToken.filter(({ token }) =>
+        /^(shadow|inset-shadow|drop-shadow|text-shadow)/.test(utility(token))
+      )
+    ).toEqual([]);
+    expect(stylesheet).not.toContain("shadow");
+  });
+
+  it("move only by fading opacity for 150 to 200 ms, and only when the reader allows motion", () => {
     const moving = everyToken.filter(({ token }) => /^(transition|animate-)/.test(utility(token)));
-    expect(moving.length).toBeGreaterThan(10);
+    expect(moving.length).toBeGreaterThan(5);
     expect(moving.filter(({ token }) => !variants(token).includes("motion-safe:"))).toEqual([]);
     expect(everyToken.filter(({ token }) => token.includes("motion-reduce:"))).toEqual([]);
+    // A spinner turns because it says work is under way; nothing else animates.
+    expect(
+      moving.filter(({ token }) => !["transition-opacity", "animate-spin"].includes(utility(token)))
+    ).toEqual([]);
+    expect(
+      everyToken.filter(
+        ({ token }) =>
+          /^duration-/.test(utility(token)) &&
+          !["duration-150", "duration-200"].includes(utility(token)) &&
+          token !== "data-swiping:duration-0"
+      )
+    ).toEqual([]);
+    expect(
+      everyToken.filter(({ token }) =>
+        /^-?(scale|zoom|blur|backdrop-blur|delay)-/.test(utility(token))
+      )
+    ).toEqual([]);
   });
 
   it("round only dots and avatars, and take every other corner from the radius token", () => {
@@ -124,10 +150,15 @@ describe("the components", () => {
     expect(everyToken.filter(({ token }) => /^rounded.*\[/.test(utility(token)))).toEqual([]);
   });
 
-  it("mark a highlighted item and a pressed toggle with an edge, not a fill alone", () => {
-    expect(
-      everyToken.filter(({ token }) => /(highlighted|pressed)\]?:bg-accent/.test(token))
-    ).toEqual([]);
+  it("mark a highlighted item with the highlight step and an edge, and a pressed toggle with an edge", () => {
+    for (const path of [
+      "components/combobox.tsx",
+      "components/dropdown-menu.tsx",
+      "components/select.tsx",
+    ]) {
+      expect(tokensOf(path), path).toContain("data-highlighted:bg-accent");
+      expect(tokensOf(path), path).toContain("data-highlighted:text-accent-foreground");
+    }
     for (const [path, state] of [
       ["components/combobox.tsx", "data-highlighted:"],
       ["components/dropdown-menu.tsx", "data-highlighted:"],
@@ -166,6 +197,16 @@ describe("the theme", () => {
         contrast(input(body), hex(body, surface)),
         `input on ${surface}`
       ).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it.each(
+    Object.entries(THEMES)
+  )("makes the highlight step visible on a popover, with readable text on it, %s", (_name, body) => {
+    const step = hex(body, "accent");
+    expect(contrast(step, hex(body, "popover")), "accent on popover").toBeGreaterThanOrEqual(1.3);
+    for (const text of ["accent-foreground", "foreground", "muted-foreground"]) {
+      expect(contrast(hex(body, text), step), `${text} on accent`).toBeGreaterThanOrEqual(4.5);
     }
   });
 });
