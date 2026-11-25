@@ -8,7 +8,7 @@ import {
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
-import type { Page } from "./page";
+import type { Page, PageLayout } from "./page";
 
 const IssuePage = lazyNamed(
   () => import("@upstream-dispatch/features/issue-page/IssuePage"),
@@ -23,7 +23,7 @@ export const issue = {
       path: "/issues/:key/*",
       element: <IssuePage />,
       prefetch: ({ key }) => [prefetchOf(issueQuery(key))],
-      layout: ({ pathname, search }) => ({
+      layout: ({ pathname, search }): PageLayout => ({
         margin: routeHasMargin(pathname, search),
         outlineFrame: parseIssuePath(pathname, search) !== undefined,
         issue: parseIssuePath(pathname)?.key,
