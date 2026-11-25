@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { lazy, type ReactNode } from "react";
 
-import { NotFound } from "./NotFound";
+import { NotFound } from "./not-found";
 import { credentialCapabilitiesQuery } from "./upstream";
 
 const MachineLoginPage = lazy(() =>
-  import("./MachineLoginPage").then((module) => ({ default: module.MachineLoginPage }))
+  import("./machine-login-page").then((module) => ({ default: module.MachineLoginPage }))
 );
 
 /** Served only while the broker still serves the device grant; blank while that answer is out. */

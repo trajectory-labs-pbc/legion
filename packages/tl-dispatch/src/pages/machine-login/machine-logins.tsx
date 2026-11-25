@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { type RevocableColumn, RevocableTable } from "./RevocableTable";
+import { type RevocableColumn, RevocableTable } from "./revocable-table";
 import {
   api,
   credentialGrantsQuery,

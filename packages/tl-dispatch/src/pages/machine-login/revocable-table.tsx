@@ -1,7 +1,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { Button } from "../../ui/button";
+import { Button } from "@/ui/button";
+import { Heading } from "@/ui/heading";
 import {
   refusedNote,
   SendStoppedError,
@@ -73,9 +74,9 @@ export function RevocableTable<Row>({
   return (
     <section aria-labelledby={headingId} className="space-y-3">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-foreground" id={headingId}>
+        <Heading id={headingId} size="section">
           {heading}
-        </h2>
+        </Heading>
         <p className="max-w-prose text-sm text-pretty text-muted-foreground">{description}</p>
       </div>
 
@@ -86,7 +87,12 @@ export function RevocableTable<Row>({
           role="alert"
         >
           <span className="text-destructive">Couldn't load {noun}.</span>
-          <Button disabled={query.isFetching} onClick={() => void query.refetch()}>
+          <Button
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+            size="sm"
+            variant="outline"
+          >
             Retry
           </Button>
         </div>
@@ -141,7 +147,8 @@ export function RevocableTable<Row>({
                           aria-label={`Revoke ${rowName(row)}`}
                           disabled={mutation.isPending}
                           onClick={() => press(row)}
-                          variant="danger"
+                          size="sm"
+                          variant="destructive"
                         >
                           Revoke
                         </Button>

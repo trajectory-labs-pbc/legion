@@ -1,5 +1,5 @@
 import { pageRoute } from "@/navigation/page-route";
-import { MachineLoginRoute } from "./machine-login/MachineLoginRoute";
+import { MachineLoginRoute } from "./machine-login/machine-login-route";
 
 import type { Page } from "./page";
 

@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
-import { DecisionButtons } from "./DecisionButtons";
-import { MachineLogins } from "./MachineLogins";
-import { RecordFacts } from "./RecordFacts";
+import { Button } from "@/ui/button";
+import { SurfaceTitle } from "@/ui/heading";
+import { Input } from "@/ui/input";
+import { DecisionButtons } from "./decision-buttons";
+import { MachineLogins } from "./machine-logins";
+import { RecordFacts } from "./record-facts";
 import {
   api,
   apiErrorMessage,
@@ -128,9 +129,9 @@ export function MachineLoginPage(): ReactNode {
   return (
     <section className="max-w-5xl space-y-8">
       <div className="max-w-2xl space-y-8">
-        <h1 className="text-xl font-semibold text-balance text-foreground">
+        <SurfaceTitle className="text-balance" size="page">
           Enter machine login code
-        </h1>
+        </SurfaceTitle>
         <form className="flex flex-wrap items-end gap-3" onSubmit={submit}>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-muted-foreground" htmlFor="machine-code">
@@ -153,7 +154,7 @@ export function MachineLoginPage(): ReactNode {
               value={code}
             />
           </div>
-          <Button disabled={lookup.isPending || code.trim() === ""} type="submit" variant="primary">
+          <Button disabled={lookup.isPending || code.trim() === ""} type="submit">
             Look up
           </Button>
         </form>

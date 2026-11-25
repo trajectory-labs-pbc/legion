@@ -10,7 +10,7 @@ import { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import { ApiError, NetworkError } from "@upstream-dispatch/api/client";
 
-import { MachineLogins } from "./MachineLogins";
+import { MachineLogins } from "./machine-logins";
 import { api, stoppedWriteNote } from "./upstream";
 
 const heading = "Machine logins";

@@ -3,9 +3,9 @@ import { expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
 
-import { MachineLoginPage } from "./MachineLoginPage";
+import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MachineLoginPage } from "./machine-login-page";
 import { api, type RecordResponse } from "./upstream";
 
 function machineRecord(decided: RecordResponse["decided"] = null): RecordResponse {
@@ -35,11 +35,11 @@ async function lookUp() {
   const user = userEvent.setup();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <MemoryRouter initialEntries={["/credentials/machine"]}>
+    <MemoryNavigationProvider path="/credentials/machine">
       <QueryClientProvider client={queryClient}>
         <MachineLoginPage />
       </QueryClientProvider>
-    </MemoryRouter>
+    </MemoryNavigationProvider>
   );
   await user.click(screen.getByLabelText("Code shown on the machine"));
   await user.paste("abcd1234");

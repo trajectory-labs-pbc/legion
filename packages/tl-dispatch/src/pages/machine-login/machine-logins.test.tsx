@@ -8,10 +8,10 @@ import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import type { ApproverGrantResp } from "@upstream-dispatch/api/types";
 import { GrantsSection } from "@upstream-dispatch/features/credentials/GrantsSection";
-import { MemoryRouter } from "react-router-dom";
 
-import { MachineLoginPage } from "./MachineLoginPage";
-import { MachineLogins } from "./MachineLogins";
+import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MachineLoginPage } from "./machine-login-page";
+import { MachineLogins } from "./machine-logins";
 import { api, type LauncherCredentialResp } from "./upstream";
 
 /** A row's Revoke, whose name is the row's. */
@@ -83,11 +83,11 @@ const adaPod: LauncherCredentialResp = {
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={["/credentials/machine"]}>
+    <MemoryNavigationProvider path="/credentials/machine">
       <QueryClientProvider client={queryClient}>
         <MachineLoginPage />
       </QueryClientProvider>
-    </MemoryRouter>
+    </MemoryNavigationProvider>
   );
 }
 

@@ -8,9 +8,9 @@ import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 import { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import { ApiError, NetworkError } from "@upstream-dispatch/api/client";
-import { MemoryRouter } from "react-router-dom";
 
-import { MachineLoginPage } from "./MachineLoginPage";
+import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MachineLoginPage } from "./machine-login-page";
 import { api, type RecordResponse, stoppedWriteNote } from "./upstream";
 
 function machineRecord(overrides: Partial<RecordResponse> = {}): RecordResponse {
@@ -36,11 +36,11 @@ function machineRecord(overrides: Partial<RecordResponse> = {}): RecordResponse 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={["/credentials/machine"]}>
+    <MemoryNavigationProvider path="/credentials/machine">
       <QueryClientProvider client={queryClient}>
         <MachineLoginPage />
       </QueryClientProvider>
-    </MemoryRouter>
+    </MemoryNavigationProvider>
   );
 }
 
@@ -183,11 +183,11 @@ async function stoppedPage(
 ) {
   const user = userOnFakeClock();
   render(
-    <MemoryRouter initialEntries={["/credentials/machine"]}>
+    <MemoryNavigationProvider path="/credentials/machine">
       <QueryClientProvider client={queryClient}>
         <MachineLoginPage />
       </QueryClientProvider>
-    </MemoryRouter>
+    </MemoryNavigationProvider>
   );
   await user.click(screen.getByLabelText("Code shown on the machine"));
   await user.paste("abcd1234");

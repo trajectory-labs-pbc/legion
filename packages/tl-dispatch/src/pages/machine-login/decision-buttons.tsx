@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Button } from "../../ui/button";
+import { Button } from "@/ui/button";
 import {
   apiErrorMessage,
   type DecisionResponse,
@@ -26,15 +26,15 @@ export function DecisionButtons({
     <div className="space-y-2">
       <div className="flex gap-2">
         {approve === undefined ? null : (
-          <Button
-            disabled={deciding}
-            onClick={() => submitGuard.guard(() => approve.mutate())}
-            variant="primary"
-          >
+          <Button disabled={deciding} onClick={() => submitGuard.guard(() => approve.mutate())}>
             Approve
           </Button>
         )}
-        <Button disabled={deciding} onClick={() => submitGuard.guard(() => deny.mutate())}>
+        <Button
+          disabled={deciding}
+          onClick={() => submitGuard.guard(() => deny.mutate())}
+          variant="outline"
+        >
           Deny
         </Button>
       </div>
