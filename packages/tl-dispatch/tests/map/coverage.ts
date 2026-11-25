@@ -23,7 +23,7 @@ export interface Coverage {
   crossed: { file: string; owner: string; importers: string[] }[];
   /** Globs of a page this app serves, which names files so a new upstream view is reported. */
   globbed: { owner: string; glob: string; list: string }[];
-  /** Files no list names that only a page this app serves loads: upstream added to that page. */
+  /** Files no list names that hang only from a page this app serves: upstream added to that page. */
   added: { file: string; owner: string; list: string }[];
   /** The pages this app serves, whose findings fail; the others' are notes. */
   forkPages: string[];
@@ -120,7 +120,12 @@ export function effectiveOwners(
   files: readonly string[],
   all: readonly Owner[],
   graph: ReadonlyMap<string, readonly string[]>
-): { owner: Map<string, string>; loaders: (file: string) => string[]; inferred: Set<string> } {
+): {
+  owner: Map<string, string>;
+  loaders: (file: string) => string[];
+  inferred: Set<string>;
+  roots: (file: string) => string[];
+} {
   const matchers = matchersOf(all);
   const owner = new Map<string, string>();
   const unlisted: string[] = [];
@@ -129,6 +134,21 @@ export function effectiveOwners(
     if (found.length === 1 && found[0]) owner.set(file, found[0]);
     if (found.length === 0) unlisted.push(file);
   }
+  const listed = new Map(owner);
+  /**
+   * The listed owners a file no list names hangs from: those of what loads it, followed through
+   * other unlisted files. A page's view that became shared still counts as its page's here.
+   */
+  const roots = (file: string, seen = new Set<string>()): string[] => {
+    if (seen.has(file)) return [];
+    seen.add(file);
+    const found = (graph.get(file) ?? []).flatMap((ref) => {
+      if (isOwnerName(ref)) return [ref];
+      const name = listed.get(ref) ?? ownersOf(ref, matchers).owners[0];
+      return name === undefined ? roots(ref, seen) : [name];
+    });
+    return [...new Set(found)];
+  };
   const inferred = new Set<string>();
   const ownerOfRef = (ref: string): string =>
     isOwnerName(ref) ? ref : (owner.get(ref) ?? ownersOf(ref, matchers).owners[0] ?? "unmapped");
@@ -154,7 +174,7 @@ export function effectiveOwners(
       }
     }
   }
-  return { owner, loaders, inferred };
+  return { owner, loaders, inferred, roots };
 }
 
 export function coverage(
@@ -174,16 +194,17 @@ export function coverage(
     added: [],
     forkPages,
   };
-  const { owner, loaders, inferred } = effectiveOwners(files, all, graph);
+  const { owner, loaders, inferred, roots } = effectiveOwners(files, all, graph);
   for (const file of files) {
     const { owners: names, hits } = ownersOf(file, matchers);
     for (const hit of hits) used.add(`${hit.owner}\0${hit.glob}`);
     const name = owner.get(file);
     if (names.length === 0 && name === undefined) result.unmapped.push(file);
     if (names.length > 1) result.shared.push({ file, owners: names });
-    if (name && inferred.has(file) && forkPages.includes(name)) {
-      const list = all.find((entry) => entry.name === name)?.list ?? name;
-      result.added.push({ file, owner: name, list });
+    const [root, ...more] = inferred.has(file) ? roots(file) : [];
+    if (root !== undefined && more.length === 0 && forkPages.includes(root)) {
+      const list = all.find((entry) => entry.name === root)?.list ?? root;
+      result.added.push({ file, owner: root, list });
     }
     if (name?.startsWith("page:")) {
       const others = loaders(file).filter((other) => other !== name);
@@ -217,7 +238,7 @@ export function messages(result: Coverage): string[] {
   return [
     ...result.added.map(
       ({ file, owner, list }) =>
-        `${file} is new upstream, and only ${owner} loads it, which this app serves: port what it adds, then name it in ${list}`
+        `${file} is new upstream, and only ${owner}'s files load it, which this app serves: port what it adds, then name it in ${list}`
     ),
     ...result.shared.map(
       ({ file, owners: names }) =>
