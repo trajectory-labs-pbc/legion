@@ -2,7 +2,7 @@ import { basename, relative } from "node:path";
 
 import { sharedViews, shellViews, widgetViews } from "@/views";
 import { UPSTREAM_WEB } from "../source";
-import { featureViews, forkSrc, readPages, viewImporters } from "./source";
+import { featureViews, forkSrc, type PageEntry, readPages, viewImporters } from "./source";
 
 export interface Owner {
   name: string;
@@ -82,18 +82,26 @@ function ownersOf(
   return { owners: [...new Set(deciding.map((entry) => entry.owner))], hits };
 }
 
+/** The owner of a file of this app: its page, for a page file and the folder of its name, else the shell. */
+export function ownOwner(file: string, pages: readonly Pick<PageEntry, "file" | "id">[]): string {
+  const page = pages.find(
+    (entry) => file === entry.file || file.startsWith(`${entry.file.replace(/\.tsx?$/, "")}/`)
+  );
+  return page ? `page:${page.id}` : "shell";
+}
+
 /**
  * For each view file, what loads it at run time: an upstream file by its path under `web/src`, a
- * file of this app by its owner (its page, else the shell).
+ * file of this app by its owner.
  */
 export function importGraph(): Map<string, string[]> {
-  const pageOf = new Map(readPages().map((page) => [page.file, `page:${page.id}`]));
+  const pages = readPages();
   const graph = new Map<string, string[]>();
   for (const [view, files] of viewImporters()) {
     graph.set(
       view,
       files.map((file) =>
-        file.startsWith(forkSrc) ? (pageOf.get(file) ?? "shell") : relative(UPSTREAM_WEB, file)
+        file.startsWith(forkSrc) ? ownOwner(file, pages) : relative(UPSTREAM_WEB, file)
       )
     );
   }

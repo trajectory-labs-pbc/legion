@@ -8,6 +8,7 @@ import {
   notes,
   type Owner,
   owners,
+  ownOwner,
   viewMap,
 } from "./coverage";
 import { featureViews, runtimeImports } from "./source";
@@ -122,6 +123,14 @@ describe("the view map", () => {
     expect(messages(coverage(["features/a/A.tsx"], served))).toEqual([
       "src/pages/a.tsx views has the glob features/a/**: a page this app serves names each upstream file it replaces",
     ]);
+  });
+
+  test("a file in a page's folder is the page's, and any other file of the app the shell's", () => {
+    const pages = [{ file: "/app/src/pages/sign-in.tsx", id: "credentials" }];
+    expect(ownOwner("/app/src/pages/sign-in.tsx", pages)).toBe("page:credentials");
+    expect(ownOwner("/app/src/pages/sign-in/form.tsx", pages)).toBe("page:credentials");
+    expect(ownOwner("/app/src/pages/sign-in-help/form.tsx", pages)).toBe("shell");
+    expect(ownOwner("/app/src/shell/frame.tsx", pages)).toBe("shell");
   });
 
   test("a type-only import loads nothing", () => {
