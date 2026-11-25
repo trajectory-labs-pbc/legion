@@ -5,7 +5,7 @@ import { cn } from "cn";
 
 const badgeVariants = cva(
   [
-    "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent px-1.5 py-0.5 text-xs font-medium whitespace-nowrap",
+    "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent text-xs font-medium whitespace-nowrap",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     "[&>svg]:pointer-events-none [&>svg]:size-3",
   ],
@@ -21,9 +21,15 @@ const badgeVariants = cva(
         warning: "border-warning-border bg-warning-tint text-warning",
         success: "border-success-border bg-success-tint text-success",
       },
+      size: {
+        default: "px-1.5 py-0.5",
+        // A number alone: a 20 px chip, at least as wide as it is high.
+        count: "h-5 min-w-5 px-1 tabular-nums",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
 );
@@ -33,6 +39,7 @@ type BadgeVariants = VariantProps<typeof badgeVariants>;
 function Badge({
   className,
   variant = "default",
+  size = "default",
   render,
   ...props
 }: useRender.ComponentProps<"span"> & BadgeVariants) {
@@ -42,7 +49,8 @@ function Badge({
     props: {
       "data-slot": "badge",
       "data-variant": variant,
-      className: cn(badgeVariants({ variant }), className),
+      "data-size": size,
+      className: cn(badgeVariants({ variant, size }), className),
       ...props,
     },
   });
