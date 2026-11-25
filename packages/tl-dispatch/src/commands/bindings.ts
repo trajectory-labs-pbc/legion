@@ -23,7 +23,8 @@ function toBinding(spec: CommandSpec, gate: () => boolean): KeyBinding {
     },
     when: () => spec.enabled && gate(),
     ...(command.inEditable === true ? { inEditable: true } : {}),
-    ...(command.hideFrom?.includes("palette") === true ? { palette: false } : {}),
+    // Stated every time: the engine's own default drops a binding with two keys.
+    palette: command.hideFrom?.includes("palette") !== true,
   };
 }
 

@@ -38,8 +38,14 @@ const catalog = createCatalog([
     parent: null,
     scope: "global",
     commands: [
-      { name: "search", label: "Search", keys: ["$mod+k"], inEditable: true },
-      { name: "create", label: "Create issue", keys: ["c"] },
+      {
+        name: "search",
+        label: "Search",
+        keys: ["$mod+k"],
+        inEditable: true,
+        hideFrom: ["palette"],
+      },
+      { name: "create", label: "Create issue", keys: ["c", "n i"] },
       { name: "go-inbox", label: "Go to Inbox", keys: ["g i"] },
       { name: "help", label: "Keyboard shortcuts", keys: ["?"], overlays: "under-all" },
     ],
@@ -100,6 +106,7 @@ describe("bindings", () => {
     let open = true;
     const [search, create] = toBindings(recorder("global", fired), () => open);
     expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
+    expect([search?.palette, create?.palette]).toEqual([false, true]);
     expect(create?.when?.()).toBe(true);
     open = false;
     expect(create?.when?.()).toBe(false);
