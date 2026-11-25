@@ -10,7 +10,6 @@ import {
   machineName,
   Timestamp,
 } from "./upstream";
-import { useRevoke } from "./use-revoke";
 
 // A pod login (`person` set) and a service's token login have no approver.
 function approvedBy(login: LauncherCredentialResp): string {
@@ -62,36 +61,28 @@ const columns: readonly RevocableColumn<LauncherCredentialResp>[] = [
   },
 ];
 
-const rowKey = (login: LauncherCredentialResp) => login.credential_id;
-
 /** The machine logins the viewer may revoke that can still reach a secret. */
 export function MachineLogins(): ReactNode {
   const queryClient = useQueryClient();
   const logins = useQuery({ ...machineLoginsQuery(), select: (data) => data.credentials ?? [] });
-  const revoke = useRevoke({
-    confirm: (login) =>
-      `Revoke the machine login for ${machineName(login)}? ${revokeOutcome(login)}`,
-    label: (login) => `Machine logins: revoke ${rowKey(login)}`,
-    listed: logins.data,
-    onRevoked: () => {
-      void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
-      void queryClient.invalidateQueries({ queryKey: credentialGrantsQuery().queryKey });
-    },
-    revoke: (login, bounds) => api.revokeMachineLogin(login.credential_id, bounds),
-    rowKey,
-  });
-
   return (
     <RevocableTable
       columns={columns}
+      confirm={(login) =>
+        `Revoke the machine login for ${machineName(login)}? ${revokeOutcome(login)}`
+      }
       description="Every machine and every pod logged in as you, and every service's login. A pod logs in as you when the broker's BROKER_POD_OPERATORS maps the pod's Kubernetes account to you. The list shows a login while it is unexpired or a session it started still runs: a session outlives its login's expiry. Only you may revoke the logins of your machines and your pods. Anyone signed in may revoke a service's login. Revoking a login ends it now: it starts no more sessions, and every session it started loses its secrets."
       empty="No live machine logins."
       heading="Machine logins"
       headingId="machine-logins-heading"
       noun="machine logins"
+      onRevoked={() => {
+        void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
+        void queryClient.invalidateQueries({ queryKey: credentialGrantsQuery().queryKey });
+      }}
       query={logins}
-      revoke={revoke}
-      rowKey={rowKey}
+      revoke={(login, bounds) => api.revokeMachineLogin(login.credential_id, bounds)}
+      rowKey={(login) => login.credential_id}
       rowName={(login) => `the machine login for ${machineName(login)}`}
     />
   );
