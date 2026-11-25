@@ -17,7 +17,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 6. A chord starts with `g` (go to a page), `o` (open a picker) or `n` (open a create form). The catalog refuses any other first step.
 7. Do not bind a key the browser keeps (`$mod+r`, `$mod+t`, `$mod+w`, `$mod+n`, `$mod+l`, `$mod+d`, `$mod+Shift+r`, `$mod+Shift+c`). The catalog refuses them.
 8. An action with no safe key has no key. It is a palette command: `keys` empty or absent.
-9. Labels are short verbs with their object: "Create issue", "Go to Agents". The same label shows on every surface.
+9. A label follows TY8 in `.agents/skills/ui-design-system/references/surfaces-and-type.md`. The same label shows on every surface.
 
 ## The catalog
 
