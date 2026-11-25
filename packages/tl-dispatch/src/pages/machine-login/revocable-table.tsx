@@ -12,8 +12,8 @@ import {
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { writeFailureNote } from "@/writes/write-failure-note";
-import { refusedNote } from "./upstream";
-import type { Revoke } from "./use-revoke";
+import { refusedNote, type WriteBounds } from "./upstream";
+import { useRevoke } from "./use-revoke";
 
 export interface RevocableColumn<Row> {
   cell: (row: Row) => ReactNode;
@@ -23,28 +23,43 @@ export interface RevocableColumn<Row> {
 /** A list of things the viewer may revoke: one row each, a Revoke button, and a refusal under it. */
 export function RevocableTable<Row>({
   columns,
+  confirm,
   description,
   empty,
   heading,
   headingId,
   noun,
+  onRevoked,
   query,
-  revoke,
+  revoke: write,
   rowKey,
   rowName,
 }: {
   columns: readonly RevocableColumn<Row>[];
+  /** The question a Revoke asks first. */
+  confirm: (row: Row) => string;
   description: ReactNode;
   empty: string;
   heading: string;
   headingId: string;
   noun: string;
+  onRevoked: () => void;
   query: UseQueryResult<readonly Row[]>;
-  revoke: Revoke<Row>;
+  /** One attempt of `row`'s revoke. */
+  revoke: (row: Row, bounds: WriteBounds) => Promise<void>;
   rowKey: (row: Row) => string;
   /** `row` as the refusal line names it: `the machine login for devbox`. */
   rowName: (row: Row) => string;
 }): ReactNode {
+  // The list and its key come from the one query, so the refusal line follows the rows shown.
+  const revoke = useRevoke({
+    confirm,
+    label: (row) => `${heading}: revoke ${rowKey(row)}`,
+    listed: query.data,
+    onRevoked,
+    revoke: write,
+    rowKey,
+  });
   const { refused } = revoke;
   return (
     <section aria-labelledby={headingId} className="space-y-3">
