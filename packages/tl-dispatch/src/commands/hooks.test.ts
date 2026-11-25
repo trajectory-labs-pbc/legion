@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { createCommandStore } from "./hooks";
 import { type CommandSpec, createCatalog } from "./schema";
 
