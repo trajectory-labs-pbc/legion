@@ -3,9 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, type ReactNode } from "react";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
-import { MemoryNavigationProvider } from "@/navigation/provider";
 import { stubFetch } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { NavigationPanel } from "./navigation-panel";
 import type { SignOut } from "./use-sign-out";

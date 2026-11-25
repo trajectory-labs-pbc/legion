@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
 import { act } from "react";
 
-import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { AppShell } from "./app-shell";
 

@@ -10,7 +10,7 @@ export interface CommandState {
 }
 
 /** The names of a context's commands, read from the catalog's ids. */
-export type CommandNamesIn<
+type CommandNamesIn<
   Id extends string,
   Context extends string,
 > = Id extends `${Context}.${infer Name}` ? Name : never;

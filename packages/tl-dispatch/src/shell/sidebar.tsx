@@ -108,7 +108,7 @@ function ItemRows({
 }
 
 /** The sidebar's rows as `data` holds them. */
-export function SidebarView({
+function SidebarView({
   data,
   onNavigate,
 }: {

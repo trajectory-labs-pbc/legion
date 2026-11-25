@@ -37,18 +37,3 @@ export const REGISTRY_FILES: readonly string[] = [
   "theme.css",
   "tooltip.tsx",
 ].map((name) => `src/ui/${name}`);
-
-/** The files in `src/ui` that draw a control, whose heights come from the scale. */
-export const CONTROL_FILES: readonly string[] = [
-  "button",
-  "checkbox",
-  "combobox",
-  "input",
-  "input-group",
-  "radio-group",
-  "select",
-  "switch",
-  "textarea",
-  "toggle",
-  "toggle-group",
-].map((name) => `src/ui/${name}.tsx`);

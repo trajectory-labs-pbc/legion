@@ -1,10 +1,10 @@
 import { createKeymap, type Keymap } from "@upstream-dispatch/features/shell/keymap";
 
 /** The first step of every chord: G jumps, O opens a picker, N opens a create form. */
-export const CHORD_PREFIXES = ["g", "o", "n"] as const;
+const CHORD_PREFIXES = ["g", "o", "n"] as const;
 
 /** Keys the browser keeps. */
-export const BROWSER_KEYS = [
+const BROWSER_KEYS = [
   "$mod+r",
   "$mod+t",
   "$mod+w",

@@ -9,7 +9,7 @@ import { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import { ApiError, NetworkError } from "@upstream-dispatch/api/client";
 
-import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginPage } from "./machine-login-page";
 import { api, type RecordResponse, stoppedWriteNote } from "./upstream";
 

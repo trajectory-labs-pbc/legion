@@ -4,7 +4,7 @@ import { KbdSequence } from "@/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import type { ShortcutChips } from "./key-chips";
 
-export interface HotkeyTooltipPopupProps {
+interface HotkeyTooltipPopupProps {
   trigger: ReactElement;
   label: string;
   chips: ShortcutChips | null;

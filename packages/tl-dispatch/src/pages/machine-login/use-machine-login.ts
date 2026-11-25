@@ -16,12 +16,12 @@ import {
 } from "./upstream";
 
 /** A looked-up login as the page shows it: its record, and its decision once one is made. */
-export interface MachineLoginView {
+interface MachineLoginView {
   record: RecordResponse;
   decided: { credential_id: string | null; event: string } | null;
 }
 
-export interface MachineLogin {
+interface MachineLogin {
   /** The code in the field, formatted. */
   code: string;
   typeCode(typed: string): void;

@@ -127,7 +127,7 @@ A move to another router (TanStack Router, say) changes these files of this pack
 
 - `src/navigation/router-path.ts`: the grammar written in the router's syntax (TanStack: `$name`
   for `:name` and `$` for `*`).
-- `src/navigation/provider.tsx`: the router provider, for the app and for tests.
+- `src/navigation/provider.tsx`: the router provider. `tests/navigation.tsx`: the one tests use.
 - `src/navigation/route-tree.tsx`: `createRouteTree`: the outlet, `pageAt` and `useCurrentPage`.
   Each route's `element` becomes the new router's component there.
 - `src/navigation/page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.

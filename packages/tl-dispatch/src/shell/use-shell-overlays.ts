@@ -10,7 +10,7 @@ import { NAV_PAGES } from "./nav-pages";
 import type { ShellLayout } from "./use-shell-layout";
 
 /** What opens over the page, and the global commands that open it. */
-export interface ShellOverlays {
+interface ShellOverlays {
   navigationOpen: boolean;
   openNavigation: () => void;
   closeNavigation: () => void;

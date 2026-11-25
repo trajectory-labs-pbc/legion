@@ -13,7 +13,7 @@ export interface CommandGroup {
 export type OverlayReach = "under-most" | "under-all";
 
 /** A surface that lists commands. A button names its command, so it reads no `hideFrom`. */
-export type CommandCatalog = "palette" | "sheet";
+type CommandCatalog = "palette" | "sheet";
 
 export type CommandIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 

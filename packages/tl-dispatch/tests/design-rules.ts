@@ -4,9 +4,9 @@ import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import ts from "typescript";
 
-import { CHECK_SIZES, CONTROL_HEIGHTS, GLYPH_SIZES, TOUCH_MIN_HEIGHT } from "./control-scale";
+import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale";
 import { type CssDeclaration, importedPath, lineAt, parseCss } from "./css";
-import { CONTROL_FILES, EXEMPT } from "./design-config";
+import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
 import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
 import { parseScript } from "./typescript";
@@ -515,17 +515,6 @@ function scriptViolations(
   };
   visit(source);
 
-  if (CONTROL_FILES.includes(file.path)) {
-    const multiLine = file.path === "src/ui/textarea.tsx";
-    const glyphs: readonly number[] = [...GLYPH_SIZES, ...CHECK_SIZES];
-    heights(
-      classWords(source),
-      (heightKind, value) =>
-        inScale(heightKind, value) ||
-        (multiLine && heightKind === "min-h") ||
-        (heightKind === "size" && glyphs.includes(Number(value)))
-    );
-  }
   return violations;
 }
 

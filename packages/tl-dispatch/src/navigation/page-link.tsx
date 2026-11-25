@@ -16,7 +16,7 @@ import { isParamsOf, type ParamsProp } from "./path";
 /** How long the pointer rests on a link before its page's reads start. */
 export const PREFETCH_INTENT_MS = 100;
 
-export interface PrefetchIntent {
+interface PrefetchIntent {
   onPointerEnter: () => void;
   onPointerLeave: () => void;
   onFocus: () => void;
@@ -30,7 +30,7 @@ export interface PrefetchIntent {
  * Losing focus and a click cancel nothing: after a click the shell moves focus to the page,
  * whose lazy code may not read yet.
  */
-export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): PrefetchIntent {
+function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): PrefetchIntent {
   const client = useQueryClient();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const started = useRef<readonly QueryKey[]>([]);
@@ -80,10 +80,7 @@ export function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined
   };
 }
 
-export type PageLinkProps<Path extends string, Search extends string> = Omit<
-  ComponentProps<"a">,
-  "href"
-> &
+type PageLinkProps<Path extends string, Search extends string> = Omit<ComponentProps<"a">, "href"> &
   ParamsProp<Path> & {
     page: PageRoute<Path, Search>;
     search?: PageSearch<Search>;

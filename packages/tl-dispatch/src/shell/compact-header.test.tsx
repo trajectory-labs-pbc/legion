@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-
-import { MemoryNavigationProvider } from "@/navigation/provider";
 import { stubFetch } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 

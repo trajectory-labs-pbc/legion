@@ -37,7 +37,7 @@ export function toBindings(specs: CommandSpecs, gate: () => boolean = () => true
   return specs.map((spec) => toBinding(spec, gate));
 }
 
-export interface ContextBindings {
+interface ContextBindings {
   scope: KeymapScope;
   /** The context's own bindings, in its scope. */
   own: KeyBinding[];

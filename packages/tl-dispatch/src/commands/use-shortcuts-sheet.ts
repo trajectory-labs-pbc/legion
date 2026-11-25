@@ -7,7 +7,7 @@ import { liveShortcuts, type ShortcutSection } from "./live-shortcuts";
 import { UPSTREAM_LABELS } from "./upstream-labels";
 
 /** The keys that run now, below anything the sheet itself opens. */
-export function readLiveShortcuts(): ShortcutSection[] {
+function readLiveShortcuts(): ShortcutSection[] {
   return liveShortcuts(appKeymap.describe(), appStack.liveScopes(), appCatalog, UPSTREAM_LABELS);
 }
 

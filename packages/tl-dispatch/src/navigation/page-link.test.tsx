@@ -2,11 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
-
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
 import { pageRoute, prefetchOf } from "./page-route";
-import { MemoryNavigationProvider } from "./provider";
 
 /** A read that waits until the test lets it answer, and records each start and abort. */
 function slowRead() {

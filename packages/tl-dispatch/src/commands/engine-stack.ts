@@ -9,7 +9,7 @@ import { type OverlayKind, type OverlayLayer, overlayStack } from "@/ui/overlay-
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";
 
 /** The overlay kinds a global command still runs under. Under the shortcuts sheet only `?` acts. */
-export const GLOBAL_COMMANDS_RUN_UNDER: Readonly<Record<OverlayKind, boolean>> = {
+const GLOBAL_COMMANDS_RUN_UNDER: Readonly<Record<OverlayKind, boolean>> = {
   dialog: false,
   "alert-dialog": false,
   sheet: false,
@@ -22,7 +22,7 @@ export const GLOBAL_COMMANDS_RUN_UNDER: Readonly<Record<OverlayKind, boolean>> =
 /** A dialog that upstream's code opened (its palette, a `useDialog` sheet), not one of our layers. */
 export const UPSTREAM = "upstream";
 
-export type DialogOwner = OverlayLayer | typeof UPSTREAM;
+type DialogOwner = OverlayLayer | typeof UPSTREAM;
 
 /** The open overlays, bottom first, as the registry's overlay stack holds them. */
 export interface LayerSource {

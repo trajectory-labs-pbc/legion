@@ -6,12 +6,12 @@ import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from
 import { routerPath } from "./router-path";
 
 /** Where a move goes on a page: its params, required where its path binds any, and search. */
-export type PageTarget<Path extends string, Search extends string> = ParamsProp<Path> & {
+type PageTarget<Path extends string, Search extends string> = ParamsProp<Path> & {
   search?: PageSearch<Search>;
   replace?: boolean;
 };
 
-export type PageNavigate = <Path extends string, Search extends string>(
+type PageNavigate = <Path extends string, Search extends string>(
   page: PageRoute<Path, Search>,
   ...target: [PathParamName<Path>] extends [never]
     ? [target?: PageTarget<Path, Search>]

@@ -22,12 +22,12 @@ import type { PageLayout } from "@/pages/page";
 import { NAV_PAGES } from "./nav-pages";
 
 /** A count beside a row, with what it counts; none at zero. */
-export interface SidebarCount {
+interface SidebarCount {
   count: number | undefined;
   label?: string;
 }
 
-export interface SidebarDestination {
+interface SidebarDestination {
   name: NavName;
   label: string;
   icon: CommandIcon;

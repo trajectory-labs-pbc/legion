@@ -11,7 +11,7 @@ export function useCommand(id: CommandId): CommandView | undefined {
 }
 
 /** Whether the command's keys run under the overlays open now. */
-export function useKeysReach(id: CommandId): boolean {
+function useKeysReach(id: CommandId): boolean {
   return useSyncExternalStore(appStack.subscribe, () =>
     keysReach(appCatalog, appCatalog.command(id), appStack)
   );

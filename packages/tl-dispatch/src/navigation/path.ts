@@ -24,7 +24,7 @@ export type ParamsProp<Path extends string> = { params?: PathParams<Path> } & ([
   ? unknown
   : { params: PathParams<Path> });
 
-export type PathSegment =
+type PathSegment =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "param"; readonly name: string }
   | { readonly kind: "rest" };

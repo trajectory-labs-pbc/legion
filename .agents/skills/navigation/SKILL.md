@@ -21,7 +21,7 @@ Every address of the app is declared in a page file. Links and moves are typed f
 The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change one folder, not every page. The files a move changes:
 
 - `router-path.ts`: the path grammar written in the router's syntax.
-- `provider.tsx`: the router provider for the app and for tests.
+- `provider.tsx`: the router provider for the app. Tests use `MemoryNavigationProvider` from `tests/navigation.tsx`.
 - `route-tree.tsx`: the route tree, `pageAt` and `useCurrentPage`.
 - `page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.

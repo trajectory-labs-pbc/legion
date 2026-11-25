@@ -31,10 +31,10 @@ export function RevocableTable<Row>({
   revoke,
   rowKey,
   rowName,
-  unrevocable,
 }: {
   columns: readonly RevocableColumn<Row>[];
-  confirm?: (row: Row) => string;
+  /** The question a Revoke asks first. */
+  confirm: (row: Row) => string;
   description: ReactNode;
   empty: string;
   heading: string;
@@ -46,7 +46,6 @@ export function RevocableTable<Row>({
   rowKey: (row: Row) => string;
   /** `row` as the refusal line names it: `the machine login for devbox`. */
   rowName: (row: Row) => string;
-  unrevocable?: (row: Row) => string | null;
 }): ReactNode {
   const submitGuard = useSubmitGuard();
   const mutation = useKeyedWrite({
@@ -65,7 +64,7 @@ export function RevocableTable<Row>({
     ? mutation.variables
     : undefined;
   const press = (row: Row) => {
-    if (confirm === undefined || window.confirm(confirm(row))) {
+    if (window.confirm(confirm(row))) {
       submitGuard.guard(() => mutation.mutate(row));
     }
   };
@@ -137,21 +136,15 @@ export function RevocableTable<Row>({
                       </td>
                     ))}
                     <td className="px-4 py-2 text-right">
-                      {unrevocable?.(row) ? (
-                        <span className="text-xs whitespace-nowrap text-muted-foreground">
-                          {unrevocable(row)}
-                        </span>
-                      ) : (
-                        <Button
-                          aria-label={`Revoke ${rowName(row)}`}
-                          disabled={mutation.isPending}
-                          onClick={() => press(row)}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          Revoke
-                        </Button>
-                      )}
+                      <Button
+                        aria-label={`Revoke ${rowName(row)}`}
+                        disabled={mutation.isPending}
+                        onClick={() => press(row)}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        Revoke
+                      </Button>
                     </td>
                   </tr>
                 ))

@@ -7,7 +7,7 @@ import type { Catalog, CommandGroup } from "./schema";
 import type { UpstreamLabels } from "./upstream-labels";
 
 /** One command as the sheet lists it: each key that runs it, in the engine's syntax. */
-export interface ShortcutRow {
+interface ShortcutRow {
   id: string;
   label: string;
   keys: readonly string[];
@@ -19,7 +19,7 @@ export interface ShortcutSection {
 }
 
 /** Keys every reader knows; the sheet leaves them out, and they still run. */
-export const UNIVERSAL_KEYS = ["Escape"] as const;
+const UNIVERSAL_KEYS = ["Escape"] as const;
 
 const UNIVERSAL = keyChecker(UNIVERSAL_KEYS);
 

@@ -12,7 +12,7 @@ import { writeFailureNote } from "@/writes/write-failure-note";
 import { forgetReads } from "./forget-reads";
 import { signIns, signOutQuestion, unsentChanges } from "./sign-ins";
 
-export function signOutFailure(error: Error): string {
+function signOutFailure(error: Error): string {
   return writeFailureNote(error, {
     what: "the sign-out",
     anew: "Every change is still here. Retry ends your session, or finds it ended, and signs you out here.",

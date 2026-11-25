@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 
 import { NAV_DESTINATIONS } from "@/commands/nav";
-import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";

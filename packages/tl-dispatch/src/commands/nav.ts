@@ -15,7 +15,7 @@ import type { CommandDefinition, CommandIcon } from "./schema";
  * A page the sidebar lists and a `G` chord jumps to. The row's key hint reads the same entry;
  * its address is its page route's (`NAV_PAGES` in the shell).
  */
-export interface NavDestination {
+interface NavDestination {
   name: string;
   label: string;
   icon: CommandIcon;
@@ -35,7 +35,7 @@ export const NAV_DESTINATIONS = [
 
 export type NavName = (typeof NAV_DESTINATIONS)[number]["name"];
 
-export type NavCommandName = `go-${NavName}`;
+type NavCommandName = `go-${NavName}`;
 
 export function navCommandName(name: NavName): NavCommandName {
   return `go-${name}`;

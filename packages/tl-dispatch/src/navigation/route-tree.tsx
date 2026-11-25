@@ -5,12 +5,12 @@ import { layoutAt, type PageRoute } from "./page-route";
 import { routerPath } from "./router-path";
 
 /** What the route tree reads of a page: its id and its named routes. */
-export interface RoutedPage<Layout> {
+interface RoutedPage<Layout> {
   readonly id: string;
   readonly routes: Readonly<Record<string, PageRoute<string, string, Layout>>>;
 }
 
-export interface CurrentPage<Page, Layout> {
+interface CurrentPage<Page, Layout> {
   page: Page;
   route: PageRoute<string, string, Layout>;
   params: Readonly<Record<string, string | undefined>>;
@@ -18,7 +18,7 @@ export interface CurrentPage<Page, Layout> {
   layout: Layout | undefined;
 }
 
-export interface RouteTree<Page, Layout> {
+interface RouteTree<Page, Layout> {
   /** The page drawn at the address. */
   PageRoutes(): ReactNode;
   /** The page and route an address opens, ranked as the router ranks them, with its layout. */

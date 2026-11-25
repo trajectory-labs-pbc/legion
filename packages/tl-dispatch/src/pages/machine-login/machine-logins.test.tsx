@@ -9,7 +9,7 @@ import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import type { ApproverGrantResp } from "@upstream-dispatch/api/types";
 import { GrantsSection } from "@upstream-dispatch/features/credentials/GrantsSection";
 
-import { MemoryNavigationProvider } from "@/navigation/provider";
+import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginPage } from "./machine-login-page";
 import { MachineLogins } from "./machine-logins";
 import { api, type LauncherCredentialResp } from "./upstream";

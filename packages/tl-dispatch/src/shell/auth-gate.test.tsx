@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act } from "react";
-
-import { MemoryNavigationProvider } from "@/navigation/provider";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
+import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render } from "../../tests/react";
 import { AuthGate } from "./auth-gate";
 

@@ -8,6 +8,3 @@ export const TOUCH_MIN_HEIGHT = 11;
 
 /** A checkbox or radio box: 14 or 16 px. */
 export const CHECK_SIZES = [3.5, 4] as const;
-
-/** Icon glyphs inside a control. */
-export const GLYPH_SIZES = [3, 3.5, 4] as const;
