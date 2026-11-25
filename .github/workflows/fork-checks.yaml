@@ -66,9 +66,12 @@ jobs:
           filter: blob:none
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
-      # The root install first: the app links React and the other shared libraries from it.
+      # The root install first: the app links React and the other shared libraries from it. Then
+      # the UI package's, whose sources the app imports.
       - run: bun install --frozen-lockfile
         working-directory: .
+      - run: bun install --frozen-lockfile
+        working-directory: packages/ui
       - run: bun install --frozen-lockfile
       - name: Type-check
         run: bun run typecheck

@@ -35,8 +35,11 @@ RUN bun install --frozen-lockfile --ignore-scripts \
     --filter './packages/contracts' \
     --filter './packages/proof-editor'
 COPY . ./
+# The UI package first: the app imports its sources, which import its own install.
+WORKDIR /repo/packages/ui
+RUN bun install --frozen-lockfile --ignore-scripts && bun scripts/link-root-packages.ts .
 WORKDIR /repo/packages/tl-dispatch
-RUN bun install --frozen-lockfile --ignore-scripts && bun scripts/link-root-packages.ts
+RUN bun install --frozen-lockfile --ignore-scripts && bun ../ui/scripts/link-root-packages.ts .
 ARG LEGION_COMMIT=
 RUN DISPATCH_BUILD="$LEGION_COMMIT" bun run build \
     && test -s dist/index.html \

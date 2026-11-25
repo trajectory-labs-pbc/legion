@@ -11,6 +11,8 @@
     "types": ["bun", "vite/client"],
     "paths": {
       "@/*": ["./src/*"],
+      "@legion/ui/components/*": ["../ui/src/components/*.tsx"],
+      "@legion/ui/lib/*": ["../ui/src/lib/*.ts"],
       "@upstream-dispatch/*": ["../dispatch/web/src/*"],
       "@legion/contracts": ["../contracts/src/index.ts"],
       "proof-sdk-upstream/src/*": ["../proof-editor/upstream/*"]

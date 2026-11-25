@@ -11,13 +11,14 @@
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
     "check:entry-budget": "bun scripts/check-entry-budget.ts",
-    "postinstall": "bun scripts/link-root-packages.ts"
+    "postinstall": "bun ../ui/scripts/link-root-packages.ts ."
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
     "class-variance-authority": "0.7.1",
+    "cn": "0.2.6",
     "lucide-react": "1.70.0",
     "tailwind-merge": "3.7.0"
   },
@@ -44,6 +45,12 @@
     "typescript",
     "vite",
     "yjs"
+  ],
+  "uiPackages": [
+    "@base-ui/react",
+    "class-variance-authority",
+    "cn",
+    "lucide-react"
   ],
   "overrides": {
     "react": "19.2.8",

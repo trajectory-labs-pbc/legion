@@ -67,9 +67,12 @@ function thirdPartyNoticesFile(): { page: Plugin; worker: () => Plugin } {
 
 const notices = thirdPartyNoticesFile();
 
-// The libraries both apps' code reaches come from the root install (scripts/link-root-packages.ts).
-const { rootPackages } = JSON.parse(readFileSync(at("package.json"), "utf8")) as {
+// The libraries both apps' code reaches come from the root install (packages/ui/scripts/link-root-packages.ts).
+// packages/ui's components import the UI packages, which this app installs too: the build takes
+// this app's copy of each.
+const { rootPackages, uiPackages } = JSON.parse(readFileSync(at("package.json"), "utf8")) as {
   rootPackages: string[];
+  uiPackages: string[];
 };
 
 export default defineConfig({
@@ -79,7 +82,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     notices.page,
-    oneCopyEach(rootPackages, `${at("node_modules")}/`),
+    oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`),
   ],
   worker: { format: "es", plugins: () => [notices.worker()] },
   define: {
@@ -96,10 +99,13 @@ export default defineConfig({
       "@tanstack/react-query",
       "yjs",
       "prosemirror-model",
+      ...uiPackages,
     ],
     alias: {
       "@": at("./src"),
       "@upstream-dispatch": at("../dispatch/web/src"),
+      "@legion/ui/components": at("../ui/src/components"),
+      "@legion/ui/lib": at("../ui/src/lib"),
       "decode-named-character-reference": characterReferenceDecoder,
       "@legion/contracts/repo": at("../contracts/src/repo.ts"),
       "@legion/contracts/dispatch-snippet": at("../contracts/src/dispatch-snippet.ts"),
