@@ -49,6 +49,8 @@ installs from the default branch, not from the ref you asked for.
   when the OS is dark.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the 1px inset edge, opacity fades of 150 to 200 ms
-  only, square corners except dots and avatars, no pointer cursor, no arbitrary properties, one
-  set of dark values. It also checks the contrast of each text colour on each surface the
-  components draw it on, and of the focus outline and the field and state edges.
+  only, no pointer cursor, no arbitrary properties, one set of dark values, and square corners.
+  `--radius` is 0, and the only other radius is `rounded-full`, which a source check allows on
+  seven parts only: the radio item and its dot, the switch and its thumb, the slider thumb, the
+  avatar and the avatar group's count. It also checks the contrast of each text colour on each
+  surface the components draw it on, and of the focus outline and the field and state edges.
