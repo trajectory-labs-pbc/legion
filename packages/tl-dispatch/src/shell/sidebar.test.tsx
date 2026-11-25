@@ -225,6 +225,31 @@ describe("the sidebar", () => {
     expect(mark()?.closest("a")?.getAttribute("href")).toBe("/");
   });
 
+  test("pinned agents fold under their heading, and with none it says how to pin one", () => {
+    const container = mountView({
+      destinations: [],
+      pinnedAgents: [],
+      inLiveView: false,
+      pinnedIssues: { status: "success", rows: [] },
+      projects: { status: "success", rows: [] },
+    });
+    const fold = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Pinned agents"
+    );
+    if (fold === undefined) throw new Error("no fold");
+    const list = document.getElementById(fold.getAttribute("aria-controls") ?? "");
+    expect(fold.getAttribute("aria-expanded")).toBe("true");
+    expect(list?.hidden).toBe(false);
+    expect(list?.textContent).toBe(
+      "Pin an agent on the Agents page, or in its live view, to keep it here."
+    );
+    settle(() => fold.click());
+    expect(fold.getAttribute("aria-expanded")).toBe("false");
+    expect(list?.hidden).toBe(true);
+    settle(() => fold.click());
+    expect(list?.hidden).toBe(false);
+  });
+
   test("a read still out draws a quiet line; a failed one says so beside Retry", () => {
     const asked: string[] = [];
     const container = mountView({
@@ -243,11 +268,12 @@ describe("the sidebar", () => {
     const lines = [...container.querySelectorAll("p")];
     expect(lines.map((line) => line.textContent)).toEqual([
       "Could not load the Inbox count.Retry",
+      "Pin an agent on the Agents page, or in its live view, to keep it here.",
       "Loading pinned issues…",
       "Could not load projects.Retry",
     ]);
-    expect(lines[1]?.className).toContain("text-muted-foreground");
-    for (const failed of [lines[0], lines[2]]) {
+    expect(lines[2]?.className).toContain("text-muted-foreground");
+    for (const failed of [lines[0], lines[3]]) {
       expect(failed?.className).toContain("text-danger");
       settle(() => failed?.querySelector("button")?.click());
     }

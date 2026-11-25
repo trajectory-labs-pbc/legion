@@ -6,7 +6,8 @@ import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
-import type { ReactNode } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
@@ -106,6 +107,55 @@ function ItemRows({
   );
 }
 
+/** The pinned agents under a heading that folds them, or the hint that says how to pin one. */
+function PinnedAgents({
+  agents,
+  onNavigate,
+  replace,
+}: {
+  agents: readonly SidebarAgent[];
+  onNavigate: (() => void) | undefined;
+  replace: boolean;
+}) {
+  const [open, setOpen] = useState(true);
+  const listId = useId();
+  return (
+    <section>
+      <Heading className="pb-1" size="label" tone="muted">
+        <Button
+          aria-controls={listId}
+          aria-expanded={open}
+          className="has-[>svg]:px-2"
+          onClick={() => setOpen(!open)}
+          size="xs"
+          variant="ghost"
+        >
+          Pinned agents
+          {open ? <ChevronDownIcon aria-hidden /> : <ChevronRightIcon aria-hidden />}
+        </Button>
+      </Heading>
+      <div hidden={!open} id={listId}>
+        {agents.length === 0 ? (
+          <p className="px-2 text-xs text-pretty text-muted-foreground">
+            Pin an agent on the Agents page, or in its live view, to keep it here.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-0.5">
+            {agents.map((agent) => (
+              <PinnedAgentRow
+                agent={agent}
+                key={agent.sessionId}
+                onNavigate={onNavigate}
+                replace={replace}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** Issues or projects under a heading, or the read's line; none when `hideEmpty` and empty. */
 function ItemSection({
   heading,
@@ -190,21 +240,7 @@ export function SidebarView({
           );
         })}
       </ul>
-      {data.pinnedAgents.length === 0 ? null : (
-        <section>
-          <SectionHeading>Pinned agents</SectionHeading>
-          <ul className="flex flex-col gap-0.5">
-            {data.pinnedAgents.map((agent) => (
-              <PinnedAgentRow
-                agent={agent}
-                key={agent.sessionId}
-                onNavigate={onNavigate}
-                replace={data.inLiveView}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
+      <PinnedAgents agents={data.pinnedAgents} onNavigate={onNavigate} replace={data.inLiveView} />
       <ItemSection
         heading="Pinned"
         hideEmpty
