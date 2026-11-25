@@ -25,7 +25,13 @@ const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
 
 /** The keys upstream's shell binds today, as the engine sees them. */
 const LIVE_KEYS: readonly CommandDefinition[] = [
-  { name: "search", keys: ["$mod+k"], label: "Search and actions", inEditable: true },
+  {
+    name: "search",
+    keys: ["$mod+k"],
+    label: "Search and actions",
+    inEditable: true,
+    hideFrom: ["palette"],
+  },
   { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
   { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
   { name: "create", keys: ["c"], label: "Create issue" },

@@ -30,6 +30,8 @@ export const APP_CONTEXTS = [
         keys: ["$mod+k"],
         icon: SearchIcon,
         inEditable: true,
+        // The palette does not list the key that opens it.
+        hideFrom: ["palette"],
       },
       // A slash typed into a field stays a slash.
       {
