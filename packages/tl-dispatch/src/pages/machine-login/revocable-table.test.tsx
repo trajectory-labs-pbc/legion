@@ -1,5 +1,7 @@
 // Upstream's features/credentials/RevocableList.test.tsx, against the rebuilt table. Only the
 // machine logins section is rebuilt; the grants and sign-ins sections stay upstream's.
+// Changed from upstream, RVL-01 to RVL-06: a row's name also carries its credential id, so each
+// row's Revoke has its own accessible name.
 import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -16,7 +18,7 @@ import { api, stoppedWriteNote } from "./upstream";
 const heading = "Machine logins";
 const empty = "No live machine logins.";
 /** The listed row as the section's sentences of its revoke name it. */
-const name = "the machine login for devbox.example.com";
+const name = "the machine login for devbox.example.com, credential cred-devbox";
 const refusal = "only the person who approved a person's machine login may revoke it";
 const rowId = "cred-devbox";
 const revoke = { name: `Revoke ${name}` };
