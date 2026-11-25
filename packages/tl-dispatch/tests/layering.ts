@@ -66,7 +66,12 @@ function rulesFor(entry: Import): string[] {
   return rules;
 }
 
-const upstreamImports = new Map<string, Import[]>();
+/** Upstream's files are read from disk alone, so one view and one cache serve every walk. */
+const upstream = {
+  files: filesWith(),
+  cache: resolutionCache(),
+  imports: new Map<string, Import[]>(),
+};
 
 /**
  * Every layer rule `files` and the modules they reach break. Imports are resolved as the build
@@ -79,10 +84,10 @@ export function layerViolations(files: readonly SourceFile[]): LayerViolation[] 
   const cache = resolutionCache();
   const importsFor = (path: string): Import[] => {
     if (own(path)) return importsOf(path, disk, cache);
-    let found = upstreamImports.get(path);
+    let found = upstream.imports.get(path);
     if (found === undefined) {
-      found = importsOf(path, filesWith(), resolutionCache());
-      upstreamImports.set(path, found);
+      found = importsOf(path, upstream.files, upstream.cache);
+      upstream.imports.set(path, found);
     }
     return found;
   };
