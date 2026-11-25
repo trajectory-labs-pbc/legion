@@ -1,21 +1,13 @@
-import {
-  cloneElement,
-  type ReactElement,
-  type Ref,
-  type RefCallback,
-  useCallback,
-  useEffect,
-  useRef,
-  useSyncExternalStore,
-} from "react";
+import type { KeyTooltip } from "@legion/ui/components/key-tooltip";
+import { useKeptFocus } from "@legion/ui/lib/use-kept-focus";
+import { cloneElement, type ReactElement, type Ref, useEffect, useSyncExternalStore } from "react";
 
 import { loadNamed } from "@/loading/lazy-named";
 import type { CommandId } from "./app-catalog";
-import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
 import { ariaKeyShortcuts } from "./key-chips";
 import { useCommand, useCommandShortcut } from "./use-command";
 
-let popup: typeof HotkeyTooltipPopup | undefined;
+let popup: typeof KeyTooltip | undefined;
 let loading: Promise<void> | undefined;
 const listeners = new Set<() => void>();
 
@@ -25,10 +17,10 @@ const listeners = new Set<() => void>();
  * its keys and no tooltip, and the stale-chunk recovery reloads a page a deploy outdated.
  */
 export function loadHotkeyTooltip(
-  load: () => Promise<{ HotkeyTooltipPopup: typeof HotkeyTooltipPopup }> = () =>
-    import("./hotkey-tooltip-popup")
+  load: () => Promise<{ KeyTooltip: typeof KeyTooltip }> = () =>
+    import("@legion/ui/components/key-tooltip")
 ): Promise<void> {
-  loading ??= loadNamed(load, "HotkeyTooltipPopup").then(
+  loading ??= loadNamed(load, "KeyTooltip").then(
     (loaded) => {
       popup = loaded;
       for (const listener of listeners) listener();
@@ -45,34 +37,6 @@ function subscribe(listener: () => void): () => void {
   return () => {
     listeners.delete(listener);
   };
-}
-
-/**
- * The control's ref, which also keeps the focus on it when the tooltip's code arrives: the control
- * is drawn again then, and the new one takes the focus if the old one held it.
- */
-function useKeptFocus(own: Ref<HTMLElement> | undefined): RefCallback<HTMLElement> {
-  const held = useRef<HTMLElement | null>(null);
-  const hadFocus = useRef(false);
-  return useCallback(
-    (node: HTMLElement | null) => {
-      // React detaches the old control's ref before it removes the control, and attaches the
-      // new one's in the same commit; a later attach never takes the focus.
-      if (node === null) {
-        hadFocus.current = document.activeElement === held.current;
-        queueMicrotask(() => {
-          hadFocus.current = false;
-        });
-      } else if (hadFocus.current) {
-        hadFocus.current = false;
-        node.focus();
-      }
-      held.current = node;
-      if (typeof own === "function") own(node);
-      else if (own !== null && own !== undefined) own.current = node;
-    },
-    [own]
-  );
 }
 
 export interface HotkeyTooltipProps {

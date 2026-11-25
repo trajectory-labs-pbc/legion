@@ -1,9 +1,10 @@
+import { Button } from "@legion/ui/components/button";
+import { SurfaceTitle } from "@legion/ui/components/heading";
 import { inboxQuery } from "@upstream-dispatch/api/queries";
 import { Inbox } from "@upstream-dispatch/features/inbox/Inbox";
 import { ANSWERS_PATH } from "@upstream-dispatch/features/refs/routes";
 import { READING_PANE_QUERY, useMediaQuery } from "@upstream-dispatch/features/shell/useDialog";
 import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
-import { linkHoverText, linkText } from "@upstream-dispatch/theme/classes";
 import type { ReactNode } from "react";
 
 import { lazyNamed } from "@/loading/lazy-named";
@@ -23,10 +24,10 @@ export function InboxPage(): ReactNode {
   return (
     <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col" : undefined}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h1 className="text-[22px] font-semibold tracking-tight">Inbox</h1>
-        <PageLink className={`text-sm ${linkText} ${linkHoverText}`} page={answers}>
+        <SurfaceTitle size="page">Inbox</SurfaceTitle>
+        <Button render={<PageLink page={answers} />} size="sm" variant="link">
           Answered by you
-        </PageLink>
+        </Button>
       </div>
       <Inbox />
     </section>

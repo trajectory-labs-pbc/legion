@@ -13,7 +13,7 @@ import { trackEngineStack } from "./engine-stack";
 import { COMMAND_GROUPS } from "./groups";
 import { liveShortcuts } from "./live-shortcuts";
 import { createCatalog } from "./schema";
-import { filterShortcuts } from "./shortcuts-sheet-view";
+import { shownSections } from "./shortcuts-sheet-view";
 
 const catalog = createCatalog([
   {
@@ -160,11 +160,22 @@ describe("the sheet's filter", () => {
     },
   ];
 
-  test("keeps the rows whose label holds the query, in any case, and drops emptied groups", () => {
-    expect(filterShortcuts(sections, "  ISSUE ")).toEqual([
-      { group: COMMAND_GROUPS.general, rows: [{ id: "a", label: "Create issue", keys: ["c"] }] },
+  test("writes each row's keys as chips for the reader's platform", () => {
+    expect(shownSections(sections, false)).toEqual([
+      {
+        id: "general",
+        label: "General",
+        rows: [
+          { id: "a", label: "Create issue", keys: [["C"]] },
+          { id: "b", label: "Search", keys: [["/"]] },
+        ],
+      },
+      {
+        id: "layout",
+        label: "Layout",
+        rows: [{ id: "c", label: "Toggle sidebar", keys: [["Shift+S"]] }],
+      },
     ]);
-    expect(filterShortcuts(sections, "")).toEqual(sections);
-    expect(filterShortcuts(sections, "nothing")).toEqual([]);
+    expect(shownSections(sections, true)[1]?.rows[0]?.keys).toEqual([["⇧S"]]);
   });
 });

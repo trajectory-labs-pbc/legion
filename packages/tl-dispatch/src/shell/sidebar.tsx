@@ -1,5 +1,7 @@
+import { Badge } from "@legion/ui/components/badge";
 import { Heading } from "@legion/ui/components/heading";
 import { KbdSequence } from "@legion/ui/components/kbd";
+import { NavRow } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
@@ -18,19 +20,10 @@ import {
   useSidebarData,
 } from "./sidebar-data";
 
-const ROW =
-  "flex h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-sidebar-accent-foreground";
-
-const BADGE =
-  "shrink-0 rounded-sm bg-sidebar-primary px-1.5 text-xs text-sidebar-primary-foreground";
-
-function Badge({ count, label }: { count: number | undefined; label?: string }) {
+/** A count beside a row; none while there is nothing to count. */
+function Count({ count, label }: { count: number | undefined; label?: string }) {
   if (count === undefined || count === 0) return null;
-  return (
-    <span className={BADGE} title={label}>
-      {count}
-    </span>
-  );
+  return <Badge title={label}>{count}</Badge>;
 }
 
 /** The destination's `G` chord, while it runs. */
@@ -58,10 +51,7 @@ function PinnedAgentRow({
 }) {
   const { name, viewState, unpin } = usePinnedAgent(agent.sessionId);
   return (
-    <li
-      aria-current={agent.selected ? "page" : undefined}
-      className="flex h-8 items-center gap-2 rounded-md px-2 text-sm aria-[current=page]:bg-sidebar-accent"
-    >
+    <NavRow aria-current={agent.selected ? "page" : undefined} render={<li />}>
       <AgentName
         className="min-w-0 flex-1"
         onNavigate={onNavigate}
@@ -69,10 +59,10 @@ function PinnedAgentRow({
         sessionId={agent.sessionId}
         storedTitle={undefined}
       />
-      <Badge count={agent.unread} label={unreadRepliesLabel(agent.unread)} />
+      <Count count={agent.unread} label={unreadRepliesLabel(agent.unread)} />
       <span className="shrink-0 text-xs text-muted-foreground">{viewState}</span>
       <PinButton label={`Unpin ${name} from the sidebar`} onClick={unpin} pinned quiet />
-    </li>
+    </NavRow>
   );
 }
 
@@ -89,17 +79,14 @@ function ItemRows({
     <ul className="flex flex-col gap-0.5">
       {items.map((item) => (
         <li key={item.key}>
-          <PageLink
+          <NavRow
             aria-current={item.current ? "page" : undefined}
-            className={ROW}
-            onClick={onNavigate}
-            page={page}
-            params={{ key: item.key }}
+            render={<PageLink onClick={onNavigate} page={page} params={{ key: item.key }} />}
           >
             <span className="shrink-0 font-medium">{item.key}</span>
             <span className="truncate text-muted-foreground">{item.text}</span>
-            <Badge count={item.openAsks} />
-          </PageLink>
+            <Count count={item.openAsks} />
+          </NavRow>
         </li>
       ))}
     </ul>
@@ -119,17 +106,15 @@ function SidebarView({
       <ul className="flex flex-col gap-0.5">
         {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => (
           <li key={name}>
-            <PageLink
+            <NavRow
               aria-current={current ? "page" : undefined}
-              className={ROW}
-              onClick={onNavigate}
-              page={page}
+              render={<PageLink onClick={onNavigate} page={page} />}
             >
               <Icon aria-hidden className="size-4 shrink-0" />
               <span className="truncate">{label}</span>
-              <Badge count={count?.count} label={count?.label} />
+              <Count count={count?.count} label={count?.label} />
               <KeyHint name={name} />
-            </PageLink>
+            </NavRow>
           </li>
         ))}
       </ul>

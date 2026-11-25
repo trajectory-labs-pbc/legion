@@ -1,10 +1,9 @@
-import { cn } from "@legion/ui/lib/utils";
+import { NavSurface } from "@legion/ui/components/nav";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
 import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
 import type { ReactNode } from "react";
 import { CommandButton } from "@/commands/command-button";
-import { SIDEBAR_SURFACE } from "./sidebar-surface";
 
 /** The issue frame's icon rail, the folded sidebar's rail, or the sidebar; none in a drawer. */
 export function SidebarRegion({
@@ -43,22 +42,19 @@ export function SidebarRegion({
   }
   if (inDrawer) return null;
   return folded ? (
-    <aside
+    <NavSurface
       aria-label="Collapsed sidebar"
-      className={cn(
-        "fixed inset-y-0 left-0 z-10 flex w-14 justify-center border-r p-2",
-        SIDEBAR_SURFACE
-      )}
+      className="fixed inset-y-0 left-0 z-10 flex w-14 justify-center border-r p-2"
       data-testid="sidebar-rail"
     >
       <CommandButton commandId="global.toggle-sidebar" label="Show sidebar" size="icon" />
-    </aside>
+    </NavSurface>
   ) : (
-    <aside
+    <NavSurface
       aria-label="Navigation"
-      className={cn("relative order-1 w-72 border-r [overflow-anchor:none]", SIDEBAR_SURFACE)}
+      className="relative order-1 w-72 border-r [overflow-anchor:none]"
     >
       <div className="sticky top-0 flex h-dvh flex-col overflow-y-auto p-4">{children}</div>
-    </aside>
+    </NavSurface>
   );
 }

@@ -50,10 +50,11 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
             onOpenNavigation={overlays.openNavigation}
           />
         ) : null}
-        {shell.inDrawer && overlays.navigationOpen ? (
+        {shell.inDrawer ? (
           <NavigationDrawer
-            containerRef={overlays.drawer.containerRef}
+            initialFocus={overlays.closeButtonRef}
             onClose={overlays.closeNavigation}
+            open={overlays.navigationOpen}
           >
             {panel}
           </NavigationDrawer>

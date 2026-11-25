@@ -24,7 +24,12 @@ function Harness({ disabled = [] }: { disabled?: readonly string[] }) {
   const sheet = useShortcutsSheet();
   useRegisterCommands(appCatalog, "global", globalSpecs(sheet.toggle, disabled));
   return (
-    <ShortcutsSheetView onOpenChange={sheet.setOpen} open={sheet.open} sections={sheet.sections} />
+    <ShortcutsSheetView
+      mac={false}
+      onOpenChange={sheet.setOpen}
+      open={sheet.open}
+      sections={sheet.sections}
+    />
   );
 }
 

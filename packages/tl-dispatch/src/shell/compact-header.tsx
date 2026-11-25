@@ -1,4 +1,6 @@
+import { Badge } from "@legion/ui/components/badge";
 import { Button } from "@legion/ui/components/button";
+import { NavSurface } from "@legion/ui/components/nav";
 import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
@@ -7,9 +9,6 @@ import { CommandButton } from "@/commands/command-button";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
-
-const CHIP =
-  "rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-focus";
 
 /** The narrow screen's top bar: the name, the counts that need the reader, and the menu. */
 export function CompactHeader({
@@ -24,30 +23,27 @@ export function CompactHeader({
   const inboxCount = useInboxCount();
   const unread = totalUnreadReplies(useQuery(userAgentStateQuery()).data);
   const inboxLabel = inboxCount === 0 ? "Inbox" : `Inbox ${inboxCount}`;
-  const inboxClass = `${CHIP} ${inboxCount === 0 ? "bg-sidebar-accent" : "bg-sidebar-primary text-sidebar-primary-foreground"}`;
+  const inboxVariant = inboxCount === 0 ? "secondary" : "default";
   return (
-    <header className="flex items-center justify-between border-b border-sidebar-border bg-sidebar px-3 text-sidebar-foreground">
+    <NavSurface className="flex items-center justify-between border-b px-3" render={<header />}>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         <PageLink className="shrink-0 text-lg font-semibold" page={inbox.routes.home}>
           Dispatch
         </PageLink>
         {onInbox ? (
-          <span className={inboxClass}>{inboxLabel}</span>
+          <Badge variant={inboxVariant}>{inboxLabel}</Badge>
         ) : (
           <>
             <CommandButton commandId="global.inbox-drawer" label="Peek" size="xs" variant="ghost" />
-            <PageLink className={inboxClass} page={inbox.routes.home}>
+            <Badge render={<PageLink page={inbox.routes.home} />} variant={inboxVariant}>
               {inboxLabel}
-            </PageLink>
+            </Badge>
           </>
         )}
         {unread === 0 ? null : (
-          <PageLink
-            className={`${CHIP} bg-sidebar-primary text-sidebar-primary-foreground`}
-            page={agents.routes.list}
-          >
+          <Badge render={<PageLink page={agents.routes.list} />}>
             {unreadRepliesLabel(unread)}
-          </PageLink>
+          </Badge>
         )}
       </div>
       <Button
@@ -59,6 +55,6 @@ export function CompactHeader({
       >
         Menu
       </Button>
-    </header>
+    </NavSurface>
   );
 }

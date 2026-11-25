@@ -77,7 +77,7 @@ export function MachineLoginPage(): ReactNode {
           </Button>
         </form>
         {lookup.isError ? (
-          <p className="text-sm text-destructive">
+          <p className="text-sm text-danger">
             {writeFailureNote(lookup.error, {
               what: "the lookup of that code",
               anew: "Look up sends the code in the field as a new lookup.",

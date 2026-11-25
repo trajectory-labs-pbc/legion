@@ -585,6 +585,18 @@
       ]
     },
     {
+      "name": "fact",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/fact.tsx",
+          "type": "registry:ui",
+          "target": "@ui/fact.tsx"
+        }
+      ]
+    },
+    {
       "name": "heading",
       "type": "registry:ui",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
@@ -680,6 +692,33 @@
       ]
     },
     {
+      "name": "key-tooltip",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/key-tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/key-tooltip.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tooltip.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
       "name": "label",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],
@@ -688,6 +727,55 @@
           "path": "packages/ui/src/components/label.tsx",
           "type": "registry:ui",
           "target": "@ui/label.tsx"
+        }
+      ]
+    },
+    {
+      "name": "load-state",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/load-state.tsx",
+          "type": "registry:ui",
+          "target": "@ui/load-state.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "message-page",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/message-page.tsx",
+          "type": "registry:ui",
+          "target": "@ui/message-page.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -712,6 +800,18 @@
           "path": "packages/ui/src/components/native-select.tsx",
           "type": "registry:ui",
           "target": "@ui/native-select.tsx"
+        }
+      ]
+    },
+    {
+      "name": "nav",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/nav.tsx",
+          "type": "registry:ui",
+          "target": "@ui/nav.tsx"
         }
       ]
     },
@@ -826,6 +926,58 @@
       ]
     },
     {
+      "name": "shortcuts-sheet",
+      "type": "registry:ui",
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
+      "files": [
+        {
+          "path": "packages/ui/src/components/shortcuts-sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/shortcuts-sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/input.tsx",
+          "type": "registry:ui",
+          "target": "@ui/input.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/kbd.tsx",
+          "type": "registry:ui",
+          "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/modal-surface-context.tsx",
+          "type": "registry:ui",
+          "target": "@ui/modal-surface-context.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/sheet.tsx",
+          "type": "registry:ui",
+          "target": "@ui/sheet.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
       "name": "skeleton",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],
@@ -858,6 +1010,18 @@
           "path": "packages/ui/src/components/spinner.tsx",
           "type": "registry:ui",
           "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "status-pill",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/status-pill.tsx",
+          "type": "registry:ui",
+          "target": "@ui/status-pill.tsx"
         }
       ]
     },

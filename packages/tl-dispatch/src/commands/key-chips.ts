@@ -6,7 +6,7 @@ import { keySteps } from "./keys";
 export type ShortcutChips = readonly string[];
 
 /** The platform the key engine matches `$mod` for, so the chips and the engine agree. */
-const IS_MAC = MOD_KEY_LABEL === "⌘";
+export const IS_MAC = MOD_KEY_LABEL === "⌘";
 
 const MODIFIERS: Readonly<Record<string, { mac: string; other: string; aria: string }>> = {
   $mod: { mac: "⌘", other: "Ctrl", aria: "" },

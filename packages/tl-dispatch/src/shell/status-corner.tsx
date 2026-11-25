@@ -1,12 +1,10 @@
 import { Button } from "@legion/ui/components/button";
-import { cn } from "@legion/ui/lib/utils";
+import { StatusPill } from "@legion/ui/components/status-pill";
 import { useLiveSocketPill } from "@upstream-dispatch/api/live-socket";
 import { DraftsNotKept } from "@upstream-dispatch/features/inbox/DraftsNotKept";
 import { PendingWritesIndicator } from "@upstream-dispatch/features/writes/PendingWritesIndicator";
 import { FOOT_STATUS_INSET_PROPERTY, useFootInset } from "@upstream-dispatch/hooks/useFootInset";
 import { useRef } from "react";
-
-const PILL = "flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium";
 
 /** The corner that reports writes on their way and a live feed that stopped. */
 export function StatusCorner() {
@@ -21,24 +19,16 @@ export function StatusCorner() {
       <PendingWritesIndicator />
       <DraftsNotKept />
       {connection === "stuck" ? (
-        <p
-          aria-live="polite"
-          className={cn(PILL, "border-danger-border bg-danger-tint text-danger")}
-          data-testid="connection-pill"
-        >
+        <StatusPill data-testid="connection-pill" tone="danger">
           Live updates are not reaching this page
           <Button onClick={() => window.location.reload()} size="xs" variant="link">
             Reload
           </Button>
-        </p>
+        </StatusPill>
       ) : connection === "reconnecting" ? (
-        <p
-          aria-live="polite"
-          className={cn(PILL, "border-warning-border bg-warning-tint text-warning")}
-          data-testid="connection-pill"
-        >
+        <StatusPill data-testid="connection-pill" tone="warning">
           Reconnecting…
-        </p>
+        </StatusPill>
       ) : null}
     </div>
   );

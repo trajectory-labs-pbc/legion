@@ -1,5 +1,4 @@
 import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
-import { type DialogHandle, useDialog } from "@upstream-dispatch/features/shell/useDialog";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
@@ -14,8 +13,7 @@ interface ShellOverlays {
   navigationOpen: boolean;
   openNavigation: () => void;
   closeNavigation: () => void;
-  /** The navigation drawer's focus trap and its first focus. */
-  drawer: DialogHandle<HTMLElement>;
+  /** The control the navigation drawer focuses when it opens. */
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   /** The issue frame's way to the navigation, where its icon rail does not fit. */
   shellNavigation: ShellNavigation | undefined;
@@ -42,11 +40,6 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
   // A context value: a new function each render would redraw every reader.
   const openShortcuts = useCallback(() => setShortcutsOpen(true), [setShortcutsOpen]);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const drawer = useDialog<HTMLElement>({
-    initialFocusRef: closeButtonRef,
-    onClose: () => setNavigationOpen(false),
-    open: navigationOpen && shell.inDrawer,
-  });
   const shellNavigation = useMemo<ShellNavigation | undefined>(
     () =>
       shell.issueFrame && !shell.railFits
@@ -85,7 +78,6 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
     navigationOpen,
     openNavigation: () => setNavigationOpen(true),
     closeNavigation: () => setNavigationOpen(false),
-    drawer,
     closeButtonRef,
     shellNavigation,
     searchOpen,

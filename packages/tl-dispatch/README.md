@@ -77,9 +77,9 @@ The files of `src/commands`, one role each:
   `use-register-commands.ts` and `use-command.ts`: the hooks that register and read them.
 - `live-shortcuts.ts`: the keys that run now, as rows. `use-shortcuts-sheet.ts`: the sheet's
   state. `shortcuts-sheet.tsx`: the sheet, whose view (`shortcuts-sheet-view.tsx`) is a chunk
-  that loads on the first `?`.
-- `command-button.tsx` and `hotkey-tooltip.tsx`, whose popup (`hotkey-tooltip-popup.tsx`) is a
-  chunk that loads after the first paint.
+  that loads on the first `?`: it writes each key as chips and draws the UI package's sheet.
+- `command-button.tsx` and `hotkey-tooltip.tsx`, whose popup is the UI package's `KeyTooltip`,
+  a chunk that loads after the first paint.
 
 `src/loading` holds the chunk loaders: `lazyNamed(load, name)` draws a module's component once
 its chunk arrives, `lazyRegion` keeps a failed chunk to its own region, and both load again when
@@ -144,7 +144,9 @@ React Router context around them. Before then, a swap means running both routers
   (`global-commands.ts`).
 - One file per region: `shell-providers.tsx` (the providers upstream's pages read),
   `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `main-region.tsx`,
-  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads.
+  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads. The navigation
+  drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
+  loads when it first opens; the global keys still run in it.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
 - `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
   `connection-error-page.tsx`, or the shell for the person signed in.

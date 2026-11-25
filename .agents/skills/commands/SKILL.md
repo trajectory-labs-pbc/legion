@@ -42,7 +42,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 1. Add the definition to its context in `app-catalog.ts`. Add a context with a `parent` if no context fits.
 2. In the feature, declare its actions hook with `defineActions(appCatalog, "<context>", build)`. `build` returns a `CommandState` (`run`, and optional `enabled` and `label`) for each command of the context. The type check refuses a missing or an unknown name.
-3. Call the hook once where the record is in view, and pass its result to `useRegisterCommands(appCatalog, "<context>", specs)`. An overlay's context also passes its layer.
+3. Call the hook once where the record is in view, and pass its result to `useRegisterCommands(appCatalog, "<context>", specs)`. An overlay's context also passes its layer, `overlayLayerOf(popup)`.
 4. Show it with `CommandButton`, or wrap a control in `HotkeyTooltip`. Read its key with `useCommandShortcut`.
 5. Run `bun test src/commands` and `bun run typecheck` in `packages/tl-dispatch`.
 

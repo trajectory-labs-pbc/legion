@@ -38,7 +38,7 @@ export function DecisionButtons({
       </div>
       {/* A stopped decision may have been made; pressing again sends a new one. */}
       {approve?.isError ? (
-        <p className="text-sm text-destructive">
+        <p className="text-sm text-danger">
           {writeFailureNote(approve.error, {
             what: "the approval",
             anew: "Pressing Approve again sends a new approval.",
@@ -47,7 +47,7 @@ export function DecisionButtons({
         </p>
       ) : null}
       {deny.isError ? (
-        <p className="text-sm text-destructive">
+        <p className="text-sm text-danger">
           {writeFailureNote(deny.error, {
             what: "the denial",
             anew: "Pressing Deny again sends a new denial.",

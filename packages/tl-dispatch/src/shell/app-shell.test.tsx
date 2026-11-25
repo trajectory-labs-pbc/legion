@@ -49,23 +49,33 @@ async function mount(path = "/no-such-page") {
 
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
-    const view = await mount();
+    await mount();
+    // The menu is a sheet, drawn in a portal on the body.
     const click = (label: string) =>
       settle(() => {
-        view.container.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.click();
+        document.body.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.click();
       });
     const button = (text: string) =>
-      [...view.container.querySelectorAll("button")].find((b) => b.textContent === text);
+      [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
+    /** Waits, a step at a time, for the menu's sheet, whose code loads when it first opens. */
+    const until = async (done: () => boolean) => {
+      for (let tries = 0; tries < 40 && !done(); tries += 1) {
+        await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
+      }
+    };
     click("Open navigation");
+    await until(() => button("Sign out") !== undefined);
     settle(() => button("Sign out")?.click());
-    const alert = () => view.container.querySelector('[role="alert"]')?.textContent ?? "";
+    const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
     // The sign-out first waits for the other tabs' answers.
     for (let tries = 0; tries < 40 && alert() === ""; tries += 1) {
       await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
     }
     expect(alert()).toContain("did not go through");
     click("Close navigation");
+    await until(() => button("Sign out") === undefined);
     click("Open navigation");
+    await until(() => button("Sign out") !== undefined);
     expect(alert()).toContain("did not go through");
   });
 

@@ -1,3 +1,4 @@
+import { Fact, FactList } from "@legion/ui/components/fact";
 import type { ReactNode } from "react";
 
 import { machineName, type RecordResponse, Timestamp } from "./upstream";
@@ -22,21 +23,12 @@ function formatLifetime(seconds: number | null): string {
 // The approver a record names when any signed-in person may decide it.
 const ANYONE_APPROVER = "anyone";
 
-function Fact({ children, label }: { children: ReactNode; label: string }): ReactNode {
-  return (
-    <div className="min-w-0">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium text-foreground wrap-anywhere">{children}</dd>
-    </div>
-  );
-}
-
 /** A looked-up machine login's facts, the agent's stated reason, and what approving it grants. */
 export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
   const identifiers = record.identifiers ?? [];
   return (
     <div className="space-y-4">
-      <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+      <FactList>
         <Fact label="Kind">Machine login</Fact>
         <Fact label="Identifiers">{identifiers.join(", ")}</Fact>
         <Fact label="Lifetime">{formatLifetime(record.lifetime_seconds)}</Fact>
@@ -52,7 +44,7 @@ export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
         <Fact label="Approver">
           {record.approver === ANYONE_APPROVER ? "Anyone signed in to Dispatch" : record.approver}
         </Fact>
-      </dl>
+      </FactList>
       {record.reason === "" ? null : (
         <div>
           <h2 className="text-sm font-medium text-muted-foreground">The agent's stated reason</h2>

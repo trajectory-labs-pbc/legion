@@ -425,6 +425,9 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["foreground", "success-tint"],
   ["muted-foreground", "success-tint"],
   ["success", "success-tint"],
+  ["sidebar-foreground", "sidebar"],
+  ["sidebar-accent-foreground", "sidebar-accent"],
+  ["danger", "card"],
 ];
 
 describe("the theme", () => {
