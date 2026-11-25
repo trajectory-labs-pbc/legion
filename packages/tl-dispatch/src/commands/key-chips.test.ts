@@ -13,6 +13,8 @@ describe("chips", () => {
     ["ArrowDown", false, ["↓"]],
     ["Escape", false, ["Esc"]],
     ["$mod+Alt+m", true, ["⌘⌥M"]],
+    ["Ctrl+x", true, ["⌃X"]],
+    ["Ctrl+x", false, ["Ctrl+X"]],
     ["$mod++", false, ["Ctrl++"]],
   ] as const)("%s on a Mac: %p", (keys, mac, chips) => {
     expect(chipsOf(keys, mac)).toEqual(chips);
@@ -25,6 +27,7 @@ describe("chips", () => {
   test("aria-keyshortcuts names each single press and leaves chords out", () => {
     expect(ariaKeyShortcuts(["$mod+k", "g i", "Shift+S"], true)).toBe("Meta+K Shift+S");
     expect(ariaKeyShortcuts(["$mod+k"], false)).toBe("Control+K");
+    expect(ariaKeyShortcuts(["Ctrl+x"], true)).toBe("Control+X");
     expect(ariaKeyShortcuts(["g i"], false)).toBeUndefined();
   });
 });
