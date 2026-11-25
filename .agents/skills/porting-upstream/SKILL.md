@@ -20,7 +20,7 @@ tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no lon
 ## Steps
 
 1. Read the failing gate's message in the sync pull request. Note the upstream file and this app's page.
-2. Find the upstream commits: `git log --oneline main..fork-sync -- <upstream file>`. Read each: `git show --stat <sha>`, then `git show <sha> -- <file>` for each view file.
+2. Find the upstream commits: `git log --oneline main..fork-sync -- packages/dispatch/web/src/<file>`. Read each: `git show --stat <sha>`, then `git show <sha> -- <file>` for each view file.
 3. Decide to port or not by the list above. If the commit both restyles and changes behaviour, port the behaviour only.
 4. Find this app's files for the page: its page file in `src/pages/` and its folder `src/pages/<page>/`. The page file's `views` names the upstream files it replaces.
 5. Make the change in this app's components. Use `packages/ui` and the design rules (`.agents/skills/ui-design-system/SKILL.md`), not upstream's class strings or markup.
