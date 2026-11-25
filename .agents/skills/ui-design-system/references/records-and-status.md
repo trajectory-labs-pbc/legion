@@ -12,7 +12,7 @@ A record is an issue, a document, an agent, a priority, a machine or a broadcast
 
 **IV4** The record's header is one row: the breadcrumb (`Project › KEY`), then at the right the position in the list it came from (`3 / 84`), previous and next buttons in the same order as `k` and `j`, and the `⋯` menu. The top of the properties panel holds the key with copy link, copy key and copy branch buttons. Facts move to the properties panel, not to more header rows. Linear: the issue view header and details pane. Pages: issue, document. Check: reviewer.
 
-**IV5** The title is a `Heading size="page"` (20 px, semibold) and edits in place: a click puts the cursor in it, Enter or a blur saves, Escape restores it. No Edit button and no dialog. Linear: inline title editing. Pages: issue, document, priority. Check: a test for Enter, blur and Escape.
+**IV5** The title is the page's `h1`, a `SurfaceTitle size="page"` (20 px, semibold) and edits in place: a click puts the cursor in it, Enter or a blur saves, Escape restores it. No Edit button and no dialog. Linear: inline title editing. Pages: issue, document, priority. Check: a test for Enter, blur and Escape.
 
 **IV6** Each property in the panel is one 32 px row: its label at the left (`Heading size="label"`, muted) and its value at the right (icon and text). An empty value reads "Add <property>" in `muted-foreground`; never "—" or "None". Linear: the details pane's label and value rows. Pages: issue, agent, machine. Check: reviewer; a test renders an empty value.
 
