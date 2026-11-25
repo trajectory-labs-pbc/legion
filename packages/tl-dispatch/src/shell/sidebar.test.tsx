@@ -7,7 +7,7 @@ import { act } from "react";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
-import { INBOX_TWO_FOR_READER } from "../../tests/inbox";
+import { INBOX_TWO_FOR_READER, inboxReads } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
@@ -212,12 +212,7 @@ describe("the sidebar", () => {
 
   test("the Inbox counts the asks waiting on the reader, not the unread threads", async () => {
     const container = mount("/agents", {
-      answer: (url) => {
-        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
-        if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
-        if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
-        return undefined;
-      },
+      answer: inboxReads(() => json(INBOX_TWO_FOR_READER), 3),
     });
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => mark() !== null, sleep);
@@ -228,7 +223,7 @@ describe("the sidebar", () => {
   test("pinned agents fold under their heading, and with none it says how to pin one", () => {
     const container = mountView({
       destinations: [],
-      pinnedAgents: [],
+      pinnedAgents: { status: "success", rows: [] },
       inLiveView: false,
       pinnedIssues: { status: "success", rows: [] },
       projects: { status: "success", rows: [] },
@@ -250,34 +245,58 @@ describe("the sidebar", () => {
     expect(list?.hidden).toBe(false);
   });
 
-  test("a read still out draws a quiet line; a failed one says so beside Retry", () => {
+  test("a read still out draws a quiet line after a moment; a failed one says so beside Retry", async () => {
     const asked: string[] = [];
+    const failed = (name: string) => () => asked.push(name);
     const container = mountView({
       destinations: [
-        destination("inbox", {
-          count: undefined,
-          needsYou: true,
-          retry: () => asked.push("inbox"),
-        }),
+        destination("inbox", { count: undefined, needsYou: true, retry: failed("inbox") }),
+        destination("agents", { count: 0, retry: failed("agents") }),
+        destination("priorities", { count: undefined, retry: failed("priorities") }),
       ],
-      pinnedAgents: [],
+      pinnedAgents: { status: "error", retry: failed("pinned agents") },
       inLiveView: false,
       pinnedIssues: { status: "pending" },
-      projects: { status: "error", retry: () => asked.push("projects") },
+      projects: { status: "error", retry: failed("projects") },
     });
-    const lines = [...container.querySelectorAll("p")];
-    expect(lines.map((line) => line.textContent)).toEqual([
+    const lines = () => [...container.querySelectorAll("p")];
+    expect(lines().map((line) => line.textContent)).not.toContain("Loading pinned issues…");
+    await sleep(250);
+    expect(lines().map((line) => line.textContent)).toEqual([
       "Could not load the Inbox count.Retry",
-      "Pin an agent on the Agents page, or in its live view, to keep it here.",
+      "Could not load the Agents count.Retry",
+      "Could not load the Priorities count.Retry",
+      "Could not load pinned agents.Retry",
       "Loading pinned issues…",
       "Could not load projects.Retry",
     ]);
-    expect(lines[2]?.className).toContain("text-muted-foreground");
-    for (const failed of [lines[0], lines[3]]) {
-      expect(failed?.className).toContain("text-danger");
-      settle(() => failed?.querySelector("button")?.click());
+    const loading = lines()[4];
+    expect(loading?.className).toContain("text-muted-foreground");
+    for (const line of lines().filter((candidate) => candidate !== loading)) {
+      expect(line.className).toContain("text-danger");
+      settle(() => line.querySelector("button")?.click());
     }
-    expect(asked).toEqual(["inbox", "projects"]);
+    expect(asked).toEqual(["inbox", "agents", "priorities", "pinned agents", "projects"]);
+  });
+
+  test("while Retry asks again, the section shows its loading line, not the failure", async () => {
+    let projectReads = 0;
+    const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) => {
+        if (!url.endsWith("/api/v1/projects")) return undefined;
+        projectReads += 1;
+        return projectReads === 1 ? json({ error: { code: "INTERNAL" } }, 500) : undefined;
+      },
+    });
+    const retry = () =>
+      [...container.querySelectorAll("button")].find((button) => button.textContent === "Retry");
+    await waitFor(() => retry() !== undefined, sleep);
+    settle(() => retry()?.click());
+    await waitFor(() => container.textContent?.includes("Loading projects…") === true, sleep);
+    expect(container.textContent).not.toContain("Could not load projects.");
+    expect(retry()).toBeUndefined();
+    expect(projectReads).toBe(2);
   });
 
   test("Retry asks a failed section's read again and draws its rows", async () => {
@@ -302,30 +321,26 @@ describe("the sidebar", () => {
     expect(retry()).toBeUndefined();
   });
 
-  /** Mounts the sidebar on an inbox of `asks` and `unread` unread threads, once both are read. */
-  async function mountInbox(asks: unknown[], unread: number) {
+  /** Mounts the sidebar on the inbox `inbox` answers and `unread` unread threads, once both are asked. */
+  async function mountInbox(inbox: () => Response | undefined, unread: number) {
     const asked = new Set<string>();
+    const answer = inboxReads(inbox, unread);
     const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       answer: (url) => {
-        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
-        if (url.endsWith("/api/v1/inbox")) {
-          asked.add("inbox");
-          return json(asks);
-        }
-        if (url.includes("/api/v1/me/replies")) {
-          asked.add("replies");
-          return json({ items: [], total: unread });
-        }
-        return undefined;
+        if (url.endsWith("/api/v1/inbox") || url.includes("/api/v1/me/replies")) asked.add(url);
+        return answer(url);
       },
     });
     await waitFor(() => asked.size === 2, sleep);
-    await sleep(100);
+    await sleep(150);
     return container.querySelector('nav a[href="/"]');
   }
+  const numberOf = (row: Element | null) =>
+    row?.querySelector('[data-slot="attention-mark"], [data-slot="count"]') ?? null;
 
   test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
-    const inboxRow = await mountInbox(INBOX_TWO_FOR_READER.slice(2), 3);
+    const inboxRow = await mountInbox(() => json(INBOX_TWO_FOR_READER.slice(2)), 3);
     expect(inboxRow?.querySelector('[data-slot="attention-mark"]')).toBeNull();
     const count = inboxRow?.querySelector('[data-slot="count"]');
     expect(count?.textContent).toBe("3");
@@ -334,9 +349,19 @@ describe("the sidebar", () => {
   });
 
   test("with nothing waiting and nothing unread, the Inbox shows no number", async () => {
-    const inboxRow = await mountInbox([], 0);
+    const inboxRow = await mountInbox(() => json([]), 0);
     expect(inboxRow?.textContent).toBe("Inbox");
-    expect(inboxRow?.querySelector('[data-slot="attention-mark"], [data-slot="count"]')).toBeNull();
+    expect(numberOf(inboxRow)).toBeNull();
+  });
+
+  test("until the inbox is read, the Inbox shows no number, not the unread count", async () => {
+    expect(numberOf(await mountInbox(() => undefined, 3))).toBeNull();
+  });
+
+  test("a failed inbox read shows no unread count in its place", async () => {
+    const inboxRow = await mountInbox(() => json({ error: { code: "INTERNAL" } }, 500), 3);
+    expect(numberOf(inboxRow)).toBeNull();
+    expect(inboxRow?.closest("li")?.textContent).toContain("Could not load the Inbox count.");
   });
 
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {
@@ -346,7 +371,7 @@ describe("the sidebar", () => {
         destination("agents", { count: 2, label: "2 unread replies" }),
         destination("priorities", { count: 3 }),
       ],
-      pinnedAgents: [],
+      pinnedAgents: { status: "success", rows: [] },
       inLiveView: false,
       pinnedIssues: { status: "success", rows: [] },
       projects: {

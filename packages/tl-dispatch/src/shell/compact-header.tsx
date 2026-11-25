@@ -39,9 +39,9 @@ export function CompactHeader({
       >
         Inbox
         {inboxCount.needsYou ? (
-          <NeedsYouMark count={inboxCount.count} />
+          <NeedsYouMark count={inboxCount.count ?? 0} />
         ) : (
-          <Count title={inboxCount.label} value={inboxCount.count} />
+          <Count title={inboxCount.label} value={inboxCount.count ?? 0} />
         )}
       </NavRow>
       {unread === 0 ? null : (

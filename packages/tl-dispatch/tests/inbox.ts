@@ -1,3 +1,5 @@
+import { json } from "./fetch";
+
 /** An open ask whose turn is a person's, waiting on `person`: the fields the needs-you count reads. */
 const waitingAsk = (id: string, person: string) => ({
   id,
@@ -13,3 +15,17 @@ export const INBOX_TWO_FOR_READER = [
   waitingAsk("a2", "reader"),
   waitingAsk("a3", "other"),
 ];
+
+/**
+ * Answers the reads the Inbox count makes: the viewer `reader`, the inbox as `inbox` answers it
+ * (undefined never settles), no credential requests, and `unread` unread threads.
+ */
+export function inboxReads(inbox: () => Response | undefined, unread: number) {
+  return (url: string): Response | undefined => {
+    if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+    if (url.endsWith("/api/v1/inbox")) return inbox();
+    if (url.includes("/api/v1/credential-requests")) return json({ pending: [] });
+    if (url.includes("/api/v1/me/replies")) return json({ items: [], total: unread });
+    return undefined;
+  };
+}

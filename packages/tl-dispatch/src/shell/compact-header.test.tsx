@@ -4,7 +4,7 @@ import { act, type ReactNode } from "react";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { json, stubFetch, waitFor } from "../../tests/fetch";
 import { GlobalCommands } from "../../tests/global-shell";
-import { INBOX_TWO_FOR_READER } from "../../tests/inbox";
+import { INBOX_TWO_FOR_READER, inboxReads } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
@@ -94,13 +94,10 @@ describe("CompactHeader", () => {
   test("the Inbox counts what waits on the reader in the mark; unread agents are muted", async () => {
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      (url) => {
-        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
-        if (url.endsWith("/api/v1/inbox")) return json(INBOX_TWO_FOR_READER);
-        if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
-        if (url.includes("/api/v1/me/agents/state")) return json({ one: { unread_replies: 2 } });
-        return undefined;
-      }
+      (url) =>
+        url.includes("/api/v1/me/agents/state")
+          ? json({ one: { unread_replies: 2 } })
+          : inboxReads(() => json(INBOX_TWO_FOR_READER), 3)(url)
     );
     const agentsLink = () => header.querySelector('a[href="/agents"]');
     const mark = () => header.querySelector('[data-slot="attention-mark"]');
@@ -117,12 +114,7 @@ describe("CompactHeader", () => {
   test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      (url) => {
-        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
-        if (url.endsWith("/api/v1/inbox")) return json([]);
-        if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
-        return undefined;
-      }
+      inboxReads(() => json([]), 3)
     );
     const count = () => header.querySelector('a[href="/"] [data-slot="count"]');
     await waitFor(() => count() !== null, sleep);

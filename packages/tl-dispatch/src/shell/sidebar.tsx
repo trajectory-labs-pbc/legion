@@ -7,7 +7,7 @@ import { PinButton } from "@upstream-dispatch/components/PinButton";
 import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { HotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
@@ -39,10 +39,24 @@ function SectionHeading({ children }: { children: ReactNode }) {
   );
 }
 
-/** A read with nothing to show yet: a quiet loading line, or the failure and Retry. */
+/** How long a read may take before its loading line shows, so a quick one draws none (ES4). */
+const LOADING_DELAY_MS = 200;
+
+/** Whether `ms` have passed since the caller mounted. */
+function useAfter(ms: number): boolean {
+  const [after, setAfter] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAfter(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return after;
+}
+
+/** A read with nothing to show yet: a quiet loading line after a moment, or the failure and Retry. */
 function ReadLine({ noun, retry }: { noun: string; retry: (() => void) | undefined }) {
+  const late = useAfter(LOADING_DELAY_MS);
   if (retry === undefined) {
-    return <p className="px-2 py-1 text-xs text-muted-foreground">Loading {noun}…</p>;
+    return late ? <p className="px-2 py-1 text-xs text-muted-foreground">Loading {noun}…</p> : null;
   }
   return (
     <p className="flex items-center gap-1 py-0.5 pl-2 text-xs text-danger">
@@ -109,11 +123,11 @@ function ItemRows({
 
 /** The pinned agents under a heading that folds them, or the hint that says how to pin one. */
 function PinnedAgents({
-  agents,
+  read,
   onNavigate,
   replace,
 }: {
-  agents: readonly SidebarAgent[];
+  read: SectionRead<SidebarAgent>;
   onNavigate: (() => void) | undefined;
   replace: boolean;
 }) {
@@ -135,13 +149,15 @@ function PinnedAgents({
         </Button>
       </Heading>
       <div hidden={!open} id={listId}>
-        {agents.length === 0 ? (
+        {read.status !== "success" ? (
+          <ReadLine noun="pinned agents" retry={read.status === "error" ? read.retry : undefined} />
+        ) : read.rows.length === 0 ? (
           <p className="px-2 text-xs text-pretty text-muted-foreground">
             Pin an agent on the Agents page, or in its live view, to keep it here.
           </p>
         ) : (
           <ul className="flex flex-col gap-0.5">
-            {agents.map((agent) => (
+            {read.rows.map((agent) => (
               <PinnedAgentRow
                 agent={agent}
                 key={agent.sessionId}
@@ -240,7 +256,7 @@ export function SidebarView({
           );
         })}
       </ul>
-      <PinnedAgents agents={data.pinnedAgents} onNavigate={onNavigate} replace={data.inLiveView} />
+      <PinnedAgents read={data.pinnedAgents} onNavigate={onNavigate} replace={data.inLiveView} />
       <ItemSection
         heading="Pinned"
         hideEmpty
