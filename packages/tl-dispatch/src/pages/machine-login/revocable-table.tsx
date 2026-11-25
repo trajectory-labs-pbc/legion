@@ -101,7 +101,7 @@ export function RevocableTable<Row>({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {query.data === undefined || query.data.length === 0 ? (
+              {query.data.length === 0 ? (
                 <TableRow>
                   <TableCell className="text-muted-foreground" colSpan={columns.length + 1}>
                     {empty}
