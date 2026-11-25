@@ -1,8 +1,8 @@
-import { describe, expect, it } from "bun:test";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "bun:test";
+import { cleanup, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 
-import { useKeptFocus } from "#registry/legion/lib/use-kept-focus";
+import { useKeptFocus } from "./use-kept-focus";
 
 function Control({ wrapped, own }: { wrapped: boolean; own?: React.Ref<HTMLButtonElement> }) {
   const ref = useKeptFocus(own);
@@ -14,6 +14,8 @@ function Control({ wrapped, own }: { wrapped: boolean; own?: React.Ref<HTMLButto
   // Another element type, so React draws a new button in place of the old one.
   return wrapped ? <span>{button}</span> : button;
 }
+
+afterEach(cleanup);
 
 describe("useKeptFocus", () => {
   it("gives the focus to the control drawn in place of the one that held it", () => {

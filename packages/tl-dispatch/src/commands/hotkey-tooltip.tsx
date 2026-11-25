@@ -1,11 +1,11 @@
 import type { KeyTooltip } from "@legion/ui/components/key-tooltip";
-import { useKeptFocus } from "@legion/ui/lib/use-kept-focus";
 import { cloneElement, type ReactElement, type Ref, useEffect, useSyncExternalStore } from "react";
 
 import { loadNamed } from "@/loading/lazy-named";
 import type { CommandId } from "./app-catalog";
 import { ariaKeyShortcuts } from "./key-chips";
 import { useCommand, useCommandShortcut } from "./use-command";
+import { useKeptFocus } from "./use-kept-focus";
 
 let popup: typeof KeyTooltip | undefined;
 let loading: Promise<void> | undefined;
