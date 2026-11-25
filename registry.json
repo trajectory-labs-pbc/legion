@@ -326,6 +326,23 @@
       ]
     },
     {
+      "name": "attention-mark",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/attention-mark.tsx",
+          "type": "registry:ui",
+          "target": "@ui/attention-mark.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/badge.tsx",
+          "type": "registry:ui",
+          "target": "@ui/badge.tsx"
+        }
+      ]
+    },
+    {
       "name": "avatar",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
@@ -505,6 +522,23 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
+      "name": "count",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/count.tsx",
+          "type": "registry:ui",
+          "target": "@ui/count.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -697,12 +731,17 @@
     {
       "name": "kbd",
       "type": "registry:ui",
-      "dependencies": ["cn@0.2.6"],
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
       "files": [
         {
           "path": "packages/ui/src/components/kbd.tsx",
           "type": "registry:ui",
           "target": "@ui/kbd.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },

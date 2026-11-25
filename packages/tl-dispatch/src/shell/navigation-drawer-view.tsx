@@ -26,12 +26,12 @@ export function NavigationDrawerView({
     >
       <SheetContent
         {...{ [GLOBAL_KEYS_ATTRIBUTE]: "" }}
-        className="w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto sm:max-w-80"
+        className="w-60 max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto sm:max-w-60"
         initialFocus={initialFocus}
         showCloseButton={false}
         side="left"
       >
-        <NavSurface className="flex min-h-full flex-col p-5" render={<div />}>
+        <NavSurface className="flex min-h-full flex-col p-2" render={<div />}>
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">
             The pages of Dispatch, and your pins.

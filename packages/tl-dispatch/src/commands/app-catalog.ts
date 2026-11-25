@@ -15,9 +15,9 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
- * binds and no other; the pages with no letter are palette commands only. The keys run as
- * upstream's do, except that an open overlay of this app stops them unless it lets them through.
- * Page contexts join as their pages are rebuilt.
+ * binds and `[` for the sidebar, and no other; the pages with no letter are palette commands only.
+ * The keys run as upstream's do, except that an open overlay of this app stops them unless it
+ * lets them through. Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [
   {
@@ -25,26 +25,19 @@ export const APP_CONTEXTS = [
     parent: null,
     scope: "global",
     commands: [
+      // Both keys open the same palette; a slash typed into a field stays a slash.
       {
         name: "search",
-        label: "Search and actions",
-        keys: ["$mod+k"],
+        label: "Search or run commands",
+        keys: ["$mod+k", "/"],
         icon: SearchIcon,
         inEditable: true,
         // The palette does not list the key that opens it.
         hideFrom: ["palette"],
       },
-      // A slash typed into a field stays a slash.
-      {
-        name: "search-only",
-        label: "Search",
-        keys: ["/"],
-        icon: SearchIcon,
-        hideFrom: ["palette"],
-      },
       {
         name: "help",
-        label: "Keyboard shortcuts",
+        label: "Show keyboard shortcuts",
         keys: ["?"],
         icon: KeyboardIcon,
         group: COMMAND_GROUPS.help,
@@ -77,7 +70,7 @@ export const APP_CONTEXTS = [
       {
         name: "toggle-sidebar",
         label: "Toggle sidebar",
-        keys: ["Shift+S"],
+        keys: ["Shift+S", "["],
         icon: PanelLeftIcon,
         group: COMMAND_GROUPS.layout,
       },

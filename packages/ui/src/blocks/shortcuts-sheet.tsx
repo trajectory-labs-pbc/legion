@@ -12,11 +12,11 @@ import {
   SheetTitle,
 } from "#registry/legion/ui/sheet";
 
-/** One action and each key that runs it, a key as its chips: `["Ctrl+K"]`, or `["G", "I"]`. */
+/** One action and each key that runs it, a key as its steps: `[["Ctrl", "K"]]`, or `[["G"], ["I"]]`. */
 interface ShortcutRow {
   id: string;
   label: string;
-  keys: readonly (readonly string[])[];
+  keys: readonly (readonly (readonly string[])[])[];
 }
 
 interface ShortcutSection {
@@ -96,14 +96,17 @@ function ShortcutsList({ sections }: { sections: readonly ShortcutSection[] }) {
                   >
                     <span className="min-w-0 truncate">{row.label}</span>
                     <span className="flex max-w-1/2 shrink-0 flex-wrap justify-end gap-1">
-                      {row.keys.map((chips, index) => (
-                        <span className="inline-flex items-center gap-1" key={chips.join(" ")}>
+                      {row.keys.map((steps, index) => (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          key={steps.map((step) => step.join("+")).join(" ")}
+                        >
                           {index > 0 ? (
                             <span className={textVariants({ size: "caption", tone: "muted" })}>
                               or
                             </span>
                           ) : null}
-                          <KbdSequence chips={chips} />
+                          <KbdSequence steps={steps} />
                         </span>
                       ))}
                     </span>

@@ -27,13 +27,12 @@ const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
 const LIVE_KEYS: readonly CommandDefinition[] = [
   {
     name: "search",
-    keys: ["$mod+k"],
-    label: "Search and actions",
+    keys: ["$mod+k", "/"],
+    label: "Search or run commands",
     inEditable: true,
     hideFrom: ["palette"],
   },
-  { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
-  { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
+  { name: "help", keys: ["?"], label: "Show keyboard shortcuts" },
   { name: "create", keys: ["c"], label: "Create issue" },
   { name: "go-inbox", keys: ["g i"], label: "Go to Inbox" },
   { name: "go-agents", keys: ["g a"], label: "Go to Agents" },
@@ -41,7 +40,7 @@ const LIVE_KEYS: readonly CommandDefinition[] = [
   { name: "go-documents", keys: ["g d"], label: "Go to Documents" },
   { name: "go-project", keys: ["g p"], label: "Go to project…", hideFrom: ["palette"] },
   { name: "inbox-drawer", keys: ["i"], label: "Open the inbox" },
-  { name: "toggle-sidebar", keys: ["Shift+S"], label: "Toggle sidebar" },
+  { name: "toggle-sidebar", keys: ["Shift+S", "["], label: "Toggle sidebar" },
   { name: "toggle-margin", keys: ["Shift+M"], label: "Toggle margin" },
 ];
 

@@ -1,15 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { api } from "@upstream-dispatch/api/client";
 import {
   prioritySummaryQuery,
   projectsQuery,
   userAgentStateQuery,
 } from "@upstream-dispatch/api/queries";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
+import type { AuthenticatedUser, UserAgentStates } from "@upstream-dispatch/api/types";
 import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
-import { useAgentPinWrite, usePinnedAgents } from "@upstream-dispatch/features/agents/pins";
-import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
+import { pinnedAgentSessions, useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
+import { totalUnreadReplies } from "@upstream-dispatch/features/agents/unread";
 import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
@@ -19,13 +18,10 @@ import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
 import { useCurrentPage } from "@/pages/index";
 import type { PageLayout } from "@/pages/page";
+import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
-
-/** A count beside a row, with what it counts; none at zero. */
-interface SidebarCount {
-  count: number | undefined;
-  label?: string;
-}
+import { retryOf } from "./read-line";
+import type { RowCount } from "./row-count";
 
 interface SidebarDestination {
   name: NavName;
@@ -33,7 +29,30 @@ interface SidebarDestination {
   icon: CommandIcon;
   page: PageRoute<string, string>;
   current: boolean;
-  count: SidebarCount | undefined;
+  /** A `G` chord opens it, which its row's tooltip shows. */
+  keyed: boolean;
+  count: RowCount | undefined;
+}
+
+/** A section's rows, none while its read is out; `failed` stays set while a Retry runs. */
+export interface SectionRead<T> {
+  rows: readonly T[] | undefined;
+  failed: boolean;
+  retry: (() => void) | undefined;
+}
+
+function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
+  // A Retry puts the read back to pending, so the error count is what says it failed before.
+  const failed = query.data === undefined && query.errorUpdateCount > 0;
+  return { rows: query.data?.map(row), failed, retry: retryOf(query) };
+}
+
+/** The pinned agents, oldest pin first, with their unread replies. */
+function pinnedOf(states: UserAgentStates): readonly { sessionId: string; unread: number }[] {
+  return pinnedAgentSessions(states).map((sessionId) => ({
+    sessionId,
+    unread: states[sessionId]?.unread_replies ?? 0,
+  }));
 }
 
 export interface SidebarItem {
@@ -52,11 +71,11 @@ export interface SidebarAgent {
 
 export interface SidebarData {
   destinations: readonly SidebarDestination[];
-  pinnedAgents: readonly SidebarAgent[];
+  pinnedAgents: SectionRead<SidebarAgent>;
   /** A live view is open: a pinned agent's link replaces it rather than stacking on it. */
   inLiveView: boolean;
-  pinnedIssues: readonly SidebarItem[] | undefined;
-  projects: readonly SidebarItem[] | undefined;
+  pinnedIssues: SectionRead<SidebarItem>;
+  projects: SectionRead<SidebarItem>;
 }
 
 /** What the page shows that a sidebar row can name: a live view, an issue, a project's own page. */
@@ -77,50 +96,51 @@ export function openOf(layout: PageLayout): {
 export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarData {
   const { pathname } = useAddress();
   const open = openOf(useCurrentPage()?.layout ?? {});
-  const inboxCount = useInboxCount();
-  const agentState = useQuery(userAgentStateQuery()).data;
-  const summary = useQuery(prioritySummaryQuery()).data;
+  const inboxCount = useInboxRowCount();
+  const agents = useQuery(userAgentStateQuery());
+  // Sorted in its own selection, which runs only when the agent state changes.
+  const pinnedAgents = useQuery({ ...userAgentStateQuery(), select: pinnedOf });
+  const summaryRead = useQuery(prioritySummaryQuery());
+  const summary = summaryRead.data;
   const pinnedIssues = useQuery({
     queryKey: ["issues", "pinned"],
     queryFn: () => api.listIssues({ pinned: true }),
-  }).data;
-  const projects = useQuery(projectsQuery()).data;
-  const pinnedAgents = usePinnedAgents();
+  });
+  const projects = useQuery(projectsQuery());
   // A deployment with no priority yet draws no count; nothing is off a list that does not exist.
   const priorityFaults =
     summary === undefined || (summary.empty ?? "") !== ""
       ? undefined
       : summary.work_under_no_priority.count + summary.priority_work_parked.count;
-  const unread = totalUnreadReplies(agentState);
-  const counts: Partial<Record<NavName, SidebarCount>> = {
-    inbox: { count: inboxCount },
-    agents: { count: unread, label: unreadRepliesLabel(unread) },
-    priorities: { count: priorityFaults },
+  const counts: Partial<Record<NavName, RowCount>> = {
+    inbox: inboxCount,
+    agents: { count: totalUnreadReplies(agents.data), retry: retryOf(agents) },
+    priorities: { count: priorityFaults, retry: retryOf(summaryRead) },
   };
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"
-    ).map(({ name, label, icon }) => ({
-      name,
-      label,
-      icon,
-      page: NAV_PAGES[name],
-      current: pathUnder(NAV_PAGES[name].path, pathname),
-      count: counts[name],
+    ).map((destination) => ({
+      name: destination.name,
+      label: destination.label,
+      icon: destination.icon,
+      page: NAV_PAGES[destination.name],
+      current: pathUnder(NAV_PAGES[destination.name].path, pathname),
+      keyed: "key" in destination,
+      count: counts[destination.name],
     })),
-    pinnedAgents: pinnedAgents.map((sessionId) => ({
-      sessionId,
-      selected: sessionId === open.liveView,
-      unread: agentState?.[sessionId]?.unread_replies ?? 0,
+    pinnedAgents: sectionOf(pinnedAgents, (agent) => ({
+      ...agent,
+      selected: agent.sessionId === open.liveView,
     })),
     inLiveView: open.liveView !== undefined,
-    pinnedIssues: pinnedIssues?.map((pinned) => ({
+    pinnedIssues: sectionOf(pinnedIssues, (pinned) => ({
       key: pinned.key,
       text: pinned.title,
       openAsks: pinned.open_asks,
       current: pinned.key === open.issue,
     })),
-    projects: projects?.map((shown) => ({
+    projects: sectionOf(projects, (shown) => ({
       key: shown.key,
       text: shown.name,
       openAsks: shown.open_asks,

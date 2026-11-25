@@ -30,7 +30,8 @@ export interface CommandDefinition {
   destructive?: boolean;
   /** The catalogs that do not list the command; its keys still run. */
   hideFrom?: readonly CommandCatalog[];
-  /** Fires while a control that takes typed text has focus. */
+  /** Fires while a control that takes typed text has focus; a key that types a character there
+   *  still types it. */
   inEditable?: boolean;
   /** A global command's reach under our overlays; none is `under-most`. */
   overlays?: OverlayReach;

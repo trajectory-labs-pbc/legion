@@ -35,9 +35,8 @@ export function MainRegion({
         issueFrame
           ? "min-h-dvh min-w-0 flex-1 bg-background outline-none md:pl-14"
           : cn(
-              "min-w-0 flex-1 p-6 outline-none xl:order-2",
-              fillsViewport ? "flex min-h-0 flex-col" : "pb-32 xl:pb-6",
-              mainLayoutClass({ sidebarHidden, hasMargin, marginHidden })
+              "min-w-0 flex-1 p-6 outline-none",
+              fillsViewport ? "flex min-h-0 flex-col" : "pb-32 xl:pb-6"
             )
       }
       data-shell-layout={
@@ -57,21 +56,4 @@ export function MainRegion({
       <MountedLiveViews front={liveView ?? null} />
     </main>
   );
-}
-
-/** The wide layout's room for the folded sidebar and margin rails beside main. */
-function mainLayoutClass({
-  sidebarHidden,
-  hasMargin,
-  marginHidden,
-}: {
-  sidebarHidden: boolean;
-  hasMargin: boolean;
-  marginHidden: boolean;
-}): string {
-  const marginRail = hasMargin && marginHidden;
-  if (sidebarHidden && marginRail) return "xl:w-full xl:pl-20 xl:pr-20";
-  if (sidebarHidden && !hasMargin) return "xl:w-full xl:pl-20";
-  if (sidebarHidden) return "xl:pl-20";
-  return marginRail ? "xl:pr-20" : "";
 }

@@ -42,10 +42,10 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const shellNavigation = useMemo<ShellNavigation | undefined>(
     () =>
-      shell.issueFrame && !shell.railFits
+      shell.issueFrame && shell.compact
         ? { onOpen: () => setNavigationOpen(true), open: navigationOpen }
         : undefined,
-    [shell.issueFrame, navigationOpen, shell.railFits]
+    [shell.issueFrame, navigationOpen, shell.compact]
   );
   const routeProject = shell.project;
   // The navigation drawer lets the global keys through, so each action closes it first.
@@ -76,7 +76,7 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
             label: "Open or close Details",
             run: closing(() => detailsDrawer.setOpen(!detailsDrawer.open)),
           }
-        : !shell.compact && shell.hasMargin
+        : shell.marginBeside && shell.hasMargin
           ? { run: closing(() => preferences.setMarginHidden(!preferences.marginHidden)) }
           : undefined,
   });

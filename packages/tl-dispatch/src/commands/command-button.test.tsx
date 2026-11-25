@@ -64,7 +64,7 @@ describe("CommandButton", () => {
     expect(create?.querySelector("svg")).not.toBeNull();
     expect(create?.dataset.variant).toBe("default");
     expect(search?.textContent).toBe("");
-    expect(search?.getAttribute("aria-label")).toBe("Search and actions");
+    expect(search?.getAttribute("aria-label")).toBe("Search or run commands");
     expect(search?.dataset.variant).toBe("ghost");
   });
 
@@ -141,7 +141,9 @@ describe("HotkeyTooltip", () => {
         </HotkeyTooltip>
       </>
     );
-    expect(button(on.container)?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
+    expect(button(on.container)?.getAttribute("aria-keyshortcuts")).toMatch(
+      /^(Meta|Control)\+K \/$/
+    );
     on.unmount();
     mounted.length = 0;
     const off = mount(
@@ -180,9 +182,37 @@ describe("HotkeyTooltip", () => {
     ]);
   });
 
+  test.each([
+    ["global.toggle-sidebar", "a combination's caps together", false],
+    ["global.go-inbox", "a sequence's steps with then between", true],
+  ] as const)("%s's tooltip draws %s", async (commandId, _form, then) => {
+    const { container } = mount(
+      <>
+        <Shell fired={[]} />
+        <CommandButton commandId={commandId} />
+      </>
+    );
+    const trigger = button(container);
+    if (trigger === null) throw new Error("no button");
+    settle(() => {
+      trigger.dispatchEvent(
+        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
+      );
+      trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+      trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
+    settle(() => {});
+    const keys = document.querySelector('[data-slot="tooltip-content"] [data-slot="kbd-sequence"]');
+    expect(keys?.querySelectorAll("kbd")).toHaveLength(2);
+    expect([...(keys?.children ?? [])].map((part) => part.tagName === "KBD")).toEqual(
+      then ? [true, false, true] : [true, true]
+    );
+  });
+
   test("shows no key a dialog masks: under upstream's drawer, search has no chip and no aria key", () => {
     function Chips() {
-      return <output>{useCommandShortcut("global.search")?.join(" ") ?? "none"}</output>;
+      return <output>{useCommandShortcut("global.search")?.flat().join(" ") ?? "none"}</output>;
     }
     const { container } = mount(
       <>

@@ -25,7 +25,7 @@ export function HotkeyTooltipPopup({
       <TooltipTrigger aria-keyshortcuts={ariaKeyShortcuts} render={trigger} />
       <TooltipContent className="flex items-center gap-2" side={side}>
         <span>{label}</span>
-        {chips === null ? null : <KbdSequence chips={chips} />}
+        {chips === null ? null : <KbdSequence steps={chips} />}
       </TooltipContent>
     </Tooltip>
   );

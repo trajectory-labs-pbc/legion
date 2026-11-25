@@ -1,11 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { join } from "node:path";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
+import { APP_CONTEXTS } from "@/commands/app-catalog";
 import { UNDER_OVERLAY } from "@/commands/bindings";
-import { keyRegistrations } from "../../tests/key-registrations";
 import { render, settle } from "../../tests/react";
-import { UPSTREAM_WEB } from "../../tests/source";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";
 
 function Harness({ actions }: { actions: GlobalActions }) {
@@ -52,14 +50,15 @@ const globalBindings = () =>
     .filter((binding) => binding.scope === "global" && !binding.id.endsWith(UNDER_OVERLAY));
 
 describe("the shell's global commands", () => {
-  test("bind upstream's shell keys and no other, so moving the shell onto the catalog changes no key", () => {
+  // The catalog's keys are upstream's shell keys and the frame's own (`upstream-keys.test.ts`).
+  test("bind the catalog's global keys and no other", () => {
     setup();
     const ours = globalBindings().flatMap((binding) => binding.keys);
-    const upstream = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
-      .filter((registration) => registration.scope === "global")
-      .map((registration) => registration.keys);
-    expect(ours.filter((keys) => !upstream.includes(keys))).toEqual([]);
-    expect(upstream.filter((keys) => !ours.includes(keys))).toEqual([]);
+    const catalog = (
+      APP_CONTEXTS.find((context) => context.name === "global")?.commands ?? []
+    ).flatMap((command) => command.keys ?? []);
+    expect(ours.filter((keys) => !catalog.includes(keys))).toEqual([]);
+    expect(catalog.filter((keys) => !ours.includes(keys))).toEqual([]);
   });
 
   test("each key runs its action", () => {
@@ -74,6 +73,7 @@ describe("the shell's global commands", () => {
     }
     press("i");
     press("S", { shiftKey: true });
+    press("[");
     press("M", { shiftKey: true });
     expect(calls).toEqual([
       "search",
@@ -84,6 +84,7 @@ describe("the shell's global commands", () => {
       "go agents",
       "go settings",
       "inbox drawer",
+      "sidebar",
       "sidebar",
       "margin",
     ]);
