@@ -9,7 +9,7 @@ import {
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
-import type { Page } from "./page";
+import type { Page, PageLayout } from "./page";
 
 const AgentsPage = lazyNamed(
   () => import("@upstream-dispatch/features/agents/AgentsPage"),
@@ -44,7 +44,10 @@ export const agents = {
       path: AGENT_LIVE_PATH,
       element: <LiveViewRoute />,
       // The thread scrolls while the header and composer stay put.
-      layout: ({ pathname }) => ({ fillsViewport: true, liveView: liveViewSessionOf(pathname) }),
+      layout: ({ pathname }): PageLayout => ({
+        fillsViewport: true,
+        liveView: liveViewSessionOf(pathname),
+      }),
     }),
     artifact: pageRoute({ path: AGENT_ARTIFACT_PATH, element: <AgentArtifactPage /> }),
   },

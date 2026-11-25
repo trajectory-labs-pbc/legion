@@ -3,7 +3,7 @@ import { routeHasMargin, routeProjectOf } from "@upstream-dispatch/features/refs
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
-import type { Page } from "./page";
+import type { Page, PageLayout } from "./page";
 
 const DocumentPage = lazyNamed(
   () => import("@upstream-dispatch/features/document/DocumentPage"),
@@ -17,7 +17,7 @@ export const projectDocument = {
     document: pageRoute({
       path: "/projects/:key/documents/:slug",
       element: <DocumentPage />,
-      layout: ({ pathname, search }) => ({
+      layout: ({ pathname, search }): PageLayout => ({
         margin: routeHasMargin(pathname, search),
         project: routeProjectOf(pathname),
       }),

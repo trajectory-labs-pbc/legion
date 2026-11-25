@@ -11,7 +11,7 @@ import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink, Redirect } from "@/navigation/page-link";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
-import type { Page } from "./page";
+import type { Page, PageLayout } from "./page";
 
 const AnswersPage = lazyNamed(
   () => import("@upstream-dispatch/features/answers/AnswersPage"),
@@ -35,7 +35,10 @@ export function InboxPage(): ReactNode {
 }
 
 /** The Inbox fills the viewport while its reading pane shows. */
-export const INBOX_LAYOUT = { inbox: true, fillsViewport: "reading-pane" } as const;
+export const INBOX_LAYOUT = {
+  inbox: true,
+  fillsViewport: "reading-pane",
+} as const satisfies PageLayout;
 
 const home = pageRoute({
   path: "/",
