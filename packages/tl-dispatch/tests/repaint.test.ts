@@ -11,8 +11,9 @@ import { PACKAGE_ROOT } from "./source";
 
 // `src/repaint.css` maps the palette upstream's pages paint with onto the theme's tokens. These
 // tests compile the app's stylesheet as the build does, resolve each colour as the cascade does
-// in light and in dark, and hold three things: nothing upstream paints with is blue, each text
-// pair upstream registers keeps its contrast, and each blue literal in a rule has a rule here.
+// in light and in dark, and hold these things: nothing upstream paints with is blue, each text
+// pair upstream registers keeps its contrast, each blue literal in a rule has a rule here, and a
+// link in a document or a comment is underlined at rest.
 
 type Scheme = "light" | "dark";
 /** A colour in OKLab, with its opacity. */
@@ -28,6 +29,10 @@ const MIX_SUPPORT = /^@supports \(color: ?color-mix\(in lab, ?red, ?red\)\)$/;
 const srcDir = join(PACKAGE_ROOT, "src");
 const stylesText = readFileSync(join(srcDir, "styles.css"), "utf8");
 const repaintText = readFileSync(join(srcDir, "repaint.css"), "utf8");
+/** The editor's own stylesheet. A document page loads it after the app's, outside every layer. */
+const editorCss = parseCss(
+  readFileSync(join(PACKAGE_ROOT, "../proof-editor/src/lib.css"), "utf8")
+).declarations;
 const REPAINT_IMPORT = '@import "./repaint.css";';
 
 /** The CSS Tailwind generates for the app, with every neutral shade's class added. */
@@ -238,7 +243,101 @@ function repainted(declarations: readonly CssDeclaration[], property: string): b
   );
 }
 
-// ---- The three checks ----
+// ---- The cascade on an element ----
+
+/** A selector's specificity as one number: ids, then classes, then elements. `:where()` adds
+ *  nothing, and `:is()`, `:not()` and `:has()` add their heaviest argument. */
+function specificity(selector: string): number {
+  let rest = selector;
+  let total = 0;
+  for (let call = /:(where|is|not|has)\(/.exec(rest); call !== null; ) {
+    const start = call.index + call[0].length;
+    let end = start;
+    for (let depth = 1; depth > 0; end += 1) {
+      if (rest[end] === "(") depth += 1;
+      if (rest[end] === ")") depth -= 1;
+    }
+    if (call[1] !== "where") {
+      total += Math.max(...split(rest.slice(start, end - 1), ",").map(specificity));
+    }
+    rest = `${rest.slice(0, call.index)} ${rest.slice(end)}`;
+    call = /:(where|is|not|has)\(/.exec(rest);
+  }
+  const take = (pattern: RegExp) => {
+    const found = rest.match(pattern)?.length ?? 0;
+    rest = rest.replace(pattern, " ");
+    return found;
+  };
+  const attributes = take(/\[[^\]]*\]/g);
+  const elements = take(/::[\w-]+/g);
+  const ids = take(/#(?:\\.|[\w-])+/g);
+  const classes = take(/[.:](?:\\.|[\w-])+/g);
+  return total + ids * 1e6 + (classes + attributes) * 1e3 + elements + take(/[a-z][\w-]*/gi);
+}
+
+/** The first element `html` holds that matches `selector`. */
+function element(html: string, selector: string): Element {
+  const host = document.createElement("div");
+  host.innerHTML = html;
+  return host.querySelector(selector) as Element;
+}
+
+const UNDERLINE = {
+  "text-decoration-color": "currentcolor",
+  "text-decoration-line": "none",
+  "text-decoration-thickness": "auto",
+  "text-underline-offset": "auto",
+};
+
+/** The underline `target` computes at rest, from each rule of `declarations` that matches it: a
+ *  rule outside every layer outranks a layered one, then specificity, then the later rule. */
+function underline(declarations: readonly CssDeclaration[], target: Element): typeof UNDERLINE {
+  const matches = (selector: string) => {
+    try {
+      return target.matches(selector);
+    } catch {
+      // The DOM here does not read every selector; one it cannot read is not a plain link's.
+      return false;
+    }
+  };
+  const applied = declarations
+    .flatMap(({ property, value, context }, index) => {
+      if (!/^text-(decoration|underline)/.test(property)) return [];
+      const around = context.filter((rule) => rule.startsWith("@") && !MIX_SUPPORT.test(rule));
+      if (around.some((rule) => !rule.startsWith("@layer"))) return [];
+      // A nested rule's selector is a descendant of its parent's.
+      const rules = context.filter((rule) => !rule.startsWith("@"));
+      const parents = rules.slice(0, -1).map((rule) => `:is(${rule}) `);
+      const matched = split(rules.at(-1) ?? "", ",")
+        .map((part) => parents.join("") + part)
+        .filter(matches);
+      if (matched.length === 0) return [];
+      const rank = (around.length === 0 ? 1e9 : 0) + Math.max(...matched.map(specificity));
+      return [{ index, property, rank, value }];
+    })
+    .sort((a, b) => a.rank - b.rank || a.index - b.index);
+  const computed = { ...UNDERLINE };
+  for (const { property, value } of applied) {
+    // The shorthand sets the line and puts the colour and the thickness back.
+    if (property === "text-decoration") {
+      Object.assign(computed, UNDERLINE, {
+        "text-decoration-line": /underline|line-through|overline|none/.exec(value)?.[0] ?? value,
+        "text-underline-offset": computed["text-underline-offset"],
+      });
+    } else if (property in computed) Object.assign(computed, { [property]: value });
+  }
+  return computed;
+}
+
+/** A link in a document, and one in a comment, as the editor and `MarkdownBody` draw them. */
+const DOCUMENT_LINK = `<div class="dispatch-doc"><div class="proof-editor"><div class="milkdown">
+  <div class="editor ProseMirror prose"><p><a href="https://example.test/">a link</a></p></div>
+</div></div></div>`;
+const COMMENT_LINK = `<div class="dispatch-markdown prose prose-sm prose-slate">
+  <p><a href="https://example.test/">a link</a></p>
+</div>`;
+
+// ---- The checks ----
 
 /** Each colour variable upstream's pages read that the theme does not hold, or that is blue. */
 function paletteProblems(declarations: readonly CssDeclaration[]): string[] {
@@ -338,6 +437,8 @@ function literalProblems(declarations: readonly CssDeclaration[], repaint: strin
 
 describe("the repaint of upstream's pages", async () => {
   const declarations = await generate();
+  /** Every rule a document page holds, in the order it loads them. */
+  const documentPage = [...declarations, ...editorCss];
 
   test("the scheme switch is set in each rule that sets the theme's tokens", () => {
     const rulesSetting = (property: string) =>
@@ -381,6 +482,34 @@ describe("the repaint of upstream's pages", async () => {
     expect(contrastProblems(await generate(broken))).toContainEqual(
       expect.stringContaining("link on canvas (light)")
     );
+  });
+
+  test("underlines a link in a document and in a comment at rest", () => {
+    for (const html of [DOCUMENT_LINK, COMMENT_LINK]) {
+      expect(underline(documentPage, element(html, "a"))).toEqual({
+        "text-decoration-color": "var(--muted-foreground)",
+        "text-decoration-line": "underline",
+        "text-decoration-thickness": "1px",
+        "text-underline-offset": "3px",
+      });
+    }
+    // The line is no text, so it takes the 3:1 of a mark on the document's ground.
+    for (const scheme of SCHEMES) {
+      const variables = rootValues(declarations, scheme);
+      const [line, ground] = ["--muted-foreground", "--card"].map((token) =>
+        toOklch(evaluate(`var(${token})`, scheme, variables) as Colour)
+      ) as [Oklch, Oklch];
+      expect(contrastRatio(line, ground)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  test("fails when the document link's rule draws no line", () => {
+    const own = (declaration: CssDeclaration) =>
+      declaration.context.join() === ".dispatch-doc .milkdown a" &&
+      declaration.property === "text-decoration-line";
+    expect(documentPage.filter(own)).toHaveLength(1);
+    const without = documentPage.filter((declaration) => !own(declaration));
+    expect(underline(without, element(DOCUMENT_LINK, "a"))["text-decoration-line"]).toBe("none");
   });
 
   test("replaces every blue literal a rule of the compiled stylesheet holds", () => {

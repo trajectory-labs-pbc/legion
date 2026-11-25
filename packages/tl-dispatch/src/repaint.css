@@ -398,8 +398,13 @@
   color: var(--foreground);
 }
 
+/* A link's colour is a grey, as its text's is, so an underline marks it at rest. */
 .dispatch-doc .milkdown a {
   color: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
+  text-decoration-line: underline;
+  text-decoration-color: var(--muted-foreground);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 ::highlight(dispatch-search) {
@@ -410,6 +415,13 @@
 .dispatch-markdown {
   --tw-prose-links: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
   --tw-prose-invert-links: var(--tw-prose-links);
+}
+
+/* Typography underlines a comment's link, and upstream a preview's inert one; this sets the line's look. */
+.dispatch-markdown :is(a, [data-markdown-link]) {
+  text-decoration-color: var(--muted-foreground);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 /* Tailwind Typography's greys are literal slate. `:where()` keeps this rule below upstream's own
