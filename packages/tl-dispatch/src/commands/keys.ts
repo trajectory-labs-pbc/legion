@@ -17,6 +17,26 @@ const BROWSER_KEYS = [
 
 const NOTHING = () => {};
 
+/** The presses of a key in the engine's syntax: `"g i"` is `g`, then `i`. */
+export function keySteps(keys: string): string[] {
+  return keys.trim().split(/\s+/);
+}
+
+/**
+ * `keys` as the engine matches a press: it ignores Shift on a symbol or a digit, which already
+ * says whether Shift is held, but compares it when it registers, so `?` and `Shift+?` would pass.
+ */
+function asMatched(keys: string): string {
+  return keySteps(keys)
+    .map((step) => {
+      const parts = step.split("+");
+      const key = parts.pop() ?? "";
+      const shiftInKey = key.length === 1 && key.toLowerCase() === key.toUpperCase();
+      return [...(shiftInKey ? parts.filter((part) => part !== "Shift") : parts), key].join("+");
+    })
+    .join(" ");
+}
+
 /** A key engine that only takes registrations, in strict mode, so a conflict throws. */
 export function keyChecker(held: readonly string[] = []): Keymap {
   const keymap = createKeymap({
@@ -26,7 +46,9 @@ export function keyChecker(held: readonly string[] = []): Keymap {
     clearTimeout: NOTHING,
   });
   for (const [index, keys] of held.entries()) {
-    keymap.register("global", [{ id: `held-${index}`, keys, label: keys, run: NOTHING }]);
+    keymap.register("global", [
+      { id: `held-${index}`, keys: asMatched(keys), label: keys, run: NOTHING },
+    ]);
   }
   return keymap;
 }
@@ -44,7 +66,9 @@ export function malformed(keys: string): string | undefined {
 /** Whether the checker refuses `keys`: one of them starts the other. */
 export function refuses(checker: Keymap, keys: string): boolean {
   try {
-    checker.register("global", [{ id: "probe", keys, label: keys, run: NOTHING }])();
+    checker.register("global", [
+      { id: "probe", keys: asMatched(keys), label: keys, run: NOTHING },
+    ])();
     return false;
   } catch {
     return true;
@@ -60,23 +84,19 @@ export function clashes(checker: Keymap, keys: string): boolean {
 
 /**
  * Whether a held key and `keys` clash, checked one held key at a time, so held keys that clash
- * among themselves never throw. Each held key's checker is made once.
+ * among themselves never throw. Each held key's checker is made once. With `startsOnly`, equal
+ * keys pass and only one that starts the other clashes: two keys of one command run the same.
  */
-export function clashChecker(): (held: string, keys: string) => boolean {
+export function clashChecker(): (held: string, keys: string, startsOnly?: boolean) => boolean {
   const checkers = new Map<string, Keymap>();
-  return (held, keys) => {
+  return (held, keys, startsOnly = false) => {
     let checker = checkers.get(held);
     if (checker === undefined) {
       checker = keyChecker([held]);
       checkers.set(held, checker);
     }
-    return clashes(checker, keys);
+    return startsOnly ? refuses(checker, keys) : clashes(checker, keys);
   };
-}
-
-/** The presses of a key in the engine's syntax: `"g i"` is `g`, then `i`. */
-export function keySteps(keys: string): string[] {
-  return keys.trim().split(/\s+/);
 }
 
 /** Whether a sequence of more than one press starts with a plain G, O or N. */

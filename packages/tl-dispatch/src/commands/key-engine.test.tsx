@@ -158,6 +158,9 @@ describe("the catalog's clash probe", () => {
     ["g i", "g", true],
     ["g i", "g a", false],
     ["Shift+s", "s", false],
+    ["Shift+?", "?", true],
+    ["Shift+1", "1", true],
+    ["g Shift+/", "g /", true],
     ["$mod+k", "k", false],
   ])("%s against %s: %p", (held, keys, expected) => {
     expect(clashes(keyChecker([held]), keys)).toBe(expected);

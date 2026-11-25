@@ -93,6 +93,21 @@ describe("the catalog refuses, when it loads", () => {
     ]);
   });
 
+  test("a key of a command that starts another key of it, but not its equal keys", () => {
+    expect(problemsOf([global([go("a", ["g", "g i"])])])).toEqual([
+      clash("global.a", "g", "global.a", "g i"),
+    ]);
+    expect(problemsOf([global([go("a", ["x", "X"])])])).toEqual([]);
+  });
+
+  test("two keys that differ by a Shift the engine ignores, on a symbol or a digit", () => {
+    expect(problemsOf([global([go("a", ["?"]), go("b", ["Shift+?"])])])).toEqual([
+      clash("global.a", "?", "global.b", "Shift+?"),
+    ]);
+    expect(problemsOf([global([go("a", ["1"]), go("b", ["$mod+Shift+1"])])])).toEqual([]);
+    expect(problemsOf([global([go("a", ["s"]), go("b", ["Shift+s"])])])).toEqual([]);
+  });
+
   test("one key in two contexts on different chains that share an engine scope", () => {
     const problems = problemsOf([
       global([]),
