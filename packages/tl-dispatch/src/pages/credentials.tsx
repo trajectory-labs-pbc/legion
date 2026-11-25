@@ -13,7 +13,7 @@ export const credentials = {
   id: "credentials",
   server: "upstream",
   routes: {
-    // A credential request opens over the Inbox.
+    // An old address upstream keeps: it draws the Inbox, which reads nothing from it.
     request: pageRoute({ path: "/credentials/*", element: <InboxPage />, layout: INBOX_LAYOUT }),
     machine: pageRoute({ path: "/credentials/machine", element: <MachineLoginRoute /> }),
   },

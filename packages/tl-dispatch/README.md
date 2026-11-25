@@ -134,9 +134,10 @@ A move to another router (TanStack Router, say) changes these files of this pack
 The page files, `page-route.ts`, `path.ts`, the shell and `tests/layering.ts` (whose rule names
 both routers) stay as they are.
 
-That holds for this package only. 111 of upstream's files import React Router, and every upstream
-page drawn here is one of them, so until the last of those pages is replaced the app must keep a
-React Router context around them. Before then, a swap means running both routers.
+That holds for this package only. More than a hundred of upstream's files import React Router,
+and the upstream pages drawn here load them, themselves or through the files they import, so until
+the last of those pages is replaced the app must keep a React Router context around them. Before
+then, a swap means running both routers.
 
 ## Install
 
@@ -158,8 +159,9 @@ load no page module:
 - `links.ts`: the app serves every route of upstream's `app.tsx`, drawing upstream's element as
   written. `OWN_ELEMENTS` names each route written with this app's own part and upstream's
   element it stands for. A page this app serves reads every query key and fragment Dispatch writes.
-- `coverage.ts`: every view file under upstream's `features/` has one owner: a page's `views`, or
-  a list in `src/views.ts`.
+- `coverage.ts`: maps each view file under upstream's `features/` to its owner: a page's `views`,
+  or a list in `src/views.ts`. It fails for a file two lists name and for what upstream changed on
+  a page this app serves; a file no owner loads, or a change on a page upstream draws, prints a note.
 - `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash. When
   upstream changes one, port the change, then run
   `bun tests/map/copies.ts --update <upstream file> <part>`, which pins that part and no other.
