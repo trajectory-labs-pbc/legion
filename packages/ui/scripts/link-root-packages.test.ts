@@ -3,7 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { lockVersionProblems, resolvePackageDir, rootVersions } from "./root-packages";
+import {
+  lockVersionProblems,
+  resolvePackageDir,
+  rootPackages,
+  rootVersions,
+} from "./link-root-packages";
 
 const pkg = join(import.meta.dir, "..");
 
@@ -16,8 +21,11 @@ describe("the root packages", () => {
     expect(resolvePackageDir("hoisted", join(root, "packages/dispatch"))).toBe(
       realpathSync(join(root, "node_modules/hoisted"))
     );
+    expect(rootVersions(["hoisted"], join(root, "packages/dispatch"))).toEqual(
+      new Map([["hoisted", "1.0.0"]])
+    );
     expect(() => resolvePackageDir("absent", join(root, "packages/dispatch"))).toThrow(
-      /absent is not installed where .* resolves it .* run `bun install` at the repository root; if upstream no longer depends on it, move it from rootPackages to this package's dependencies \(`bun add absent`\)/
+      /absent is not installed where .* resolves it .* run `bun install` at the repository root; if upstream no longer depends on it, move it from rootPackages to the package's dependencies \(`bun add absent`\)/
     );
   });
 
@@ -29,8 +37,14 @@ describe("the root packages", () => {
     expect(lockVersionProblems(lock, new Map([["react", "19.3.1"]]))).toEqual([]);
   });
 
+  test("a package without a rootPackages list is refused", () => {
+    const dir = mkdtempSync(join(tmpdir(), "root-packages-"));
+    writeFileSync(join(dir, "package.json"), '{"rootPackages":"react"}');
+    expect(() => rootPackages(dir)).toThrow("has no rootPackages list");
+  });
+
   test("this package's lock records each root package at the root install's version", () => {
     const lock = readFileSync(join(pkg, "bun.lock"), "utf8");
-    expect(lockVersionProblems(lock, rootVersions())).toEqual([]);
+    expect(lockVersionProblems(lock, rootVersions(rootPackages(pkg)))).toEqual([]);
   });
 });

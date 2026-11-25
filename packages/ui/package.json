@@ -20,7 +20,7 @@
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
     "registry": "bun scripts/registry.ts",
-    "postinstall": "bun scripts/link-root-packages.ts",
+    "postinstall": "bun scripts/link-root-packages.ts .",
     "registry:validate": "bunx --bun shadcn registry validate --cwd ../.."
   },
   "dependencies": {
