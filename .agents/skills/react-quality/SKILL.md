@@ -11,6 +11,8 @@ Each rule below holds for every file this repository adds under `packages/tl-dis
 
 A cast tells the type check to stop checking. Use a type guard, `satisfies`, a generic, or a typed parser at the boundary. This covers `as T`, `as unknown as T`, the non-null `!`, and `// @ts-ignore`. `as const` is not a cast.
 
+The rule is for source files. A test may cast a DOM query (`as HTMLElement`) or a fixture. A few source files under `src/loading`, `src/commands` and `src/navigation` cast where the types cannot state the relation: add no new cast, and give one you cannot avoid a one-line comment that says why. No check refuses a cast, so a reviewer does.
+
 ```ts
 // Bad
 const params = match.params as { key: string };
