@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { temporaryDirectories } from "@legion/test-fixtures/temporary-directories";
 import { spawnSync } from "bun";
 import { buildRegistry, componentItem, peerVersionProblems, registryPath } from "./registry";
 
@@ -13,6 +13,8 @@ const validate = (dir: string) => {
 };
 
 describe("registry.json", () => {
+  const makeDirectory = temporaryDirectories("registry");
+
   it("is what scripts/registry.ts writes from the sources and the stylesheet", () => {
     const committed = JSON.parse(readFileSync(registryPath, "utf8"));
     expect(committed, "run `bun run registry` in packages/ui").toEqual(buildRegistry());
@@ -42,7 +44,7 @@ describe("registry.json", () => {
   }, 60_000);
 
   it("fails shadcn registry validate when an item names a file that is not there", () => {
-    const dir = mkdtempSync(join(tmpdir(), "registry-"));
+    const dir = makeDirectory();
     const registry = buildRegistry();
     const broken = {
       ...registry,

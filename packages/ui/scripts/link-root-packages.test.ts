@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { temporaryDirectories } from "@legion/test-fixtures/temporary-directories";
 
 import {
   lockVersionProblems,
@@ -13,8 +13,10 @@ import {
 const pkg = join(import.meta.dir, "..");
 
 describe("the root packages", () => {
+  const makeDirectory = temporaryDirectories("root-packages");
+
   test("resolve as Node does, from a parent's node_modules too", () => {
-    const root = mkdtempSync(join(tmpdir(), "root-packages-"));
+    const root = makeDirectory();
     mkdirSync(join(root, "node_modules/hoisted"), { recursive: true });
     writeFileSync(join(root, "node_modules/hoisted/package.json"), '{"version":"1.0.0"}');
     mkdirSync(join(root, "packages/dispatch"), { recursive: true });
@@ -38,7 +40,7 @@ describe("the root packages", () => {
   });
 
   test("a package without a rootPackages list is refused", () => {
-    const dir = mkdtempSync(join(tmpdir(), "root-packages-"));
+    const dir = makeDirectory();
     writeFileSync(join(dir, "package.json"), '{"rootPackages":"react"}');
     expect(() => rootPackages(dir)).toThrow("has no rootPackages list");
   });
