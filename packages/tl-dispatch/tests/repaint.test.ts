@@ -12,6 +12,7 @@ import {
   CALLOUT_WARNING_BG,
   CONTRAST_CHECKS,
   type ColorPair,
+  issueStatusScale,
   PAGE_COLORS,
 } from "@upstream-dispatch/theme/classes";
 import { contrastRatio, type Oklch } from "@upstream-dispatch/theme/contrast";
@@ -533,6 +534,18 @@ const PILLS: Record<string, Step> = {
   "med pill": { from: shades(CALLOUT_INFO_BG), to: shades(ASK_BLOCK_PILL_MED_BG) },
 };
 
+/** The grounds of upstream's issue status chips, one scale from triage to done, the same in both
+ *  schemes: from each status's ground to the next one's. */
+const STATUS_GROUNDS = Object.values(issueStatusScale).map(
+  (classes) => /bg-([a-z]+-\d+)/.exec(classes)?.[1] ?? ""
+);
+const STATUSES: Record<string, Step> = Object.fromEntries(
+  STATUS_GROUNDS.slice(1).map((ground, at) => {
+    const before = STATUS_GROUNDS[at] as string;
+    return [`status chip ${ground}`, { from: [before, before], to: [ground, ground] }];
+  })
+);
+
 /** Each of `steps` whose two shades are less than a step apart. */
 function stepProblems(
   declarations: readonly CssDeclaration[],
@@ -714,6 +727,11 @@ describe("the repaint of upstream's pages", async () => {
 
   test("lifts a decision card's urgency pill a step above the card's tint", () => {
     expect(stepProblems(declarations, PILLS)).toEqual([]);
+  });
+
+  test("keeps each issue status chip a step from the next status's", () => {
+    expect(Object.keys(STATUSES)).toHaveLength(8);
+    expect(stepProblems(declarations, STATUSES)).toEqual([]);
   });
 
   test("underlines a link in a document and in a comment at rest", () => {
