@@ -9,7 +9,7 @@ import {
 } from "@upstream-dispatch/features/shell/keymap";
 
 import { render } from "../../tests/react";
-import { appStack, UPSTREAM } from "./engine-stack";
+import { appStack } from "./engine-stack";
 import { clashes, keyChecker } from "./keys";
 
 // What the catalog and its bindings rely on in upstream's key engine, driven through its public
@@ -141,11 +141,11 @@ describe("upstream's key engine", () => {
       useKeymapScope(DIALOG_SCOPE);
       return null;
     }
-    expect(appStack.top()).toBeUndefined();
+    expect(appStack.liveScopes()).toEqual(["global"]);
     const mounted = render(<UpstreamDialog />);
-    expect(appStack.top()).toBe(UPSTREAM);
+    expect(appStack.liveScopes()).toEqual([DIALOG_SCOPE]);
     mounted.unmount();
-    expect(appStack.top()).toBeUndefined();
+    expect(appStack.liveScopes()).toEqual(["global"]);
   });
 });
 

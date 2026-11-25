@@ -9,7 +9,6 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { contextBindings } from "./bindings";
 import { type CommandStore, commandStore } from "./command-store";
 import { appStack, passing } from "./engine-stack";
-import type { OverlayLayer } from "./focused-overlay";
 import type { Catalog, CommandSpecs } from "./schema";
 
 /**
@@ -60,13 +59,8 @@ function useStoredSpecs(store: CommandStore, specs: CommandSpecs): void {
  * Registers a context's specs with the app's key engine and its command store while mounted, so
  * keys, buttons and the sheet read one spec.
  */
-export function useRegisterCommands(
-  catalog: Catalog,
-  context: string,
-  specs: CommandSpecs,
-  layer?: OverlayLayer
-): void {
-  const { scope, own, underOverlays } = contextBindings(catalog, context, specs, appStack, layer);
+export function useRegisterCommands(catalog: Catalog, context: string, specs: CommandSpecs): void {
+  const { scope, own, underOverlays } = contextBindings(catalog, context, specs, appStack);
   const passes = useSyncExternalStore(appStack.subscribe, () => passing(appStack));
   useEngineBindings(scope, own);
   // Registered only while it can fire, so its chords never swallow a key under another dialog.

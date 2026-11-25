@@ -8,17 +8,7 @@ import {
 import { focusedOverlays, type LayerSource, type OverlayLayer } from "./focused-overlay";
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";
 
-/** A dialog that upstream's code opened (its palette, a `useDialog` sheet), not one of our layers. */
-export const UPSTREAM = "upstream";
-
-type DialogOwner = OverlayLayer | typeof UPSTREAM;
-
 export interface EngineStack {
-  /**
-   * What is on top: `UPSTREAM` while one of upstream's dialogs is open, else the top overlay of
-   * ours, else undefined.
-   */
-  top(): DialogOwner | undefined;
   /**
    * Whether global commands of this reach run under what is open: overlays are open, each ours,
    * and each lets them through. `under-most` runs under a `passthrough` overlay alone;
@@ -102,10 +92,6 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
 
   const upstreamDialog = () => upstream.includes(DIALOG_SCOPE);
   const tracker: EngineStack = {
-    top() {
-      read();
-      return upstreamDialog() ? UPSTREAM : ours.at(-1);
-    },
     passes(reach) {
       read();
       return (
@@ -137,11 +123,11 @@ export const appStack = trackEngineStack(appKeymap, focusedOverlays);
 
 /**
  * Whether a command's keys run with the overlays open now: its scope is live, or it is a global
- * command whose copy reaches under them. An overlay's own context is live while it is drawn.
+ * command whose copy reaches under them.
  */
 export function keysReach(catalog: Catalog, command: CatalogCommand, stack: EngineStack): boolean {
   const { scope } = catalog.context(command.context);
-  if (scope === DIALOG_SCOPE || stack.liveScopes().includes(scope)) return true;
+  if (stack.liveScopes().includes(scope)) return true;
   return scope === "global" && stack.passes(command.overlays ?? "under-most");
 }
 

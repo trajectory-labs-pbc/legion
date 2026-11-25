@@ -40,11 +40,8 @@ const OPEN_MODALS = slots(MODAL_SLOTS, "[data-open]");
 
 const layers = new WeakMap<Element, OverlayLayer>();
 
-/**
- * The layer of an overlay's popup, or undefined for an element that is none. An overlay's own
- * context passes it to `useRegisterCommands`.
- */
-export function overlayLayerOf(popup: Element): OverlayLayer | undefined {
+/** The layer of an overlay's popup, or undefined for an element that is none. */
+function overlayLayerOf(popup: Element): OverlayLayer | undefined {
   const known = layers.get(popup);
   if (known !== undefined) return known;
   if (!popup.matches(POPUPS)) return undefined;

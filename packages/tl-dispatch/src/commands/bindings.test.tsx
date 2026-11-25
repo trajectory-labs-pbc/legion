@@ -44,12 +44,6 @@ const catalog = createCatalog([
       { name: "help", label: "Keyboard shortcuts", keys: ["?"], overlays: "under-all" },
     ],
   },
-  {
-    name: "sheet",
-    parent: "global",
-    scope: DIALOG_SCOPE,
-    commands: [{ name: "next", label: "Next", keys: ["j"] }],
-  },
 ]);
 
 function recorder(context: string, fired: string[], enabled = true): CommandSpecs {
@@ -189,46 +183,6 @@ describe("global commands under overlays", () => {
     closePalette();
     sheet.close();
     expect(fired).toEqual(["global.search", "palette.close"]);
-  });
-});
-
-describe("an overlay's own commands", () => {
-  test("run only while its layer is on top of every dialog of ours", () => {
-    const { keymap, layers, dialogs, fired } = setup();
-    const sheet = layers.open("overlay");
-    const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
-    keymap.register(own.scope, own.own);
-    press(keymap, "j");
-    const menu = layers.open("overlay");
-    press(keymap, "j");
-    menu.close();
-    press(keymap, "j");
-    sheet.close();
-    expect(fired).toEqual(["sheet.next", "sheet.next"]);
-  });
-
-  test("stop while one of upstream's dialogs is above the layer", () => {
-    const { keymap, layers, dialogs, fired } = setup();
-    const sheet = layers.open("overlay");
-    const own = contextBindings(catalog, "sheet", recorder("sheet", fired), dialogs, sheet);
-    keymap.register(own.scope, own.own);
-    const close = keymap.pushScope(DIALOG_SCOPE);
-    press(keymap, "j");
-    close();
-    press(keymap, "j");
-    sheet.close();
-    expect(fired).toEqual(["sheet.next"]);
-  });
-
-  test("an overlay's context takes its layer, and a page's takes none", () => {
-    const { layers, dialogs } = setup();
-    expect(() => contextBindings(catalog, "sheet", recorder("sheet", []), dialogs)).toThrow(
-      "takes its layer"
-    );
-    const layer = layers.open("overlay");
-    expect(() =>
-      contextBindings(catalog, "global", recorder("global", []), dialogs, layer)
-    ).toThrow("takes its layer");
   });
 });
 

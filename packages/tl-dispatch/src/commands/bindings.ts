@@ -1,11 +1,6 @@
-import {
-  DIALOG_SCOPE,
-  type KeyBinding,
-  type KeymapScope,
-} from "@upstream-dispatch/features/shell/keymap";
+import type { KeyBinding, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
 
 import type { EngineStack } from "./engine-stack";
-import type { OverlayLayer } from "./focused-overlay";
 import {
   type Catalog,
   type CommandSpec,
@@ -45,19 +40,15 @@ interface ContextBindings {
   underOverlays: { reach: OverlayReach; binding: KeyBinding }[];
 }
 
-/** What one context's specs register. An overlay's context runs only while its layer is on top. */
+/** What one context's specs register. */
 export function contextBindings(
   catalog: Catalog,
   context: string,
   specs: CommandSpecs,
-  stack: EngineStack,
-  layer?: OverlayLayer
+  stack: EngineStack
 ): ContextBindings {
   const { scope } = catalog.context(context);
-  if ((scope === DIALOG_SCOPE) !== (layer !== undefined)) {
-    throw new Error(`context "${context}": an overlay's context takes its layer, and only it does`);
-  }
-  const own = toBindings(specs, layer === undefined ? undefined : () => stack.top() === layer);
+  const own = toBindings(specs);
   const underOverlays =
     scope === "global"
       ? specs

@@ -1,4 +1,4 @@
-import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import { DIALOG_SCOPE, type KeymapScope } from "@upstream-dispatch/features/shell/keymap";
 import type { ComponentType } from "react";
 
 import { browserKeeps, chordStartsRight, clashChecker, malformed } from "./keys";
@@ -40,7 +40,7 @@ export interface CommandDefinition {
 export interface CommandContext {
   name: string;
   parent: string | null;
-  /** The key engine's scope these commands register in; an overlay's context uses `dialog`. */
+  /** The key engine's scope these commands register in: `global`, or a page's. */
   scope: KeymapScope;
   commands: readonly CommandDefinition[];
 }
@@ -133,6 +133,11 @@ export function createCatalog<const Contexts extends readonly CommandContext[]>(
   const commands = new Map<string, CatalogCommand>();
   const keysOf = new Map<string, CatalogKey[]>();
   for (const context of contexts.values()) {
+    if (context.scope === DIALOG_SCOPE) {
+      problems.push(
+        `context "${context.name}" registers in the dialog scope: an overlay has no commands of its own yet`
+      );
+    }
     if (context.name !== ROOT && context.parent === null) {
       problems.push(`context "${context.name}" extends nothing`);
     }

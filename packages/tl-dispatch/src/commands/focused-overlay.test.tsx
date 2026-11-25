@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetTitle } from "@legion/ui/components/sheet";
 import { act } from "react";
 
 import { render, settle } from "../../tests/react";
-import { focusedOverlays, overlayLayerOf } from "./focused-overlay";
+import { focusedOverlays, GLOBAL_KEYS_ATTRIBUTE } from "./focused-overlay";
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -28,7 +28,7 @@ describe("the overlays over the page", () => {
     mounted.push(
       render(
         <Sheet open>
-          <SheetContent initialFocus={false}>
+          <SheetContent {...{ [GLOBAL_KEYS_ATTRIBUTE]: "" }} initialFocus={false}>
             <SheetTitle>Details</SheetTitle>
             <button type="button">In the sheet</button>
             <Dialog open>
@@ -47,9 +47,7 @@ describe("the overlays over the page", () => {
     settle(() => sheet.querySelector("button")?.focus());
     expect(sheet.contains(document.activeElement)).toBe(true);
     expect(dialog.contains(document.activeElement)).toBe(false);
-    const stacked: (object | undefined)[] = [...focusedOverlays.get()];
-    expect(stacked).toHaveLength(2);
-    expect(stacked[0]).toBe(overlayLayerOf(sheet));
-    expect(stacked[1]).toBe(overlayLayerOf(dialog));
+    // The sheet passes the global keys and the dialog does not, so their kinds tell them apart.
+    expect(focusedOverlays.get().map((layer) => layer.kind)).toEqual(["passthrough", "overlay"]);
   });
 });

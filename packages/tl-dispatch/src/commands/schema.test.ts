@@ -129,6 +129,14 @@ describe("the catalog refuses, when it loads", () => {
     expect(problems.some((problem) => problem.includes("has a cycle"))).toBe(true);
   });
 
+  test("a context in the dialog scope: an overlay has no commands of its own yet", () => {
+    expect(
+      problemsOf([global([]), { name: "sheet", parent: "global", scope: "dialog", commands: [] }])
+    ).toEqual([
+      `context "sheet" registers in the dialog scope: an overlay has no commands of its own yet`,
+    ]);
+  });
+
   test("a catalog with no global context", () => {
     expect(problemsOf([{ name: "page", parent: null, scope: "project", commands: [] }])).toContain(
       `no "global" context`

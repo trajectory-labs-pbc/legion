@@ -27,7 +27,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 | --- | --- |
 | `name` | Kebab-case. The command id is `<context>.<name>`. |
 | `parent` | The context it extends. Every chain ends at `global`. |
-| `scope` | The key engine's scope it registers in. An overlay's context uses `dialog`. |
+| `scope` | The key engine's scope it registers in: `global`, or a page's. The catalog refuses `dialog`: an overlay has no commands of its own yet. |
 | `commands` | Each `CommandDefinition`: `name`, `label`, `keys`, `icon`, `group`, `destructive`, `hideFrom`, `inEditable`, `overlays`. |
 
 `CommandId` is typed from the catalog, so a wrong id fails `tsc`. `createCatalog` checks the whole catalog when the module loads, and throws one `CatalogError` that lists every problem: a name that is not kebab-case, two commands with one id, a broken or cyclic chain, two keys live together that one press sequence matches or where one starts the other, a bad chord prefix, a browser key, a key the engine cannot read, and `overlays` on a command outside `global`. Every test that imports the catalog fails on a clash.
@@ -42,7 +42,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 1. Add the definition to its context in `app-catalog.ts`. Add a context with a `parent` if no context fits.
 2. In the feature, declare its actions hook with `defineActions(appCatalog, "<context>", build)`. `build` returns a `CommandState` (`run`, and optional `enabled` and `label`) for each command of the context. The type check refuses a missing or an unknown name.
-3. Call the hook once where the record is in view, and pass its result to `useRegisterCommands(appCatalog, "<context>", specs)`. An overlay's context also passes its layer, `overlayLayerOf(popup)`.
+3. Call the hook once where the record is in view, and pass its result to `useRegisterCommands(appCatalog, "<context>", specs)`. 
 4. Show it with `CommandButton`, or wrap a control in `HotkeyTooltip`. Read its key with `useCommandShortcut`.
 5. Run `bun test src/commands` and `bun run typecheck` in `packages/tl-dispatch`.
 
@@ -60,7 +60,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`). `src/commands/engine-stack.ts` follows the engine's scope stack and the overlays over the page, and `bindings.ts` writes a context's commands as the engine's bindings.
 
-- Only the top overlay's commands run. `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup, in the order the page stacks them: each open dialog, alert dialog and sheet, then each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
+- `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup, in the order the page stacks them: each open dialog, alert dialog and sheet, then each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
 - An overlay is one of three kinds. A `passthrough` one lets the global commands run: a popup with the `data-global-keys` attribute, as the navigation drawer's has. An `alert-dialog` stops every command. Any other stops all but the `under-all` ones.
 - `overlays: "under-all"` lets a global command run under every overlay but an alert dialog. `help` (`?`) uses it.
 - Never turn a command off in a component by checking focus or DOM roles: the engine does it once, for every command. Never deactivate a scope when an overlay opens. Closing the overlay brings the scope back, and focus returns to where it was.

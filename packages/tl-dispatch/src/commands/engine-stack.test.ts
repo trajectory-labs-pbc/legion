@@ -14,10 +14,10 @@ describe("the app's engine stack", () => {
       notified += 1;
     });
     const close = appKeymap.pushScope(DIALOG_SCOPE);
-    expect(appStack.top()).toBe("upstream");
+    expect(appStack.liveScopes()).toEqual([DIALOG_SCOPE]);
     close();
     stop();
-    expect(appStack.top()).toBeUndefined();
+    expect(appStack.liveScopes()).toEqual(["global"]);
     expect(notified).toBe(2);
   });
 });
