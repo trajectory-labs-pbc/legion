@@ -404,8 +404,8 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["muted-foreground", "card"],
   ["popover-foreground", "popover"],
   ["muted-foreground", "popover"],
-  ["destructive", "popover"],
-  ["destructive", "destructive/10 popover"],
+  ["danger", "popover"],
+  ["danger", "background"],
   ["accent-foreground", "accent"],
   ["foreground", "accent"],
   ["muted-foreground", "accent"],
@@ -439,6 +439,15 @@ describe("the theme", () => {
     });
     expect(texts.size).toBeGreaterThan(5);
     expect([...texts].filter((text) => !TEXT_PAIRS.some(([pair]) => pair === text))).toEqual([]);
+  });
+
+  it("fills a destructive button with one colour in every theme, and dims dark's page less", () => {
+    for (const tokens of Object.values(THEMES)) {
+      expect(tokens.get("destructive")).toBe(THEMES.light.get("destructive"));
+      expect(tokens.get("destructive-foreground")).toBe(THEMES.light.get("destructive-foreground"));
+    }
+    expect(THEMES.light.get("scrim")).toBe("#000");
+    expect(THEMES.dark.get("scrim")).toBe("rgb(0 0 0 / 0.6)");
   });
 
   it.each(

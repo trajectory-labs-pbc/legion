@@ -121,8 +121,8 @@
           "muted-foreground": "#b7b3ab",
           "accent": "#3d3a34",
           "accent-foreground": "#f5f4f2",
-          "destructive": "#f8d7d8",
-          "destructive-foreground": "#9b1c1f",
+          "destructive": "#9b1c1f",
+          "destructive-foreground": "#f8d7d8",
           "border": "#494640",
           "input": "color-mix(in srgb, var(--foreground) 50%, var(--background))",
           "field": "#211f1c",
@@ -150,7 +150,7 @@
           "success": "#86d49b",
           "success-tint": "#1b3324",
           "success-border": "#2e5a3a",
-          "scrim": "#000"
+          "scrim": "rgb(0 0 0 / 0.6)"
         }
       },
       "css": {
@@ -187,8 +187,8 @@
             "--muted-foreground": "#b7b3ab",
             "--accent": "#3d3a34",
             "--accent-foreground": "#f5f4f2",
-            "--destructive": "#f8d7d8",
-            "--destructive-foreground": "#9b1c1f",
+            "--destructive": "#9b1c1f",
+            "--destructive-foreground": "#f8d7d8",
             "--border": "#494640",
             "--input": "color-mix(in srgb, var(--foreground) 50%, var(--background))",
             "--field": "#211f1c",
@@ -216,7 +216,7 @@
             "--success": "#86d49b",
             "--success-tint": "#1b3324",
             "--success-border": "#2e5a3a",
-            "--scrim": "#000"
+            "--scrim": "rgb(0 0 0 / 0.6)"
           }
         },
         "@layer base": {
