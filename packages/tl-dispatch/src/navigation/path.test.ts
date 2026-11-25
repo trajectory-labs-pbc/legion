@@ -19,6 +19,18 @@ describe("navigation's path grammar", () => {
     expect(() => pathSegments("a")).toThrow("does not start with /");
   });
 
+  test("control: refuses a param name that is not a name, and a name bound twice", () => {
+    expect(() => pathSegments("/issues/:id?")).toThrow('":id?" is not a param name');
+    expect(() => pathSegments("/files/:name.:ext")).toThrow('":name.:ext" is not a param name');
+    expect(() => pathSegments("/a/:1st")).toThrow('":1st" is not a param name');
+    expect(() => pathSegments("/a/:key/b/:key")).toThrow('binds "key" twice');
+    expect(pathSegments("/a/:_key/:key2")).toEqual([
+      { kind: "text", text: "a" },
+      { kind: "param", name: "_key" },
+      { kind: "param", name: "key2" },
+    ]);
+  });
+
   test("fills params, encoded, and the rest segment by segment", () => {
     expect(fillPath("/machines/:machine", { machine: "box one" })).toBe("/machines/box%20one");
     expect(fillPath("/issues/:key/*", { key: "AB-1", "*": "plan/step 2" })).toBe(

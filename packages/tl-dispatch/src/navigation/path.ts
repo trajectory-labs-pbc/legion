@@ -34,18 +34,28 @@ export type PathSegment =
   | { readonly kind: "param"; readonly name: string }
   | { readonly kind: "rest" };
 
-/** A path's segments after the leading `/`. A `*` anywhere but last, or an empty name, throws. */
+const PARAM_NAME = /^[A-Za-z_]\w*$/;
+
+/**
+ * A path's segments after the leading `/`. A `*` anywhere but last, a param with no name or a
+ * name that is not a word (`:id?`, `:name.:ext`), and a name bound twice all throw.
+ */
 export function pathSegments(path: string): readonly PathSegment[] {
   if (!path.startsWith("/")) throw new Error(`the path "${path}" does not start with /`);
   const parts = path.slice(1).split("/");
+  const names = new Set<string>();
   return parts.map((part, index): PathSegment => {
     if (part === "*") {
       if (index !== parts.length - 1) throw new Error(`"${path}": * comes last`);
       return { kind: "rest" };
     }
     if (!part.startsWith(":")) return { kind: "text", text: part };
-    if (part.length === 1) throw new Error(`"${path}": a param needs a name`);
-    return { kind: "param", name: part.slice(1) };
+    const name = part.slice(1);
+    if (name === "") throw new Error(`"${path}": a param needs a name`);
+    if (!PARAM_NAME.test(name)) throw new Error(`"${path}": "${part}" is not a param name`);
+    if (names.has(name)) throw new Error(`"${path}" binds "${name}" twice`);
+    names.add(name);
+    return { kind: "param", name };
   });
 }
 
