@@ -45,7 +45,7 @@ Never edit an upstream file to make a port easier. Every file this repository ch
 - A page's view that another owner also loads: move it to `sharedViews.pages`, or to the one owner that loads it.
 - A glob in the page's `views`: a page this app draws names each file, so a new upstream file shows up.
 
-For a page upstream still draws, the same findings print as notes and do not fail.
+For a page upstream still draws, the same findings print as notes and do not fail, except a file that two lists name, which fails for every page.
 
 **The copies** (`copies.ts`, `copies.json`). Each part of upstream code this app copied (a shell function, a route's lazy import, an inline script) is pinned by a hash of its tokens, so a reformat does not trip it. When upstream changes or removes a pinned part, the test names the part and the command that shows upstream's diff since the copy. Port the change, then run `bun tests/map/copies.ts --update`. Every name a `<Route>` element of upstream's `app.tsx` refers to must have a pin.
 
