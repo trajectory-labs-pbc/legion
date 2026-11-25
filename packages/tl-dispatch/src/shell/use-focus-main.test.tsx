@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { parseIssuePath, parseProjectPath } from "@upstream-dispatch/features/refs/routes";
 import { useRef } from "react";
 
+import { pageAt } from "@/navigation/route-tree";
 import { render } from "../../tests/react";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 
+const identity = (pathname: string) => pageIdentityOf(pageAt(pathname)?.layout ?? {}, pathname);
+
 function Shell({ pathname }: { pathname: string }) {
   const main = useRef<HTMLElement | null>(null);
-  useFocusMainOnPageChange(main, pathname);
+  useFocusMainOnPageChange(main, identity(pathname));
   return (
     <>
       <button type="button">elsewhere</button>
@@ -49,8 +53,21 @@ describe("useFocusMainOnPageChange", () => {
   });
 
   test("an issue's tabs and a project's views are one page each", () => {
-    expect(pageIdentityOf("/issues/AB-1/plan")).toBe(pageIdentityOf("/issues/AB-1"));
-    expect(pageIdentityOf("/projects/AB/issues")).toBe(pageIdentityOf("/projects/AB"));
-    expect(pageIdentityOf("/agents")).not.toBe(pageIdentityOf("/machines"));
+    expect(identity("/issues/AB-1/plan")).toBe(identity("/issues/AB-1"));
+    expect(identity("/projects/AB/issues")).toBe(identity("/projects/AB"));
+    expect(identity("/agents")).not.toBe(identity("/machines"));
+  });
+
+  test.each([
+    "/issues/AB-1/asks/a1",
+    "/issues/ab-1",
+    "/projects/AB/documents/spec",
+    "/projects/ab",
+    "/agents/s-1/live",
+    "/",
+  ])("at %s, is upstream's: the issue, else the project page, else the address", (pathname) => {
+    expect(identity(pathname)).toBe(
+      parseIssuePath(pathname)?.key ?? parseProjectPath(pathname)?.project ?? pathname
+    );
   });
 });

@@ -1,0 +1,100 @@
+import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
+import { type DialogHandle, useDialog } from "@upstream-dispatch/features/shell/useDialog";
+import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
+
+import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/shortcuts-sheet";
+import { usePageNavigate } from "@/navigation/hooks";
+import { project } from "@/pages/project";
+import { useGlobalCommands } from "./global-commands";
+import { NAV_PAGES } from "./nav-pages";
+import type { ShellLayout } from "./use-shell-layout";
+
+/** What opens over the page, and the global commands that open it. */
+export interface ShellOverlays {
+  navigationOpen: boolean;
+  openNavigation: () => void;
+  closeNavigation: () => void;
+  /** The navigation drawer's focus trap and its first focus. */
+  drawer: DialogHandle<HTMLElement>;
+  closeButtonRef: RefObject<HTMLButtonElement | null>;
+  /** The issue frame's way to the navigation, where its icon rail does not fit. */
+  shellNavigation: ShellNavigation | undefined;
+  searchOpen: boolean;
+  closeSearch: () => void;
+  createOpen: boolean;
+  closeCreate: () => void;
+  inboxDrawerOpen: boolean;
+  closeInboxDrawer: () => void;
+  shortcuts: ShortcutsSheetState;
+  openShortcuts: () => void;
+}
+
+/** Holds the overlays' state and registers the global commands they feed. */
+export function useShellOverlays(shell: ShellLayout): ShellOverlays {
+  const navigate = usePageNavigate();
+  const { preferences, detailsDrawer } = shell;
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const [inboxDrawerOpen, setInboxDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const shortcuts = useShortcutsSheet();
+  const { setOpen: setShortcutsOpen } = shortcuts;
+  // A context value: a new function each render would redraw every reader.
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), [setShortcutsOpen]);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const drawer = useDialog<HTMLElement>({
+    initialFocusRef: closeButtonRef,
+    onClose: () => setNavigationOpen(false),
+    open: navigationOpen && shell.inDrawer,
+  });
+  const shellNavigation = useMemo<ShellNavigation | undefined>(
+    () =>
+      shell.issueFrame && !shell.railFits
+        ? { onOpen: () => setNavigationOpen(true), open: navigationOpen }
+        : undefined,
+    [shell.issueFrame, navigationOpen, shell.railFits]
+  );
+  const routeProject = shell.project;
+  useGlobalCommands({
+    openSearch: () => {
+      setNavigationOpen(false);
+      setSearchOpen(true);
+    },
+    toggleShortcuts: shortcuts.toggle,
+    createIssue: () => {
+      setNavigationOpen(false);
+      setCreateOpen(true);
+    },
+    goTo: (destination) => navigate(NAV_PAGES[destination]),
+    openDocuments:
+      routeProject === undefined
+        ? undefined
+        : () => navigate(project.routes.documents, { params: { key: routeProject } }),
+    toggleInboxDrawer: shell.onInbox ? undefined : () => setInboxDrawerOpen((open) => !open),
+    toggleSidebar: shell.inDrawer
+      ? undefined
+      : () => preferences.setSidebarHidden(!preferences.sidebarHidden),
+    toggleMargin:
+      detailsDrawer !== undefined
+        ? { label: "Open or close Details", run: () => detailsDrawer.setOpen(!detailsDrawer.open) }
+        : !shell.compact && shell.hasMargin
+          ? { run: () => preferences.setMarginHidden(!preferences.marginHidden) }
+          : undefined,
+  });
+  return {
+    navigationOpen,
+    openNavigation: () => setNavigationOpen(true),
+    closeNavigation: () => setNavigationOpen(false),
+    drawer,
+    closeButtonRef,
+    shellNavigation,
+    searchOpen,
+    closeSearch: () => setSearchOpen(false),
+    createOpen,
+    closeCreate: () => setCreateOpen(false),
+    inboxDrawerOpen,
+    closeInboxDrawer: () => setInboxDrawerOpen(false),
+    shortcuts,
+    openShortcuts,
+  };
+}
