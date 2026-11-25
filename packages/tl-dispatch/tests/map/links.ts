@@ -117,8 +117,9 @@ export function linkFormProblems(fork: readonly ForkRoute[], hrefs: readonly str
 }
 
 /**
- * Hrefs Dispatch's server writes that @legion/contracts' list does not hold: search results
- * (`searchHref` in search.go) carry the query and the block they matched.
+ * Hrefs Dispatch's server writes that @legion/contracts' list does not hold: a search result's,
+ * which carries the query and the block it matched (`searchHref` in search.go), a session's live view
+ * (sessionanswers.go) and the machine sign-in page a device grant names.
  */
 export const SERVER_HREFS: readonly string[] = [
   "/issues/CORE-1/spec?q=ship",
