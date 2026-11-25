@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginRoute } from "./machine-login-route";
@@ -47,18 +48,45 @@ test("MLR-02 a Dispatch with the device grant shows the machine login page", asy
   }
 });
 
-test("MLR-03 the route is blank while the capabilities answer is out", async () => {
+test("MLR-03 the route shows a page skeleton after 200 ms while the capabilities answer is out", async () => {
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
   try {
     const container = renderRoute();
     expect(capabilities).toHaveBeenCalledTimes(1);
     expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByRole("status", { name: "Loading the page" })).toBeDefined();
 
     answer.resolve({ machine_code_page: false });
     expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+    expect(screen.queryByRole("status", { name: "Loading the page" })).toBeNull();
   } finally {
     cleanup();
     capabilities.mockRestore();
+  }
+});
+
+test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the focus", async () => {
+  const again = Promise.withResolvers<{ machine_code_page: boolean }>();
+  const capabilities = spyOn(api, "getCredentialCapabilities")
+    .mockRejectedValueOnce(new Error("broker down"))
+    .mockReturnValueOnce(again.promise);
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  try {
+    renderRoute();
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Could not load the machine login page.");
+    expect(screen.queryByRole("heading", { name: "Page not found" })).toBeNull();
+    const retry = within(alert).getByRole("button", { name: "Retry" });
+    await userEvent.click(retry);
+    expect(retry.getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(retry);
+    again.resolve({ machine_code_page: true });
+    expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+    expect(capabilities).toHaveBeenCalledTimes(2);
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
   }
 });
