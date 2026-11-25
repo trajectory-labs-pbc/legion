@@ -2,6 +2,7 @@
 @import "../../dispatch/web/src/styles.css";
 @import "../../ui/src/styles/theme.css";
 @import "./tokens.css";
+@import "./repaint.css";
 
 @source "./";
 @source "../../dispatch/web/src";
