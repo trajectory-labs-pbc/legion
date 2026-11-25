@@ -1,43 +1,14 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { cn } from "cn";
-import { type ComponentProps, useState } from "react";
+import type { ComponentProps } from "react";
 import { popupMotion } from "#registry/legion/lib/overlay-styles";
 import { headingVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { useIsInsideModalSurface } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerProvider,
-  OverlayOpenProvider,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function Popover<Payload = unknown>({
-  modal,
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: PopoverPrimitive.Root.Props<Payload>) {
+function Popover<Payload = unknown>({ modal, ...props }: PopoverPrimitive.Root.Props<Payload>) {
   const insideModalSurface = useIsInsideModalSurface();
-  // A popover a hover opened joins no overlay layer, as a tooltip joins none.
-  const [openedByHover, setOpenedByHover] = useState(false);
-  const state = useOverlayOpen<PopoverPrimitive.Root.ChangeEventDetails>({
-    open,
-    defaultOpen,
-    onOpenChange: (next, details) => {
-      onOpenChange?.(next, details);
-      if (!details.isCanceled) setOpenedByHover(next && details.reason === "trigger-hover");
-    },
-  });
-  return (
-    <OverlayOpenProvider open={state.open && !openedByHover}>
-      <PopoverPrimitive.Root<Payload>
-        modal={modal ?? insideModalSurface}
-        {...props}
-        {...state.rootProps}
-      />
-    </OverlayOpenProvider>
-  );
+  return <PopoverPrimitive.Root<Payload> modal={modal ?? insideModalSurface} {...props} />;
 }
 
 function PopoverTrigger<Payload = unknown>(props: PopoverPrimitive.Trigger.Props<Payload>) {
@@ -78,9 +49,7 @@ function PopoverContent({
           )}
           {...props}
         >
-          <OverlayLayerProvider kind="popover">
-            <OverlayOutline>{children}</OverlayOutline>
-          </OverlayLayerProvider>
+          <OverlayOutline>{children}</OverlayOutline>
         </PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>

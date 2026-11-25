@@ -15,27 +15,10 @@ import {
   DropdownMenuSubTrigger as ContextMenuSubTrigger,
   menuPopupClass,
 } from "#registry/legion/ui/dropdown-menu";
-import {
-  OverlayLayerProvider,
-  OverlayOpenProvider,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
 // A context menu's items are the menu's own, so it takes them from the dropdown menu.
 
-function ContextMenu({
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: ContextMenuPrimitive.Root.Props) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <ContextMenuPrimitive.Root {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
+const ContextMenu = ContextMenuPrimitive.Root;
 
 function ContextMenuTrigger(props: ContextMenuPrimitive.Trigger.Props) {
   return <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />;
@@ -74,7 +57,7 @@ function ContextMenuContent({
           className={cn(menuPopupClass, className)}
           {...props}
         >
-          <OverlayLayerProvider kind="menu">{children}</OverlayLayerProvider>
+          {children}
         </ContextMenuPrimitive.Popup>
       </ContextMenuPrimitive.Positioner>
     </ContextMenuPrimitive.Portal>

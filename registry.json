@@ -285,11 +285,6 @@
           "target": "@ui/heading.tsx"
         },
         {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
-        },
-        {
           "path": "packages/ui/src/components/spinner.tsx",
           "type": "registry:ui",
           "target": "@ui/spinner.tsx"
@@ -446,11 +441,6 @@
           "target": "@ui/modal-surface-context.tsx"
         },
         {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
-        },
-        {
           "path": "packages/ui/src/components/spinner.tsx",
           "type": "registry:ui",
           "target": "@ui/spinner.tsx"
@@ -488,11 +478,6 @@
           "target": "@ui/modal-surface-context.tsx"
         },
         {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
-        },
-        {
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
@@ -523,11 +508,6 @@
           "path": "packages/ui/src/components/modal-surface-context.tsx",
           "type": "registry:ui",
           "target": "@ui/modal-surface-context.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
         },
         {
           "path": "packages/ui/src/lib/overlay-styles.ts",
@@ -562,11 +542,6 @@
           "target": "@ui/modal-surface-context.tsx"
         },
         {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
-        },
-        {
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
@@ -592,11 +567,6 @@
           "path": "packages/ui/src/components/modal-surface-context.tsx",
           "type": "registry:ui",
           "target": "@ui/modal-surface-context.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
         },
         {
           "path": "packages/ui/src/lib/overlay-styles.ts",
@@ -737,18 +707,6 @@
       ]
     },
     {
-      "name": "overlay-layer",
-      "type": "registry:ui",
-      "dependencies": [],
-      "files": [
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
-        }
-      ]
-    },
-    {
       "name": "popover",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
@@ -767,11 +725,6 @@
           "path": "packages/ui/src/components/modal-surface-context.tsx",
           "type": "registry:ui",
           "target": "@ui/modal-surface-context.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
         },
         {
           "path": "packages/ui/src/lib/overlay-styles.ts",
@@ -806,11 +759,6 @@
           "path": "packages/ui/src/components/select.tsx",
           "type": "registry:ui",
           "target": "@ui/select.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
         },
         {
           "path": "packages/ui/src/lib/overlay-styles.ts",
@@ -855,11 +803,6 @@
           "path": "packages/ui/src/components/modal-surface-context.tsx",
           "type": "registry:ui",
           "target": "@ui/modal-surface-context.tsx"
-        },
-        {
-          "path": "packages/ui/src/components/overlay-layer.tsx",
-          "type": "registry:ui",
-          "target": "@ui/overlay-layer.tsx"
         },
         {
           "path": "packages/ui/src/lib/overlay-styles.ts",

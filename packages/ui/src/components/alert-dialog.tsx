@@ -5,26 +5,8 @@ import { coveredClass, modalPopupMotion, scrimClass } from "#registry/legion/lib
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { Button, type ButtonVariants } from "#registry/legion/ui/button";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
-import {
-  OverlayLayerScope,
-  OverlayOpenProvider,
-  useModalLayer,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function AlertDialog({
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: AlertDialogPrimitive.Root.Props) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <AlertDialogPrimitive.Root {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
+const AlertDialog = AlertDialogPrimitive.Root;
 
 function AlertDialogTrigger(props: AlertDialogPrimitive.Trigger.Props) {
   return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
@@ -37,7 +19,6 @@ function AlertDialogPortal(props: AlertDialogPrimitive.Portal.Props) {
 function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdrop.Props) {
   return (
     <AlertDialogPrimitive.Backdrop
-      forceRender
       data-slot="alert-dialog-overlay"
       className={cn(scrimClass, className)}
       {...props}
@@ -49,11 +30,10 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
 const CancelRefContext = createContext<RefObject<HTMLButtonElement | null> | null>(null);
 
 function AlertDialogContent({ className, children, ...props }: AlertDialogPrimitive.Popup.Props) {
-  const modal = useModalLayer("alert-dialog");
   const cancelRef = useRef<HTMLButtonElement>(null);
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay {...modal.backdropProps} />
+      <AlertDialogOverlay />
       <AlertDialogPrimitive.Viewport
         data-slot="alert-dialog-viewport"
         className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain p-4"
@@ -61,7 +41,6 @@ function AlertDialogContent({ className, children, ...props }: AlertDialogPrimit
         <AlertDialogPrimitive.Popup
           data-slot="alert-dialog-content"
           initialFocus={() => cancelRef.current}
-          {...modal.popupProps}
           className={cn(
             "relative m-auto grid w-full gap-4 rounded-lg border bg-background p-6 outline-hidden sm:max-w-lg",
             modalPopupMotion,
@@ -70,11 +49,9 @@ function AlertDialogContent({ className, children, ...props }: AlertDialogPrimit
           )}
           {...props}
         >
-          <OverlayLayerScope layer={modal.layer}>
-            <CancelRefContext.Provider value={cancelRef}>
-              <OverlayOutline>{children}</OverlayOutline>
-            </CancelRefContext.Provider>
-          </OverlayLayerScope>
+          <CancelRefContext.Provider value={cancelRef}>
+            <OverlayOutline>{children}</OverlayOutline>
+          </CancelRefContext.Provider>
         </AlertDialogPrimitive.Popup>
       </AlertDialogPrimitive.Viewport>
     </AlertDialogPortal>

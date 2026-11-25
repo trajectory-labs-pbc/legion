@@ -11,22 +11,8 @@ import {
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerScope,
-  OverlayOpenProvider,
-  useModalLayer,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function Dialog({ open, defaultOpen, onOpenChange, ...props }: DialogPrimitive.Root.Props) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <DialogPrimitive.Root {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
-
+const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;
 const DialogClose = DialogPrimitive.Close;
@@ -34,7 +20,6 @@ const DialogClose = DialogPrimitive.Close;
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
-      forceRender
       data-slot="dialog-overlay"
       className={cn(scrimClass, className)}
       {...props}
@@ -49,17 +34,15 @@ function DialogContent({
   closeLabel = "Close",
   ...props
 }: DialogPrimitive.Popup.Props & { showCloseButton?: boolean; closeLabel?: string }) {
-  const modal = useModalLayer("dialog");
   return (
     <DialogPortal>
-      <DialogOverlay {...modal.backdropProps} />
+      <DialogOverlay />
       <DialogPrimitive.Viewport
         data-slot="dialog-viewport"
         className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain p-4"
       >
         <DialogPrimitive.Popup
           data-slot="dialog-content"
-          {...modal.popupProps}
           className={cn(
             "relative m-auto grid w-full gap-4 rounded-lg border bg-background p-6 outline-hidden sm:max-w-lg",
             modalPopupMotion,
@@ -68,11 +51,9 @@ function DialogContent({
           )}
           {...props}
         >
-          <OverlayLayerScope layer={modal.layer}>
-            <ModalSurfaceProvider>
-              <OverlayOutline>{children}</OverlayOutline>
-            </ModalSurfaceProvider>
-          </OverlayLayerScope>
+          <ModalSurfaceProvider>
+            <OverlayOutline>{children}</OverlayOutline>
+          </ModalSurfaceProvider>
           {showCloseButton && <DialogCloseButton label={closeLabel} />}
         </DialogPrimitive.Popup>
       </DialogPrimitive.Viewport>

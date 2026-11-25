@@ -11,29 +11,14 @@ import {
   InputGroupInput,
 } from "#registry/legion/ui/input-group";
 import { useIsInsideModalSurface } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerProvider,
-  OverlayOpenProvider,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
 function Combobox<Value, Multiple extends boolean | undefined = false, Item = Value>({
   modal,
-  open,
-  defaultOpen,
-  onOpenChange,
   ...props
 }: ComboboxPrimitive.Root.Props<Value, Multiple, Item>) {
   const insideModalSurface = useIsInsideModalSurface();
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
   return (
-    <OverlayOpenProvider open={state.open}>
-      <ComboboxPrimitive.Root<Value, Multiple, Item>
-        modal={modal ?? insideModalSurface}
-        {...props}
-        {...state.rootProps}
-      />
-    </OverlayOpenProvider>
+    <ComboboxPrimitive.Root<Value, Multiple, Item> modal={modal ?? insideModalSurface} {...props} />
   );
 }
 
@@ -149,7 +134,7 @@ function ComboboxContent({
           )}
           {...props}
         >
-          <OverlayLayerProvider kind="popover">{children}</OverlayLayerProvider>
+          {children}
         </ComboboxPrimitive.Popup>
       </ComboboxPrimitive.Positioner>
     </ComboboxPrimitive.Portal>

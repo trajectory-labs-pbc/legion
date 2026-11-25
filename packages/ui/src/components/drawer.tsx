@@ -5,27 +5,8 @@ import { coveredClass, modalPopupMotion } from "#registry/legion/lib/overlay-sty
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerScope,
-  OverlayOpenProvider,
-  useModalLayer,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function Drawer<Payload = unknown>({
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: DrawerPrimitive.Root.Props<Payload>) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <DrawerPrimitive.Root<Payload> {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
-
+const Drawer = DrawerPrimitive.Root;
 const DrawerTrigger = DrawerPrimitive.Trigger;
 const DrawerPortal = DrawerPrimitive.Portal;
 const DrawerClose = DrawerPrimitive.Close;
@@ -33,10 +14,9 @@ const DrawerClose = DrawerPrimitive.Close;
 function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props) {
   return (
     <DrawerPrimitive.Backdrop
-      forceRender
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 z-50 min-h-dvh bg-scrim/50 opacity-[calc(1-var(--drawer-swipe-progress))] motion-safe:transition-opacity motion-safe:duration-200 data-[stacked]:bg-transparent data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0",
+        "fixed inset-0 z-50 min-h-dvh bg-scrim/50 opacity-[calc(1-var(--drawer-swipe-progress))] motion-safe:transition-opacity motion-safe:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0",
         className
       )}
       {...props}
@@ -45,14 +25,12 @@ function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props) 
 }
 
 function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.Props) {
-  const modal = useModalLayer("drawer");
   return (
     <DrawerPortal>
-      <DrawerOverlay {...modal.backdropProps} />
+      <DrawerOverlay />
       <DrawerPrimitive.Viewport data-slot="drawer-viewport" className="fixed inset-0 z-50">
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
-          {...modal.popupProps}
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-xl border-t bg-background pb-[env(safe-area-inset-bottom)] outline-hidden",
             "transform-[translateY(var(--drawer-swipe-movement-y))] data-swiping:duration-0 data-swiping:select-none",
@@ -62,11 +40,9 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
           )}
           {...props}
         >
-          <OverlayLayerScope layer={modal.layer}>
-            <ModalSurfaceProvider>
-              <OverlayOutline>{children}</OverlayOutline>
-            </ModalSurfaceProvider>
-          </OverlayLayerScope>
+          <ModalSurfaceProvider>
+            <OverlayOutline>{children}</OverlayOutline>
+          </ModalSurfaceProvider>
         </DrawerPrimitive.Popup>
       </DrawerPrimitive.Viewport>
     </DrawerPortal>

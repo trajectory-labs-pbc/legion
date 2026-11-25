@@ -8,13 +8,13 @@ export const popupMotion =
 export const modalPopupMotion =
   "motion-safe:transition-opacity motion-safe:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0";
 
-/** A modal backdrop: the scrim, transparent when another modal's scrim is below. */
+/** A modal backdrop. A nested modal renders none, so one scrim dims the page. */
 export const scrimClass =
-  "fixed inset-0 z-50 bg-scrim/50 motion-safe:transition-opacity motion-safe:duration-200 data-[stacked]:bg-transparent data-starting-style:opacity-0 data-ending-style:opacity-0";
+  "fixed inset-0 z-50 bg-scrim/50 motion-safe:transition-opacity motion-safe:duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0";
 
-/** A modal popup that dims while another modal covers it. */
+/** A modal popup that dims while a modal nested in it is open. */
 export const coveredClass =
-  "after:pointer-events-none after:absolute after:inset-0 after:bg-scrim after:opacity-0 motion-safe:after:transition-opacity motion-safe:after:duration-200 data-[covered]:after:opacity-25";
+  "after:pointer-events-none after:absolute after:inset-0 after:bg-scrim after:opacity-0 motion-safe:after:transition-opacity motion-safe:after:duration-200 data-nested-dialog-open:after:opacity-25 data-nested-drawer-open:after:opacity-25";
 
 /** The close button in a dialog's or a sheet's corner, a 24px target. */
 export const closeButtonClass =

@@ -4,30 +4,10 @@ import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { popupMotion } from "#registry/legion/lib/overlay-styles";
 import { useIsInsideModalSurface } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerProvider,
-  OverlayOpenProvider,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function DropdownMenu<Payload = unknown>({
-  modal,
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: MenuPrimitive.Root.Props<Payload>) {
+function DropdownMenu<Payload = unknown>({ modal, ...props }: MenuPrimitive.Root.Props<Payload>) {
   const insideModalSurface = useIsInsideModalSurface();
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <MenuPrimitive.Root<Payload>
-        modal={modal ?? insideModalSurface}
-        {...props}
-        {...state.rootProps}
-      />
-    </OverlayOpenProvider>
-  );
+  return <MenuPrimitive.Root<Payload> modal={modal ?? insideModalSurface} {...props} />;
 }
 
 function DropdownMenuTrigger<Payload = unknown>(props: MenuPrimitive.Trigger.Props<Payload>) {
@@ -67,7 +47,7 @@ function DropdownMenuContent({
           className={cn(menuPopupClass, className)}
           {...props}
         >
-          <OverlayLayerProvider kind="menu">{children}</OverlayLayerProvider>
+          {children}
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>

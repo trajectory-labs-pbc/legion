@@ -1,0 +1,99 @@
+import { describe, expect, it } from "bun:test";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { Button } from "#registry/legion/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "#registry/legion/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#registry/legion/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTitle } from "#registry/legion/ui/sheet";
+
+// Base UI stacks the overlays: these check what the package's parts rely on.
+
+function DialogInSheet() {
+  return (
+    <Sheet defaultOpen>
+      <SheetContent>
+        <SheetTitle>Sheet</SheetTitle>
+        <p>Sheet body</p>
+        <Dialog>
+          <DialogTrigger render={<Button />}>Open dialog</DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Dialog</DialogTitle>
+          </DialogContent>
+        </Dialog>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const scrims = () =>
+  document.querySelectorAll("[data-slot=sheet-overlay], [data-slot=dialog-overlay]");
+
+async function openDialogInSheet(): Promise<HTMLElement> {
+  render(<DialogInSheet />);
+  const sheet = await screen.findByRole("dialog", { name: "Sheet" });
+  await userEvent.click(screen.getByRole("button", { name: "Open dialog" }));
+  await screen.findByRole("dialog", { name: "Dialog" });
+  return sheet;
+}
+
+describe("Nested overlays", () => {
+  it("show one scrim and dim the sheet under a dialog", async () => {
+    const sheet = await openDialogInSheet();
+    expect(scrims().length).toBe(1);
+    await waitFor(() => expect(sheet.hasAttribute("data-nested-dialog-open")).toBe(true));
+  });
+
+  it("close only the top layer on Escape", async () => {
+    const sheet = await openDialogInSheet();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Dialog" })).toBeNull());
+    expect(screen.getByRole("dialog", { name: "Sheet" })).toBe(sheet);
+    await waitFor(() => expect(sheet.hasAttribute("data-nested-dialog-open")).toBe(false));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("close only the top layer on a press outside it", async () => {
+    await openDialogInSheet();
+    const viewport = document.querySelector<HTMLElement>("[data-slot=dialog-viewport]");
+    if (viewport === null) throw new Error("no dialog viewport");
+    await userEvent.click(viewport);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Dialog" })).toBeNull());
+    expect(screen.getByRole("dialog", { name: "Sheet" })).toBeDefined();
+  });
+
+  it("close a menu in a dialog on Escape or a press outside it, and leave the dialog open", async () => {
+    render(
+      <Dialog defaultOpen>
+        <DialogContent>
+          <DialogTitle>Dialog</DialogTitle>
+          <p>Dialog body</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button />}>Menu</DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem>One</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </DialogContent>
+      </Dialog>
+    );
+    const trigger = await screen.findByRole("button", { name: "Menu" });
+    await userEvent.click(trigger);
+    await screen.findByRole("menu");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(screen.getByRole("dialog", { name: "Dialog" })).toBeDefined();
+
+    await userEvent.click(trigger);
+    await screen.findByRole("menu");
+    await userEvent.click(screen.getByText("Dialog body"));
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(screen.getByRole("dialog", { name: "Dialog" })).toBeDefined();
+  });
+});

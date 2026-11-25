@@ -11,21 +11,8 @@ import {
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
-import {
-  OverlayLayerScope,
-  OverlayOpenProvider,
-  useModalLayer,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function Sheet({ open, defaultOpen, onOpenChange, ...props }: SheetPrimitive.Root.Props) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <SheetPrimitive.Root {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
+const Sheet = SheetPrimitive.Root;
 
 function SheetTrigger(props: SheetPrimitive.Trigger.Props) {
   return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
@@ -38,7 +25,6 @@ function SheetClose(props: SheetPrimitive.Close.Props) {
 function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
     <SheetPrimitive.Backdrop
-      forceRender
       data-slot="sheet-overlay"
       className={cn(scrimClass, className)}
       {...props}
@@ -65,14 +51,12 @@ function SheetContent({
   showCloseButton?: boolean;
   closeLabel?: string;
 }) {
-  const modal = useModalLayer("sheet");
   return (
     <SheetPrimitive.Portal data-slot="sheet-portal">
-      <SheetOverlay {...modal.backdropProps} />
+      <SheetOverlay />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
-        {...modal.popupProps}
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background outline-hidden",
           modalPopupMotion,
@@ -82,11 +66,9 @@ function SheetContent({
         )}
         {...props}
       >
-        <OverlayLayerScope layer={modal.layer}>
-          <ModalSurfaceProvider>
-            <OverlayOutline>{children}</OverlayOutline>
-          </ModalSurfaceProvider>
-        </OverlayLayerScope>
+        <ModalSurfaceProvider>
+          <OverlayOutline>{children}</OverlayOutline>
+        </ModalSurfaceProvider>
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"

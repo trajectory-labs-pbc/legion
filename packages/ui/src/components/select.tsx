@@ -2,25 +2,8 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { popupMotion } from "#registry/legion/lib/overlay-styles";
-import {
-  OverlayLayerProvider,
-  OverlayOpenProvider,
-  useOverlayOpen,
-} from "#registry/legion/ui/overlay-layer";
 
-function Select<Value, Multiple extends boolean | undefined = false>({
-  open,
-  defaultOpen,
-  onOpenChange,
-  ...props
-}: SelectPrimitive.Root.Props<Value, Multiple>) {
-  const state = useOverlayOpen({ open, defaultOpen, onOpenChange });
-  return (
-    <OverlayOpenProvider open={state.open}>
-      <SelectPrimitive.Root<Value, Multiple> {...props} {...state.rootProps} />
-    </OverlayOpenProvider>
-  );
-}
+const Select = SelectPrimitive.Root;
 
 function SelectGroup(props: SelectPrimitive.Group.Props) {
   return <SelectPrimitive.Group data-slot="select-group" {...props} />;
@@ -92,9 +75,7 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List className="p-1">
-            <OverlayLayerProvider kind="select">{children}</OverlayLayerProvider>
-          </SelectPrimitive.List>
+          <SelectPrimitive.List className="p-1">{children}</SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
