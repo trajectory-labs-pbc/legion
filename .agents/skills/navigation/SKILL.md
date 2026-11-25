@@ -9,7 +9,7 @@ Every address of the app is declared in a page file. Links and moves are typed f
 
 ## The rules
 
-1. Only `src/navigation` imports the router (`react-router-dom`, or any `@tanstack/*router*`). `tests/layering.test.ts` refuses the import anywhere else in this package. Upstream's own files keep their router imports.
+1. Only `src/navigation` imports the router (`react-router-dom`, or any `@tanstack/*router*`). `tests/layering.test.ts` refuses the import anywhere else under `src/`. Upstream's own files keep their router imports.
 2. Never write a path as a string. Link with `PageLink`, move with `usePageNavigate`, and build a string address with `pageHref` only where an API needs a string.
 3. A command never navigates by itself. It takes a callback (`goTo`), and the shell wires the callback to `usePageNavigate`. See `.agents/skills/commands/SKILL.md`.
 4. The URL is the state a reader reloads into or shares: the page, its tab, its filters, its selection, its peek and an open create form. Keep that state in the path or the search keys, not in component state.
@@ -26,7 +26,7 @@ The app keeps React Router while it still draws upstream's pages, because each o
 - `page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
 
-The page files, `page-route.ts` and `path.ts` do not change.
+Outside the folder, `tests/navigation.tsx` imports the router for the tests, and changes too. The page files, `page-route.ts` and `path.ts` do not change.
 
 ## Page files
 
