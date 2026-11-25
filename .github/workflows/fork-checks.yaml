@@ -51,11 +51,8 @@ jobs:
       run:
         working-directory: packages/tl-dispatch
     steps:
-      # The history, so a copied upstream part that changed prints upstream's diff since the copy.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
-          filter: blob:none
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
       # The root install first: the app links React and the other shared libraries from it. Then
