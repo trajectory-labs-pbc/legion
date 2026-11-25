@@ -13,3 +13,18 @@
     min-height: revert-layer;
   }
 }
+
+/* Upstream's sticky margin sheet stays inside the panel's inset and edge. */
+@media (min-width: 80rem) {
+  [data-testid="content-panel"] [data-testid="margin-sheet"] {
+    top: calc(0.5rem + 1px);
+    height: calc(100dvh - 1rem - 2px);
+    max-height: calc(100dvh - 1rem - 2px);
+  }
+}
+
+/* Fields that name a border colour but draw no border need one on the panel's card. */
+[data-testid="content-panel"]
+  :is(input, textarea, select)[class~="border-slate-300"]:not([class~="border"]) {
+  border-width: 1px;
+}

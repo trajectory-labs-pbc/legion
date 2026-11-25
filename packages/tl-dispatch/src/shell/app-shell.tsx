@@ -3,6 +3,7 @@ import { useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
 import { useRecordRecents } from "@upstream-dispatch/features/search/recents";
 
 import { CompactHeader } from "./compact-header";
+import { ContentPanel } from "./content-panel";
 import { MainRegion } from "./main-region";
 import { MarginRegion } from "./margin-region";
 import { NavigationDrawer } from "./navigation-drawer";
@@ -70,17 +71,24 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
         >
           {panel}
         </SidebarRegion>
-        <MainRegion
+        <ContentPanel
           fillsViewport={shell.fillsViewport}
-          hasMargin={shell.hasMargin}
           issueFrame={shell.issueFrame}
-          liveView={shell.liveView}
-          mainRef={shell.mainRef}
-          marginHidden={preferences.marginHidden}
-          pathname={shell.pathname}
-          sidebarHidden={preferences.sidebarHidden}
-        />
-        <MarginRegion pathname={shell.pathname} preferences={preferences} />
+          marginRail={shell.hasMargin && preferences.marginHidden}
+          sidebarFolded={preferences.sidebarHidden}
+        >
+          <MainRegion
+            fillsViewport={shell.fillsViewport}
+            hasMargin={shell.hasMargin}
+            issueFrame={shell.issueFrame}
+            liveView={shell.liveView}
+            mainRef={shell.mainRef}
+            marginHidden={preferences.marginHidden}
+            pathname={shell.pathname}
+            sidebarHidden={preferences.sidebarHidden}
+          />
+          <MarginRegion pathname={shell.pathname} preferences={preferences} />
+        </ContentPanel>
         <ShellDialogs
           closeCreate={overlays.closeCreate}
           closeInboxDrawer={overlays.closeInboxDrawer}

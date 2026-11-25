@@ -118,14 +118,39 @@ describe("AppShell", () => {
           })
         );
       });
+    const panel = () => view.container.querySelector('[data-testid="content-panel"]');
+    const sidebar = () => view.container.querySelector('[data-testid="sidebar"]');
     expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
     expect(rail()).toBeNull();
+    expect(sidebar()?.className).toContain("w-60");
+    expect(panel()?.className).toContain("xl:ml-0");
     fold();
     expect(main()?.getAttribute("data-shell-layout")).toBe("full-width");
     expect(rail()).not.toBeNull();
+    expect(sidebar()).toBeNull();
+    expect(panel()?.className).toContain("xl:ml-14");
     fold();
     expect(main()?.getAttribute("data-shell-layout")).toBe("standard");
     expect(rail()).toBeNull();
+  });
+
+  test("draws the inverted L: the sidebar on the window's ground, main in an inset card", async () => {
+    const browser = (
+      window as unknown as { happyDOM: { setViewport(size: { width: number }): void } }
+    ).happyDOM;
+    const narrow = window.innerWidth;
+    browser.setViewport({ width: 1440 });
+    const view = await mount();
+    mounted.push({ unmount: () => browser.setViewport({ width: narrow }) });
+    const sidebar = view.container.querySelector('[data-testid="sidebar"]');
+    const panel = view.container.querySelector('[data-testid="content-panel"]');
+    expect(sidebar?.className).toContain("bg-background");
+    expect(sidebar?.className).not.toContain("border-r");
+    expect(panel?.contains(view.container.querySelector("main"))).toBe(true);
+    for (const name of ["bg-card", "md:border", "md:mx-2", "md:mb-2", "xl:mt-2"]) {
+      expect(panel?.className.split(" ")).toContain(name);
+    }
+    expect(panel?.className).not.toContain("shadow");
   });
 
   test("$mod+k opens the search palette at once: a key typed next is the palette's", async () => {
