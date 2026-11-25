@@ -302,6 +302,43 @@ describe("the sidebar", () => {
     expect(retry()).toBeUndefined();
   });
 
+  /** Mounts the sidebar on an inbox of `asks` and `unread` unread threads, once both are read. */
+  async function mountInbox(asks: unknown[], unread: number) {
+    const asked = new Set<string>();
+    const container = mount("/agents", {
+      answer: (url) => {
+        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+        if (url.endsWith("/api/v1/inbox")) {
+          asked.add("inbox");
+          return json(asks);
+        }
+        if (url.includes("/api/v1/me/replies")) {
+          asked.add("replies");
+          return json({ items: [], total: unread });
+        }
+        return undefined;
+      },
+    });
+    await waitFor(() => asked.size === 2, sleep);
+    await sleep(100);
+    return container.querySelector('nav a[href="/"]');
+  }
+
+  test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
+    const inboxRow = await mountInbox(INBOX_TWO_FOR_READER.slice(2), 3);
+    expect(inboxRow?.querySelector('[data-slot="attention-mark"]')).toBeNull();
+    const count = inboxRow?.querySelector('[data-slot="count"]');
+    expect(count?.textContent).toBe("3");
+    expect(count?.getAttribute("title")).toBe("3 unread threads");
+    expect(count?.className).toContain("text-muted-foreground");
+  });
+
+  test("with nothing waiting and nothing unread, the Inbox shows no number", async () => {
+    const inboxRow = await mountInbox([], 0);
+    expect(inboxRow?.textContent).toBe("Inbox");
+    expect(inboxRow?.querySelector('[data-slot="attention-mark"], [data-slot="count"]')).toBeNull();
+  });
+
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {
     const data: SidebarData = {
       destinations: [

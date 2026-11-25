@@ -4,11 +4,11 @@ import { NavRow, NavSurface } from "@legion/ui/components/nav";
 import { useQuery } from "@tanstack/react-query";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { NeedsYouMark } from "@/features/needs-you";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { inbox } from "@/pages/inbox";
+import { useInboxRowCount } from "./inbox-count";
 import { PeekButton } from "./peek-button";
 
 /** The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu. */
@@ -21,7 +21,7 @@ export function CompactHeader({
   onInbox: boolean;
   onOpenNavigation: () => void;
 }) {
-  const inboxCount = useNeedsYouCount();
+  const inboxCount = useInboxRowCount();
   const unread = totalUnreadReplies(useQuery(userAgentStateQuery()).data);
   return (
     <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>
@@ -38,7 +38,11 @@ export function CompactHeader({
         render={<PageLink page={inbox.routes.home} />}
       >
         Inbox
-        <NeedsYouMark count={inboxCount} />
+        {inboxCount.needsYou ? (
+          <NeedsYouMark count={inboxCount.count} />
+        ) : (
+          <Count title={inboxCount.label} value={inboxCount.count} />
+        )}
       </NavRow>
       {unread === 0 ? null : (
         <NavRow

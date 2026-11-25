@@ -114,6 +114,22 @@ describe("CompactHeader", () => {
     expect(unread?.className).toContain("text-muted-foreground");
   });
 
+  test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
+    const header = mount(
+      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+      (url) => {
+        if (url.endsWith("/auth/whoami")) return json({ kind: "user", login: "reader" });
+        if (url.endsWith("/api/v1/inbox")) return json([]);
+        if (url.includes("/api/v1/me/replies")) return json({ items: [], total: 3 });
+        return undefined;
+      }
+    );
+    const count = () => header.querySelector('a[href="/"] [data-slot="count"]');
+    await waitFor(() => count() !== null, sleep);
+    expect(count()?.textContent).toBe("3");
+    expect(header.querySelector('[data-slot="attention-mark"]')).toBeNull();
+  });
+
   test("Menu says whether the navigation is open and opens it", () => {
     let opened = 0;
     const container = mount(
