@@ -23,7 +23,7 @@ const go = (name: string, keys: string[]): CommandDefinition => ({ name, label: 
 const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
   `"${a}" (${aKeys}) and "${b}" (${bKeys}) are live together and one press sequence matches both, or one starts the other`;
 
-/** The keys the shell binds today (`src/shell/global-commands.ts`), as the engine sees them. */
+/** The keys upstream's shell binds today, as the engine sees them. */
 const LIVE_KEYS: readonly CommandDefinition[] = [
   { name: "search", keys: ["$mod+k"], label: "Search and actions", inEditable: true },
   { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
