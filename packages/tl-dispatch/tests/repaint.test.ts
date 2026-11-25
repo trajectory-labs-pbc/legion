@@ -46,13 +46,16 @@ const editorCss = parseCss(
 ).declarations;
 const REPAINT_IMPORT = '@import "./repaint.css";';
 
+/** The classes the app's sources write. No test changes a source, so one scan serves them all. */
+let classes: string[] | undefined;
+
 /** The CSS Tailwind generates for the app, with every neutral shade's class added. */
 async function generate(repaint = repaintText): Promise<CssDeclaration[]> {
   const compiler = await compile(stylesText.replace(REPAINT_IMPORT, repaint), {
     base: srcDir,
     onDependency: () => {},
   });
-  const classes = new Scanner({ sources: compiler.sources }).scan();
+  classes ??= new Scanner({ sources: compiler.sources }).scan();
   const forced = NEUTRAL_FAMILIES.flatMap((family) =>
     SHADES.map((shade) => `text-${family}-${shade}`)
   );
@@ -358,11 +361,11 @@ function paletteProblems(declarations: readonly CssDeclaration[]): string[] {
       .filter((property) => /^--color-([a-z]+-\d+|page-[\w-]+|icon-rail[\w-]*)$/.test(property))
   );
   const problems: string[] = [];
+  const variables = SCHEMES.map((scheme) => [scheme, rootValues(declarations, scheme)] as const);
   for (const name of [...names].sort()) {
     if (!repainted(declarations, name)) problems.push(`${name}: src/repaint.css does not set it`);
-    for (const scheme of SCHEMES) {
-      const variables = rootValues(declarations, scheme);
-      const colour = evaluate(`var(${name})`, scheme, variables);
+    for (const [scheme, held] of variables) {
+      const colour = evaluate(`var(${name})`, scheme, held);
       if (colour === undefined) problems.push(`${name} (${scheme}): not a colour this test reads`);
       else if (isBlue(colour)) problems.push(`${name} (${scheme}): a blue`);
     }
