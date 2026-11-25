@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act, createRef } from "react";
 
 import { render, settle } from "../../tests/react";
@@ -18,7 +18,7 @@ function Shell() {
 
 interface TooltipModule {
   HotkeyTooltip: typeof HotkeyTooltipType;
-  loadHotkeyTooltip(): Promise<void>;
+  loadHotkeyTooltip(load?: () => Promise<never>): Promise<void>;
 }
 
 /** The module as a first page load runs it: the tooltip's code not yet arrived. */
@@ -90,5 +90,27 @@ describe("HotkeyTooltip, while its code arrives", () => {
     await act(() => loadHotkeyTooltip());
     expect(own.current).toBe(view.container.querySelector("button"));
     expect(own.current?.getAttribute("data-slot")).toBe("tooltip-trigger");
+  });
+
+  test("a tooltip chunk that fails leaves the control working, with its keys", async () => {
+    const logged = spyOn(console, "error").mockImplementation(() => {});
+    const { HotkeyTooltip, loadHotkeyTooltip } = await freshModule();
+    // Asked before the first tooltip mounts, so the mount's request is this one.
+    const arrival = loadHotkeyTooltip(() => Promise.reject(new Error("chunk gone")));
+    const view = render(
+      <>
+        <Shell />
+        <HotkeyTooltip commandId="global.search">
+          <button type="button">Search</button>
+        </HotkeyTooltip>
+      </>
+    );
+    mounted.push(view);
+    await act(() => arrival);
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+    const control = view.container.querySelector("button");
+    expect(control?.getAttribute("data-slot")).toBeNull();
+    expect(control?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
   });
 });

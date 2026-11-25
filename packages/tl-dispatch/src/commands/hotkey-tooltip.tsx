@@ -1,3 +1,4 @@
+import { importWhenOnline } from "@upstream-dispatch/features/shell/DeploymentResilience";
 import {
   cloneElement,
   type ReactElement,
@@ -18,12 +19,24 @@ let popup: typeof HotkeyTooltipPopup | undefined;
 let loading: Promise<void> | undefined;
 const listeners = new Set<() => void>();
 
-/** Loads the tooltip's code once. The first tooltip mounted asks for it, after the first paint. */
-export function loadHotkeyTooltip(): Promise<void> {
-  loading ??= import("./hotkey-tooltip-popup").then((module) => {
-    popup = module.HotkeyTooltipPopup;
-    for (const listener of listeners) listener();
-  });
+/**
+ * Loads the tooltip's code once. The first tooltip mounted asks for it, after the first paint.
+ * Offline it loads when the network returns; a failure online leaves every control working with
+ * its keys and no tooltip, and the stale-chunk recovery reloads a page a deploy outdated.
+ */
+export function loadHotkeyTooltip(
+  load: () => Promise<{ HotkeyTooltipPopup: typeof HotkeyTooltipPopup }> = () =>
+    import("./hotkey-tooltip-popup")
+): Promise<void> {
+  loading ??= importWhenOnline(load).then(
+    (module) => {
+      popup = module.HotkeyTooltipPopup;
+      for (const listener of listeners) listener();
+    },
+    (error: unknown) => {
+      console.error("Dispatch: the key tooltips failed to load", error);
+    }
+  );
   return loading;
 }
 

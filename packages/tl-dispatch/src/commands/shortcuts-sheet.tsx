@@ -1,8 +1,9 @@
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
-import { lazy, Suspense, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { appCatalog, UPSTREAM_LABELS } from "./app-catalog";
 import { appStack } from "./engine-stack";
+import { lazyRegion } from "./lazy-region";
 import { liveShortcuts, type ShortcutSection } from "./shortcuts";
 import type { ShortcutsSheetProps } from "./shortcuts-sheet-view";
 
@@ -42,18 +43,13 @@ export function useShortcutsSheet(
   return { ...state, setOpen, toggle };
 }
 
-const ShortcutsSheetView = lazy(() =>
-  import("./shortcuts-sheet-view").then((module) => ({ default: module.ShortcutsSheet }))
+const ShortcutsSheetView = lazyRegion("the shortcuts sheet", () =>
+  import("./shortcuts-sheet-view").then((module) => module.ShortcutsSheet)
 );
 
 /** The shortcuts sheet, whose code loads the first time it opens and stays for its close. */
 export function ShortcutsSheet(props: ShortcutsSheetProps) {
   const [opened, setOpened] = useState(false);
   if (props.open && !opened) setOpened(true);
-  if (!opened) return null;
-  return (
-    <Suspense fallback={null}>
-      <ShortcutsSheetView {...props} />
-    </Suspense>
-  );
+  return opened ? <ShortcutsSheetView {...props} /> : null;
 }
