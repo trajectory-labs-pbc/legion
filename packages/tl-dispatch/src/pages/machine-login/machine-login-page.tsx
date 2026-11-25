@@ -1,5 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/ui/button";
 import { SurfaceTitle } from "@/ui/heading";
@@ -8,19 +7,13 @@ import { DecisionButtons } from "./decision-buttons";
 import { MachineLogins } from "./machine-logins";
 import { RecordFacts } from "./record-facts";
 import {
-  api,
   apiErrorMessage,
-  credentialPendingQuery,
-  type DecisionResponse,
-  machineLoginsQuery,
   machineName,
   SendStoppedError,
-  type StateResponse,
   stoppedWriteNote,
   useDocumentTitle,
-  useKeyedWrite,
-  useSubmitGuard,
 } from "./upstream";
+import { useMachineLogin } from "./use-machine-login";
 
 /** The login's decision, in place of the buttons that decide it. */
 function Decision({
@@ -56,75 +49,8 @@ function Decision({
 
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
-  const [code, setCode] = useState("");
-  const queryClient = useQueryClient();
-  const submitGuard = useSubmitGuard();
-
-  const lookup = useKeyedWrite({
-    method: "POST",
-    inline: true,
-    label: () => "Lookup of a machine login code",
-    onSettled: () => submitGuard.release(),
-    write: (lookupCode: string, bounds) => api.lookupMachineCredential(lookupCode, bounds),
-  });
-  const record = lookup.data ?? undefined;
-  // The code the shown record was looked up by, not what the field holds now.
-  const lookedUpCode = lookup.variables ?? "";
-
-  const approve = useKeyedWrite<DecisionResponse>({
-    method: "POST",
-    write: (_variables, bounds) =>
-      api.approveCredentialRecord(record?.record_id ?? "", { code: lookedUpCode }, bounds),
-    inline: true,
-    label: () => "Approval of a machine login",
-    onSettled: () => submitGuard.release(),
-    onSuccess: (decided) => {
-      void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
-      void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
-      if (decided === null) lookup.mutate(lookedUpCode);
-    },
-  });
-  const deny = useKeyedWrite<StateResponse>({
-    method: "POST",
-    write: (_variables, bounds) =>
-      api.denyCredentialRecord(record?.record_id ?? "", { code: lookedUpCode }, bounds),
-    inline: true,
-    label: () => "Denial of a machine login",
-    onSettled: () => submitGuard.release(),
-    onSuccess: (decided) => {
-      void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
-      if (decided === null) lookup.mutate(lookedUpCode);
-    },
-  });
-
+  const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    submitGuard.guard(() => {
-      approve.reset();
-      deny.reset();
-      lookup.mutate(code);
-    });
-  };
-  // An approval names the credential it minted; a denial names none.
-  const approved = approve.data ?? undefined;
-  const denied = deny.data ?? undefined;
-  const madeHere =
-    approved !== undefined
-      ? { credential_id: approved.credential_id, state: approved.state }
-      : denied === undefined
-        ? undefined
-        : { credential_id: null, state: denied.state };
-  const view =
-    record === undefined
-      ? undefined
-      : madeHere === undefined
-        ? { decided: record.decided, record }
-        : {
-            decided: { credential_id: madeHere.credential_id, event: madeHere.state },
-            record: { ...record, state: madeHere.state },
-          };
 
   return (
     <section className="max-w-5xl space-y-8">
@@ -132,7 +58,13 @@ export function MachineLoginPage(): ReactNode {
         <SurfaceTitle className="text-balance" size="page">
           Enter machine login code
         </SurfaceTitle>
-        <form className="flex flex-wrap items-end gap-3" onSubmit={submit}>
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            lookUp();
+          }}
+        >
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-muted-foreground" htmlFor="machine-code">
               Code shown on the machine
@@ -141,15 +73,7 @@ export function MachineLoginPage(): ReactNode {
               autoComplete="off"
               className="font-mono tracking-widest"
               id="machine-code"
-              onChange={(event) => {
-                const cleaned = event.target.value
-                  .toUpperCase()
-                  .replaceAll(/[^A-Z0-9]/g, "")
-                  .slice(0, 8);
-                setCode(
-                  cleaned.length > 4 ? `${cleaned.slice(0, 4)}-${cleaned.slice(4)}` : cleaned
-                );
-              }}
+              onChange={(event) => typeCode(event.target.value)}
               placeholder="XXXX-XXXX"
               value={code}
             />
