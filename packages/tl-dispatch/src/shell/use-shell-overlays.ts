@@ -2,7 +2,7 @@ import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/she
 import { type DialogHandle, useDialog } from "@upstream-dispatch/features/shell/useDialog";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 
-import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/shortcuts-sheet";
+import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
 import { project } from "@/pages/project";
 import { useGlobalCommands } from "./global-commands";

@@ -16,8 +16,11 @@ import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { AppShell } from "./app-shell";
+import { ConnectionErrorPage } from "./connection-error-page";
+import { forgetReads } from "./forget-reads";
+import { ShellSkeleton } from "./shell-skeleton";
+import { SignInPage } from "./sign-in-page";
 import { signIns } from "./sign-ins";
-import { ConnectionErrorPage, ShellSkeleton, SignInPage } from "./states";
 import { useSignInChannel } from "./use-sign-in-channel";
 
 function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
@@ -45,7 +48,7 @@ export function AuthGate(): ReactNode {
   const signedOut = whoAmI.isError && isUnauthorized(whoAmI.error);
   useEffect(() => {
     if (!signedOut) return;
-    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "whoami" });
+    forgetReads(queryClient);
   }, [queryClient, signedOut]);
   useEffect(
     () => writesOf(queryClient).onSignedOut((person) => draftStoresSignedOut(queryClient, person)),

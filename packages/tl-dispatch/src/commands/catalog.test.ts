@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { appCatalog, type CommandId } from "./catalog";
+import { appCatalog, type CommandId } from "./app-catalog";
 import type { CommandButtonProps } from "./command-button";
 
 describe("command ids", () => {

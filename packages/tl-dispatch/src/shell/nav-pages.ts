@@ -1,4 +1,4 @@
-import type { NavName } from "@/commands/catalog";
+import type { NavName } from "@/commands/nav";
 import type { PageRoute } from "@/navigation/page-route";
 import { agents } from "@/pages/agents";
 import { delivery } from "@/pages/delivery";

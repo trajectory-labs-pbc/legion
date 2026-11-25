@@ -1,7 +1,8 @@
 import { Button, type ButtonProps } from "@/ui/button";
-import type { CommandId } from "./catalog";
-import { type CommandView, commandStore, useCommand } from "./hooks";
+import type { CommandId } from "./app-catalog";
+import { type CommandView, commandStore } from "./command-store";
 import { HotkeyTooltip, type HotkeyTooltipProps } from "./hotkey-tooltip";
+import { useCommand } from "./use-command";
 
 export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "children" | "render"> {
   commandId: CommandId;

@@ -10,6 +10,7 @@ replaces them one page at a time.
 | `src/ui` | The registry's components and theme, as `shadcn add` wrote them: no data, no router | packages and `src/ui` only |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
 | `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom` |
+| `src/loading` | The chunk loaders | upstream's offline retry and error boundary |
 | `src/writes` | What a surface says of a failed write | upstream's write modules |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
@@ -54,7 +55,7 @@ the dark scheme follow the operating system; keep it when the file is written ag
 
 ## Commands
 
-`src/commands/catalog.ts` declares every command once: its label, keys, icon, group, whether
+`src/commands/app-catalog.ts` declares every command once: its label, keys, icon, group, whether
 it is destructive and the lists it stays out of. Its global context holds the keys upstream's shell
 binds, with the same behaviour, and adds the pages with no letter as palette commands. The catalog refuses,
 when it loads, two keys live together that one press sequence matches or where one starts the
@@ -77,17 +78,24 @@ engine and the command store. Everything else reads the store:
 
 The files of `src/commands`, one role each:
 
-- `catalog.ts`: the app's commands, the sheet's groups, the sidebar's destinations and the sheet's
-  labels for upstream's bindings.
+- `app-catalog.ts`: the app's commands (`APP_CONTEXTS`, `appCatalog`, `CommandId`).
+- `groups.ts`: the sheet's groups. `nav.ts`: the sidebar's destinations and their `G` chords.
+  `upstream-labels.ts`: the sheet's labels for upstream's bindings.
 - `schema.ts`: what a command, a context and a catalog are; `createCatalog` checks a catalog.
-- `keys.ts`: key text: the checks the catalog runs, and the chips a key shows as.
-- `engine.ts`: the bridge to upstream's key engine: its scope stack under our overlays, and the
-  bindings a context registers.
-- `hooks.ts`: `defineActions`, the command store, `useRegisterCommands` and the hooks that read
-  the store.
-- `command-button.tsx`, `hotkey-tooltip.tsx` and `shortcuts-sheet.tsx`. The tooltip's popup
-  (`hotkey-tooltip-popup.tsx`) and the sheet's view (`shortcuts-sheet-view.tsx`) are files of
-  their own because each is a chunk that loads later.
+- `keys.ts`: the checks the catalog runs on a key. `key-chips.ts`: the chips a key shows as.
+- `engine-stack.ts`: upstream's key engine's scope stack under our overlays. `bindings.ts`: the
+  bindings a context registers with it.
+- `actions.ts`: `defineActions`. `command-store.ts`: the mounted commands.
+  `use-register-commands.ts` and `use-command.ts`: the hooks that register and read them.
+- `live-shortcuts.ts`: the keys that run now, as rows. `use-shortcuts-sheet.ts`: the sheet's
+  state. `shortcuts-sheet.tsx`: the sheet, whose view (`shortcuts-sheet-view.tsx`) is a chunk
+  that loads on the first `?`.
+- `command-button.tsx` and `hotkey-tooltip.tsx`, whose popup (`hotkey-tooltip-popup.tsx`) is a
+  chunk that loads after the first paint.
+
+`src/loading` holds the chunk loaders: `lazyNamed(load, name)` draws a module's component once
+its chunk arrives, `lazyRegion` keeps a failed chunk to its own region, and both load again when
+the network returns.
 
 ## Navigation
 
@@ -137,15 +145,18 @@ React Router context around them. Before then, a swap means running both routers
 
 `src/shell/app-shell.tsx` only composes the frame around every page. Its parts:
 
-- `use-shell-layout.ts`: `useShellLayout()`, the current page's layout on this viewport with the
-  reader's choices (the folded sidebar and margin, the issue page they draw).
+- `use-shell-layout.ts`: `useShellLayout()`, the current page's layout on this viewport, with
+  the reader's choices from `use-shell-preferences.ts` (the folded sidebar and margin).
 - `use-shell-overlays.ts`: `useShellOverlays()`, the navigation drawer, search, a new issue, the
-  inbox drawer and the shortcuts sheet, and the global commands that open them.
-- `shell-frame.tsx`: the regions: the providers upstream's pages read, the frame, the navigation
-  drawer, the sidebar region, main, the margin and the dialogs.
+  inbox drawer and the shortcuts sheet, and the global commands that open them
+  (`global-commands.ts`).
+- One file per region: `shell-providers.tsx` (the providers upstream's pages read),
+  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `main-region.tsx`,
+  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
-- `auth-gate.tsx`: the sign-in check before the shell: a skeleton, the sign-in page, a
-  connection error, or the shell for the person signed in.
+- `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
+  `connection-error-page.tsx`, or the shell for the person signed in.
+- `page-fallbacks.tsx`: what main shows while a page's code loads.
 
 ## Install
 

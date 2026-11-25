@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ariaKeyShortcuts, chipsOf, rowChips } from "./keys";
+import { ariaKeyShortcuts, chipsOf, rowChips } from "./key-chips";
 
 describe("chips", () => {
   test.each([

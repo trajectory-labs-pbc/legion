@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 
 import { render } from "../../tests/react";
-import { lazyRegion } from "./shortcuts-sheet";
+import { lazyRegion } from "./lazy-region";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -34,8 +34,10 @@ describe("lazyRegion", () => {
     const logged = spyOn(console, "error").mockImplementation(() => {});
     cleanups.push(() => logged.mockRestore());
     network(true);
-    const Lazy = lazyRegion<{ word: string }>("the shortcuts sheet", () =>
-      Promise.reject(new Error("chunk gone"))
+    const Lazy = lazyRegion(
+      "the shortcuts sheet",
+      (): Promise<{ Piece: typeof Piece }> => Promise.reject(new Error("chunk gone")),
+      "Piece"
     );
     const view = render(
       <>
@@ -54,10 +56,14 @@ describe("lazyRegion", () => {
   test("a chunk that fails offline loads when the network returns", async () => {
     const { reconnect } = network(false);
     let tries = 0;
-    const Lazy = lazyRegion("the shortcuts sheet", () => {
-      tries += 1;
-      return tries === 1 ? Promise.reject(new Error("offline")) : Promise.resolve(Piece);
-    });
+    const Lazy = lazyRegion(
+      "the shortcuts sheet",
+      () => {
+        tries += 1;
+        return tries === 1 ? Promise.reject(new Error("offline")) : Promise.resolve({ Piece });
+      },
+      "Piece"
+    );
     const view = render(<Lazy word="piece" />);
     cleanups.push(() => view.unmount());
     await flush();

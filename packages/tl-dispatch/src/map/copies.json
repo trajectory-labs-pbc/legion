@@ -9,42 +9,42 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "IssuePageFallback",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/page-fallbacks.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "90ad11dff39eb0354c4f9fa429ce38bd48eb110f045372dc006a899b50fef662"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "IssueFrameFallback",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/page-fallbacks.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "6913f6376916666799c2cf1bd6837d3a642ed177f8baf73d5b57db169ebc669c"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ShellMessagePage",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/shell-message-page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "f5387c34d6a605366e1781a84a3c2f79e76d9e4ad097ff745621b37e01b61ead"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "SignInPage",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/sign-in-page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "9ee8afc29bd717cac1119610f6e3c9c616259b731ec264c9f0ca97eed2a4859f"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ConnectionErrorPage",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/connection-error-page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "c49de4e9c86af07f00722f49402fc327114078ccea8eb855852b384e4c5a41e5"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ShellSkeleton",
-    "copy": "src/shell/states.tsx",
+    "copy": "src/shell/shell-skeleton.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0ae1df8268e433441b3b5ecbff0daa0bb955b3b7fdfbe0ab001dab6043f1e176"
   },
@@ -100,7 +100,7 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ShellProviders",
-    "copy": "src/shell/shell-frame.tsx",
+    "copy": "src/shell/shell-providers.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0d6a413b4a5e84b17bc93aa1568cb9ea1672d6439f15b4cb7854d7cb6cc6a624"
   },

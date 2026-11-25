@@ -1,4 +1,4 @@
-import { type CommandState, defineActions } from "@/commands/hooks";
+import { type CommandState, defineActions } from "@/commands/actions";
 import type { Catalog, CatalogCommand, CommandSpecs } from "@/commands/schema";
 
 /** A context's specs from one function of the command. */
@@ -11,5 +11,5 @@ export function specsFor(
   const specsOf = defineActions(catalog, context, () =>
     Object.fromEntries(commands.map((command) => [command.name, stateOf(command)]))
   );
-  return specsOf(undefined, undefined);
+  return specsOf(undefined);
 }

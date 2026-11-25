@@ -1,7 +1,7 @@
-import type { Keymap, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";
 import type { ComponentType } from "react";
 
-import { browserKeeps, chordStartsRight, clashes, keyChecker, malformed } from "./keys";
+import { browserKeeps, chordStartsRight, clashChecker, malformed } from "./keys";
 
 /** A section of the shortcuts sheet. Declare each once: the sheet compares groups by id. */
 export interface CommandGroup {
@@ -106,20 +106,13 @@ function chainOf(contexts: ReadonlyMap<string, CommandContext>, name: string): s
 function clashesBetween(
   held: readonly CatalogKey[],
   incoming: readonly CatalogKey[],
-  checkers: Map<string, Keymap>
+  clash: (held: string, keys: string) => boolean
 ): [CatalogKey, CatalogKey][] {
-  const found: [CatalogKey, CatalogKey][] = [];
-  for (const other of held) {
-    let checker = checkers.get(other.keys);
-    if (checker === undefined) {
-      checker = keyChecker([other.keys]);
-      checkers.set(other.keys, checker);
-    }
-    for (const key of incoming) {
-      if (other.command !== key.command && clashes(checker, key.keys)) found.push([other, key]);
-    }
-  }
-  return found;
+  return held.flatMap((other) =>
+    incoming
+      .filter((key) => other.command !== key.command && clash(other.keys, key.keys))
+      .map((key): [CatalogKey, CatalogKey] => [other, key])
+  );
 }
 
 /** Builds the catalog, or throws one error that names every problem. */
@@ -181,15 +174,15 @@ export function createCatalog<const Contexts extends readonly CommandContext[]>(
     chains.get(b)?.includes(a) === true ||
     contexts.get(a)?.scope === contexts.get(b)?.scope;
   const reported = new Set<string>();
-  const checkers = new Map<string, Keymap>();
+  const clash = clashChecker();
   for (const [index, a] of names.entries()) {
     for (const b of names.slice(index)) {
       if (!together(a, b)) continue;
       const held = keysOf.get(a) ?? [];
       const pairs =
         a === b
-          ? held.flatMap((key, at) => clashesBetween(held.slice(0, at), [key], checkers))
-          : clashesBetween(held, keysOf.get(b) ?? [], checkers);
+          ? held.flatMap((key, at) => clashesBetween(held.slice(0, at), [key], clash))
+          : clashesBetween(held, keysOf.get(b) ?? [], clash);
       for (const [first, second] of pairs) {
         const pair = [first.command.id, second.command.id].sort().join("|");
         if (reported.has(pair)) continue;

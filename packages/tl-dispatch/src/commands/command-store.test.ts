@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createCommandStore } from "./hooks";
+import { createCommandStore } from "./command-store";
 import { type CommandSpec, createCatalog } from "./schema";
 
 const catalog = createCatalog([

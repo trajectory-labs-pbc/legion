@@ -1,5 +1,7 @@
-import { appCatalog, type NavName } from "@/commands/catalog";
-import { type CommandState, defineActions, useRegisterCommands } from "@/commands/hooks";
+import { type CommandState, defineActions } from "@/commands/actions";
+import { appCatalog } from "@/commands/app-catalog";
+import type { NavName } from "@/commands/nav";
+import { useRegisterCommands } from "@/commands/use-register-commands";
 
 /** What the shell's global commands do here; an absent action shuts its command's gate. */
 export interface GlobalActions {
@@ -22,7 +24,7 @@ const off = (run: (() => void) | undefined): CommandState => ({
   run: () => run?.(),
 });
 
-const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalActions, _: null) => ({
+const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalActions) => ({
   search: { run: actions.openSearch },
   "search-only": { run: actions.openSearch },
   help: { run: actions.toggleShortcuts },
@@ -43,5 +45,5 @@ const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalAct
 
 /** Registers the catalog's global commands with what they do in the shell now. */
 export function useGlobalCommands(actions: GlobalActions): void {
-  useRegisterCommands(appCatalog, "global", useGlobalActions(actions, null));
+  useRegisterCommands(appCatalog, "global", useGlobalActions(actions));
 }

@@ -11,16 +11,12 @@ import {
 import { createLayerSource, openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./catalog";
-import {
-  contextBindings,
-  type EngineStack,
-  toBindings,
-  trackEngineStack,
-  UNDER_OVERLAY,
-} from "./engine";
-import { commandStore, useRegisterCommands } from "./hooks";
+import { appCatalog } from "./app-catalog";
+import { contextBindings, toBindings, UNDER_OVERLAY } from "./bindings";
+import { commandStore } from "./command-store";
+import { type EngineStack, trackEngineStack } from "./engine-stack";
 import { type CommandSpecs, createCatalog } from "./schema";
+import { useRegisterCommands } from "./use-register-commands";
 
 const catalog = createCatalog([
   {

@@ -6,8 +6,8 @@ import { KbdSequence } from "@/ui/kbd";
 import { textVariants } from "@/ui/lib/typography";
 import { cn } from "@/ui/lib/utils";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/ui/sheet";
-import { rowChips } from "./keys";
-import type { ShortcutSection } from "./shortcuts-sheet";
+import { rowChips } from "./key-chips";
+import type { ShortcutSection } from "./live-shortcuts";
 
 /** The rows whose label holds the query, any case; a section left empty goes. */
 export function filterShortcuts(
@@ -31,7 +31,7 @@ export interface ShortcutsSheetProps {
 }
 
 /** Every key that runs where `?` was pressed, grouped, with a filter. Loaded on the first `?`. */
-export function ShortcutsSheet({ open, onOpenChange, sections }: ShortcutsSheetProps) {
+export function ShortcutsSheetView({ open, onOpenChange, sections }: ShortcutsSheetProps) {
   // Focus starts on the sheet itself, where `?` and Escape still reach the keys; the filter is a Tab away.
   const popup = useRef<HTMLDivElement>(null);
   return (

@@ -7,9 +7,10 @@ import {
   UPSTREAM_WEB,
   upstreamKeyRegistrations,
 } from "../../tests/key-registrations";
-import { APP_CONTEXTS, UPSTREAM_LABELS } from "./catalog";
+import { APP_CONTEXTS } from "./app-catalog";
 import { clashes, keyChecker, refuses } from "./keys";
 import type { CommandContext } from "./schema";
+import { UPSTREAM_LABELS } from "./upstream-labels";
 
 const upstream = upstreamKeyRegistrations();
 

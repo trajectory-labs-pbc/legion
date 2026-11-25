@@ -4,8 +4,8 @@ import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
 import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import type { ReactNode } from "react";
 
-import { type NavName, navCommandName } from "@/commands/catalog";
-import { useCommandShortcut } from "@/commands/hooks";
+import { type NavName, navCommandName } from "@/commands/nav";
+import { useCommandShortcut } from "@/commands/use-command";
 import { PageLink } from "@/navigation/page-link";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";

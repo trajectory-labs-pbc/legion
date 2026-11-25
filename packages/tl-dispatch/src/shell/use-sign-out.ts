@@ -9,6 +9,7 @@ import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { useState } from "react";
 
 import { writeFailureNote } from "@/writes/write-failure-note";
+import { forgetReads } from "./forget-reads";
 import { signIns, signOutQuestion, unsentChanges } from "./sign-ins";
 
 export function signOutFailure(error: Error): string {
@@ -49,7 +50,7 @@ export function useSignOut(login: string): SignOut {
     onError: (_error, signingOut) => signIns.stillSignedIn(signingOut),
     onSuccess: (_answer, signingOut) => {
       void queryClient.resetQueries({ queryKey: ["whoami"] });
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "whoami" });
+      forgetReads(queryClient);
       writesOf(queryClient).signedOut(signingOut);
       signIns.signedOut(signingOut);
     },

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
-import { UNDER_OVERLAY } from "@/commands/engine";
+import { UNDER_OVERLAY } from "@/commands/bindings";
 import { keyRegistrations, UPSTREAM_WEB } from "../../tests/key-registrations";
 import { render, settle } from "../../tests/react";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";

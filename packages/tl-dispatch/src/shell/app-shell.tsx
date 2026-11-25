@@ -3,16 +3,14 @@ import { useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
 import { useRecordRecents } from "@upstream-dispatch/features/search/recents";
 
 import { CompactHeader } from "./compact-header";
+import { MainRegion } from "./main-region";
+import { MarginRegion } from "./margin-region";
+import { NavigationDrawer } from "./navigation-drawer";
 import { NavigationPanel } from "./navigation-panel";
-import {
-  MainRegion,
-  MarginRegion,
-  NavigationDrawer,
-  ShellDialogs,
-  ShellFrame,
-  ShellProviders,
-  SidebarRegion,
-} from "./shell-frame";
+import { ShellDialogs } from "./shell-dialogs";
+import { ShellFrame } from "./shell-frame";
+import { ShellProviders } from "./shell-providers";
+import { SidebarRegion } from "./sidebar-region";
 import { StatusCorner } from "./status-corner";
 import { useLiveViewPins, usePinsMigration } from "./use-agent-pins";
 import { useShellLayout } from "./use-shell-layout";
@@ -26,6 +24,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
   usePinsMigration(user.login, useAgentPinWrite());
   const signOut = useSignOut(user.login);
   const shell = useShellLayout();
+  const { preferences } = shell;
   const overlays = useShellOverlays(shell);
   const panel = (
     <NavigationPanel
@@ -59,12 +58,37 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
             {panel}
           </NavigationDrawer>
         ) : null}
-        <SidebarRegion overlays={overlays} shell={shell} user={user}>
+        <SidebarRegion
+          folded={preferences.sidebarHidden}
+          inDrawer={shell.inDrawer}
+          issueRail={shell.issueFrame && shell.railFits}
+          navigationOpen={overlays.navigationOpen}
+          onOpenNavigation={overlays.openNavigation}
+          project={shell.project}
+          user={user}
+        >
           {panel}
         </SidebarRegion>
-        <MainRegion shell={shell} />
-        <MarginRegion shell={shell} />
-        <ShellDialogs overlays={overlays} />
+        <MainRegion
+          fillsViewport={shell.fillsViewport}
+          hasMargin={shell.hasMargin}
+          issueFrame={shell.issueFrame}
+          liveView={shell.liveView}
+          mainRef={shell.mainRef}
+          marginHidden={preferences.marginHidden}
+          pathname={shell.pathname}
+          sidebarHidden={preferences.sidebarHidden}
+        />
+        <MarginRegion pathname={shell.pathname} preferences={preferences} />
+        <ShellDialogs
+          closeCreate={overlays.closeCreate}
+          closeInboxDrawer={overlays.closeInboxDrawer}
+          closeSearch={overlays.closeSearch}
+          createOpen={overlays.createOpen}
+          inboxDrawerOpen={overlays.inboxDrawerOpen}
+          searchOpen={overlays.searchOpen}
+          shortcuts={overlays.shortcuts}
+        />
       </ShellFrame>
     </ShellProviders>
   );

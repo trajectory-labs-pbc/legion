@@ -1,5 +1,5 @@
-import { appCatalog } from "@/commands/catalog";
-import { useRegisterCommands } from "@/commands/hooks";
+import { appCatalog } from "@/commands/app-catalog";
+import { useRegisterCommands } from "@/commands/use-register-commands";
 import { specsFor } from "./specs";
 
 /** Mounts every global command, each recording its id when it runs. */

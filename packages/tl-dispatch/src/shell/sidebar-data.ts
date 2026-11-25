@@ -12,7 +12,7 @@ import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/featu
 import { useInboxCount } from "@upstream-dispatch/features/inbox/useInboxCount";
 import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
-import { NAV_DESTINATIONS, type NavName } from "@/commands/catalog";
+import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
 import { useAddress } from "@/navigation/hooks";
 import type { PageLayout, PageRoute } from "@/navigation/page-route";

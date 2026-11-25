@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { appCatalog, NAV_DESTINATIONS, navCommandName } from "./catalog";
+import { appCatalog } from "./app-catalog";
+import { NAV_DESTINATIONS, navCommandName } from "./nav";
 import { CatalogError, type CommandContext, type CommandDefinition, createCatalog } from "./schema";
 
 function global(commands: CommandDefinition[]): CommandContext {

@@ -5,10 +5,11 @@ import { act } from "react";
 import { openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./catalog";
-import { useRegisterCommands } from "./hooks";
-import { ShortcutsSheet as LazyShortcutsSheet, useShortcutsSheet } from "./shortcuts-sheet";
-import { ShortcutsSheet } from "./shortcuts-sheet-view";
+import { appCatalog } from "./app-catalog";
+import { ShortcutsSheet } from "./shortcuts-sheet";
+import { ShortcutsSheetView } from "./shortcuts-sheet-view";
+import { useRegisterCommands } from "./use-register-commands";
+import { useShortcutsSheet } from "./use-shortcuts-sheet";
 
 const globalSpecs = (toggle: () => void, disabled: readonly string[]) =>
   specsFor(appCatalog, "global", (command) => ({
@@ -23,7 +24,7 @@ function Harness({ disabled = [] }: { disabled?: readonly string[] }) {
   const sheet = useShortcutsSheet();
   useRegisterCommands(appCatalog, "global", globalSpecs(sheet.toggle, disabled));
   return (
-    <ShortcutsSheet onOpenChange={sheet.setOpen} open={sheet.open} sections={sheet.sections} />
+    <ShortcutsSheetView onOpenChange={sheet.setOpen} open={sheet.open} sections={sheet.sections} />
   );
 }
 
@@ -191,11 +192,7 @@ describe("ShortcutsSheet", () => {
       const state = useShortcutsSheet();
       useRegisterCommands(appCatalog, "global", globalSpecs(state.toggle, []));
       return (
-        <LazyShortcutsSheet
-          onOpenChange={state.setOpen}
-          open={state.open}
-          sections={state.sections}
-        />
+        <ShortcutsSheet onOpenChange={state.setOpen} open={state.open} sections={state.sections} />
       );
     }
     const view = render(<Lazy />);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { defineActions } from "./hooks";
+import { defineActions } from "./actions";
 import { createCatalog, runCommand } from "./schema";
 
 const catalog = createCatalog([

@@ -5,10 +5,11 @@ import { act } from "react";
 
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./catalog";
+import { appCatalog } from "./app-catalog";
 import { CommandButton, commandButtonVariant } from "./command-button";
-import { useCommandShortcut, useRegisterCommands } from "./hooks";
 import { HotkeyTooltip, loadHotkeyTooltip } from "./hotkey-tooltip";
+import { useCommandShortcut } from "./use-command";
+import { useRegisterCommands } from "./use-register-commands";
 
 const globalSpecs = (fired: string[], enabled: boolean) =>
   specsFor(appCatalog, "global", (command) => ({ enabled, run: () => fired.push(command.id) }));

@@ -7,11 +7,12 @@ import {
 } from "@upstream-dispatch/features/shell/keymap";
 
 import { createLayerSource } from "../../tests/layers";
-import { COMMAND_GROUPS } from "./catalog";
-import { contextBindings, trackEngineStack } from "./engine";
-import { defineActions } from "./hooks";
+import { defineActions } from "./actions";
+import { contextBindings } from "./bindings";
+import { trackEngineStack } from "./engine-stack";
+import { COMMAND_GROUPS } from "./groups";
+import { liveShortcuts } from "./live-shortcuts";
 import { createCatalog } from "./schema";
-import { liveShortcuts } from "./shortcuts-sheet";
 import { filterShortcuts } from "./shortcuts-sheet-view";
 
 const catalog = createCatalog([

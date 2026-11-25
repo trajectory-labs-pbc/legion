@@ -1,4 +1,4 @@
-import type { LayerSource } from "@/commands/engine";
+import type { LayerSource } from "@/commands/engine-stack";
 import { type OverlayKind, type OverlayLayer, overlayStack } from "@/ui/overlay-layer";
 
 export interface OpenLayer extends OverlayLayer {
