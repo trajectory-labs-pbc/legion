@@ -9,6 +9,10 @@ packages/tl-dispatch/
 .github/scripts/fork-envoy-base.sh
 .github/scripts/fork-envoy-base.test.sh
 
+# The fork's UI package, outside the root workspaces, and the shadcn registry that serves it.
+packages/ui/
+registry.json
+
 # The fork's checks.
 .github/fork-allowlist.txt
 .github/scripts/check-fork-allowlist.sh

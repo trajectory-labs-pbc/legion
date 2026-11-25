@@ -1,9 +1,11 @@
 name: Fork checks
 
 # This repository is a fork, and this file, which upstream does not have, checks what the fork
-# adds: its whole diff against upstream's main stays on .github/fork-allowlist.txt, and its own web
+# adds: its whole diff against upstream's main stays on .github/fork-allowlist.txt, its own web
 # app, packages/tl-dispatch, type-checks, lints, passes its tests (the route map, the view map and
-# the copied upstream code among them) and builds. Upstream's own jobs in ci.yaml run beside it.
+# the copied upstream code among them) and builds, and its UI package, packages/ui, type-checks,
+# lints, passes its tests and keeps a valid registry.json. Upstream's own jobs in ci.yaml run
+# beside it.
 on:
   pull_request:
   push:
@@ -76,3 +78,27 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
+
+  ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      # The root install first: the package links React and the test tools from it.
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun install --frozen-lockfile
+      - name: Type-check
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Test (components, theme, registry.json drift)
+        run: bun run test
+      - name: Validate registry.json
+        run: bun run registry:validate

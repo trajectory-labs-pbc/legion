@@ -17,3 +17,11 @@ Element.prototype.scrollIntoView ??= () => {};
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.setPointerCapture ??= () => {};
 Element.prototype.releasePointerCapture ??= () => {};
+
+// A failed expectation prints a node as its markup, not happy-dom's whole object graph, which
+// takes seconds and runs on every retry inside waitFor.
+Object.defineProperty(Node.prototype, Bun.inspect.custom, {
+  value(this: Node) {
+    return this instanceof Element ? this.outerHTML.slice(0, 200) : this.nodeName;
+  },
+});

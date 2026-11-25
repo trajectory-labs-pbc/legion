@@ -221,6 +221,12 @@
   html {
     @apply font-sans;
   }
+  code,
+  kbd,
+  samp,
+  pre {
+    @apply font-mono;
+  }
   body {
     @apply bg-background text-foreground;
   }
