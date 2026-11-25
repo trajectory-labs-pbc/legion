@@ -597,6 +597,22 @@ PINNED_IMAGE_GATES: list[tuple[str, str, str, str]] = [
         "refused by that gate rather than merging quietly. Any failure of that read leaves "
         "the term true and the build runs.",
     ),
+    (
+        ".github/workflows/fork-envoy-image.yaml",
+        "build",
+        "steps.names.outputs.base != ''",
+        "that job's names step asks .github/scripts/fork-envoy-base.sh for the image "
+        "release-envoy-listener.yaml built for this same commit, and the term is false only "
+        "where that workflow built none: it has no run for the commit on main, or a later push "
+        "replaced its run. The fork's image is that image plus the fork's app, so where the "
+        "term is false there is nothing to build on, and the commit has no upstream image for "
+        "a pin to name either. What the trigger exists to guarantee, that a change to a build "
+        "input produces an image, therefore holds through release-envoy-listener.yaml's own "
+        "path list, which this check reads for upstream's inputs and "
+        ".github/scripts/fork-envoy-base.test.sh reads for the fork's: that test fails when "
+        "the list lacks an input of the fork's image. A failed run of that workflow, or a "
+        "failed read of its image, fails the names step and never leaves the term false.",
+    ),
 ]
 gate_excusals: list[str] = []
 gate_matches: dict[tuple[str, str, str, str], set[str]] = {}

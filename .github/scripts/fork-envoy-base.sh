@@ -1,46 +1,74 @@
 #!/usr/bin/env bash
-# Prints the upstream-built envoy image the fork's envoy image derives from, by digest: the image of
-# the newest first-parent ancestor of <commit> (itself included) that release-envoy-listener.yaml
-# ran for on a push, waiting for that run when it is still going. A commit that workflow did not
-# run for changed none of its paths, so that image holds the same upstream files. The tag can move,
-# so the digest is used only once its attestation shows that workflow built it on main.
-#   fork-envoy-base.sh <commit> <image>     needs GH_TOKEN and GITHUB_REPOSITORY
+# Prints the upstream-built envoy image the fork's envoy image derives from, by digest.
+#   fork-envoy-base.sh <event> <commit> <image>     needs GH_TOKEN and GITHUB_REPOSITORY
+# On a push or a dispatch it is the image release-envoy-listener.yaml built for <commit> itself, so
+# the fork's image serves the commit it names. A commit that workflow has no run for on main, or
+# only cancelled ones, has no upstream image: the script says so in a notice and exits 3. On a pull
+# request, which that workflow does not run for, it is the image of the newest first-parent
+# ancestor that has one. The tag can move, so the digest is used only once its attestation shows
+# that workflow built it on main.
 set -euo pipefail
-commit=$1
-image=$2
+event=$1
+commit=$2
+image=$3
 listener=.github/workflows/release-envoy-listener.yaml
 
 runs_for() {
-  gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release-envoy-listener.yaml/runs?head_sha=$1&event=push" \
-    --jq '[.workflow_runs[] | {id, conclusion}]'
+  gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release-envoy-listener.yaml/runs?head_sha=$1&branch=main" \
+    --jq '[.workflow_runs[] | {id, status, conclusion}]'
 }
 
+# A commit's listener runs on main, of any event, after the wait for one that is still going.
 # GitHub creates every run of one push in the same second, before any of their jobs starts, so a
-# commit with no listener run when this job runs never gets one.
-for _ in $(seq 1 100); do
-  runs=$(runs_for "$commit")
-  if [ "$runs" != "[]" ]; then
-    if ! jq -e 'any(.conclusion == "success")' <<<"$runs" >/dev/null; then
-      id=$(jq -r 'max_by(.id).id' <<<"$runs")
-      echo "waiting for release-envoy-listener.yaml run $id ($commit)" >&2
-      if ! gh run watch "$id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 60 >&2; then
-        echo "::error::release-envoy-listener.yaml run $id for $commit did not succeed, so its image is not there to build on; rerun it (gh run rerun $id --failed --repo $GITHUB_REPOSITORY), then rerun this workflow" >&2
-        exit 1
-      fi
-    fi
-    digest=$(docker buildx imagetools inspect "$image:$commit" --format '{{json .Manifest}}' | jq -r .digest)
-    if ! gh attestation verify "oci://$image@$digest" --repo "$GITHUB_REPOSITORY" \
-      --signer-workflow "$GITHUB_REPOSITORY/$listener" --source-ref refs/heads/main >&2; then
-      echo "::error::$image@$digest, tagged $commit, has no attestation from $listener on main, so this workflow will not build on it" >&2
+# commit with no listener run when this job runs gets one only by hand.
+settled_runs() {
+  local runs id
+  runs=$(runs_for "$1")
+  if jq -e 'any(.conclusion == "success") or all(.status == "completed")' <<<"$runs" >/dev/null; then
+    echo "$runs"
+    return
+  fi
+  id=$(jq -r 'map(select(.status != "completed")) | max_by(.id).id' <<<"$runs")
+  echo "waiting for release-envoy-listener.yaml run $id ($1)" >&2
+  # The runs read after the wait say how it ended; a later push cancels a run that still waits.
+  gh run watch "$id" --repo "$GITHUB_REPOSITORY" --interval 60 >&2 || true
+  runs_for "$1"
+}
+succeeded() { jq -e 'any(.conclusion == "success")' <<<"$1" >/dev/null; }
+
+if [ "$event" = pull_request ]; then
+  while :; do
+    runs=$(settled_runs "$commit")
+    if succeeded "$runs"; then break; fi
+    if ! commit=$(git rev-parse -q --verify "$commit^1^{commit}"); then
+      echo "::error::the checkout's history ends before any commit release-envoy-listener.yaml built an image for; raise the checkout's fetch-depth" >&2
       exit 1
     fi
-    echo "$image@$digest"
-    exit 0
+  done
+else
+  runs=$(settled_runs "$commit")
+  if ! succeeded "$runs"; then
+    id=$(jq -r 'map(select(.conclusion != "cancelled")) | max_by(.id).id // empty' <<<"$runs")
+    if [ -n "$id" ]; then
+      echo "::error::release-envoy-listener.yaml run $id for $commit did not succeed, so its image is not there to build on; rerun it (gh run rerun $id --failed --repo $GITHUB_REPOSITORY), then rerun this workflow" >&2
+      exit 1
+    fi
+    if [ "$runs" = "[]" ]; then
+      why="release-envoy-listener.yaml has no run for it on main"
+    else
+      why="a later push replaced its release-envoy-listener.yaml run, which was cancelled; that push's image holds this commit's change"
+    fi
+    notice="No -tl image for $commit: $why, so there is no upstream image of this commit to build on."
+    echo "::notice::$notice" >&2
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "$notice" >>"$GITHUB_STEP_SUMMARY"; fi
+    exit 3
   fi
-  if ! commit=$(git rev-parse -q --verify "$commit^1^{commit}"); then
-    echo "::error::the checkout's history ends before any commit release-envoy-listener.yaml ran for; raise the checkout's fetch-depth" >&2
-    exit 1
-  fi
-done
-echo "::error::no release-envoy-listener.yaml push run in 100 first-parent commits" >&2
-exit 1
+fi
+
+digest=$(docker buildx imagetools inspect "$image:$commit" --format '{{json .Manifest}}' | jq -r .digest)
+if ! gh attestation verify "oci://$image@$digest" --repo "$GITHUB_REPOSITORY" \
+  --signer-workflow "$GITHUB_REPOSITORY/$listener" --source-ref refs/heads/main >&2; then
+  echo "::error::$image@$digest, tagged $commit, has no attestation from $listener on main, so this workflow will not build on it" >&2
+  exit 1
+fi
+echo "$image@$digest"
