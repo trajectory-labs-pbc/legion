@@ -52,7 +52,7 @@ the dark scheme follow the operating system; keep it when the file is written ag
 
 ## Commands
 
-`src/commands/app-catalog.ts` declares every command once: its label, keys, icon, group, whether
+`src/commands/catalog.ts` declares every command once: its label, keys, icon, group, whether
 it is destructive and the lists it stays out of. Its global context holds the keys upstream's shell
 binds, with the same behaviour, and adds the pages with no letter as palette commands. The catalog refuses,
 when it loads, two keys live together that one press sequence matches or where one starts the
@@ -72,6 +72,20 @@ engine and the command store. Everything else reads the store:
 - `ShortcutsSheet`: `?` opens it anywhere but under an alert dialog, and its code loads then. It
   lists each key live where `?` was pressed, grouped, each command once with all its keys, without
   `Escape` or disabled commands. While it is open, only `?` and Escape act: they close it.
+
+The files of `src/commands`, one role each:
+
+- `catalog.ts`: the app's commands, the sheet's groups, the sidebar's destinations and the sheet's
+  labels for upstream's bindings.
+- `schema.ts`: what a command, a context and a catalog are; `createCatalog` checks a catalog.
+- `keys.ts`: key text: the checks the catalog runs, and the chips a key shows as.
+- `engine.ts`: the bridge to upstream's key engine: its scope stack under our overlays, and the
+  bindings a context registers.
+- `hooks.ts`: `defineActions`, the command store, `useRegisterCommands` and the hooks that read
+  the store.
+- `command-button.tsx`, `hotkey-tooltip.tsx` and `shortcuts-sheet.tsx`. The tooltip's popup
+  (`hotkey-tooltip-popup.tsx`) and the sheet's view (`shortcuts-sheet-view.tsx`) are files of
+  their own because each is a chunk that loads later.
 
 ## Navigation
 

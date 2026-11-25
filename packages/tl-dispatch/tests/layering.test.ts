@@ -38,9 +38,9 @@ describe("layers", () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the control is source text that holds a template
     ["src/shell/x.tsx", "const name = 'app'; import(`@upstream-dispatch/${name}`);", "non-literal"],
     ["src/shell/x.tsx", "const pages = import.meta.glob('../pages/*.tsx');", "import.meta.glob"],
-    ["src/ui/x.tsx", 'import { appCatalog } from "@/commands/app-catalog";', "outside src/ui"],
+    ["src/ui/x.tsx", 'import { appCatalog } from "@/commands/catalog";', "outside src/ui"],
     ["src/ui/x.tsx", 'import { y } from "@/nowhere/y";', "resolves to no file"],
-    ["src/ui/x.tsx", 'import { appCatalog } from "../commands/app-catalog";', "outside src/ui"],
+    ["src/ui/x.tsx", 'import { appCatalog } from "../commands/catalog";', "outside src/ui"],
     [
       "src/ui/x.tsx",
       'import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";',

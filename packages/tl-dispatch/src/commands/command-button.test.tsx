@@ -3,10 +3,9 @@ import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keyma
 
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./app-catalog";
-import { useRegisterCommands } from "./bindings";
+import { appCatalog } from "./catalog";
 import { CommandButton, commandButtonVariant } from "./command-button";
-import { useCommandShortcut } from "./hooks";
+import { useCommandShortcut, useRegisterCommands } from "./hooks";
 import { HotkeyTooltip, loadHotkeyTooltip } from "./hotkey-tooltip";
 
 const globalSpecs = (fired: string[], enabled: boolean) =>

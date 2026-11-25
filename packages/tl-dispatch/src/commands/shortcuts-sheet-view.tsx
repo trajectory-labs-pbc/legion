@@ -6,8 +6,23 @@ import { KbdSequence } from "@/ui/kbd";
 import { textVariants } from "@/ui/lib/typography";
 import { cn } from "@/ui/lib/utils";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/ui/sheet";
-import { rowChips } from "./chips";
-import { filterShortcuts, type ShortcutSection } from "./shortcuts";
+import { rowChips } from "./keys";
+import type { ShortcutSection } from "./shortcuts-sheet";
+
+/** The rows whose label holds the query, any case; a section left empty goes. */
+export function filterShortcuts(
+  sections: readonly ShortcutSection[],
+  query: string
+): ShortcutSection[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return [...sections];
+  return sections
+    .map(({ group, rows }) => ({
+      group,
+      rows: rows.filter((row) => row.label.toLowerCase().includes(needle)),
+    }))
+    .filter(({ rows }) => rows.length > 0);
+}
 
 export interface ShortcutsSheetProps {
   open: boolean;

@@ -1,7 +1,5 @@
-import { appCatalog } from "@/commands/app-catalog";
-import { useRegisterCommands } from "@/commands/bindings";
-import type { NavName } from "@/commands/nav";
-import { type CommandState, defineActions } from "@/commands/specs";
+import { appCatalog, type NavName } from "@/commands/catalog";
+import { type CommandState, defineActions, useRegisterCommands } from "@/commands/hooks";
 
 /** What the shell's global commands do here; an absent action shuts its command's gate. */
 export interface GlobalActions {

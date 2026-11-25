@@ -3,8 +3,8 @@ import { act, createRef } from "react";
 
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./app-catalog";
-import { useRegisterCommands } from "./bindings";
+import { appCatalog } from "./catalog";
+import { useRegisterCommands } from "./hooks";
 import type { HotkeyTooltip as HotkeyTooltipType } from "./hotkey-tooltip";
 
 function Shell() {

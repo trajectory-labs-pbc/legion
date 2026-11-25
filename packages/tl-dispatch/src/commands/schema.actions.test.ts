@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-
-import { createCatalog } from "./catalog";
-import { defineActions, runCommand } from "./specs";
+import { defineActions } from "./hooks";
+import { createCatalog, runCommand } from "./schema";
 
 const catalog = createCatalog([
   { name: "global", parent: null, scope: "global", commands: [] },

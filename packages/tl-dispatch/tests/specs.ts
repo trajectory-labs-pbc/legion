@@ -1,5 +1,5 @@
-import type { Catalog, CatalogCommand } from "@/commands/catalog";
-import { type CommandSpecs, type CommandState, defineActions } from "@/commands/specs";
+import { type CommandState, defineActions } from "@/commands/hooks";
+import type { Catalog, CatalogCommand, CommandSpecs } from "@/commands/schema";
 
 /** A context's specs from one function of the command. */
 export function specsFor(

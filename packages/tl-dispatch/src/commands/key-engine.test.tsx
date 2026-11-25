@@ -9,7 +9,7 @@ import {
 } from "@upstream-dispatch/features/shell/keymap";
 
 import { render } from "../../tests/react";
-import { appStack, UPSTREAM } from "./engine-stack";
+import { appStack, UPSTREAM } from "./engine";
 import { clashes, keyChecker } from "./keys";
 
 // What the catalog and its bindings rely on in upstream's key engine, driven through its public

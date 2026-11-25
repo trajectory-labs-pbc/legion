@@ -1,218 +1,209 @@
-import type { Keymap, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
-import type { ComponentType } from "react";
+import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import {
+  BotIcon,
+  FileTextIcon,
+  FolderIcon,
+  InboxIcon,
+  KeyboardIcon,
+  ListOrderedIcon,
+  PackageCheckIcon,
+  PanelLeftIcon,
+  PanelRightIcon,
+  PlusIcon,
+  SearchIcon,
+  ServerIcon,
+  SettingsIcon,
+  WorkflowIcon,
+} from "lucide-react";
 
-import type { OverlayReach } from "./engine-stack";
-import type { CommandGroup } from "./groups";
-import { browserKeeps, chordStartsRight, clashes, keyChecker, malformed } from "./keys";
+import {
+  type CommandContext,
+  type CommandDefinition,
+  type CommandGroup,
+  type CommandIcon,
+  type CommandIdOf,
+  createCatalog,
+} from "./schema";
 
-/** A surface that lists commands. A button names its command, so it reads no `hideFrom`. */
-export type CommandCatalog = "palette" | "sheet";
+/** The sections of the shortcuts sheet. Declare each once, here: the sheet compares groups by id. */
+export const COMMAND_GROUPS = {
+  general: { id: "general", label: "General" },
+  navigation: { id: "navigation", label: "Navigation" },
+  layout: { id: "layout", label: "Layout" },
+  help: { id: "help", label: "Help" },
+} as const satisfies Record<string, CommandGroup>;
 
-export type CommandIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+/** The section of a command declared without a group. */
+export const DEFAULT_GROUP: CommandGroup = COMMAND_GROUPS.general;
 
-/** A command as declared once: the fields that never change while it is mounted. */
-export interface CommandDefinition {
-  /** Unique in its context; the id is `<context>.<name>`. */
+/**
+ * A page the sidebar lists and a `G` chord jumps to. The row's key hint reads the same entry;
+ * its address is its page route's (`NAV_PAGES` in the shell).
+ */
+export interface NavDestination {
   name: string;
   label: string;
-  /** The key engine's syntax; the first is the one a tooltip shows. None: palette only. */
-  keys?: readonly string[];
-  icon?: CommandIcon;
-  /** The shortcuts sheet's section; none is `DEFAULT_GROUP`. */
-  group?: CommandGroup;
-  destructive?: boolean;
-  /** The catalogs that do not list the command; its keys still run. */
-  hideFrom?: readonly CommandCatalog[];
-  /** Fires while a control that takes typed text has focus. */
-  inEditable?: boolean;
-  /** A global command's reach under our overlays; none is `under-most`. */
-  overlays?: OverlayReach;
+  icon: CommandIcon;
+  /** The letter after `G`; none where no letter is free and clear. */
+  key?: string;
 }
 
-/** A set of commands that is live together. Each context extends one parent, up to `global`. */
-export interface CommandContext {
-  name: string;
-  parent: string | null;
-  /** The key engine's scope these commands register in; an overlay's context uses `dialog`. */
-  scope: KeymapScope;
-  commands: readonly CommandDefinition[];
+export const NAV_DESTINATIONS = [
+  { name: "inbox", label: "Inbox", icon: InboxIcon, key: "i" },
+  { name: "agents", label: "Agents", icon: BotIcon, key: "a" },
+  { name: "priorities", label: "Priorities", icon: ListOrderedIcon },
+  { name: "delivery", label: "Delivery", icon: PackageCheckIcon },
+  { name: "pipeline", label: "Pipeline", icon: WorkflowIcon },
+  { name: "machines", label: "Machines", icon: ServerIcon },
+  { name: "settings", label: "Settings", icon: SettingsIcon, key: "s" },
+] as const satisfies readonly NavDestination[];
+
+export type NavName = (typeof NAV_DESTINATIONS)[number]["name"];
+
+export type NavCommandName = `go-${NavName}`;
+
+export function navCommandName(name: NavName): NavCommandName {
+  return `go-${name}`;
 }
 
-type ContextIds<C> = C extends {
-  readonly name: infer N extends string;
-  readonly commands: readonly (infer D)[];
-}
-  ? D extends { readonly name: infer M extends string }
-    ? `${N}.${M}`
-    : never
-  : never;
-
-/** Every command id of a catalog's contexts, `<context>.<name>`: a typo fails the type check. */
-export type CommandIdOf<Contexts extends readonly CommandContext[]> = ContextIds<Contexts[number]>;
-
-export interface CatalogCommand extends CommandDefinition {
-  id: string;
-  context: string;
+export function navCommandDefinitions(): readonly (CommandDefinition & {
+  name: NavCommandName;
+})[] {
+  return NAV_DESTINATIONS.map((destination: NavDestination & { name: NavName }) => ({
+    name: navCommandName(destination.name),
+    label: `Go to ${destination.label}`,
+    icon: destination.icon,
+    group: COMMAND_GROUPS.navigation,
+    keys: destination.key === undefined ? [] : [`g ${destination.key}`],
+  }));
 }
 
-export interface Catalog<Id extends string = string> {
-  context(name: string): CommandContext;
-  /** The context and its ancestors, nearest first. */
-  chain(name: string): readonly string[];
-  command(id: Id): CatalogCommand;
-  /** A command by an id read at run time, such as a key binding's. */
-  find(id: string): CatalogCommand | undefined;
-  commandsOf(context: string): readonly CatalogCommand[];
-}
+/**
+ * Every command of the app, declared once. The global context holds every key upstream's shell
+ * binds and no other, with the same behaviour; the pages with no letter are palette commands only.
+ * Page contexts join as their pages are rebuilt.
+ */
+export const APP_CONTEXTS = [
+  {
+    name: "global",
+    parent: null,
+    scope: "global",
+    commands: [
+      {
+        name: "search",
+        label: "Search and actions",
+        keys: ["$mod+k"],
+        icon: SearchIcon,
+        inEditable: true,
+      },
+      // A slash typed into a field stays a slash.
+      {
+        name: "search-only",
+        label: "Search",
+        keys: ["/"],
+        icon: SearchIcon,
+        hideFrom: ["palette"],
+      },
+      {
+        name: "help",
+        label: "Keyboard shortcuts",
+        keys: ["?"],
+        icon: KeyboardIcon,
+        group: COMMAND_GROUPS.help,
+        overlays: "under-all",
+      },
+      { name: "create", label: "Create issue", keys: ["c"], icon: PlusIcon },
+      ...navCommandDefinitions(),
+      {
+        name: "go-documents",
+        label: "Go to Documents",
+        keys: ["g d"],
+        icon: FileTextIcon,
+        group: COMMAND_GROUPS.navigation,
+      },
+      {
+        name: "go-project",
+        label: "Go to project…",
+        keys: ["g p"],
+        icon: FolderIcon,
+        group: COMMAND_GROUPS.navigation,
+        hideFrom: ["palette"],
+      },
+      {
+        name: "inbox-drawer",
+        label: "Open the inbox",
+        keys: ["i"],
+        icon: InboxIcon,
+        group: COMMAND_GROUPS.layout,
+      },
+      {
+        name: "toggle-sidebar",
+        label: "Toggle sidebar",
+        keys: ["Shift+S"],
+        icon: PanelLeftIcon,
+        group: COMMAND_GROUPS.layout,
+      },
+      {
+        name: "toggle-margin",
+        label: "Toggle margin",
+        keys: ["Shift+M"],
+        icon: PanelRightIcon,
+        group: COMMAND_GROUPS.layout,
+      },
+    ],
+  },
+] as const satisfies readonly CommandContext[];
 
-export class CatalogError extends Error {
-  constructor(readonly problems: readonly string[]) {
-    super(`The command catalog is invalid:\n- ${problems.join("\n- ")}`);
-  }
-}
+export type CommandId = CommandIdOf<typeof APP_CONTEXTS>;
 
-const NAME = /^[a-z][a-z0-9-]*$/;
-const ROOT = "global";
+/** Loading this module checks the whole catalog, so a clash fails every test that imports it. */
+export const appCatalog = createCatalog(APP_CONTEXTS);
 
-interface CatalogKey {
-  command: CatalogCommand;
-  keys: string;
-}
+/** Our labels for upstream's bindings, by `scope:id`, where theirs do not fit the sheet. */
+export type UpstreamLabels = Readonly<
+  Partial<Record<`${KeymapScope}:${string}`, { upstream: string; label: string }>>
+>;
 
-function chainOf(contexts: ReadonlyMap<string, CommandContext>, name: string): string[] | string {
-  const chain: string[] = [];
-  let current: string | null = name;
-  while (current !== null) {
-    if (chain.includes(current))
-      return `context "${name}" has a cycle: ${chain.join(" > ")} > ${current}`;
-    const context = contexts.get(current);
-    if (context === undefined)
-      return `context "${chain.at(-1)}" extends "${current}", which does not exist`;
-    chain.push(current);
-    current = context.parent;
-  }
-  if (chain.at(-1) !== ROOT) return `context "${name}" does not reach "${ROOT}"`;
-  return chain;
-}
-
-/** Each pair of a key of `held` and a key of `incoming` that clash, as the key engine compares them. */
-function clashesBetween(
-  held: readonly CatalogKey[],
-  incoming: readonly CatalogKey[],
-  checkers: Map<string, Keymap>
-): [CatalogKey, CatalogKey][] {
-  const found: [CatalogKey, CatalogKey][] = [];
-  for (const other of held) {
-    let checker = checkers.get(other.keys);
-    if (checker === undefined) {
-      checker = keyChecker([other.keys]);
-      checkers.set(other.keys, checker);
-    }
-    for (const key of incoming) {
-      if (other.command !== key.command && clashes(checker, key.keys)) found.push([other, key]);
-    }
-  }
-  return found;
-}
-
-/** Builds the catalog, or throws one error that names every problem. */
-export function createCatalog<const Contexts extends readonly CommandContext[]>(
-  declared: Contexts
-): Catalog<CommandIdOf<Contexts>> {
-  const problems: string[] = [];
-  const contexts = new Map<string, CommandContext>();
-  for (const context of declared) {
-    if (!NAME.test(context.name)) problems.push(`context name "${context.name}" is not kebab-case`);
-    if (contexts.has(context.name)) problems.push(`context "${context.name}" is declared twice`);
-    contexts.set(context.name, context);
-  }
-  const root = contexts.get(ROOT);
-  if (root === undefined) problems.push(`no "${ROOT}" context`);
-  else if (root.parent !== null) problems.push(`"${ROOT}" extends "${root.parent}"`);
-
-  const commands = new Map<string, CatalogCommand>();
-  const keysOf = new Map<string, CatalogKey[]>();
-  for (const context of contexts.values()) {
-    if (context.name !== ROOT && context.parent === null) {
-      problems.push(`context "${context.name}" extends nothing`);
-    }
-    const own: CatalogKey[] = [];
-    for (const definition of context.commands) {
-      const id = `${context.name}.${definition.name}`;
-      if (!NAME.test(definition.name)) problems.push(`command name "${id}" is not kebab-case`);
-      if (definition.overlays !== undefined && context.name !== ROOT) {
-        problems.push(`"${id}": only a global command reaches under overlays`);
-      }
-      if (commands.has(id)) problems.push(`two commands are named "${id}"`);
-      const command: CatalogCommand = { ...definition, id, context: context.name };
-      commands.set(id, command);
-      for (const keys of definition.keys ?? []) {
-        const unreadable = malformed(keys);
-        if (unreadable !== undefined) problems.push(`"${id}": ${unreadable}`);
-        else if (!chordStartsRight(keys))
-          problems.push(`"${id}": the chord "${keys}" starts with neither G, O nor N`);
-        else if (browserKeeps(keys)) problems.push(`"${id}": the browser keeps "${keys}"`);
-        else own.push({ command, keys });
-      }
-    }
-    keysOf.set(context.name, own);
-  }
-
-  const chains = new Map<string, readonly string[]>();
-  for (const name of contexts.keys()) {
-    const chain = chainOf(contexts, name);
-    if (typeof chain === "string") problems.push(chain);
-    else chains.set(name, chain);
-  }
-
-  // Two contexts are live together when one is on the other's chain, or both register in one
-  // engine scope, where the first registered of two equal keys wins.
-  const names = [...chains.keys()];
-  const together = (a: string, b: string) =>
-    a === b ||
-    chains.get(a)?.includes(b) === true ||
-    chains.get(b)?.includes(a) === true ||
-    contexts.get(a)?.scope === contexts.get(b)?.scope;
-  const reported = new Set<string>();
-  const checkers = new Map<string, Keymap>();
-  for (const [index, a] of names.entries()) {
-    for (const b of names.slice(index)) {
-      if (!together(a, b)) continue;
-      const held = keysOf.get(a) ?? [];
-      const pairs =
-        a === b
-          ? held.flatMap((key, at) => clashesBetween(held.slice(0, at), [key], checkers))
-          : clashesBetween(held, keysOf.get(b) ?? [], checkers);
-      for (const [first, second] of pairs) {
-        const pair = [first.command.id, second.command.id].sort().join("|");
-        if (reported.has(pair)) continue;
-        reported.add(pair);
-        problems.push(
-          `"${first.command.id}" (${first.keys}) and "${second.command.id}" (${second.keys}) are live together and one press sequence matches both, or one starts the other`
-        );
-      }
-    }
-  }
-  if (problems.length > 0) throw new CatalogError(problems);
-
-  return {
-    context(name) {
-      const context = contexts.get(name);
-      if (context === undefined) throw new Error(`no context "${name}"`);
-      return context;
-    },
-    chain(name) {
-      const chain = chains.get(name);
-      if (chain === undefined) throw new Error(`no context "${name}"`);
-      return chain;
-    },
-    command(id) {
-      const command = commands.get(id);
-      if (command === undefined) throw new Error(`no command "${id}"`);
-      return command;
-    },
-    find: (id) => commands.get(id),
-    commandsOf: (context) =>
-      [...commands.values()].filter((command) => command.context === context),
-  };
-}
+/**
+ * The sheet's labels for upstream's bindings whose own do not fit it, by `scope:id`, each beside
+ * upstream's label as its source writes it, so a test notices when upstream's changes.
+ */
+export const UPSTREAM_LABELS: UpstreamLabels = {
+  "inbox:arrows": {
+    upstream: "Next / previous row while {arrowsWhen}",
+    label: "Next / previous row",
+  },
+  "inbox:option": { upstream: "Select option 1–9 of the {acted} ask", label: "Select an option" },
+  "inbox:snooze": {
+    upstream: "Snooze the focused ask, or every selected ask",
+    label: "Snooze the ask or the selection",
+  },
+  "architecture:arrows": {
+    upstream: "Next / previous component while one is focused",
+    label: "Next / previous component",
+  },
+  "architecture:open": {
+    upstream: "Open the focused component: its children, else its details",
+    label: "Open the focused component",
+  },
+  "board:arrows-horizontal": {
+    upstream: "Next / previous column while one is focused",
+    label: "Next / previous column",
+  },
+  "board:arrows-vertical": {
+    upstream: "Next / previous card while one is focused",
+    label: "Next / previous card",
+  },
+  "issue:request-changes": {
+    upstream: "Request changes on the focused approval request",
+    label: "Request changes",
+  },
+  "issue:tree-decision": {
+    upstream: "Move into the decision behind the focused row",
+    label: "Move into the row's decision",
+  },
+  "issue:tree-fold": {
+    upstream: "Fold the focused row, or move to its parent",
+    label: "Fold the row, or go to its parent",
+  },
+};

@@ -5,8 +5,8 @@ import { act } from "react";
 import { openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
-import { appCatalog } from "./app-catalog";
-import { useRegisterCommands } from "./bindings";
+import { appCatalog } from "./catalog";
+import { useRegisterCommands } from "./hooks";
 import { ShortcutsSheet as LazyShortcutsSheet, useShortcutsSheet } from "./shortcuts-sheet";
 import { ShortcutsSheet } from "./shortcuts-sheet-view";
 

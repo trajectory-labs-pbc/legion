@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 
 import { KbdSequence } from "@/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
-import type { ShortcutChips } from "./chips";
+import type { ShortcutChips } from "./keys";
 
 export interface HotkeyTooltipPopupProps {
   trigger: ReactElement;

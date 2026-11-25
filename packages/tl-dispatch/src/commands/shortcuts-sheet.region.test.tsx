@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { act } from "react";
 
 import { render } from "../../tests/react";
-import { lazyRegion } from "./lazy-region";
+import { lazyRegion } from "./shortcuts-sheet";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {

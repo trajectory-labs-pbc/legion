@@ -18,9 +18,8 @@ import {
   parseProjectPath,
 } from "@upstream-dispatch/features/refs/routes";
 import type { ReactNode } from "react";
-
+import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/catalog";
 import { useCommandShortcut } from "@/commands/hooks";
-import { NAV_DESTINATIONS, type NavName, navCommandName } from "@/commands/nav";
 import { useAddress } from "@/navigation/hooks";
 import { PageLink } from "@/navigation/page-link";
 import { pathUnder } from "@/navigation/path";

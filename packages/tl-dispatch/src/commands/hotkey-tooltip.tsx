@@ -10,10 +10,10 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import type { CommandId } from "./app-catalog";
-import { ariaKeyShortcuts } from "./chips";
+import type { CommandId } from "./catalog";
 import { useCommand, useCommandShortcut } from "./hooks";
 import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
+import { ariaKeyShortcuts } from "./keys";
 
 let popup: typeof HotkeyTooltipPopup | undefined;
 let loading: Promise<void> | undefined;
