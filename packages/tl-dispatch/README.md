@@ -197,7 +197,7 @@ load no page module:
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
   outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
-- `bun run build && bun run check:entry-budget`: the entry chunk stays within its budget. The
+- `bun run build && bun run check:entry-budget`: the entry chunk, with the chunks the page preloads beside it, stays within its budget. The
   shortcuts sheet and the tooltips are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.
 
