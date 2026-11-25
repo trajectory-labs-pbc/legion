@@ -1,7 +1,7 @@
 /**
  * Navigation's path grammar, the one every page declares its paths in: `/`-separated text, a
  * `:name` segment for a param, and a last `*` for the rest of the address. This module alone
- * reads it; `routerPath` in `route-tree.tsx` writes it in the router's grammar.
+ * reads it; `routerPath` in `router-path.ts` writes it in the router's grammar.
  */
 
 type Segments<Path extends string> = Path extends `${infer Head}/${infer Tail}`
