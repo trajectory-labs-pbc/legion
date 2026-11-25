@@ -58,7 +58,10 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
       setNavigationOpen(false);
       setCreateOpen(true);
     },
-    goTo: (destination) => navigate(NAV_PAGES[destination]),
+    goTo: (destination) => {
+      setNavigationOpen(false);
+      navigate(NAV_PAGES[destination]);
+    },
     openDocuments:
       routeProject === undefined
         ? undefined

@@ -141,4 +141,43 @@ describe("AppShell", () => {
     expect(document.body.querySelector('input[placeholder="Search Dispatch"]')).not.toBeNull();
     expect(document.body.querySelector('[data-testid="inbox-drawer"]')).toBeNull();
   });
+
+  describe("in the narrow screen's menu", () => {
+    const menu = () => document.body.querySelector('[data-slot="sheet-content"][data-open]');
+    const until = async (done: () => boolean) => {
+      for (let tries = 0; tries < 40 && !done(); tries += 1) {
+        await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
+      }
+    };
+    const openMenu = async () => {
+      await mount();
+      settle(() => {
+        document.body.querySelector<HTMLElement>('[aria-label="Open navigation"]')?.click();
+      });
+      // The menu takes the focus a moment after it opens.
+      await until(() => menu()?.contains(document.activeElement) === true);
+    };
+    const press = (init: KeyboardEventInit) =>
+      settle(() => {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init })
+        );
+      });
+
+    test("$mod+k opens the search palette and closes the menu", async () => {
+      await openMenu();
+      press({ key: "k", code: "KeyK", ctrlKey: true });
+      expect(document.body.querySelector('input[placeholder="Search Dispatch"]')).not.toBeNull();
+      await until(() => menu() === null);
+      expect(menu()).toBeNull();
+    });
+
+    test("a go-to chord closes the menu", async () => {
+      await openMenu();
+      press({ key: "g", code: "KeyG" });
+      press({ key: "i", code: "KeyI" });
+      await until(() => menu() === null);
+      expect(menu()).toBeNull();
+    });
+  });
 });
