@@ -494,6 +494,18 @@
       ]
     },
     {
+      "name": "count",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/count.tsx",
+          "type": "registry:ui",
+          "target": "@ui/count.tsx"
+        }
+      ]
+    },
+    {
       "name": "dialog",
       "type": "registry:ui",
       "dependencies": [
