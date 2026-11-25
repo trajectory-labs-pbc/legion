@@ -56,8 +56,8 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
   `usePageNavigate()`, `usePageParams(route)`, `usePageSearch(route)` and `useCurrentPage()`, each
   typed from the route's path. `params` is required only where the path binds a `:name`.
 - `<PageLink>` starts the route's `prefetch` reads when the pointer rests on it for 100 ms or it
-  takes focus. The pointer leaving with no click stops a read nothing else watches; losing focus
-  and a click stop nothing, since the page that opens reads it.
+  takes focus. The pointer leaving before then starts nothing. A read that started runs to its
+  answer, since upstream's reads cannot be stopped and the page that opens uses it.
 - `route-tree.tsx` builds a route tree from the pages it is handed, through `routerPath`.
 
 ## Install
