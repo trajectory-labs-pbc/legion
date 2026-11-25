@@ -13,6 +13,7 @@ replaces them one page at a time.
 | `src/writes` | What a surface says of a failed write | upstream's write modules |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
+| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader | `@legion/ui`; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
 `tests/layering.test.ts` holds these rules. It resolves every import as the build does (the
 tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
@@ -43,6 +44,10 @@ import { cn } from "@legion/ui/lib/utils";
 - `src/tokens.css` holds the two rules the app adds: the theme's typeface on `:root`, which
   upstream's stylesheet would otherwise set, and the package's edge and focus colours on its
   parts (`[data-slot]`), which its base rules would otherwise give.
+- `src/repaint.css` paints upstream's pages with the theme by pointing Tailwind's palette
+  variables at its tokens. It is temporary: it goes when the last upstream page is replaced.
+- `src/frame.css` overrides the upstream rules that break the frame (the 44 px floor in the
+  navigation, the margin sheet and borderless fields in the content panel). It goes with them.
 
 ## Commands
 
@@ -148,14 +153,24 @@ React Router context around them. Before then, a swap means running both routers
   inbox drawer and the shortcuts sheet, and the global commands that open them
   (`global-commands.ts`).
 - One file per region: `shell-providers.tsx` (the providers upstream's pages read),
-  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `main-region.tsx`,
-  `margin-region.tsx` and `shell-dialogs.tsx`. Each takes the values it reads. The navigation
+  `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `content-panel.tsx` (the
+  card main and the margin sit in), `main-region.tsx`, `margin-region.tsx` and
+  `shell-dialogs.tsx`. Each takes the values it reads. The navigation
   drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
   loads when it first opens; the global keys still run in it.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
 - `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
   `connection-error-page.tsx`, or the shell for the person signed in.
 - `page-fallbacks.tsx`: what main shows while a page's code loads.
+
+## Image
+
+- `docker/`: `Dockerfile` builds the fork's envoy image, upstream's with this app added at
+  `/srv/tl-dispatch`, and `envoy-dispatch.sh` stops the server from starting on a web folder
+  with no build.
+- `DISPATCH_WEB_DIST` names the build the server serves: `/srv/dispatch-web` (upstream's, the
+  image's default) or `/srv/tl-dispatch`. Both are in every image, so a rollback sets it back to
+  `/srv/dispatch-web`.
 
 ## Install
 
