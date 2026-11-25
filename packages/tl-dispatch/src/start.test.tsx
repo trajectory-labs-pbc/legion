@@ -16,27 +16,30 @@ test("installs the stale-chunk recovery before React takes the root for its firs
   document.body.append(root);
   cleanups.push(() => root.remove());
   const steps: string[] = [];
-  const addToWindow = window.addEventListener.bind(window);
-  const onWindow = spyOn(window, "addEventListener").mockImplementation(
-    (...args: Parameters<typeof window.addEventListener>) => {
-      if (args[0] === "vite:preloadError") steps.push("recovery installed");
-      addToWindow(...args);
-    }
-  );
-  // React listens on the root when `createRoot` takes it, before it renders.
-  const addToRoot = root.addEventListener.bind(root);
-  const onRoot = spyOn(root, "addEventListener").mockImplementation(
-    (...args: Parameters<typeof root.addEventListener>) => {
-      if (steps.at(-1) !== "root taken") steps.push("root taken");
-      addToRoot(...args);
-    }
-  );
+  // Each spy goes on the object that owns the method, so its restore leaves no copy behind.
+  const owner = (target: EventTarget): EventTarget => {
+    let found: object = target;
+    while (!Object.hasOwn(found, "addEventListener")) found = Object.getPrototypeOf(found);
+    return found as EventTarget;
+  };
+  const spies = [...new Set([owner(window), owner(root)])].map((owned) => {
+    const add = owned.addEventListener;
+    return spyOn(owned, "addEventListener").mockImplementation(function (
+      this: EventTarget | undefined,
+      ...args: Parameters<EventTarget["addEventListener"]>
+    ) {
+      const target = this ?? window;
+      if (target === window && args[0] === "vite:preloadError") steps.push("recovery installed");
+      // React listens on the root when `createRoot` takes it, before it renders.
+      if (target === root && steps.at(-1) !== "root taken") steps.push("root taken");
+      add.apply(target, args);
+    });
+  });
   let app: { stop(): void } | undefined;
   await act(async () => {
     app = start(root);
   });
-  onWindow.mockRestore();
-  onRoot.mockRestore();
+  for (const spy of spies) spy.mockRestore();
   cleanups.push(() => act(() => app?.stop()));
   expect(steps).toEqual(["recovery installed", "root taken"]);
   expect(root.querySelector('[aria-busy="true"]')).not.toBeNull();
