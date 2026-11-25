@@ -90,7 +90,11 @@ else
   fi
 fi
 
-digest=$(docker buildx imagetools inspect "$image:$commit" --format '{{json .Manifest}}' | jq -r .digest)
+if ! manifest=$(docker buildx imagetools inspect "$image:$commit" --format '{{json .Manifest}}') ||
+  ! digest=$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<<"$manifest"); then
+  echo "::error::could not read the digest of $image:$commit, the image release-envoy-listener.yaml built for that commit" >&2
+  exit 1
+fi
 if ! gh attestation verify "oci://$image@$digest" --repo "$GITHUB_REPOSITORY" \
   --signer-workflow "$GITHUB_REPOSITORY/$listener" --source-ref refs/heads/main >&2; then
   echo "::error::$image@$digest, tagged $commit, has no attestation from $listener on main, so this workflow will not build on it" >&2
