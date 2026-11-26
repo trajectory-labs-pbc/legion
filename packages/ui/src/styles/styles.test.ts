@@ -75,7 +75,7 @@ const DURATIONS = new Set([
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
-const FACTOR = String.raw`(0\.[5-9]\d*|1(\.[0-4]\d*|\.5)?)`;
+const FACTOR = String.raw`(0\.[5-9]\d*|1(\.[0-4]\d*|\.50*)?)`;
 const RADIUS = new RegExp(
   String.raw`^(0|var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\)|calc\(infinity \* 1px\))$`
 );
@@ -274,8 +274,8 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
     "a theme shadow with a literal colour",
     {
       css: globalsText.replace(
-        "--shadow-popover: 0 8px 24px -8px var(--shadow-tint);",
-        "--shadow-popover: 0 8px 24px -8px rgb(0 0 0 / 0.2);"
+        /--shadow-popover: [^;]+;/,
+        "--shadow-popover: 0 0 1px rgb(0 0 0 / 0.2);"
       ),
     },
     "a shadow other than the theme's",
@@ -296,23 +296,20 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   [
     "a corner step written as a length",
     {
-      css: globalsText.replace("--radius-sm: calc(var(--radius) * 0.5);", "--radius-sm: 4px;"),
+      css: globalsText.replace(/--radius-sm: [^;]+;/, "--radius-sm: 4px;"),
     },
     "a corner",
   ],
   [
     "a corner step past the scale",
     {
-      css: globalsText.replace(
-        "--radius-xl: calc(var(--radius) * 1.5);",
-        "--radius-xl: calc(var(--radius) * 2);"
-      ),
+      css: globalsText.replace(/--radius-xl: [^;]+;/, "--radius-xl: calc(var(--radius) * 2);"),
     },
     "a corner",
   ],
   [
     "a --radius that is not a length",
-    { css: globalsText.replace("--radius: 8px;", "--radius: var(--x);") },
+    { css: globalsText.replace(/--radius: [^;]+;/, "--radius: var(--x);") },
     "a --radius that is not one length",
   ],
   ["a pointer cursor", { extra: ["hover:cursor-pointer"] }, "a pointer cursor"],
@@ -327,8 +324,8 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
     "an OS dark block that differs from .dark",
     {
       css: globalsText.replace(
-        /(:root:not\(\.light\) \{\s*color-scheme: dark;\s*--background: )#141311/,
-        "$1#000000"
+        /(:root:not\(\.light\) \{\s*color-scheme: dark;\s*--background: )[^;]+/,
+        "$1#010203"
       ),
     },
     "the OS dark block differs from .dark",
@@ -496,9 +493,39 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["faint-foreground", "popover"],
   ["faint-foreground", "sidebar"],
   ["faint-foreground", "background"],
+  ["muted-foreground", "sidebar-accent"],
+];
+
+/** The selector part that stands for each state a component fills with an accent. */
+const ACCENT_STATES: readonly (readonly [RegExp, string])[] = [
+  [/hover$/, ":hover"],
+  [/^data-highlighted$/, "[data-highlighted]"],
+  [/^data-popup-open$/, "[data-popup-open]"],
+  [/^aria-\[current=page\]$/, '[aria-current="page"]'],
 ];
 
 describe("the theme", () => {
+  it("draws faint text in the muted colour on each accent fill an entry takes", () => {
+    const selectors: string[] = [];
+    generated.walkDecls("--faint-foreground", (decl) => {
+      if (decl.value === "var(--muted-foreground)" && decl.parent instanceof Rule) {
+        selectors.push(decl.parent.selector);
+      }
+    });
+    expect(selectors).toHaveLength(1);
+    const states = new Set(
+      SOURCES.flatMap(({ text }) => classTokens(text)).flatMap(
+        (name) => /^(.+):bg-(sidebar-)?accent(\/\d+)?$/.exec(name)?.[1] ?? []
+      )
+    );
+    expect(states.size).toBeGreaterThan(3);
+    for (const state of states) {
+      const part =
+        ACCENT_STATES.find(([pattern]) => pattern.test(state))?.[1] ?? `${state}: no selector part`;
+      expect(selectors[0]).toContain(part);
+    }
+  });
+
   it("has a pair for every text colour the components use", () => {
     const texts = new Set<string>();
     generated.walkDecls("color", (decl) => {
