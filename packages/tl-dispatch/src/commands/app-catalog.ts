@@ -70,7 +70,7 @@ export const APP_CONTEXTS = [
         group: COMMAND_GROUPS.navigation,
       },
       {
-        // Shut where no page is served, so its second press runs alone: a letter no key holds.
+        // Always open: `n` starts chords, so a shut chord's second press would start one.
         name: "go-machine-logins",
         label: "Go to Machine logins",
         keys: ["g n"],

@@ -12,9 +12,9 @@ export interface GlobalActions {
   /** The route's project's documents; absent off a project. */
   openDocuments: (() => void) | undefined;
   openAnswers: () => void;
-  /** Absent where the deployment serves no machine login page. */
-  openMachineLogins: (() => void) | undefined;
-  signOut: () => void;
+  openMachineLogins: () => void;
+  /** Absent while a sign-out is under way. */
+  signOut: (() => void) | undefined;
   /** Absent on the Inbox, which is the inbox already. */
   toggleInboxDrawer: (() => void) | undefined;
   /** Absent where the layout has no sidebar to fold. */
@@ -42,11 +42,11 @@ const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalAct
   "go-documents": off(actions.openDocuments),
   "go-project": { run: actions.openSearch },
   "go-answered": { run: actions.openAnswers },
-  "go-machine-logins": off(actions.openMachineLogins),
+  "go-machine-logins": { run: actions.openMachineLogins },
   "inbox-drawer": off(actions.toggleInboxDrawer),
   "toggle-sidebar": off(actions.toggleSidebar),
   "toggle-margin": { ...off(actions.toggleMargin?.run), label: actions.toggleMargin?.label },
-  "sign-out": { run: actions.signOut },
+  "sign-out": off(actions.signOut),
 }));
 
 /** Registers the catalog's global commands with what they do in the shell now. */

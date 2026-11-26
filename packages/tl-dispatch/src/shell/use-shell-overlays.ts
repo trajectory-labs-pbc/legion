@@ -1,4 +1,3 @@
-import { useMachineCodePage } from "@upstream-dispatch/features/credentials/capabilities";
 import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -35,9 +34,11 @@ interface ShellOverlays {
 }
 
 /** Holds the overlays' state and registers the global commands they feed. */
-export function useShellOverlays(shell: ShellLayout, signOut: () => void): ShellOverlays {
+export function useShellOverlays(
+  shell: ShellLayout,
+  signOut: (() => void) | undefined
+): ShellOverlays {
   const navigate = usePageNavigate();
-  const machineCodePage = useMachineCodePage();
   const { preferences, detailsDrawer } = shell;
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [inboxDrawerOpen, setInboxDrawerOpen] = useState(false);
@@ -75,10 +76,9 @@ export function useShellOverlays(shell: ShellLayout, signOut: () => void): Shell
         ? undefined
         : closing(() => navigate(project.routes.documents, { params: { key: routeProject } })),
     openAnswers: closing(() => navigate(inbox.routes.answers)),
-    openMachineLogins: machineCodePage
-      ? closing(() => navigate(machineLogin.routes.machine))
-      : undefined,
-    signOut: closing(signOut),
+    // The page itself says when this deployment does not serve it.
+    openMachineLogins: closing(() => navigate(machineLogin.routes.machine)),
+    signOut: signOut && closing(signOut),
     toggleInboxDrawer: shell.onInbox
       ? undefined
       : closing(() => setInboxDrawerOpen((open) => !open)),

@@ -97,22 +97,36 @@ describe("the shell's global commands", () => {
   });
 
   test("an absent action shuts its gate: the key does nothing until it is given", () => {
-    const { calls, rerender } = setup({
-      openMachineLogins: undefined,
-      toggleInboxDrawer: undefined,
-    });
+    const { calls, rerender } = setup({ toggleInboxDrawer: undefined });
     const keys = () => {
-      for (const keys of [["g", "d"], ["i"], ["g", "n"]]) for (const key of keys) press(key);
+      for (const keys of [["g", "d"], ["i"]]) for (const key of keys) press(key);
     };
     keys();
     expect(calls).toEqual([]);
     rerender({
       openDocuments: () => calls.push("documents"),
-      openMachineLogins: () => calls.push("machine logins"),
       toggleInboxDrawer: () => calls.push("drawer"),
     });
     keys();
-    expect(calls).toEqual(["documents", "drawer", "machine logins"]);
+    expect(calls).toEqual(["documents", "drawer"]);
+  });
+
+  // `n` starts chords, so a shut `g n` would hand its second press to one.
+  test("G N always opens the machine login page, which says itself when it is not served", () => {
+    const { calls } = setup();
+    expect(globalBindings().find((binding) => binding.keys.includes("g n"))?.enabled).toBe(true);
+    press("g");
+    press("n");
+    expect(calls).toEqual(["machine logins"]);
+  });
+
+  test("the palette offers Sign out only while no sign-out is under way", () => {
+    const { calls, rerender } = setup({ signOut: undefined });
+    const signOut = () => appKeymap.actions().find((action) => action.label === "Sign out");
+    expect(signOut()).toBeUndefined();
+    rerender({ signOut: () => calls.push("sign out") });
+    signOut()?.run();
+    expect(calls).toEqual(["sign out"]);
   });
 
   test("Shift+M names what it opens", () => {
