@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
   createAlertDialogHandle,
 } from "@legion/ui/components/alert-dialog";
+import { Badge } from "@legion/ui/components/badge";
 import { Button } from "@legion/ui/components/button";
 import {
   Collapsible,
@@ -29,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/t
 import { textVariants } from "@legion/ui/lib/typography";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { Fragment, type ReactNode, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/features/read-failure";
 import { WriteFailure } from "@/writes/write-failure";
 import {
@@ -57,20 +58,42 @@ const FOCUS_FALLBACKS: readonly FocusFallback[] = [afterRevoke];
 const MUTED = textVariants({ tone: "muted" });
 const CUT_CELL = "w-1/4 max-w-0";
 
-// A pod login (`person` set) and a service's token login have no approver.
 /** A long name cut to its cell, and shown in full in a tooltip. Its cell is `max-w-0` with a share
- *  of the width, so the table fits the page and the name takes what the other columns leave. */
+ *  of the width, so the table fits the page and the name takes what the other columns leave.
+ *  While the name is cut, Tab reaches it, so the keyboard opens the tooltip too. */
 function Cut({ text }: { text: string }): ReactNode {
+  const span = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  useEffect(() => {
+    const el = span.current;
+    if (el === null) return;
+    const measure = () => setCut(el.scrollWidth > el.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="block truncate" />}>{text}</TooltipTrigger>
-      <TooltipContent>{text}</TooltipContent>
+      <TooltipTrigger
+        render={
+          <span
+            className="block truncate rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            ref={span}
+            tabIndex={cut ? 0 : undefined}
+          />
+        }
+      >
+        {text}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-(--available-width) wrap-anywhere">{text}</TooltipContent>
     </Tooltip>
   );
 }
 
-function approvedBy(login: LauncherCredentialResp): string {
-  if (login.subject == null) return login.approved_by;
+/** A pod login (`person` set) and a service's token login have no approver. The cell says so in a
+ *  sentence, which wraps rather than cuts. */
+function noApprover(login: LauncherCredentialResp): string {
   if (login.person != null) return `No one: BROKER_POD_OPERATORS maps ${login.subject} to you`;
   return `No one: ${login.subject}`;
 }
@@ -159,10 +182,12 @@ function RevokeQuestionDialog({
 
 function LoginRows({
   logins,
+  newCredential,
   question,
   revoke,
 }: {
   logins: readonly LauncherCredentialResp[];
+  newCredential: string | undefined;
   question: RevokeQuestion;
   revoke: Revoke;
 }): ReactNode {
@@ -198,9 +223,18 @@ function LoginRows({
           <span className={textVariants({ className: "font-mono", size: "caption" })}>
             {login.credential_id}
           </span>
+          {login.credential_id === newCredential ? (
+            <Badge className="ml-2" variant="success">
+              New
+            </Badge>
+          ) : null}
         </TableCell>
         <TableCell className={textVariants({ className: CUT_CELL, tone: "muted" })}>
-          <Cut text={approvedBy(login)} />
+          {login.subject == null ? (
+            <Cut text={login.approved_by} />
+          ) : (
+            <span className="block whitespace-normal wrap-anywhere">{noApprover(login)}</span>
+          )}
         </TableCell>
         <TableCell className={MUTED}>
           <Timestamp at={login.issued_at} className="whitespace-nowrap tabular-nums" />
@@ -228,8 +262,9 @@ function LoginRows({
   ));
 }
 
-/** The machine logins the viewer may revoke that can still reach a secret. */
-export function MachineLogins(): ReactNode {
+/** The machine logins the viewer may revoke that can still reach a secret; `newCredential` is the
+ *  one this page just approved, marked New. */
+export function MachineLogins({ newCredential }: { newCredential?: string }): ReactNode {
   const logins = useQuery({ ...machineLoginsQuery(), select: (data) => data.credentials ?? [] });
   // The refusal follows the rows shown, which come from the same query.
   const revoke = useRevoke(logins.data);
@@ -288,7 +323,12 @@ export function MachineLogins(): ReactNode {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <LoginRows logins={logins.data} question={question} revoke={revoke} />
+              <LoginRows
+                logins={logins.data}
+                newCredential={newCredential}
+                question={question}
+                revoke={revoke}
+              />
             </TableBody>
           </Table>
         </div>

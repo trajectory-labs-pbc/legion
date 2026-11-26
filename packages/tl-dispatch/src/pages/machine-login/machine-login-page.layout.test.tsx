@@ -1,6 +1,6 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { MemoryNavigationProvider } from "../../../tests/navigation";
@@ -30,23 +30,24 @@ afterEach(() => {
   for (const restore of restores.splice(0)) restore();
 });
 
-function stub(looked: RecordResponse = record) {
+const login = (credential_id: string, host: string) => ({
+  approved_by: "ada@example.com",
+  credential_id,
+  expired: false,
+  expires_at: "2026-10-10T12:00:00Z",
+  host,
+  issued_at: "2026-10-03T12:00:00Z",
+  person: null,
+  service: null,
+  subject: null,
+});
+
+function stub(
+  looked: RecordResponse = record,
+  credentials = [login("cred-devbox", "devbox.example.com")]
+) {
   const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(looked);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({
-    credentials: [
-      {
-        approved_by: "ada@example.com",
-        credential_id: "cred-devbox",
-        expired: false,
-        expires_at: "2026-10-10T12:00:00Z",
-        host: "devbox.example.com",
-        issued_at: "2026-10-03T12:00:00Z",
-        person: null,
-        service: null,
-        subject: null,
-      },
-    ],
-  });
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials });
   restores.push(
     () => lookup.mockRestore(),
     () => logins.mockRestore()
@@ -87,6 +88,38 @@ test("one 720 px column with one primary action: Look up, then Approve once a re
   await lookUp();
   expect(primaries()).toEqual(["Approve"]);
   expect(screen.getByRole("button", { name: "Look up" }).className).toContain("border-input");
+});
+
+test("the code field has the focus when the page opens, so typing goes to it", async () => {
+  stub();
+  renderPage();
+  await waitFor(() => expect(screen.getByLabelText("Code shown on the machine")).toHaveFocus());
+});
+
+test("an approval takes the focus to what it did, empties the field, and marks the new login", async () => {
+  stub(record, [
+    login("cred-devbox", "devbox.example.com"),
+    login("cred-9", "worker-7.example.com"),
+  ]);
+  const approve = spyOn(api, "approveCredentialRecord").mockResolvedValue({
+    credential_id: "cred-9",
+    state: "approved",
+  });
+  restores.push(() => approve.mockRestore());
+  renderPage();
+  await lookUp();
+  expect(screen.queryByText("New")).toBeNull();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Approve" }));
+  const outcome = await screen.findByText(/^Approved\./);
+  await waitFor(() => expect(document.activeElement?.contains(outcome)).toBe(true));
+  const field = screen.getByLabelText("Code shown on the machine");
+  expect(field).toHaveValue("");
+  // Nothing is left to do with that code, so no button leads until a new one is typed.
+  expect(primaries()).toEqual([]);
+  expect((await screen.findByText("New")).closest("tr")?.textContent).toContain("cred-9");
+  await user.type(field, "efgh5678");
+  expect(primaries()).toEqual(["Look up"]);
 });
 
 test.each([

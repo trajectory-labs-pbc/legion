@@ -73,6 +73,7 @@ for (const [id, button, word] of [
       expect(screen.queryByRole("button", { name: "Deny" })).not.toBeInTheDocument();
       expect(screen.getByText(word)).toBeDefined();
       expect(screen.queryByText(/^Approving lets/)).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Code shown on the machine")).toHaveValue("");
     } finally {
       cleanup();
       lookup.mockRestore();

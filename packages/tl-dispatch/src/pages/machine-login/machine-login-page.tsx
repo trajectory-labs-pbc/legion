@@ -4,7 +4,7 @@ import { SurfaceTitle } from "@legion/ui/components/heading";
 import { Input } from "@legion/ui/components/input";
 import { Label } from "@legion/ui/components/label";
 import { textVariants } from "@legion/ui/lib/typography";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { WriteFailure } from "@/writes/write-failure";
 import { DecisionButtons } from "./decision-buttons";
 import { MachineLogins } from "./machine-logins";
@@ -51,9 +51,19 @@ function Decision({
 export function MachineLoginPage(): ReactNode {
   const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
-  // Approve takes the primary from Look up only when it shows.
+  const codeField = useRef<HTMLInputElement>(null);
+  const result = useRef<HTMLDivElement>(null);
+  // The page has one field: typing goes there, not to the shortcuts. After the shell focuses main.
+  useEffect(() => queueMicrotask(() => codeField.current?.focus()), []);
+  // A decision made here takes away the button that made it, so the focus goes to what it did.
+  const decidedHere = view?.decided != null && (approve.isSuccess || deny.isSuccess);
+  useEffect(() => {
+    if (decidedHere) result.current?.focus();
+  }, [decidedHere]);
+  // Approve takes the primary from Look up when it shows; after a decision, a new code does.
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
+  const lookUpLeads = !approvable && (view === undefined || code !== "");
 
   return (
     <section className="max-w-180 space-y-8">
@@ -75,6 +85,7 @@ export function MachineLoginPage(): ReactNode {
             id="machine-code"
             onChange={(event) => typeCode(event.target.value)}
             placeholder="XXXX-XXXX"
+            ref={codeField}
             value={code}
           />
         </div>
@@ -82,7 +93,7 @@ export function MachineLoginPage(): ReactNode {
           disabled={code.trim() === ""}
           loading={lookup.isPending}
           type="submit"
-          variant={approvable ? "outline" : "default"}
+          variant={lookUpLeads ? "default" : "outline"}
         >
           Look up
         </Button>
@@ -103,12 +114,14 @@ export function MachineLoginPage(): ReactNode {
               This login expired before anyone decided it.
             </p>
           ) : view.decided !== null ? (
-            <Decision
-              credentialId={view.decided.credential_id}
-              event={view.decided.event}
-              host={view.record.identifiers?.[0] ?? ""}
-              service={view.record.service}
-            />
+            <div className="outline-none" ref={result} tabIndex={-1}>
+              <Decision
+                credentialId={view.decided.credential_id}
+                event={view.decided.event}
+                host={view.record.identifiers?.[0] ?? ""}
+                service={view.record.service}
+              />
+            </div>
           ) : view.record.state === "pending" ? (
             <DecisionButtons
               approve={approvable ? approve : undefined}
@@ -118,7 +131,7 @@ export function MachineLoginPage(): ReactNode {
           ) : null}
         </Card>
       )}
-      <MachineLogins />
+      <MachineLogins newCredential={approve.data?.credential_id ?? undefined} />
     </section>
   );
 }
