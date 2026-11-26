@@ -115,6 +115,7 @@ func (enrollsEveryPod) Carried(context.Context, []string) ([]supervise.CarriedEn
 // the broker still admits the pod's exchange under its session. Once the claim ends, nothing more
 // is written.
 func TestRegistrationsAreRenewedBeforeTheyLapse(t *testing.T) {
+	t.Parallel()
 	const (
 		pod        = "pod-uid-renewed"
 		session    = "ses_renewed"
@@ -205,8 +206,8 @@ func TestRegistrationsAreRenewedBeforeTheyLapse(t *testing.T) {
 }
 
 // foreignBroker is POST /v1/oauth/exchange/pod-sessions answering a write at the generation it
-// sent, until it is set to answer at a fixed one, as a broker holding a row another claim or
-// another service login wrote at that generation answers.
+// sent, until it is set to answer at a fixed one, as a broker holding a row another claim of this
+// daemon or another process of the daemon's account wrote at that generation answers.
 type foreignBroker struct {
 	mu     sync.Mutex
 	answer int64
@@ -240,6 +241,7 @@ func (b *foreignBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // logs at Error an error saying it never made that registration, naming the pod, the session and
 // the generations, and writes it no more.
 func TestTheDaemonLogsARegistrationItNeverMadeAsForeign(t *testing.T) {
+	t.Parallel()
 	const (
 		pod        = "pod-uid-foreign"
 		session    = "ses_foreign"

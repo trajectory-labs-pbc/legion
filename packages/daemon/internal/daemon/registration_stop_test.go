@@ -108,6 +108,10 @@ func (r renewingRegistrar) KeepPodSession(ctx context.Context, s supervise.PodSe
 	})
 }
 
+func (r renewingRegistrar) ReleasePodSessions(ctx context.Context, names []string) error {
+	return r.client.ReleasePodSessions(ctx, names)
+}
+
 // TestAStopDoesNotWaitOutTheRPCTimeoutWhileTheShimIsAskedForItsToken drives the stop of a
 // registration (stopRegistration, from the decision that lets the process go) while the
 // registration's renewal is reading the pod's token over the real worker stream (stream.Conn's
@@ -125,6 +129,7 @@ func (r renewingRegistrar) KeepPodSession(ctx context.Context, s supervise.PodSe
 // reader that waited on its consumer would hold the answer until the write's own deadline, the
 // RPC timeout, ended the write unsent.
 func TestAStopDoesNotWaitOutTheRPCTimeoutWhileTheShimIsAskedForItsToken(t *testing.T) {
+	t.Parallel()
 	const (
 		pod        = "pod-uid-stopwait"
 		session    = "ses_stopwait"
