@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 
-import { APP_CONTEXTS } from "@/commands/app-catalog";
+import { appCatalog } from "@/commands/app-catalog";
 import { UNDER_OVERLAY } from "@/commands/bindings";
 import { render, settle } from "../../tests/react";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";
@@ -20,6 +20,9 @@ function setup(overrides: Partial<GlobalActions> = {}) {
     createIssue: log("create"),
     goTo: (destination) => calls.push(`go ${destination}`),
     openDocuments: undefined,
+    openAnswers: log("answers"),
+    openMachineLogins: log("machine logins"),
+    signOut: log("sign out"),
     toggleInboxDrawer: log("inbox drawer"),
     toggleSidebar: log("sidebar"),
     toggleMargin: { label: "Toggle margin", run: log("margin") },
@@ -54,9 +57,7 @@ describe("the shell's global commands", () => {
   test("bind the catalog's global keys and no other", () => {
     setup();
     const ours = globalBindings().flatMap((binding) => binding.keys);
-    const catalog = (
-      APP_CONTEXTS.find((context) => context.name === "global")?.commands ?? []
-    ).flatMap((command) => command.keys ?? []);
+    const catalog = appCatalog.commandsOf("global").flatMap((command) => command.keys ?? []);
     expect(ours.filter((keys) => !catalog.includes(keys))).toEqual([]);
     expect(catalog.filter((keys) => !ours.includes(keys))).toEqual([]);
   });
@@ -67,7 +68,7 @@ describe("the shell's global commands", () => {
     press("/");
     press("?", { shiftKey: true });
     press("c");
-    for (const letter of ["i", "a", "s"]) {
+    for (const letter of ["i", "a", "o", "e", "l", "m", "s", "n"]) {
       press("g");
       press(letter);
     }
@@ -82,7 +83,12 @@ describe("the shell's global commands", () => {
       "create",
       "go inbox",
       "go agents",
+      "go priorities",
+      "go delivery",
+      "go pipeline",
+      "go machines",
       "go settings",
+      "machine logins",
       "inbox drawer",
       "sidebar",
       "sidebar",
@@ -91,19 +97,22 @@ describe("the shell's global commands", () => {
   });
 
   test("an absent action shuts its gate: the key does nothing until it is given", () => {
-    const { calls, rerender } = setup({ toggleInboxDrawer: undefined });
-    press("g");
-    press("d");
-    press("i");
+    const { calls, rerender } = setup({
+      openMachineLogins: undefined,
+      toggleInboxDrawer: undefined,
+    });
+    const keys = () => {
+      for (const keys of [["g", "d"], ["i"], ["g", "n"]]) for (const key of keys) press(key);
+    };
+    keys();
     expect(calls).toEqual([]);
     rerender({
       openDocuments: () => calls.push("documents"),
+      openMachineLogins: () => calls.push("machine logins"),
       toggleInboxDrawer: () => calls.push("drawer"),
     });
-    press("g");
-    press("d");
-    press("i");
-    expect(calls).toEqual(["documents", "drawer"]);
+    keys();
+    expect(calls).toEqual(["documents", "drawer", "machine logins"]);
   });
 
   test("Shift+M names what it opens", () => {

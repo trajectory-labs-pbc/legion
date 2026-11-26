@@ -19,17 +19,20 @@ interface NavDestination {
   name: string;
   label: string;
   icon: CommandIcon;
-  /** The letter after `G`; none where no letter is free and clear. */
-  key?: string;
+  /** The letter after `G`: upstream's where it binds one, else the first letter of the label that
+   *  no other `G` chord holds, taken in sidebar order. `r` stays for the Progress page below
+   *  Priorities. A chord that can be shut takes a letter no single key holds, since its second
+   *  press then runs alone. */
+  key: string;
 }
 
 export const NAV_DESTINATIONS = [
   { name: "inbox", label: "Inbox", icon: InboxIcon, key: "i" },
   { name: "agents", label: "Agents", icon: BotIcon, key: "a" },
-  { name: "priorities", label: "Priorities", icon: ListOrderedIcon },
-  { name: "delivery", label: "Delivery", icon: PackageCheckIcon },
-  { name: "pipeline", label: "Pipeline", icon: WorkflowIcon },
-  { name: "machines", label: "Machines", icon: ServerIcon },
+  { name: "priorities", label: "Priorities", icon: ListOrderedIcon, key: "o" },
+  { name: "delivery", label: "Delivery", icon: PackageCheckIcon, key: "e" },
+  { name: "pipeline", label: "Pipeline", icon: WorkflowIcon, key: "l" },
+  { name: "machines", label: "Machines", icon: ServerIcon, key: "m" },
   { name: "settings", label: "Settings", icon: SettingsIcon, key: "s" },
 ] as const satisfies readonly NavDestination[];
 
@@ -49,6 +52,6 @@ export function navCommandDefinitions(): readonly (CommandDefinition & {
     label: `Go to ${destination.label}`,
     icon: destination.icon,
     group: COMMAND_GROUPS.navigation,
-    keys: destination.key === undefined ? [] : [`g ${destination.key}`],
+    keys: [`g ${destination.key}`],
   }));
 }

@@ -27,7 +27,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
   const signOut = useSignOut(user.login);
   const shell = useShellLayout();
   const { preferences } = shell;
-  const overlays = useShellOverlays(shell);
+  const overlays = useShellOverlays(shell, signOut.start);
   const panel = (
     <NavigationPanel
       closeButtonRef={overlays.closeButtonRef}

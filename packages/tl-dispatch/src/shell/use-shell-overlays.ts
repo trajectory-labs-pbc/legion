@@ -1,9 +1,12 @@
+import { useMachineCodePage } from "@upstream-dispatch/features/credentials/capabilities";
 import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
+import { inbox } from "@/pages/inbox";
+import { machineLogin } from "@/pages/machine-login";
 import { project } from "@/pages/project";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
@@ -32,8 +35,9 @@ interface ShellOverlays {
 }
 
 /** Holds the overlays' state and registers the global commands they feed. */
-export function useShellOverlays(shell: ShellLayout): ShellOverlays {
+export function useShellOverlays(shell: ShellLayout, signOut: () => void): ShellOverlays {
   const navigate = usePageNavigate();
+  const machineCodePage = useMachineCodePage();
   const { preferences, detailsDrawer } = shell;
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [inboxDrawerOpen, setInboxDrawerOpen] = useState(false);
@@ -70,6 +74,11 @@ export function useShellOverlays(shell: ShellLayout): ShellOverlays {
       routeProject === undefined
         ? undefined
         : closing(() => navigate(project.routes.documents, { params: { key: routeProject } })),
+    openAnswers: closing(() => navigate(inbox.routes.answers)),
+    openMachineLogins: machineCodePage
+      ? closing(() => navigate(machineLogin.routes.machine))
+      : undefined,
+    signOut: closing(signOut),
     toggleInboxDrawer: shell.onInbox
       ? undefined
       : closing(() => setInboxDrawerOpen((open) => !open)),

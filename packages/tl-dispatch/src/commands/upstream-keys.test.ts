@@ -7,7 +7,7 @@ import {
   upstreamKeyRegistrations,
 } from "../../tests/key-registrations";
 import { UPSTREAM_WEB } from "../../tests/source";
-import { APP_CONTEXTS } from "./app-catalog";
+import { APP_CONTEXTS, appCatalog } from "./app-catalog";
 import { clashes, keyChecker, refuses } from "./keys";
 import type { CommandContext } from "./schema";
 import { UPSTREAM_LABELS } from "./upstream-labels";
@@ -102,10 +102,10 @@ describe("upstream's shell keys", () => {
     const live = keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))
       .filter((registration) => registration.scope === "global")
       .map((registration) => registration.keys);
-    const global = APP_CONTEXTS.find((context) => context.name === "global");
-    // The frame's own: `[` folds the sidebar beside Shift+S.
-    const own = ["["];
-    const catalog = (global?.commands ?? [])
+    // The frame's own: `[` folds the sidebar beside Shift+S, and the G chords upstream has not.
+    const own = ["[", "g o", "g e", "g l", "g m", "g n"];
+    const catalog = appCatalog
+      .commandsOf("global")
       .flatMap((command) => command.keys ?? [])
       .filter((keys) => !own.includes(keys));
     expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
