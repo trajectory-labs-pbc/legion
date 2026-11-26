@@ -430,8 +430,8 @@
     "file": "packages/dispatch/web/src/features/credentials/CredentialRecordFacts.tsx",
     "part": "*",
     "copy": "src/pages/machine-login/record-facts.tsx",
-    "commit": "1ffc8dec7e789c9cb2374f10a8d69069edff73ed",
-    "sha256": "79463bd87d3e3f10b402756a9fcaf6798598b0aad1dadb46a42801e6ea9b827e"
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "1e7494f36794a443a5fc61757a31225075414f583a129ed91f006ac534bd3ac5"
   },
   {
     "file": "packages/dispatch/web/src/features/credentials/MachineLoginPage.tsx",
