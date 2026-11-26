@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DeliverySettingsForm } from "@upstream-dispatch/features/delivery/DeliverySettingsForm";
+import { railBg, railBorder, railText } from "@upstream-dispatch/theme/classes";
 
 import { parseCss } from "../tests/css";
 import { render } from "../tests/react";
@@ -108,4 +109,27 @@ test("wider than a phone, the issue's details line wraps rather than scrolls", (
   expect(rail.map(({ context, property, value }) => [context.at(-1), property, value])).toEqual([
     ["@variant md", "flex-wrap", "wrap"],
   ]);
+});
+
+test("the folded margin's rail sits on the canvas, not in upstream's dark navigation colour", () => {
+  // Stand-ins for the theme's tokens and upstream's rail utilities, which load no Tailwind here.
+  const UPSTREAM = `:root { --background: rgb(250, 249, 247); --muted-foreground: rgb(93, 92, 89); }
+.${railBg} { background-color: rgb(2, 6, 23); }
+.${railBorder} { border-color: rgb(30, 41, 59); }
+.${railText} { color: rgb(241, 245, 249); }`;
+  const draw = (frame: boolean) => {
+    const style = document.createElement("style");
+    style.textContent = frame ? `${UPSTREAM}\n${FRAME_CSS}` : UPSTREAM;
+    document.head.append(style);
+    const rail = document.createElement("aside");
+    rail.dataset.testid = "margin-rail";
+    rail.className = `border-l ${railBorder} ${railBg} ${railText}`;
+    document.body.append(rail);
+    const { backgroundColor, color } = getComputedStyle(rail);
+    rail.remove();
+    style.remove();
+    return [backgroundColor, color];
+  };
+  expect(draw(false)).toEqual(["rgb(2, 6, 23)", "rgb(241, 245, 249)"]);
+  expect(draw(true)).toEqual(["rgb(250, 249, 247)", "rgb(93, 92, 89)"]);
 });
