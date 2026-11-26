@@ -22,7 +22,7 @@ interface MachineLoginView {
 }
 
 interface MachineLogin {
-  /** The code in the field, formatted; a decision made here empties it for the next machine. */
+  /** The code in the field, formatted; a decision on that code empties it for the next machine. */
   code: string;
   typeCode(typed: string): void;
   /** Looks the field's code up, forgetting any decision made on the login shown before. */
@@ -51,6 +51,14 @@ export function useMachineLogin(): MachineLogin {
   const record = lookup.data ?? undefined;
   // The code the shown record was looked up by, not what the field holds now.
   const lookedUpCode = lookup.variables ?? "";
+  // A decision empties the field for the next machine, unless another code was typed meanwhile.
+  const clearDecided = (decidedCode: string) =>
+    setCode((typed) => (typed === decidedCode ? "" : typed));
+  // A decision someone else made first is looked up again; the field empties once that shows.
+  const settle = (decided: unknown) => {
+    if (decided !== null) clearDecided(lookedUpCode);
+    else lookup.mutate(lookedUpCode, { onSuccess: () => clearDecided(lookedUpCode) });
+  };
 
   const approve = useKeyedWrite<DecisionResponse>({
     method: "POST",
@@ -60,10 +68,9 @@ export function useMachineLogin(): MachineLogin {
     label: () => "Approval of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
-      setCode("");
       void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
       void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
-      if (decided === null) lookup.mutate(lookedUpCode);
+      settle(decided);
     },
   });
   const deny = useKeyedWrite<StateResponse>({
@@ -74,9 +81,8 @@ export function useMachineLogin(): MachineLogin {
     label: () => "Denial of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
-      setCode("");
       void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
-      if (decided === null) lookup.mutate(lookedUpCode);
+      settle(decided);
     },
   });
 
