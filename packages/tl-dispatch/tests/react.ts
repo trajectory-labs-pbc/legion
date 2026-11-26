@@ -12,14 +12,14 @@ export function render(element: ReactNode): {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
-  act(() => root.render(element));
+  void act(() => root.render(element));
   return {
     container,
     rerender(next) {
-      act(() => root.render(next));
+      void act(() => root.render(next));
     },
     unmount() {
-      act(() => root.unmount());
+      void act(() => root.unmount());
       container.remove();
     },
   };
@@ -27,5 +27,5 @@ export function render(element: ReactNode): {
 
 /** Runs `change` inside React's `act`, so the renders it causes land before the next line. */
 export function settle(change: () => void): void {
-  act(change);
+  void act(change);
 }
