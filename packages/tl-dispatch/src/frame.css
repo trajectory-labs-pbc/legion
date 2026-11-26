@@ -62,3 +62,16 @@ html:has([data-testid="panel-header"]) {
 [data-testid="content-panel"] :is(input, textarea)[placeholder*=" "]::placeholder {
   font-family: var(--font-sans);
 }
+
+/* Upstream's folded margin is a rail the colour of its own dark navigation; here it sits on the
+   canvas beside the panel, as the sidebar does, with the ghost button's hover. */
+[data-testid="margin-rail"] {
+  border-color: transparent;
+  background-color: var(--background);
+  color: var(--muted-foreground);
+}
+
+[data-testid="margin-rail"] button:hover {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
