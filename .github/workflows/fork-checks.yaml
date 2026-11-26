@@ -80,6 +80,13 @@ jobs:
         run: bun run typecheck
       - name: Lint
         run: bun run lint
+      # A pin hashed again, renamed or removed since the pull request's base names its outcome and
+      # reason, so a sync that changed a copied part or a replaced view says it ported or closed it.
+      - name: Check the pins changed since the base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bun tests/map/copies.ts --check-base "origin/$BASE_REF"
       - name: Test (layers, design rules, route map, view map, copied upstream code)
         run: bun run test
       - name: Build
