@@ -39,7 +39,7 @@ describe("Button", () => {
     expect(tokens.filter((token) => token.includes("accent"))).toEqual([]);
   });
 
-  it("hovers an outline or ghost button on the secondary step; the accent is a menu's", () => {
+  it("hovers an outline or ghost button on the secondary step; the accent is a menu's and a navigation's", () => {
     render(
       <>
         <Button variant="outline">Look up</Button>
@@ -49,7 +49,10 @@ describe("Button", () => {
     for (const name of ["Look up", "Sign out"]) {
       const tokens = screen.getByRole("button", { name }).className.split(" ");
       expect(tokens).toContain("hover:bg-secondary");
-      expect(tokens.filter((token) => token.includes("accent"))).toEqual([]);
+      const accents = tokens.filter((token) => token.includes("accent"));
+      expect(accents.filter((token) => !token.startsWith("in-data-[slot=nav-surface]:"))).toEqual(
+        []
+      );
     }
   });
 
