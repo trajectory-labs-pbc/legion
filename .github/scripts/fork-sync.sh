@@ -93,7 +93,8 @@ git checkout -q -B "$sync" "$start"
 if git merge-base --is-ancestor "$up" "$start"; then
   push=false
   echo "upstream main $short is already in $start"
-  summary "Upstream's main at \`$short\` is already in \`${start#refs/remotes/origin/}\`; nothing to push."
+  start_branch=${start#refs/remotes/origin/}
+  summary "Upstream's main at \`$short\` is already in \`$start_branch\`; nothing to push."
   if git merge-base --is-ancestor "$up" "$base_ref"; then
     exit 0
   fi
