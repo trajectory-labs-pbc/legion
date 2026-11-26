@@ -465,6 +465,12 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["muted-foreground", "popover"],
   ["danger", "popover"],
   ["danger", "background"],
+  // Danger text on a card, and the count's quiet-danger Retry on a sidebar row at rest, hovered
+  // and current; its own hover is danger-tint, below.
+  ["danger", "card"],
+  ["danger", "sidebar"],
+  ["danger", "sidebar-accent/50 sidebar"],
+  ["danger", "sidebar-accent"],
   ["accent-foreground", "accent"],
   ["foreground", "accent"],
   ["muted-foreground", "accent"],
@@ -489,6 +495,7 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["success", "success-tint"],
   ["sidebar-foreground", "sidebar"],
   ["sidebar-accent-foreground", "sidebar-accent"],
+  ["sidebar-accent-foreground", "sidebar-accent/50 background"],
   // Faint text: a count, a time, a placeholder. A hovered or selected row draws it in muted.
   ["faint-foreground", "card"],
   ["faint-foreground", "popover"],
