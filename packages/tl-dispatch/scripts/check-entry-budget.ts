@@ -8,7 +8,8 @@ import { gzipSync } from "node:zlib";
  */
 export const ENTRY_BUDGET_BYTES =
   1_200_092 + // the package's first commit measured 1,142,944 on 2026-11-24, plus 5%
-  24_196; // upstream's search palette, eager so the key typed after $mod+k is the palette's
+  24_196 + // upstream's search palette, eager so the key typed after $mod+k is the palette's
+  140_000; // the shared code the shell reads grew upstream (tool specs, write store, references)
 
 /** The entry chunk, read as the server reads it: the first script of `/assets/index-*.js`. */
 export function entryChunk(indexHtml: string): string {
