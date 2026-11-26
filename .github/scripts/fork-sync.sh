@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The weekly sync of this fork (.github/workflows/fork-sync.yaml runs it): merge upstream's main
+# The daily sync of this fork (.github/workflows/fork-sync.yaml runs it): merge upstream's main
 # into the sync branch, scan the merged tree's workflow files, push, and open or update one pull
 # request from the sync branch.
 #
 # Inputs, from the environment: GH_TOKEN (the sync App's token), APP_SLUG (the App's slug), BASE
-# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork) and GITHUB_STEP_SUMMARY.
+# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork), GITHUB_EVENT_NAME and
+# GITHUB_STEP_SUMMARY.
 # It works in the current directory: the merged tree goes to ./work, and the lists it builds sit
 # beside it.
 #
@@ -75,6 +76,14 @@ short=$(git rev-parse --short=12 "$up")
 # the same name.
 open_pr=$(gh pr list -R "$REPOSITORY" --head "$sync" --base "$BASE" --state open \
   --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+
+# A push to an open pull request dismisses its approval, so this run syncs only to the upstream
+# commit the sync branch holds: it pushes nothing, and still scans the branch and rewrites the body.
+if [ -n "$open_pr" ] && [ "$GITHUB_EVENT_NAME" != workflow_dispatch ] && ! git merge-base --is-ancestor "$up" "$start"; then
+  echo "::warning::pull request #$open_pr is open, so this run merges nothing into it; start this workflow to merge upstream's main at $short"
+  up=$(git merge-base "$start" "$up")
+  short=$(git rev-parse --short=12 "$up")
+fi
 
 conflict() {
   local what=$1 paths

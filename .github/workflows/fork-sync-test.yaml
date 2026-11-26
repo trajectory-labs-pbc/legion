@@ -1,6 +1,6 @@
 name: Fork sync test
 
-# This repository is a fork, and this file, which upstream does not have, tests the weekly sync's
+# This repository is a fork, and this file, which upstream does not have, tests the daily sync's
 # script (.github/scripts/fork-sync.sh) with .github/scripts/fork-sync.test.sh: scratch copies of
 # this repository and of upstream on the runner, and a stub gh. It runs on a pull request that
 # changes the script, its test or either workflow, and when someone starts it.
