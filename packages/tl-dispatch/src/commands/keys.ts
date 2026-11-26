@@ -1,7 +1,7 @@
 import { createKeymap, type Keymap } from "@upstream-dispatch/features/shell/keymap";
 
-/** The first step of every chord: G jumps, O opens a picker, N opens a create form. */
-const CHORD_PREFIXES = ["g", "o", "n"] as const;
+/** The first step of every chord: G jumps, N opens a create form. O alone opens a row's page. */
+const CHORD_PREFIXES = ["g", "n"] as const;
 
 /** Keys the browser keeps. */
 const BROWSER_KEYS = [
@@ -106,7 +106,7 @@ export function clashChecker(): (held: string, keys: string, startsOnly?: boolea
   };
 }
 
-/** Whether a sequence of more than one press starts with a plain G, O or N. */
+/** Whether a sequence of more than one press starts with a plain G or N. */
 export function chordStartsRight(keys: string): boolean {
   const [first, ...rest] = keySteps(keys);
   return rest.length === 0 || CHORD_PREFIXES.some((prefix) => prefix === first?.toLowerCase());

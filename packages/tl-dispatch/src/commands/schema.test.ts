@@ -164,10 +164,10 @@ describe("the catalog refuses, when it loads", () => {
   test("one key in two contexts on different chains that share an engine scope", () => {
     const problems = problemsOf([
       global([]),
-      { name: "tree", parent: "global", scope: "issue", commands: [go("open", ["o"])] },
-      { name: "header", parent: "global", scope: "issue", commands: [go("pick", ["o p"])] },
+      { name: "tree", parent: "global", scope: "issue", commands: [go("open", ["g"])] },
+      { name: "header", parent: "global", scope: "issue", commands: [go("pick", ["g p"])] },
     ]);
-    expect(problems).toEqual([clash("tree.open", "o", "header.pick", "o p")]);
+    expect(problems).toEqual([clash("tree.open", "g", "header.pick", "g p")]);
   });
 
   test("but lets two pages that are never live together use one key", () => {
@@ -211,9 +211,15 @@ describe("the catalog refuses, when it loads", () => {
     );
   });
 
-  test("a chord that starts with a key other than G, O or N", () => {
+  test("a chord that starts with a key other than G or N", () => {
     expect(problemsOf([global([go("a", ["t s"])])])).toEqual([
-      `"global.a": the chord "t s" starts with neither G, O nor N`,
+      `"global.a": the chord "t s" starts with neither G nor N`,
+    ]);
+  });
+
+  test("a chord that starts with O, which alone opens a row's page", () => {
+    expect(problemsOf([global([go("a", ["o p"])])])).toEqual([
+      `"global.a": the chord "o p" starts with neither G nor N`,
     ]);
   });
 

@@ -157,7 +157,7 @@ export function createCatalog<const Contexts extends readonly CommandContext[]>(
         const unreadable = malformed(keys);
         if (unreadable !== undefined) problems.push(`"${id}": ${unreadable}`);
         else if (!chordStartsRight(keys))
-          problems.push(`"${id}": the chord "${keys}" starts with neither G, O nor N`);
+          problems.push(`"${id}": the chord "${keys}" starts with neither G nor N`);
         else if (browserKeeps(keys)) problems.push(`"${id}": the browser keeps "${keys}"`);
         else own.push({ command, keys });
       }

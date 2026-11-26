@@ -9,7 +9,7 @@ import {
 import { UPSTREAM_WEB } from "../../tests/source";
 import { APP_CONTEXTS, appCatalog } from "./app-catalog";
 import { clashes, keyChecker, refuses } from "./keys";
-import type { CommandContext } from "./schema";
+import { CatalogError, type CommandContext, createCatalog } from "./schema";
 import { UPSTREAM_LABELS } from "./upstream-labels";
 
 const upstream = upstreamKeyRegistrations();
@@ -60,7 +60,7 @@ describe("upstream's key registrations", () => {
     expect(clashesWithUpstream(APP_CONTEXTS)).toEqual([]);
   });
 
-  test("an O chord in the catalog clashes with the pages that bind O alone", () => {
+  test("the catalog refuses an O chord, which clashes with the pages that bind O alone", () => {
     const withPicker: CommandContext[] = [
       {
         name: "global",
@@ -78,6 +78,7 @@ describe("upstream's key registrations", () => {
         "../dispatch/web/src/features/architecture/ArchitecturePage.tsx",
       ])
     );
+    expect(() => createCatalog(withPicker)).toThrow(CatalogError);
   });
 
   test("a key equal to one an upstream page binds in the same scope clashes; in another scope it does not", () => {
