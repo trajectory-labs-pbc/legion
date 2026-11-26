@@ -1,5 +1,5 @@
+import type { Issue, OpenAsk } from "@legion/contracts";
 import { isLegionRole } from "@legion/contracts";
-import type { Issue, OpenAsk } from "@upstream-dispatch/api/types";
 import type { AgentState } from "@upstream-dispatch/features/refs/agent-registry";
 
 /** The fields of an issue read that the model uses. */
