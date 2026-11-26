@@ -51,7 +51,7 @@ jobs:
 
   tl-dispatch:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: packages/tl-dispatch
@@ -95,6 +95,52 @@ jobs:
         run: bun run build
       - name: Check the entry chunk's size
         run: bun run check:entry-budget
+      # The browser tests' local mode (e2e/playwright.config.ts): upstream's harness starts a Go
+      # server on this app's build, with a Postgres from upstream's image and its fakes.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: packages/envoy/go.mod
+          go-download-base-url: https://go.dev/dl
+          token: ''
+          cache-dependency-path: packages/envoy/go.sum
+      - name: Build the Dispatch server
+        run: go build -o ./dispatch-e2e ./cmd/dispatch
+        working-directory: packages/envoy
+        env:
+          GOPROXY: https://proxy.golang.org|direct
+      # Upstream's pgvector row in .github/ci-images.yaml, so the job follows upstream's pin. The
+      # harness's own `docker run` fetches it: check-ci-images.sh cannot read an image this step
+      # would pull by variable.
+      - name: Name the Postgres image upstream's browser jobs run
+        working-directory: .
+        run: |
+          registry=$(sed -n 's/^registry: //p' .github/ci-images.yaml)
+          digest=$(awk '/^ *tag: pgvector-/ { row = 1; next } row && /^ *digest:/ { print $2; exit }' .github/ci-images.yaml)
+          if [ -z "$registry" ] || [ -z "$digest" ]; then
+            echo "::error file=.github/ci-images.yaml::no registry or pgvector digest" >&2
+            exit 1
+          fi
+          echo "DISPATCH_E2E_PG_IMAGE=$registry@$digest" >> "$GITHUB_ENV"
+      - name: Install Chromium
+        timeout-minutes: 4
+        run: bunx playwright install chromium
+      # Builds the contracts upstream's helpers import under Node, and this app, first. The
+      # harness pulls the Postgres image here, and a failed pull reads as its port error ("got
+      # none of N ports"), with docker's own message inside it.
+      - name: Browser tests (local mode)
+        timeout-minutes: 12
+        run: bun run test:browser
+      # The deployed mode once, against a local stack that e2e/local-stack.ts starts through
+      # upstream's harness, as the local mode does (no docker command here): a dev sign-in's
+      # storage state and an agent token with no scope.
+      - name: Browser tests (deployed mode, against a local server)
+        timeout-minutes: 8
+        run: bun run test:browser:deployed-local
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: tl-dispatch-browser-results-${{ github.run_attempt }}
+          path: packages/tl-dispatch/e2e/test-results
 
   ui:
     runs-on: ubuntu-24.04
