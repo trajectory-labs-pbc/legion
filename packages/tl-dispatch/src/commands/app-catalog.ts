@@ -1,8 +1,11 @@
 import {
+  CheckCheckIcon,
   EyeIcon,
   FileTextIcon,
   FolderIcon,
   KeyboardIcon,
+  KeyRoundIcon,
+  LogOutIcon,
   PanelLeftIcon,
   PanelRightIcon,
   PlusIcon,
@@ -15,9 +18,9 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**
  * Every command of the app, declared once. The global context holds every key upstream's shell
- * binds and `[` for the sidebar, and no other; the pages with no letter are palette commands only.
- * The keys run as upstream's do, except that an open overlay of this app stops them unless it
- * lets them through. Page contexts join as their pages are rebuilt.
+ * binds, and the frame's own: `[` for the sidebar and a `G` chord for each page upstream gives
+ * none. The keys run as upstream's do, except that an open overlay of this app stops them unless
+ * it lets them through. Page contexts join as their pages are rebuilt.
  */
 export const APP_CONTEXTS = [
   {
@@ -61,6 +64,20 @@ export const APP_CONTEXTS = [
         hideFrom: ["palette"],
       },
       {
+        name: "go-answered",
+        label: "Open Answered by you",
+        icon: CheckCheckIcon,
+        group: COMMAND_GROUPS.navigation,
+      },
+      {
+        // Shut where no page is served, so its second press runs alone: a letter no key holds.
+        name: "go-machine-logins",
+        label: "Go to Machine logins",
+        keys: ["g n"],
+        icon: KeyRoundIcon,
+        group: COMMAND_GROUPS.navigation,
+      },
+      {
         name: "inbox-drawer",
         label: "Peek inbox",
         keys: ["i"],
@@ -81,6 +98,7 @@ export const APP_CONTEXTS = [
         icon: PanelRightIcon,
         group: COMMAND_GROUPS.layout,
       },
+      { name: "sign-out", label: "Sign out", icon: LogOutIcon },
     ],
   },
 ] as const satisfies readonly CommandContext[];

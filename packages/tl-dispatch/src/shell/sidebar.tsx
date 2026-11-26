@@ -154,7 +154,7 @@ export function SidebarView({
   return (
     <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
-        {data.destinations.map(({ name, label, icon: Icon, page, current, keyed, count }) => {
+        {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => {
           const fault = count?.fault;
           // A failed count's Retry takes the box Peek would show in.
           const peekHere = peekable && name === "inbox" && fault === undefined;
@@ -174,13 +174,9 @@ export function SidebarView({
           );
           return (
             <li className={peekHere ? "group/peek relative" : fault && "relative"} key={name}>
-              {keyed ? (
-                <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
-                  {row}
-                </HotkeyTooltip>
-              ) : (
-                row
-              )}
+              <HotkeyTooltip commandId={`global.${navCommandName(name)}`} side="right">
+                {row}
+              </HotkeyTooltip>
               {peekHere ? <PeekButton className={PEEK_SHOWN} tooltipSide="right" /> : null}
               {fault === undefined ? null : (
                 <CountRetry

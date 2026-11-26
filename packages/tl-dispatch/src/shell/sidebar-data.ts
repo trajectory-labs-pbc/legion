@@ -29,8 +29,6 @@ interface SidebarDestination {
   icon: CommandIcon;
   page: PageRoute<string, string>;
   current: boolean;
-  /** A `G` chord opens it, which its row's tooltip shows. */
-  keyed: boolean;
   count: RowCount | undefined;
 }
 
@@ -141,7 +139,6 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       icon: destination.icon,
       page: NAV_PAGES[destination.name],
       current: pathUnder(NAV_PAGES[destination.name].path, pathname),
-      keyed: "key" in destination,
       count: counts[destination.name],
     })),
     pinnedAgents: sectionOf(pinnedAgents, (agent) => ({
