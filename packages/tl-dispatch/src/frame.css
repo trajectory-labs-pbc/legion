@@ -27,8 +27,8 @@
 /* Upstream scrolls the issue's details line sideways, which on a desktop cuts its last item
    (Subscribers) at the card's edge. Wider than a phone, the line wraps instead; it still scrolls
    an item wider than itself, and with nothing to scroll upstream's trailing fade goes. */
-@media (min-width: 48rem) {
-  [data-testid="issue-metadata-rail"] {
+[data-testid="issue-metadata-rail"] {
+  @variant md {
     flex-wrap: wrap;
   }
 }
@@ -41,7 +41,7 @@ html:has([data-testid="panel-header"]) {
 /* Fields that name a border colour but draw no border need one on the panel's card. */
 [data-testid="content-panel"]
   :is(input, textarea, select)[class~="border-slate-300"]:not([class~="border"]) {
-  border-width: 1px;
+  border-width: var(--border-width);
 }
 
 /* Upstream's form grids: each field keeps its height, so a hint does not move the input beside it. */
