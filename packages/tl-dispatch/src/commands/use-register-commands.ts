@@ -25,7 +25,7 @@ function useEngineBindings(scope: KeymapScope, bindings: readonly KeyBinding[]):
   const signature = bindings
     .map((binding) => `${binding.id}=${[binding.keys].flat().join(",")}=${binding.label}`)
     .join("\n");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `signature` stands in for the bindings, read through `latest`
+  // `signature` stands in for the bindings, read through `latest`
   useLayoutEffect(() => {
     const proxies = latest.current.map((binding, index) => ({
       ...binding,
@@ -43,7 +43,7 @@ function useStoredSpecs(store: CommandStore, specs: CommandSpecs): void {
     latest.current = specs;
   });
   const ids = specs.map((spec) => spec.command.id).join("\n");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `ids` stands in for the specs, read through `latest`
+  // `ids` stands in for the specs, read through `latest`
   useLayoutEffect(() => {
     const releases = latest.current.map((spec) => store.register(spec));
     return () => {
