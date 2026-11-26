@@ -1244,6 +1244,10 @@ ENV_ALLOWED = frozenset({
     # cannot judge gaps from shape alone into a failure, and go compiles the same files and runs
     # the same tests with it set as without.
     "DISPATCH_XID_REQUIRE_GAP_JUDGMENT",
+    # The repository docs-site.yaml's build step builds the site's addresses for: that step reads
+    # it into GITHUB_REPOSITORY for the build command alone, which repo-paths.sh reads. go reads
+    # neither.
+    "DOCS_REPOSITORY",
     "ENVOY_INFRA_DOCKER_PLUGIN", "ENVOY_SMOKE_HELD_PORT_IMAGE",
     "ENVOY_SMOKE_IMAGE", "FIRST_ROLLOUT_COMMIT",
     # The token gh reads. A step of the lint job sets it for the daemon API contract check, and

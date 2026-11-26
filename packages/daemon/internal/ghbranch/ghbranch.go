@@ -24,11 +24,13 @@ import (
 // the read of base or to the create, is an error naming the repository, the ref and GitHub's
 // answer (a *githubrest.Answer, its status and body).
 //
-// The ref name passes this repository's own private-name rules before anything is sent
-// (leakguard.Rules): a name they match, and a rule pass that could not be made to run, are each
-// an error, and the base is not even read. The check lives here rather than in the daemon that
-// calls Create so that the package's contract holds for every caller: a create of this package
-// publishes no ref name of a class the rules refuse.
+// The ref name passes this repository's own private-name rules before the base is read
+// (leakguard.Rules): on a public repository, a name they match, and a rule pass that could not be
+// made to run, are each an error. A repository GitHub reports private or internal takes any name,
+// as a push or a gh call to it does (leakguard's scanThrough): its visibility is read only when the
+// rules refuse, and a read that fails counts as public. The check lives here rather than in the
+// daemon that calls Create so that the package's contract holds for every caller: a create of this
+// package publishes no ref name of a class the rules refuse to a public repository.
 //
 // The rule pass alone runs, and no shared public leak check: a ref name is a branch name of the
 // daemon's own making, which can carry one of this repository's four private classes — the
@@ -36,7 +38,7 @@ import (
 // what the shared check reads for. The write itself is one POST of a ref and a sha.
 func Create(ctx context.Context, github githubrest.Client, repo ghrepo.Repository, branch, base string) error {
 	ref := "refs/heads/" + branch
-	if err := leakguard.New(leakguard.Options{}).Rules(ctx, leakguard.RefRecord(ref)); err != nil {
+	if err := leakguard.New(leakguard.Options{}).Rules(ctx, leakguard.RefRecord(ref)); err != nil && !notPublic(ctx, github) {
 		return fmt.Errorf("create a branch of %s: %w", repo, err)
 	}
 	var read struct {
@@ -107,6 +109,18 @@ func Read(ctx context.Context, github githubrest.Client, repo ghrepo.Repository)
 		return Repository{}, err
 	}
 	return Repository{Name: name, DefaultBranch: info.DefaultBranch}, nil
+}
+
+// notPublic says whether GitHub reports the repository private or internal (`visibility` of
+// `GET /repos/{owner}/{repo}`). A read that fails, or names no visibility, counts as public.
+func notPublic(ctx context.Context, github githubrest.Client) bool {
+	var info struct {
+		Visibility leakguard.Visibility `json:"visibility"`
+	}
+	if err := github.Get(ctx, "", &info); err != nil {
+		return false
+	}
+	return info.Visibility == leakguard.Private || info.Visibility == leakguard.Internal
 }
 
 // alreadyExists says whether a 422's body is GitHub's answer to a ref it already has. GitHub answers
