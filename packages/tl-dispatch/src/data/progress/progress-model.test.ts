@@ -4,13 +4,18 @@ import {
   ASK_AT_RISK_DAYS,
   CHANGE_AT_RISK_DAYS,
   CHANGE_OFF_TRACK_DAYS,
+  figuresFor,
   indexIssues,
   isClosed,
   isInFlight,
   moreThanDays,
+  type ProgressAsk,
   type ProgressIssue,
+  progressModel,
   STATE_ORDER,
+  staleIssues,
   subtreeIssues,
+  waitingAsks,
 } from "./progress-model";
 
 const NOW = Date.parse("2026-03-11T12:00:00Z");
@@ -54,6 +59,32 @@ function issue(key: string, fields: IssueFields = {}): ProgressIssue {
 }
 
 const keys = (issues: readonly ProgressIssue[]) => issues.map((each) => each.key);
+
+/** An open ask on an issue, or on a project document when `on` is null; `age` is before NOW. */
+function ask(id: string, on: string | null, age: number, waitingOn = "human"): ProgressAsk {
+  return {
+    id,
+    ref: `dispatch://ask/${id}`,
+    created_at: ago(age),
+    urgency: "med",
+    waiting_on: waitingOn,
+    waiting_on_person: "ada@example.test",
+    owner:
+      on === null
+        ? { document: { name: "notes.md", project: "ALPHA", slug: "notes-md" } }
+        : { issue: { key: on, title: `Title of ${on}`, assignee: null } },
+  };
+}
+
+function model(issues: readonly ProgressIssue[], asks: readonly ProgressAsk[] = []) {
+  return progressModel({ issues, asks }, NOW);
+}
+
+function figuresOf(issues: readonly ProgressIssue[], key: string, asks?: readonly ProgressAsk[]) {
+  const figures = model(issues, asks).figures.get(key);
+  if (figures === undefined) throw new Error(`no figures for ${key}`);
+  return figures;
+}
 
 describe("progress terms", () => {
   test("only done closes an issue", () => {
@@ -133,5 +164,140 @@ describe("progress trees", () => {
     ]);
     expect(keys(subtreeIssues(index, "ALPHA-2"))).toEqual(["ALPHA-2", "ALPHA-3"]);
     expect(subtreeIssues(index, "ALPHA-404")).toEqual([]);
+  });
+});
+
+describe("progress figures", () => {
+  test("descendants closed out of all descendants, and the in-flight count", () => {
+    const figures = figuresOf(
+      [
+        issue("ALPHA-1", { status: "in_progress" }),
+        issue("ALPHA-2", { parent: "ALPHA-1", status: "done" }),
+        issue("ALPHA-3", { parent: "ALPHA-1", status: "testing" }),
+        issue("ALPHA-4", { parent: "ALPHA-3", status: "done" }),
+        issue("ALPHA-5", { parent: "ALPHA-3" }),
+      ],
+      "ALPHA-1"
+    );
+    expect(figures.descendants).toBe(4);
+    expect(figures.descendantsClosed).toBe(2);
+    expect(figures.percentClosed).toBe(50);
+    expect(figures.inFlight).toBe(2);
+  });
+
+  test("each subtree has its own figures, which add to its parent's", () => {
+    const { figures } = model([
+      issue("ALPHA-1"),
+      issue("ALPHA-2", { parent: "ALPHA-1", status: "retro" }),
+      issue("ALPHA-3", { parent: "ALPHA-2", status: "done" }),
+      issue("ALPHA-4", { parent: "ALPHA-2", status: "needs_review" }),
+    ]);
+    expect(figures.get("ALPHA-2")).toMatchObject({
+      descendants: 2,
+      descendantsClosed: 1,
+      inFlight: 2,
+    });
+    expect(figures.get("ALPHA-1")).toMatchObject({
+      descendants: 3,
+      descendantsClosed: 1,
+      inFlight: 2,
+    });
+    expect(figures.has("ALPHA-3")).toBe(false);
+  });
+
+  test("the percentage shows 100 only when every descendant is closed", () => {
+    const issues = [issue("ALPHA-1")];
+    for (let n = 2; n <= 201; n += 1) {
+      issues.push(issue(`ALPHA-${n}`, { parent: "ALPHA-1", status: n === 2 ? "todo" : "done" }));
+    }
+    expect(figuresOf(issues, "ALPHA-1").percentClosed).toBe(99);
+  });
+
+  test("the closed-issue-change test: a closed descendant's newer change does not move the last change", () => {
+    const figures = figuresOf(
+      [
+        issue("ALPHA-1", { updated: 10 * DAY }),
+        issue("ALPHA-2", { parent: "ALPHA-1", status: "done", updated: MINUTE }),
+        issue("ALPHA-3", { parent: "ALPHA-1", updated: 9 * DAY }),
+      ],
+      "ALPHA-1"
+    );
+    expect(figures.lastChange).toBe(NOW - 9 * DAY);
+  });
+
+  test("a newer change on the open root moves the last change", () => {
+    const figures = figuresOf(
+      [
+        issue("ALPHA-1", { updated: DAY }),
+        issue("ALPHA-2", { parent: "ALPHA-1", updated: 9 * DAY }),
+      ],
+      "ALPHA-1"
+    );
+    expect(figures.lastChange).toBe(NOW - DAY);
+  });
+
+  test("a tree with no open issue has no last change", () => {
+    const figures = figuresOf(
+      [
+        issue("ALPHA-1", { status: "done" }),
+        issue("ALPHA-2", { parent: "ALPHA-1", status: "done" }),
+      ],
+      "ALPHA-1"
+    );
+    expect(figures.lastChange).toBeNull();
+    expect(figures.open).toBe(0);
+  });
+
+  test("stale issues are in-flight issues changed more than 7 days ago, oldest first", () => {
+    const issues = [
+      issue("ALPHA-1", { status: "in_progress", updated: 8 * DAY }),
+      issue("ALPHA-2", { parent: "ALPHA-1", status: "testing", updated: 7 * DAY }),
+      issue("ALPHA-3", { parent: "ALPHA-1", status: "needs_review", updated: 7 * DAY + MINUTE }),
+      issue("ALPHA-4", { parent: "ALPHA-1", status: "todo", updated: 30 * DAY }),
+      issue("ALPHA-5", { parent: "ALPHA-1", status: "retro", updated: 20 * DAY }),
+    ];
+    const built = model(issues);
+    expect(built.figures.get("ALPHA-1")?.stale).toBe(3);
+    expect(keys(staleIssues(built, "ALPHA-1"))).toEqual(["ALPHA-5", "ALPHA-1", "ALPHA-3"]);
+  });
+
+  test("waiting asks wait on a person, on an open issue of the tree; the oldest gives the age", () => {
+    const issues = [
+      issue("ALPHA-1"),
+      issue("ALPHA-2", { parent: "ALPHA-1" }),
+      issue("ALPHA-3", { parent: "ALPHA-1", status: "done" }),
+    ];
+    const asks = [
+      ask("a1", "ALPHA-2", 3 * DAY),
+      ask("a2", "ALPHA-1", 5 * DAY),
+      ask("a3", "ALPHA-2", 9 * DAY, "agent"),
+      ask("a4", "ALPHA-3", 9 * DAY),
+      ask("a5", null, 9 * DAY),
+      ask("a6", "BETA-1", 9 * DAY),
+    ];
+    const built = model(issues, asks);
+    expect(built.figures.get("ALPHA-1")).toMatchObject({
+      waitingAsks: 2,
+      oldestAsk: NOW - 5 * DAY,
+    });
+    expect(waitingAsks(built, "ALPHA-1").map((each) => each.id)).toEqual(["a2", "a1"]);
+  });
+
+  test("a tree with no waiting ask has no oldest age", () => {
+    const figures = figuresOf(
+      [issue("ALPHA-1"), issue("ALPHA-2", { parent: "ALPHA-1" })],
+      "ALPHA-1"
+    );
+    expect(figures).toMatchObject({ waitingAsks: 0, oldestAsk: null });
+  });
+
+  test("a tree page opened on an issue of a parent cycle gets figures", () => {
+    const built = model([
+      issue("ALPHA-1", { parent: "ALPHA-2", status: "in_progress" }),
+      issue("ALPHA-2", { parent: "ALPHA-1" }),
+    ]);
+    expect(built.figures.has("ALPHA-1")).toBe(false);
+    expect(figuresFor(built, "ALPHA-1")).toMatchObject({ descendants: 1, inFlight: 1 });
+    expect(figuresFor(built, "ALPHA-404")).toBeUndefined();
   });
 });
