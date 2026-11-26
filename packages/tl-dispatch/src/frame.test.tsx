@@ -84,11 +84,13 @@ test("the margin sheet stays under the panel's top border, or under its stuck to
     declaration.context.at(-1)?.includes('[data-testid="margin-sheet"]')
   );
   const at = (property: string) => sheet.find((declaration) => declaration.property === property);
-  // Stuck, the row covers where the panel's 1 px top border was.
-  const above = "max(var(--panel-row, 0px), 1px)";
-  expect(at("top")?.value).toBe(`calc(var(--panel-inset) + ${above})`);
-  // So the sheet's bottom stays 1 px over the panel's bottom inset.
-  expect(at("height")?.value).toBe(`calc(100dvh - 2 * var(--panel-inset) - ${above} - 1px)`);
+  // Stuck, the row covers where the panel's top border was.
+  expect(at("--sheet-above")?.value).toBe("max(var(--panel-row, 0px), var(--border-width))");
+  expect(at("top")?.value).toBe("calc(var(--panel-inset) + var(--sheet-above))");
+  // So the sheet's bottom stays one border over the panel's bottom inset.
+  expect(at("height")?.value).toBe(
+    "calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width))"
+  );
   expect(at("max-height")?.value).toBe(at("height")?.value);
 });
 
