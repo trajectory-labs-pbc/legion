@@ -1,9 +1,11 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ApiError } from "@upstream-dispatch/api/client";
 
 import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { formatMachineCode } from "./format-machine-code";
 import { MachineLoginPage } from "./machine-login-page";
 import { api, type RecordResponse } from "./upstream";
 
@@ -120,6 +122,77 @@ test("an approval takes the focus to what it did, empties the field, and marks t
   expect((await screen.findByText("New")).closest("tr")?.textContent).toContain("cred-9");
   await user.type(field, "efgh5678");
   expect(primaries()).toEqual(["Look up"]);
+});
+
+test("a code typed while an approval is out stays in the field, with the focus", async () => {
+  stub();
+  const answer = Promise.withResolvers<Awaited<ReturnType<typeof api.approveCredentialRecord>>>();
+  const approve = spyOn(api, "approveCredentialRecord").mockReturnValue(answer.promise);
+  restores.push(() => approve.mockRestore());
+  renderPage();
+  await lookUp();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Approve" }));
+  const field = screen.getByLabelText("Code shown on the machine");
+  await user.clear(field);
+  await user.type(field, "efgh");
+  await act(async () => answer.resolve({ credential_id: "cred-9", state: "approved" }));
+  await user.type(field, "5678");
+  expect(await screen.findByText(/^Approved\./)).toBeDefined();
+  expect(field).toHaveValue(formatMachineCode("efgh5678"));
+  expect(field).toHaveFocus();
+});
+
+const decidedFirst: RecordResponse = {
+  ...record,
+  decided: { at: "2026-09-27T00:05:00Z", credential_id: "cred-9", event: "approved" },
+  state: "approved",
+};
+
+test("a decision someone made first empties the field once the lookup after it shows it", async () => {
+  const lookups = spyOn(api, "lookupMachineCredential")
+    .mockResolvedValueOnce(record)
+    .mockResolvedValueOnce(decidedFirst);
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  // Dispatch made the decision already, so the write lands with no answer.
+  const approve = spyOn(api, "approveCredentialRecord").mockRejectedValue(
+    new ApiError(409, { code: "KEY_COMMITTED", error: "made" })
+  );
+  restores.push(
+    () => lookups.mockRestore(),
+    () => logins.mockRestore(),
+    () => approve.mockRestore()
+  );
+  renderPage();
+  await lookUp();
+  await userEvent.setup().click(screen.getByRole("button", { name: "Approve" }));
+  const outcome = await screen.findByText(/^Approved\./);
+  expect(screen.getByLabelText("Code shown on the machine")).toHaveValue("");
+  await waitFor(() => expect(document.activeElement?.contains(outcome)).toBe(true));
+});
+
+test("when the lookup after a decision someone made first fails, the code stays, with the focus", async () => {
+  const lookups = spyOn(api, "lookupMachineCredential")
+    .mockResolvedValueOnce(record)
+    .mockRejectedValueOnce(new Error("offline"));
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  // Dispatch made the decision already, so the write lands with no answer.
+  const approve = spyOn(api, "approveCredentialRecord").mockRejectedValue(
+    new ApiError(409, { code: "KEY_COMMITTED", error: "made" })
+  );
+  restores.push(
+    () => lookups.mockRestore(),
+    () => logins.mockRestore(),
+    () => approve.mockRestore()
+  );
+  renderPage();
+  await lookUp();
+  await userEvent.setup().click(screen.getByRole("button", { name: "Approve" }));
+  const field = screen.getByLabelText("Code shown on the machine");
+  await waitFor(() => expect(lookups).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(field).toHaveFocus());
+  expect(field).toHaveValue(formatMachineCode("abcd1234"));
+  expect(screen.getByRole("button", { name: "Look up" })).toBeEnabled();
 });
 
 test.each([

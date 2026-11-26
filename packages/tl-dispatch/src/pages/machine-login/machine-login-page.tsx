@@ -52,14 +52,20 @@ export function MachineLoginPage(): ReactNode {
   const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
   const codeField = useRef<HTMLInputElement>(null);
+  const card = useRef<HTMLDivElement>(null);
   const result = useRef<HTMLDivElement>(null);
   // The page has one field: typing goes there, not to the shortcuts. After the shell focuses main.
   useEffect(() => queueMicrotask(() => codeField.current?.focus()), []);
-  // A decision made here takes away the button that made it, so the focus goes to what it did.
+  // A decision, or the lookup after one, takes away the button that had the focus: the focus goes
+  // to the result, else back to the field. Focus the person moved on stays where they put it.
   const decidedHere = view?.decided != null && (approve.isSuccess || deny.isSuccess);
+  const settled = decidedHere || lookup.isError;
   useEffect(() => {
-    if (decidedHere) result.current?.focus();
-  }, [decidedHere]);
+    if (!settled) return;
+    const at = document.activeElement;
+    if (at !== null && at !== document.body && !card.current?.contains(at)) return;
+    (result.current ?? codeField.current)?.focus();
+  }, [settled]);
   // Approve takes the primary from Look up when it shows; after a decision, a new code does.
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
@@ -107,14 +113,18 @@ export function MachineLoginPage(): ReactNode {
         />
       ) : null}
       {view === undefined ? null : (
-        <Card className="px-4">
+        <Card className="px-4" ref={card}>
           <RecordFacts record={view.record} />
           {view.record.state === "expired" ? (
             <p className={textVariants({ weight: "medium" })}>
               This login expired before anyone decided it.
             </p>
           ) : view.decided !== null ? (
-            <div className="outline-none" ref={result} tabIndex={-1}>
+            <div
+              className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              ref={result}
+              tabIndex={-1}
+            >
               <Decision
                 credentialId={view.decided.credential_id}
                 event={view.decided.event}
