@@ -1,15 +1,22 @@
 // Upstream code this app copied, pinned by hash, so a change upstream is ported rather than lost.
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
 
-import { REPO_ROOT } from "../source";
+import { replacedViews } from "@/views";
+import { PACKAGE_ROOT, REPO_ROOT, UPSTREAM_WEB } from "../source";
 import { parseScript } from "../typescript";
 import { namedImports, routeTargets, topLevelNames, upstreamAppFile } from "./source";
 
 const pinsFile = join(import.meta.dir, "copies.json");
+const pinsPath = relative(REPO_ROOT, pinsFile);
 const appFile = relative(REPO_ROOT, upstreamAppFile);
+const upstreamWeb = relative(REPO_ROOT, UPSTREAM_WEB);
+const updateHint = (file: string, part: string) =>
+  `run \`bun tests/map/copies.ts --update ${file} '${part}' --outcome ported --reason '<why>'\`, or \`--outcome closed\` for a change not ported`;
+/** The files of this app that hold a pin's copy. */
+export const copyFiles = (pin: Copy) => [pin.copy, ...(pin.also ?? [])];
 
 export interface Copy {
   /** Upstream's file, from the repository root. */
@@ -21,10 +28,21 @@ export interface Copy {
   part: string;
   /** This app's file holding the copy. */
   copy: string;
+  /** This app's other files holding code from the same part, when the copy spans several. */
+  also?: string[];
   /** The last upstream commit that changed `file` when the copy was taken. */
   commit: string;
   sha256: string;
+  /** Set by the sync that changed the pin: the change was ported, or closed with no port. */
+  outcome?: "ported" | "closed";
+  /** Why, for the sync that changed the pin. */
+  reason?: string;
 }
+
+type Outcome = NonNullable<Copy["outcome"]>;
+type Why = Pick<Copy, "outcome" | "reason">;
+const isOutcome = (value: string | undefined): value is Outcome =>
+  value === "ported" || value === "closed";
 
 /**
  * A node's tokens, without what a formatter changes: spacing, comments, semicolons, trailing
@@ -97,11 +115,9 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
 }
 
 /** One part of a file with its formatting removed, or undefined when the file no longer has it. */
-export function partText(
-  file: string,
-  part: string,
-  text = readFileSync(join(REPO_ROOT, file), "utf8")
-): string | undefined {
+export function partText(file: string, part: string, given?: string): string | undefined {
+  const text = given ?? readIfThere(join(REPO_ROOT, file));
+  if (text === undefined) return undefined;
   if (part === "script") {
     const scripts = [...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
     if (scripts.length === 0) return undefined;
@@ -118,8 +134,17 @@ export function partText(
 
 export const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 
-export function readPins(): Copy[] {
-  return JSON.parse(readFileSync(pinsFile, "utf8")) as Copy[];
+function readIfThere(path: string): string | undefined {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+export function readPins(text = readFileSync(pinsFile, "utf8")): Copy[] {
+  return JSON.parse(text) as Copy[];
 }
 
 /** Each pinned part upstream changed or removed, with what to do. */
@@ -127,11 +152,11 @@ export function copyProblems(pins: readonly Copy[] = readPins(), read = partText
   return pins.flatMap((pin) => {
     const text = read(pin.file, pin.part);
     if (text !== undefined && hash(text) === pin.sha256) return [];
-    const since = `since ${pin.commit.slice(0, 12)}, which ${pin.copy} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file})`;
+    const since = `since ${pin.commit.slice(0, 12)}, which ${copyFiles(pin).join(" and ")} copies: port the change (git diff ${pin.commit.slice(0, 12)} -- ${pin.file})`;
     return [
       text === undefined
-        ? `${pin.file} no longer has ${pin.part} ${since}, then remove or rename its entry in copies.json`
-        : `${pin.file} changed ${pin.part} ${since}, then run \`bun tests/map/copies.ts --update ${pin.file} ${pin.part}\``,
+        ? `${pin.file} no longer has ${pin.part} ${since}, then remove or rename its entry in copies.json, and give the pin that replaces it an outcome and a reason`
+        : `${pin.file} changed ${pin.part} ${since}, or close it, then ${updateHint(pin.file, pin.part)}`,
     ];
   });
 }
@@ -153,19 +178,117 @@ export function unpinnedRouteTargets(
     );
 }
 
+/** Each upstream view file of `replaced` that copies.json does not pin whole. */
+export function unpinnedReplacedViews(
+  pins: readonly Copy[] = readPins(),
+  replaced: Readonly<Record<string, string>> = replacedViews
+): string[] {
+  const whole = new Map(pins.filter((pin) => pin.part === "*").map((pin) => [pin.file, pin]));
+  return Object.entries(replaced).flatMap(([view, copy]) => {
+    const file = `${upstreamWeb}/${view}`;
+    const pin = whole.get(file);
+    if (pin === undefined) {
+      return [
+        `${file} is in src/views.ts replacedViews, and copies.json does not pin it whole: add {"file": "${file}", "part": "*", "copy": "${copy}", "commit": "", "sha256": ""} and run \`bun tests/map/copies.ts --update ${file} '*'\``,
+      ];
+    }
+    return pin.copy === copy
+      ? []
+      : [
+          `${file}: src/views.ts replacedViews gives it to ${copy}, and its pin in copies.json to ${pin.copy}: make them agree`,
+        ];
+  });
+}
+
+const keyOf = (pin: Copy) => `${pin.file}\0${pin.part}`;
+const nameOf = (pin: Copy) => `${pin.file} '${pin.part}'`;
+const reasonOf = (pin: Copy) => pin.reason?.trim() ?? "";
+const explained = (pin: Copy) => pin.outcome !== undefined && reasonOf(pin) !== "";
+
+/**
+ * Each way the pins fail to say why they changed since `base`, the pins of the merge base: a pin
+ * hashed again with no outcome and reason of its own, an outcome or reason that is not one, and a
+ * pin gone with no new or changed pin of its file or its copy that says why. A pin whose copy this
+ * app no longer has may go with no record.
+ */
+export function unexplainedPins(
+  pins: readonly Copy[],
+  base: readonly Copy[],
+  hasCopy = (copy: string) => existsSync(join(PACKAGE_ROOT, copy))
+): string[] {
+  const before = new Map(base.map((pin) => [keyOf(pin), pin]));
+  const now = new Set(pins.map(keyOf));
+  const changed = (pin: Copy, old = before.get(keyOf(pin))) =>
+    old === undefined || old.sha256 !== pin.sha256 || old.commit !== pin.commit;
+  const problems: string[] = [];
+  for (const pin of pins) {
+    if (pin.outcome !== undefined && !isOutcome(pin.outcome)) {
+      problems.push(`${nameOf(pin)} has the outcome ${pin.outcome}: it is ported or closed`);
+    }
+    if (pin.reason !== undefined && reasonOf(pin) === "") {
+      problems.push(`${nameOf(pin)} has an empty reason`);
+    }
+    const old = before.get(keyOf(pin));
+    if (old === undefined || !changed(pin, old)) continue;
+    const since = `since the base (${old.commit.slice(0, 12)} to ${pin.commit.slice(0, 12)})`;
+    if (!explained(pin)) {
+      problems.push(
+        `${nameOf(pin)} was pinned again ${since} with no outcome or reason: ${updateHint(pin.file, pin.part)}`
+      );
+    } else if (reasonOf(pin) === reasonOf(old)) {
+      problems.push(
+        `${nameOf(pin)} was pinned again ${since} and keeps the base's reason: ${updateHint(pin.file, pin.part)}, with this change's reason`
+      );
+    }
+  }
+  for (const old of base) {
+    const copies = copyFiles(old);
+    if (now.has(keyOf(old)) || !copies.some(hasCopy)) continue;
+    const heir = pins.find(
+      (pin) =>
+        (pin.file === old.file || copyFiles(pin).some((copy) => copies.includes(copy))) &&
+        changed(pin) &&
+        explained(pin) &&
+        reasonOf(pin) !== reasonOf(old)
+    );
+    if (heir === undefined) {
+      problems.push(
+        `${nameOf(old)} is gone since the base, and no new or changed pin of ${old.file} or ${copies.join(" or ")} gives an outcome and a reason: give the pin that replaces it both`
+      );
+    }
+  }
+  return problems;
+}
+
+function git(args: readonly string[]): { ok: boolean; out: string; err: string } {
+  const run = Bun.spawnSync(["git", ...args], { cwd: REPO_ROOT });
+  return { ok: run.exitCode === 0, out: run.stdout.toString(), err: run.stderr.toString().trim() };
+}
+
+/** The pins at the merge base of HEAD and `target`; none when the base has no copies.json. */
+export function basePins(target: string): Copy[] {
+  const base = git(["merge-base", "HEAD", target]);
+  if (!base.ok) throw new Error(`git merge-base HEAD ${target} failed: ${base.err}`);
+  const at = `${base.out.trim()}:${pinsPath}`;
+  if (!git(["cat-file", "-e", at]).ok) return [];
+  const shown = git(["show", at]);
+  if (!shown.ok) throw new Error(`git show ${at} failed: ${shown.err}`);
+  return readPins(shown.out);
+}
+
 function lastCommit(file: string): string {
-  const run = Bun.spawnSync(["git", "log", "-1", "--format=%H", "--", file], { cwd: REPO_ROOT });
-  const commit = run.stdout.toString().trim();
-  if (run.exitCode !== 0 || commit === "") throw new Error(`git log found no commit for ${file}`);
+  const run = git(["log", "-1", "--format=%H", "--", file]);
+  const commit = run.out.trim();
+  if (!run.ok || commit === "") throw new Error(`git log found no commit for ${file}`);
   return commit;
 }
 
 /** The upstream diff behind a problem, for the log. */
 export function upstreamDiff(pin: Copy): string {
-  const run = Bun.spawnSync(["git", "diff", pin.commit, "--", pin.file], { cwd: REPO_ROOT });
-  return run.exitCode === 0
-    ? run.stdout.toString()
-    : `git diff ${pin.commit} failed (a shallow checkout lacks it): ${run.stderr.toString().trim()}`;
+  const run = git(["diff", pin.commit, "--", pin.file]);
+  return run.ok
+    ? run.out
+    : `git diff ${pin.commit} failed (a shallow checkout lacks it): ${run.err}`;
 }
 
 /**
@@ -176,6 +299,7 @@ export function repin(
   pins: readonly Copy[],
   file: string,
   part: string,
+  why: Why = {},
   read = partText,
   commitOf = lastCommit
 ): Copy[] {
@@ -186,16 +310,51 @@ export function repin(
     if (pin.file !== file || pin.part !== part) return pin;
     const text = read(file, part);
     if (text === undefined) throw new Error(`${file} has no ${part}: update copies.json by hand`);
-    return { ...pin, commit: commitOf(file), sha256: hash(text) };
+    return { ...pin, commit: commitOf(file), sha256: hash(text), ...why };
   });
 }
 
+const usage = [
+  "usage: bun tests/map/copies.ts --update <upstream file> <part> [--outcome ported|closed --reason <why>]",
+  "       bun tests/map/copies.ts --check-base <ref>",
+].join("\n");
+
+/** The arguments of the command line, or undefined when they do not parse. */
+export function parseUpdate(
+  args: readonly string[]
+): { file: string; part: string; why: Why } | undefined {
+  const [flag, file, part, ...rest] = args;
+  if (flag !== "--update" || file === undefined || part === undefined) return undefined;
+  const why: Why = {};
+  for (let index = 0; index < rest.length; index += 2) {
+    const value = rest[index + 1];
+    if (rest[index] === "--outcome" && isOutcome(value)) {
+      why.outcome = value;
+    } else if (rest[index] === "--reason" && value?.trim()) {
+      why.reason = value.trim();
+    } else {
+      return undefined;
+    }
+  }
+  if ((why.outcome === undefined) !== (why.reason === undefined)) return undefined;
+  return { file, part, why };
+}
+
 if (import.meta.main) {
-  const [flag, file, part, ...rest] = process.argv.slice(2);
-  if (flag !== "--update" || file === undefined || part === undefined || rest.length > 0) {
-    console.error("usage: bun tests/map/copies.ts --update <upstream file> <part>");
+  const args = process.argv.slice(2);
+  const [command, target, ...rest] = args;
+  const update = parseUpdate(args);
+  if (command === "--check-base" && target !== undefined && rest.length === 0) {
+    const problems = unexplainedPins(readPins(), basePins(target));
+    for (const line of problems) console.error(line);
+    if (problems.length > 0) process.exit(1);
+    console.log(`${pinsPath}: each pin changed since ${target} names its outcome and reason`);
+  } else if (update) {
+    const { file, part, why } = update;
+    writeFileSync(pinsFile, `${JSON.stringify(repin(readPins(), file, part, why), null, 2)}\n`);
+    console.log(`${pinsPath}: pinned ${part} of ${file}`);
+  } else {
+    console.error(usage);
     process.exit(1);
   }
-  writeFileSync(pinsFile, `${JSON.stringify(repin(readPins(), file, part), null, 2)}\n`);
-  console.log(`${relative(process.cwd(), pinsFile)}: pinned ${part} of ${file}`);
 }

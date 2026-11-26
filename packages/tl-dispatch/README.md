@@ -198,9 +198,11 @@ load no page module:
 - `coverage.ts`: maps each view file under upstream's `features/` to its owner: a page's `views`,
   or a list in `src/views.ts`. It fails for a file two lists name and for what upstream changed on
   a page this app serves; a file no owner loads, or a change on a page upstream draws, prints a note.
-- `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash. When
-  upstream changes one, port the change, then run
-  `bun tests/map/copies.ts --update <upstream file> <part>`, which pins that part and no other.
+- `copies.ts`: `copies.json` pins each part of upstream's code this app copied, by hash, and
+  each upstream view file in `replacedViews` of `src/views.ts` whole. When upstream changes one,
+  port the change or close it, then run
+  `bun tests/map/copies.ts --update <upstream file> <part> --outcome ported|closed --reason <why>`,
+  which pins that part and no other. A pin changed since the merge base needs its outcome and reason.
 
 ## Checks
 

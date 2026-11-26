@@ -2,7 +2,7 @@ import { join, relative } from "node:path";
 
 import { pages } from "@/pages/index";
 import type { Page } from "@/pages/page";
-import { sharedViews, shellViews, widgetViews } from "@/views";
+import { replacedViews, sharedViews, shellViews, widgetViews } from "@/views";
 import { type Files, filesWith, importsOf, resolutionCache } from "../imports";
 import { PACKAGE_ROOT, sourceFiles, UPSTREAM_WEB } from "../source";
 import { forkSrc, pageFile, upstreamScripts } from "./source";
@@ -314,4 +314,21 @@ export function notes(result: Coverage): string[] {
     ...result.unused.filter((entry) => upstream(entry.owner)).map(unusedLine),
     ...result.crossed.filter((entry) => upstream(entry.owner)).map(crossedLine),
   ];
+}
+
+/**
+ * Each key of `replaced` that is not a view file under upstream's `features/`. The copies gate
+ * holds its value to the file's pin, and the pin's copy to a file of this app.
+ */
+export function replacedViewProblems(
+  files: readonly string[],
+  replaced: Readonly<Record<string, string>> = replacedViews
+): string[] {
+  const views = new Set(files);
+  return Object.keys(replaced)
+    .filter((view) => !views.has(view))
+    .map(
+      (view) =>
+        `src/views.ts replacedViews names ${view}, which is not a view file under upstream's features/: name the file the fork replaced`
+    );
 }
