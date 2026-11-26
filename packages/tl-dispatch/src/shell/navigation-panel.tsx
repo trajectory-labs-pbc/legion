@@ -1,11 +1,16 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@legion/ui/components/dropdown-menu";
 import { textVariants } from "@legion/ui/lib/typography";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
+import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
 import type { RefObject } from "react";
 import { CommandButton } from "@/commands/command-button";
-import { PageLink } from "@/navigation/page-link";
-import { people } from "@/pages/people";
 import { AppName } from "./app-name";
 import { Sidebar } from "./sidebar";
 import type { SignOut } from "./use-sign-out";
@@ -64,28 +69,37 @@ export function NavigationPanel({
       </div>
       <Sidebar onNavigate={compact ? onClose : undefined} peek={!compact} user={user} />
       <div className="mt-auto flex flex-col gap-1 pt-4">
-        <div className="flex h-7 items-center gap-2 pl-2">
-          <p
-            className={textVariants({
-              className: "min-w-0 flex-1 truncate",
-              size: "caption",
-              tone: "muted",
-            })}
+        {/* Sign out sits in the account's menu: two deliberate steps, never one stray click. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={signOut.pending}
+            render={
+              <Button
+                className="w-full justify-start"
+                loading={signOut.pending}
+                size="sm"
+                variant="ghost"
+              />
+            }
           >
-            Signed in as{" "}
-            <PageLink
-              className="text-foreground underline underline-offset-4"
-              onClick={onClose}
-              page={people.routes.person}
-              params={{ login: user.login }}
+            <span
+              className={textVariants({
+                className: "min-w-0 flex-1 truncate text-left",
+                size: "caption",
+                tone: "muted",
+              })}
             >
-              {user.login}
-            </PageLink>
-          </p>
-          <Button loading={signOut.pending} onClick={signOut.start} size="xs" variant="ghost">
-            Sign out
-          </Button>
-        </div>
+              Signed in as {user.login}
+            </span>
+            <ChevronsUpDownIcon aria-hidden data-icon="inline-end" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-(--anchor-width)" side="top">
+            <DropdownMenuItem onClick={signOut.start}>
+              <LogOutIcon aria-hidden />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {signOut.error === undefined ? null : (
           <Alert size="compact" variant="danger">
             <AlertTitle>{signOut.error}</AlertTitle>

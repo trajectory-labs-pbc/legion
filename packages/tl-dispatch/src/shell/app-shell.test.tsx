@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import userEvent from "@testing-library/user-event";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
 import { http } from "msw";
@@ -72,8 +73,15 @@ describe("AppShell", () => {
     const button = (text: string) =>
       [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
     settle(() => menuButton(document.body)?.click());
-    await until(() => button("Sign out") !== undefined);
-    settle(() => button("Sign out")?.click());
+    const account = "Signed in as reader";
+    await until(() => button(account) !== undefined);
+    const accountButton = button(account);
+    if (accountButton === undefined) throw new Error("no account button");
+    await userEvent.setup().click(accountButton);
+    const signOut = [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === "Sign out"
+    );
+    settle(() => signOut?.click());
     const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
     // The sign-out first waits for the other tabs' answers.
     for (let tries = 0; tries < 40 && alert() === ""; tries += 1) {
@@ -81,9 +89,9 @@ describe("AppShell", () => {
     }
     expect(alert()).toContain("did not go through");
     click("Close navigation");
-    await until(() => button("Sign out") === undefined);
+    await until(() => button(account) === undefined);
     settle(() => menuButton(document.body)?.click());
-    await until(() => button("Sign out") !== undefined);
+    await until(() => button(account) !== undefined);
     expect(alert()).toContain("did not go through");
   });
 
