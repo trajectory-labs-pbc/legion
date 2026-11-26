@@ -75,11 +75,12 @@ const DURATIONS = new Set([
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
-const FACTOR = String.raw`(0\.[5-9]\d*|1(\.[0-4]\d*|\.50*)?)`;
+// The theme's four steps: 4, 6, 8 and 12 px at an 8 px --radius.
+const FACTOR = String.raw`(0\.5|0\.75|1|1\.5)`;
 const RADIUS = new RegExp(
   String.raw`^(0|var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\)|calc\(infinity \* 1px\))$`
 );
-// A corner step: --radius, or --radius times a factor from 0.5 to 1.5, or another step.
+// A corner step: --radius, or --radius times one of the steps' factors, or another step.
 const STEP = new RegExp(
   String.raw`^(var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\))$`
 );
@@ -497,12 +498,13 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
 ];
 
 /** The selector part that stands for each state a component fills with an accent. */
-const ACCENT_STATES: readonly (readonly [RegExp, string])[] = [
-  [/hover$/, ":hover"],
-  [/^data-highlighted$/, "[data-highlighted]"],
-  [/^data-popup-open$/, "[data-popup-open]"],
-  [/^aria-\[current=page\]$/, '[aria-current="page"]'],
-];
+/** The selector part each state's variant draws on. */
+const ACCENT_STATES: Readonly<Record<string, string>> = {
+  hover: ":hover",
+  "data-highlighted": "[data-highlighted]",
+  "data-popup-open": "[data-popup-open]",
+  "aria-[current=page]": '[aria-current="page"]',
+};
 
 describe("the theme", () => {
   it("draws faint text in the muted colour on each accent fill an entry takes", () => {
@@ -513,16 +515,18 @@ describe("the theme", () => {
       }
     });
     expect(selectors).toHaveLength(1);
-    const states = new Set(
-      SOURCES.flatMap(({ text }) => classTokens(text)).flatMap(
-        (name) => /^(.+):bg-(sidebar-)?accent(\/\d+)?$/.exec(name)?.[1] ?? []
-      )
+    // Each fill's own part: the class that draws it, in the state that shows it.
+    const fills = new Set(
+      SOURCES.flatMap(({ text }) => classTokens(text)).flatMap((name) => {
+        const match = /^(?:.+:)?([^:]+):(bg-(?:sidebar-)?accent)(?:\/\d+)?$/.exec(name);
+        return match === null ? [] : [`${match[1]}:${match[2]}`];
+      })
     );
-    expect(states.size).toBeGreaterThan(3);
-    for (const state of states) {
-      const part =
-        ACCENT_STATES.find(([pattern]) => pattern.test(state))?.[1] ?? `${state}: no selector part`;
-      expect(selectors[0]).toContain(part);
+    expect(fills.size).toBeGreaterThan(4);
+    for (const fill of fills) {
+      const state = fill.slice(0, fill.lastIndexOf(":"));
+      const part = ACCENT_STATES[state] ?? `${state}: no selector part`;
+      expect(selectors[0]).toContain(`[class*="${fill}"]${part}`);
     }
   });
 
