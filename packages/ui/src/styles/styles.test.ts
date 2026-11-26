@@ -504,7 +504,6 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["muted-foreground", "sidebar-accent"],
 ];
 
-/** The selector part that stands for each state a component fills with an accent. */
 /** The selector part each state's variant draws on. */
 const ACCENT_STATES: Readonly<Record<string, string>> = {
   hover: ":hover",
@@ -512,6 +511,35 @@ const ACCENT_STATES: Readonly<Record<string, string>> = {
   "data-popup-open": "[data-popup-open]",
   "aria-[current=page]": '[aria-current="page"]',
 };
+
+/** A class's accent fill as `state:fill`, or why the faint-text rule cannot follow it: a fill on
+ *  a descendant (`[&_…]:`, `*:`) or in another element's state (`group-`, `peer-`) matches the
+ *  rule on the element that carries the class, not the one filled. */
+function accentFill(name: string): string | undefined {
+  const match = /^(.+:)?([^:]+):(bg-(?:sidebar-)?accent)(?:\/\d+)?$/.exec(name);
+  if (match === null) return undefined;
+  const elsewhere = `${match[1] ?? ""}${match[2]}`
+    .split(/:(?![^[]*\])/)
+    .filter((variant) => /^(\[[^\]]*&[_>~+]|\*{1,2}$|group-|peer-)/.test(variant));
+  return elsewhere.length > 0 ? `refused ${name}` : `${match[2]}:${match[3]}`;
+}
+
+describe("accentFill", () => {
+  it("refuses a fill on a descendant or in another element's state, and reads the rest", () => {
+    expect(
+      accentFill("[&_[data-slot=button][data-variant=ghost]]:hover:bg-sidebar-accent/50")
+    ).toStartWith("refused");
+    expect(accentFill("group-hover:bg-accent")).toStartWith("refused");
+    expect(accentFill("*:hover:bg-accent")).toStartWith("refused");
+    expect(accentFill("in-data-[slot=nav-surface]:hover:bg-sidebar-accent/50")).toBe(
+      "hover:bg-sidebar-accent"
+    );
+    expect(accentFill("aria-[current=page]:bg-sidebar-accent")).toBe(
+      "aria-[current=page]:bg-sidebar-accent"
+    );
+    expect(accentFill("bg-accent")).toBeUndefined();
+  });
+});
 
 describe("the theme", () => {
   it("draws faint text in the muted colour on each accent fill an entry takes", () => {
@@ -523,12 +551,12 @@ describe("the theme", () => {
     });
     expect(selectors).toHaveLength(1);
     // Each fill's own part: the class that draws it, in the state that shows it.
-    const fills = new Set(
-      SOURCES.flatMap(({ text }) => classTokens(text)).flatMap((name) => {
-        const match = /^(?:.+:)?([^:]+):(bg-(?:sidebar-)?accent)(?:\/\d+)?$/.exec(name);
-        return match === null ? [] : [`${match[1]}:${match[2]}`];
-      })
-    );
+    const found = SOURCES.flatMap(({ text }) => classTokens(text)).flatMap((name) => {
+      const fill = accentFill(name);
+      return fill === undefined ? [] : [fill];
+    });
+    expect(found.filter((fill) => fill.startsWith("refused"))).toEqual([]);
+    const fills = new Set(found);
     expect(fills.size).toBeGreaterThan(4);
     for (const fill of fills) {
       const state = fill.slice(0, fill.lastIndexOf(":"));
