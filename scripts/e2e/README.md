@@ -98,16 +98,24 @@ Each item below names a script, then what it proves.
 - `leak-guard-image-job.sh`
 
   the published worker image's own `git` and `jj` refuse a push that names something private, driven as one Kubernetes Job on the image digest the caller names, under the rules of `docs/kubernetes.md`, "Running a workload in the cluster from a role":
-  k1 of dispatch://INFRA-1527 — a commit whose message carries a refusable Tailscale MagicDNS host, one whose author identity carries it, one whose only hit is an added line of a tracked file, one whose only hit is the branch name, and a clean one — under `git push` and under `jj git push` in each shape jj's own help in that image enumerates (the bare shape, `--all`, `--change`, `--named` and `--deleted`, the last a ref change with no commit), with `git ls-remote` read before and after every push, the added-line case and the branch-name case reported as checks of their own, and the run failed outright where a shape the script drives is gone from jj;
-  k7's two shared-check failures at those same call sites, the stand-in check removed so that none resolves and a stand-in that exits 2 for an internal error, each of which must refuse under both commands and name the failure it met;
-  and a `jj gerrit upload` of the message case run with `--config git.executable-path=/usr/bin/git`, which the image's jj wrapper must refuse before the upload starts, with exit 2, its `LEAK CHECK SETUP ERROR` line saying `git.executable-path is /usr/bin/git`, and the remote unchanged.
-  The Job runs no launcher, so the daemon pushes it no shared check.
-  It writes its own stand-in shared check into its `emptyDir`, and the rule file embedded in the image's `legion` decides every verdict;
-  k7's other two failures cannot be met in an image at all, since the rules are embedded in that binary and the engine is linked into it, which the Job says in its own log.
+  k1 of dispatch://INFRA-1527 — a commit whose message carries a refusable Tailscale MagicDNS host, one whose author identity carries it, one whose only hit is an added line of a tracked file, one whose only hit is the branch name, and a clean one — under `git push` and under `jj git push` in each shape jj's own help in that image enumerates (the bare shape, `--all`, `--change`, `--named` and `--deleted`, the last a ref change with no commit), with `git ls-remote` read before and after every push, the added-line case and the branch-name case reported as checks of their own, each refusal naming the record and the class and, on the head's image, the text the rule matched and the line it stands on, and the run failed outright where a shape the script drives is gone from jj;
+  a refusable push with no rule file named, which the head's image lands with no `LEAK CHECK` line printed;
+  k7's four setup failures at those same call sites, on the clean case — the stand-in check removed so that none resolves, a stand-in that exits 2 for an internal error, and `LEGION_PRIVATE_NAME_RULES_FILE` naming a missing file or a file that is no TOML — each of which must refuse under both commands as a setup failure (`LEAK CHECK SETUP ERROR`) and name the failure it met;
+  and, on the head's image alone, a `jj gerrit upload` of the message case run with `--config git.executable-path=/usr/bin/git`, which the image's jj wrapper must refuse before the upload starts, with exit 2, its `LEAK CHECK SETUP ERROR` line saying `git.executable-path is /usr/bin/git`, and the remote unchanged.
+
+  - One more case, `jj-push-author-from-trailer`, on the head's image alone, drives the push step of `legion jj` in a repository of its own: one identity makes a commit with `jj new`, the implementer's identity describes it with `jj commit -m` and a `Legion-Role: implementer` trailer, and `jj git push --bookmark` sends it with `LEGION_ROLE_IDENTITIES` set for that push alone.
+    The remote commit's author must be the implementer's identity, which the step sets.
+    The control is the base branch's image from before the rule-file change, which holds the push step or not according to when it was built, so a verdict there would prove nothing.
+
+  The Job runs no launcher, so the daemon hands it neither the shared check nor the deployment's rule file.
+  It writes a stand-in of each into its `emptyDir`:
+  a shared check that clears every call, and a rule file of one rule, for the invented host, which k1's cases name in `LEGION_PRIVATE_NAME_RULES_FILE`.
   The probe the Job runs is `leak-guard-image-probe.sh` beside the harness, which reads it in and writes it into the Job's command, since a Job holds no checkout to read it from, so the two files are one recipe and neither is changed without the other.
   Needs a pod whose projected credential may create a Job (`kubectl -n <namespace> auth can-i create jobs` answers `yes`), the image to prove by digest (`--image`, from the `Worker Image` run's `Record digest` step), and the deployment's compute class (`--node-selector`), whose value is in that deployment's own declaration and in no file of this repository.
-  Its negative control runs in the same Job: a `jj git push` of the message case with `/opt/legion/bin` taken off `PATH`, so the real jj and the real git push with no wrapper and no hook, which must land on the scratch remote.
-  The base branch's image carries the wrappers too, so a run names no `--control`; `--control` drives an image published before the wrappers, on which every push lands, should a second control be wanted;
+  Each arm also runs a negative control in the same Job: a `jj git push` of the message case with `/opt/legion/bin` taken off `PATH`, so the real jj and the real git push with no wrapper and no hook, which must land on the scratch remote.
+  Its second negative control (`--control`) is the base branch's published image from before the `legion` binary stopped carrying a rule file of its own:
+  it carries the same wrappers and runs the rules embedded in its `legion`, reading no `LEGION_PRIVATE_NAME_RULES_FILE`, so it refuses the refusable push with no file named, refuses k1's cases with the Job's file named while naming the class alone, and lands the clean push with a missing or an unparseable file named, and it refuses under the shared check's two failures as the head does.
+  A run without it proves only the head, and an image built after the change is no control;
   `--dry-run` renders the manifest and validates it with `kubectl` without creating anything.
   Legion pod only
 
@@ -658,7 +666,7 @@ the gate compares the two with each other, never with a constant) and `LEGION_EN
 `LEGION_PROMPT_AGENTS=resolved` and `LEGION_PROMPT_SKILLS=resolved` when the gate asks for the task agents and skills the role prompts name;
 and `LEGION_AGENT_MODELS=resolved` when it asks whether those agents' models resolve
 — and exits 1 on anything else, because this proof launches no agent;
-and the daemon runs with `HOME=<work>/home` and no `OMP_PROFILE`/`PI_PROFILE`, where `<work>/home/.omp/plugins/node_modules/@sjawhar/pi-legion/package.json` is the checkout's own manifest (`name`, `version`, `legion`), so it declares the contract this checkout's daemon requires, and `@sjawhar/pi-envoy/package.json` beside it owns the file the stub says the Envoy plugin loaded from.
+and the daemon runs with `HOME=<work>/home` and no `OMP_PROFILE`/`PI_PROFILE`, where `<work>/home/.omp/plugins/node_modules/@sjawhar/pi-legion/package.json` is the checkout's `name` and `version` with the `legion` block a pack writes, since the checkout's own manifest declares no contract: its `daemonApiVersion` is the number `scripts/daemon-contract.sh` prints for the working tree, so it declares the contract this checkout's daemon requires, and `@sjawhar/pi-envoy/package.json` beside it owns the file the stub says the Envoy plugin loaded from.
 The real gate against a real Oh My Pi is proven where a proof installs the plugins (`lib/install-plugin-profile.sh`); this one proves the skeleton.
 
 Each item below names an input and its default, then what it means.
@@ -1752,7 +1760,7 @@ Each item below names an input and its default, then what it means.
 - `LEGION_E2E_PREVIOUS_IMAGE` — required
 
   a worker image, by digest, built from a commit of `main` at daemon API contract 37 (the pod-owned disk, whose harness records each claim's session for the fixture) or 38 (the blocked issues, the same harness) and before one container (its issue pods run six role containers) that this checkout contains;
-  refused when not pinned by digest, when its `org.opencontainers.image.revision` is a commit `origin/main` or this checkout does not contain, when that commit already runs one container, or when that commit's `DaemonAPIVersion` is neither 37 nor 38.
+  refused when not pinned by digest, when its `org.opencontainers.image.revision` is a commit `origin/main` or this checkout does not contain, when that commit already runs one container, or when the daemon API contract `scripts/daemon-contract.sh <rev>` prints for that commit is neither 37 nor 38.
   `previous-layout` builds that commit's own harness and runs it on the image
 
 - `LEGION_E2E_IMPLEMENT_APP_ID` — the default pair's implement App
@@ -5728,6 +5736,33 @@ The planner's launch follows the move into planning, so the list the line names 
 What the proof stands in for is what [`step-records.sh`](#step-recordssh) stands in for.
 `OWNER_STEPS_EVIDENCE_DIR` (default a fresh directory under `TMPDIR`, kept and printed) keeps the transcript, the `nats-server`'s log, the daemon's own, Dispatch's (`dispatch.log`) and the driver's output.
 
+## look-names-its-check.sh
+
+```sh
+LEGION_TEST_PG_DSN=postgres://<user>@127.0.0.1:<port>/<database>?sslmode=disable \
+  bash scripts/e2e/look-names-its-check.sh
+```
+
+This proof builds and boots the whole daemon and a real Dispatch of this checkout, on databases of the caller's PostgreSQL server and a `nats-server` of its own.
+It needs Linux, Go, Git, jj, Bun after `bun install`, awk and Python 3, as [`owner-steps-client.sh`](#owner-steps-clientsh) does.
+`LOOK_NAMES_ITS_CHECK_EVIDENCE_DIR` keeps its evidence.
+GitHub-hosted CI runs its row in `.github/e2e-scripts.json` with the `e2e` label, by manual dispatch and each night.
+
+`TestLookNamesItsCheckLive`, built with `-tags e2e`, walks one issue to its merge and close under `production_check: tester`.
+The tester takes look 1.
+The client is `executePhaseOp` with `createLegionDaemonClient`, run under Bun by the unchanged `owner-steps-client.ts` runner.
+
+- `control-client-look-unnamed` sends a report without `check_opened_at`.
+  It must throw `409 CHECK_LOOK_NOT_SERVED`, and the operator's `legion state --json` must still show look 1 open.
+
+- `client-look-named` reads the opening time from the task the fake runtime received, never from the store.
+  A `pending` with that `check_opened_at` and a `wake_at` must answer `{}`.
+  The same CLI must show the check still open, `lookOpen: false`, and `nextWakeAt` equal to the wake.
+
+The refused call is run first.
+A daemon that chooses a report from the claim's served look records that unnamed report, so the control fails before the named call can pass.
+The proof stands in for GitHub and each worker's runtime; Dispatch, the daemon, its operator CLI, and the plugin's phase operation and HTTP client are real.
+
 ## owner-steps-client.sh
 
 ```sh
@@ -5742,11 +5777,19 @@ One run measured on a loaded host (load 619 to 703) took 864 s: 72 s building th
 The driver is `TestOwnerStepsClientLive` (`internal/daemon/owner_steps_client_live_test.go`, `-tags e2e`), on the rig of [`owner-steps.sh`](#owner-stepssh) (`ownerStepsRig`) over four issues of one project of the run's own, with the project's `default_steps` named so the state the client reads carries the key.
 Each call is one run of `scripts/e2e/owner-steps-client.ts` under bun: it imports `packages/pi-shared` from the tree it is given, makes the call as `packages/pi-legion/src/tools.ts` and `packages/pi-shared/src/legion-phase-ops.ts` make it, and prints what the client answered or threw as one JSON line.
 
-The plugin of the release before is built by the driver itself, in the first check: the newest commit of main's first-parent line whose `DaemonAPIVersion` is below this checkout's.
+The plugin of the release before is built by the driver itself, in the first check: the newest commit of main's first-parent line whose daemon API contract, the number `scripts/daemon-contract.sh <rev>` prints for that commit, is below this checkout's.
 In a run of a pull request that changes the contract, that is the main it merges into; in a run of one that keeps main's contract, and on main, it is the commit before the last change of the contract.
-A clone that holds main's history reads `origin/main` as it stands and fetches nothing; a shallow clone, as CI's checkout is, fetches main from origin 64 commits deep, then 256, 1024 and 4096, then main's whole history, until the walk finds such a commit.
-Which commit that is follows main's contract and this checkout's, so the driver holds that release only to what its own contract says: the contract it reads from that tree's `internal/api/version.go`, never one the driver names for it.
+The walk reads `refs/remotes/origin/main` as the script fetched it, with main's whole history (below), and fetches nothing itself.
+Which commit that is follows main's contract and this checkout's, so the driver holds that release only to what its own contract says: the number `scripts/daemon-contract.sh` prints for that tree, never one the driver names for it.
 The commit is taken with `git archive` into a directory of the run's own and given `bun install --frozen-lockfile` there, as [`busy-relaunch-delivery.sh`](#busy-relaunch-deliverysh) takes its base tree, and the directory goes when the run ends.
+
+The driver's daemon carries a merge order, the one daemon of an e2e driver that does, since it alone meets a plugin of another commit, and an unstamped build numbers its entries by id.
+Before the checks of [`lib/live-daemon-proof.sh`](#liblive-daemon-proofsh), the script fetches without blobs the history of `HEAD` and of main, main into `refs/remotes/origin/main`
+— a shallow clone, as CI's checkout is, holds neither, and one that holds `HEAD`'s history fetches main alone —
+and takes the order with `scripts/daemon-contract-order.sh --stamp HEAD`: main's order with this checkout's own entries after it, the order main takes if this checkout merges next.
+It hands the order to the run, whose `driver` check builds with it (`build_daemon_driver OUT STAMP`).
+A fetch or an order that fails is `FAIL prerequisites: …` and exit 1.
+The order names the entries committed at `HEAD`, and the daemon refuses an order that does not name exactly the entries it was built with, so an entry file the checkout has not committed fails the run.
 
 | check | driven by | read back as | its control, which must fail the check |
 | :--- | :--- | :--- | :--- |
@@ -7909,12 +7952,13 @@ Every entry script that sources this file differs from the others only in what i
 
 ```sh
 . "$root/scripts/e2e/lib/live-daemon-proof.sh"     # sourced, never run
-live_daemon_proof LABEL SLUG TEST EVIDENCE [TIMEOUT [DRIVER]]    # the script's last command, or a subshell's, as above
+live_daemon_proof LABEL SLUG TEST EVIDENCE [TIMEOUT [DRIVER [STAMP]]]    # the script's last command, or a subshell's, as above
 ```
 
 An entry script whose driver runs this checkout's `dispatch` CLI (`handoff-records.sh`, `step-records.sh`, `plan-ratings.sh`) calls `require_dispatch_cli` between the two lines above: it refuses a host with no `bun` on PATH or no `node_modules` at the checkout's root with `FAIL prerequisites: …` and exit 1, before the run builds or starts anything, and exports `LEGION_E2E_REPO_ROOT`, the checkout the driver builds Dispatch from and runs the CLI out of.
 
-`build_daemon_driver OUT` builds every proof's driver, the daemon package's `-tags e2e` test binary, from `root`'s `packages/daemon` into `OUT` (`go test -c -tags e2e ./internal/daemon`).
+`build_daemon_driver OUT [STAMP]` builds every proof's driver, the daemon package's `-tags e2e` test binary, from `root`'s `packages/daemon` into `OUT` (`go test -c -tags e2e ./internal/daemon`).
+With a `STAMP`, the merge order `scripts/daemon-contract-order.sh --stamp` prints, it adds `-ldflags "-X github.com/sjawhar/legion/daemon/internal/api.contractOrder=<STAMP>"`; with none, or an empty one, it adds no flag and the binary numbers its entries by id.
 The `driver` check builds with it, and so does a caller that builds the driver before the run and hands it over as `DRIVER`.
 
 The caller sets `set -euo pipefail` and `root`, the checkout.
@@ -7926,7 +7970,7 @@ It also unsets `PGHOSTADDR`, `PGSERVICE` and `PGSERVICEFILE` before that call, s
 Exit 2 covers one fault of the host as well: [`lib/loopback-dsn.py`](#libloopback-dsnpy) refuses every DSN where the machine has no libpq, and this file answers that refusal as it answers the other two.
 The refusal line tells that case apart, and names libpq and the package to install.
 That guard reads the caller's DSN in the shell, and it reaches no further.
-The `driver` check then builds the test binary (`build_daemon_driver`), or notes the one `DRIVER` names and builds nothing.
+The `driver` check then builds the test binary (`build_daemon_driver`, with `STAMP` when the caller gives one), or notes the one `DRIVER` names and builds nothing.
 That binary reads every DSN it builds from `LEGION_TEST_PG_DSN` back with pgx before anything connects or creates, which is the second of the two frames that hold the run to the server its caller named.
 `DatabaseURL` in `packages/daemon/internal/testpg/testdb/testdb.go` is where that frame is written, and the comment above `require_loopback_dsn` in [`lib/loopback-dsn.sh`](#libloopback-dsnsh) is where this one is.
 On any exit it stops the `nats-server`, removes the work directory and prints its last line through [`lib/run-verdict.sh`](#librun-verdictsh).
@@ -7942,6 +7986,7 @@ A run that ended before its last check with status 0 says so on the line before,
 | `EVIDENCE` | the evidence directory the script's own variable names (`BUSY_RELAUNCH_DELIVERY_EVIDENCE_DIR`, `CHILD_ADOPTION_EVIDENCE_DIR`, `CONFLICT_NO_TAKEOVER_EVIDENCE_DIR`, `CONFLICT_MERGER_EVIDENCE_DIR`, `BEHIND_ENTRY_FENCE_EVIDENCE_DIR`, `PHASE_ENTRY_CONVERGE_EVIDENCE_DIR`, `HANDOFF_RECORDS_EVIDENCE_DIR`, `REVIEW_RANGE_EVIDENCE_DIR`, `MERGE_WAIT_READABLE_EVIDENCE_DIR`, `STEP_RECORDS_EVIDENCE_DIR`, `PLAN_RATINGS_EVIDENCE_DIR`, `OWNER_STEPS_EVIDENCE_DIR`, `OWNER_STEPS_CLIENT_EVIDENCE_DIR`, `EXPERIMENT_EVIDENCE_DIR`, `PROVIDER_ERROR_RETRY_EVIDENCE_DIR`, `CLAIM_COMPACTION_EVIDENCE_DIR`, `ROLE_PROMPT_RULE_EVIDENCE_DIR`, `LATE_COMPLETION_EVIDENCE_DIR`, `SUB_ARCHITECT_EVIDENCE_DIR`, and a `part-one.*` or `part-two.*` directory inside `APPROVED_VERSION_NEWS_EVIDENCE_DIR`), or empty for a fresh one; kept and printed, it holds `transcript.log`, the broker's `nats.log`, the daemon's own `daemon.log`, which the driver writes through `LEGION_E2E_DAEMON_LOG`, and the driver's `proof.log` |
 | `TIMEOUT` | the driver's own deadline (`-test.timeout`), `20m` when it is not given or is empty; `approved-version-news.sh` gives part two 9 minutes for each run its pick makes and 20 more, since the driver bounds each run at eight minutes, and counts no base run of `a4` or `answers` in a run that picks no arm |
 | `DRIVER` | a driver the caller built with `build_daemon_driver` before the run, which the `driver` check notes and does not build again, and which the run does not remove; not given, or empty, the check builds one into the work directory; `approved-version-news.sh` hands both its parts the driver its `plan` check built, in a run of both parts, and every other entry script gives none |
+| `STAMP` | the merge order the check builds the driver with (`build_daemon_driver OUT STAMP`); not given, or empty, the driver numbers its entries by id; [`owner-steps-client.sh`](#owner-steps-clientsh) alone gives one, and a handed `DRIVER` is built with the order its caller chose |
 
 The drivers share their Go harness the same way:
 `internal/daemon/live_proof_test.go` (no build tag, so the package's ordinary `go test` builds it too) holds the broker and log variables (`LEGION_E2E_NATS_URL`, `LEGION_E2E_DAEMON_LOG`);
