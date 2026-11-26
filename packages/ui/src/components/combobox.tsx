@@ -127,7 +127,7 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={anchor !== undefined}
           className={cn(
-            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] overflow-hidden rounded-md border bg-popover text-popover-foreground data-[chips=true]:min-w-(--anchor-width)",
+            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-popover data-[chips=true]:min-w-(--anchor-width)",
             "*:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0",
             popupMotion,
             className

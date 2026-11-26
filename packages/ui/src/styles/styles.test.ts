@@ -73,8 +73,19 @@ const DURATIONS = new Set([
   "var(--tw-duration, var(--default-transition-duration))",
 ]);
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
-// Round is calc(infinity * 1px); every other corner is a multiple of --radius, which is 0.
-const RADIUS = /^(0|var\(--radius\)|calc\(var\(--radius\) \* [\d.]+\)|calc\(infinity \* 1px\))$/;
+// Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
+// token that names a step (`--radius-badge` is `var(--radius-sm)`).
+const FACTOR = String.raw`(0\.[5-9]\d*|1(\.[0-4]\d*|\.5)?)`;
+const RADIUS = new RegExp(
+  String.raw`^(0|var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\)|calc\(infinity \* 1px\))$`
+);
+// A corner step: --radius, or --radius times a factor from 0.5 to 1.5, or another step.
+const STEP = new RegExp(
+  String.raw`^(var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\))$`
+);
+// The theme's shadows. Each one's colour is the shadow tint, so a scheme sets how dark it is.
+const THEME_SHADOW = /\.shadow-(popover|dialog)$/;
+const TINT = "var(--tw-shadow-color, var(--shadow-tint))";
 const THEME_BLOCKS = [":root", ".dark", "@media (prefers-color-scheme: dark) > :root:not(.light)"];
 
 /** Each place the generated CSS breaks a design rule. */
@@ -87,12 +98,19 @@ function designProblems(css: Root): string[] {
   css.walkDecls((decl) => {
     const { prop, value } = decl;
     const text = `${prop}: ${value}`;
-    if (/shadow/.test(prop) && !/-(color|alpha)$/.test(prop)) {
+    if (/shadow/.test(prop) && !/-(color|alpha|tint)$/.test(prop)) {
+      const themeShadow =
+        prop === "--tw-shadow" &&
+        THEME_SHADOW.test(where(decl)) &&
+        value.includes(TINT) &&
+        !/#|\b(rgba?|hsla?|oklch|oklab|lab|lch|color-mix)\(/.test(value.replaceAll(TINT, ""));
       const allowed =
         NO_SHADOW.has(value) ||
+        themeShadow ||
         (prop === "box-shadow" && value === SHADOW_STACK) ||
         (prop === "--tw-inset-ring-shadow" && value === INSET_EDGE);
-      if (!allowed) say(decl, text, "a shadow other than the 1px inset edge");
+      if (!allowed)
+        say(decl, text, "a shadow other than the theme's shadows and the 1px inset edge");
     }
     if (value.includes("drop-shadow(")) say(decl, text, "a drop shadow");
     if (prop === "transition") say(decl, text, "a transition shorthand");
@@ -116,8 +134,15 @@ function designProblems(css: Root): string[] {
     }
     // A spinner turns because it says work is under way; nothing else animates.
     if (prop === "animation" && value !== "var(--animate-spin)") say(decl, text, "an animation");
-    if (/radius$/.test(prop) && !RADIUS.test(value)) say(decl, text, "a radius other than 0");
-    if (prop === "--radius" && value !== "0") say(decl, text, "a radius other than 0");
+    if (/radius$/.test(prop) && prop !== "--radius" && !RADIUS.test(value)) {
+      say(decl, text, "a corner outside the theme");
+    }
+    if (/^--radius-/.test(prop) && !STEP.test(value)) {
+      say(decl, text, "a corner step that is not --radius times 0.5 to 1.5");
+    }
+    if (prop === "--radius" && !/^\d+(\.\d+)?(px|rem)$/.test(value)) {
+      say(decl, text, "a --radius that is not one length");
+    }
     if (prop === "cursor" && value === "pointer") {
       say(decl, text, "a pointer cursor, which only an external link takes");
     }
@@ -199,7 +224,7 @@ const everyToken = SOURCES.flatMap(({ path, text }) =>
 const tokensOf = (path: string): string[] =>
   classTokens(SOURCES.find((source) => source.path === path)?.text ?? "");
 
-// The parts drawn round: dots and avatars. Everything else is square.
+// The parts drawn round: dots and avatars. Everything else takes a corner step.
 const ROUND_SLOTS = [
   "avatar",
   "avatar-group-count",
@@ -239,12 +264,22 @@ describe("the generated CSS", () => {
 });
 
 const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
-  ["a shadow", { extra: ["shadow-sm"] }, "a shadow other than the 1px inset edge"],
-  ["an inset shadow", { extra: ["inset-shadow-sm"] }, "a shadow other than the 1px inset edge"],
-  ["a ring halo", { extra: ["focus:ring-2"] }, "a shadow other than the 1px inset edge"],
-  ["a wider inset edge", { extra: ["inset-ring-2"] }, "a shadow other than the 1px inset edge"],
+  ["a shadow", { extra: ["shadow-sm"] }, "a shadow other than the theme's"],
+  ["an inset shadow", { extra: ["inset-shadow-sm"] }, "a shadow other than the theme's"],
+  ["a ring halo", { extra: ["focus:ring-2"] }, "a shadow other than the theme's"],
+  ["a wider inset edge", { extra: ["inset-ring-2"] }, "a shadow other than the theme's"],
   ["an arbitrary shadow", { extra: ["shadow-[0_0_0_1px_red]"] }, "a shadow other than"],
-  ["a text shadow", { extra: ["text-shadow-sm"] }, "a shadow other than the 1px inset edge"],
+  ["a text shadow", { extra: ["text-shadow-sm"] }, "a shadow other than the theme's"],
+  [
+    "a theme shadow with a literal colour",
+    {
+      css: globalsText.replace(
+        "--shadow-popover: 0 8px 24px -8px var(--shadow-tint);",
+        "--shadow-popover: 0 8px 24px -8px rgb(0 0 0 / 0.2);"
+      ),
+    },
+    "a shadow other than the theme's",
+  ],
   ["a drop shadow", { extra: ["drop-shadow-sm"] }, "a drop shadow"],
   ["a shadow in CSS", { css: `${globalsText}\n.x { box-shadow: 0 0 1px red; }` }, "a shadow"],
   ["a fade of everything", { extra: ["motion-safe:transition-all"] }, "other than opacity"],
@@ -256,12 +291,29 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   ["a delay", { extra: ["delay-75"] }, "a delay"],
   ["a fade that ignores reduced motion", { extra: ["transition-opacity"] }, "reduced-motion"],
   ["an animation", { extra: ["motion-safe:animate-pulse"] }, "an animation"],
-  ["a corner from the default theme", { extra: ["rounded-2xl"] }, "a radius other than 0"],
-  ["an arbitrary corner", { extra: ["rounded-[4px]"] }, "a radius other than 0"],
+  ["a corner from the default theme", { extra: ["rounded-2xl"] }, "a corner outside the theme"],
+  ["an arbitrary corner", { extra: ["rounded-[4px]"] }, "a corner outside the theme"],
   [
-    "a radius token",
-    { css: globalsText.replace("--radius: 0;", "--radius: 0.5rem;") },
-    "a radius other than 0",
+    "a corner step written as a length",
+    {
+      css: globalsText.replace("--radius-sm: calc(var(--radius) * 0.5);", "--radius-sm: 4px;"),
+    },
+    "a corner",
+  ],
+  [
+    "a corner step past the scale",
+    {
+      css: globalsText.replace(
+        "--radius-xl: calc(var(--radius) * 1.5);",
+        "--radius-xl: calc(var(--radius) * 2);"
+      ),
+    },
+    "a corner",
+  ],
+  [
+    "a --radius that is not a length",
+    { css: globalsText.replace("--radius: 8px;", "--radius: var(--x);") },
+    "a --radius that is not one length",
   ],
   ["a pointer cursor", { extra: ["hover:cursor-pointer"] }, "a pointer cursor"],
   ["an arbitrary property", { extra: ["[mask-type:luminance]"] }, "an arbitrary property"],
@@ -275,7 +327,7 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
     "an OS dark block that differs from .dark",
     {
       css: globalsText.replace(
-        /(:root:not\(\.light\) \{\s*color-scheme: dark;\s*--background: )#1b1a18/,
+        /(:root:not\(\.light\) \{\s*color-scheme: dark;\s*--background: )#141311/,
         "$1#000000"
       ),
     },
@@ -439,6 +491,11 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["success", "success-tint"],
   ["sidebar-foreground", "sidebar"],
   ["sidebar-accent-foreground", "sidebar-accent"],
+  // Faint text: a count, a time, a placeholder. A hovered or selected row draws it in muted.
+  ["faint-foreground", "card"],
+  ["faint-foreground", "popover"],
+  ["faint-foreground", "sidebar"],
+  ["faint-foreground", "background"],
 ];
 
 describe("the theme", () => {
@@ -487,8 +544,8 @@ describe("the theme", () => {
 
   it.each(
     Object.entries(THEMES)
-  )("keeps a field's edge at 3:1 on the page, a card and muted, %s", (_name, tokens) => {
-    for (const ground of ["background", "card", "muted"]) {
+  )("keeps a field's edge at 3:1 on the page, a card, a dialog and muted, %s", (_name, tokens) => {
+    for (const ground of ["background", "card", "popover", "muted"]) {
       expect(
         contrast(colour(tokens, "input"), colour(tokens, ground)),
         `input on ${ground}`

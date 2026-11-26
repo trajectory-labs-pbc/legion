@@ -52,13 +52,17 @@ installs from the default branch, not from the ref you asked for.
 - After you change a component's imports or the stylesheet, run `bun run registry` to rewrite
   `registry.json`. A test fails while the file differs from what the script writes.
 - `bun run registry:validate` runs `shadcn registry validate` on it. A test runs the same check.
-- The colours are in `src/styles/theme.css`: light in `:root`, dark in `.dark` and in the
-  `prefers-color-scheme: dark` block, which must match. A `.light` class on the root keeps light
-  when the OS is dark.
+- Every style is a token of `src/styles/theme.css`, and the components name the token, so one
+  edit there restyles every part that draws it: the colours (light in `:root`, dark in `.dark` and
+  in the `prefers-color-scheme: dark` block, which must match; a `.light` class on the root keeps
+  light when the OS is dark), the corners (steps of the one `--radius`, and `--radius-badge` for a
+  badge), the two shadows (`shadow-popover`, `shadow-dialog`, in the scheme's `--shadow-tint`),
+  the table row (`h-row`) and the icon stroke (`--icon-stroke`).
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
-  checks the CSS it generates: no shadow but the 1px inset edge, opacity fades of 150 to 200 ms
-  only, no pointer cursor, no arbitrary properties, one set of dark values, and square corners.
-  `--radius` is 0, and the only other radius is `rounded-full`, which a source check allows on
-  seven parts only: the radio item and its dot, the switch and its thumb, the slider thumb, the
-  avatar and the avatar group's count. It also checks the contrast of each text colour on each
+  checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
+  of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
+  corners from the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and
+  the only other radius is `rounded-full`, which a source check allows on seven parts only: the
+  radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar
+  group's count. It also checks the contrast of each text colour on each
   surface the components draw it on, and of the focus outline and the field and state edges.

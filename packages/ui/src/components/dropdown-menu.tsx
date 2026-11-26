@@ -16,7 +16,7 @@ function DropdownMenuTrigger<Payload = unknown>(props: MenuPrimitive.Trigger.Pro
 
 /** Class names for a menu's popup, shared with the context menu. */
 const menuPopupClass = cn(
-  "z-50 max-h-(--available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground outline-hidden",
+  "z-50 max-h-(--available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 shadow-popover text-popover-foreground outline-hidden",
   popupMotion
 );
 
