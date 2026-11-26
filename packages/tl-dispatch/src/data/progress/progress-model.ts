@@ -461,3 +461,63 @@ export function agentsOf(model: ProgressModel, key: string): ProgressAgent[] {
 export function notRunningClaims(model: ProgressModel, key: string): ProgressIssue[] {
   return subtreeIssues(model.index, key).filter((issue) => linksOf(model, issue).notRunningClaim);
 }
+
+export const CHART_WEEKS = 8;
+
+const WEEK_MS = 7 * DAY_MS;
+
+export interface WeekFigures {
+  /** Monday 00:00 UTC, epoch milliseconds. */
+  readonly start: number;
+  /** The current week, which runs only up to now. */
+  readonly partial: boolean;
+  readonly created: number;
+  readonly closed: number;
+  /** The median of `closed_at` minus `created_at` over the week's closes; null with none. */
+  readonly medianLeadDays: number | null;
+}
+
+/** The start of the UTC week, from Monday 00:00, that holds `time`. */
+export function weekStart(time: number): number {
+  const day = new Date(time);
+  const sinceMonday = (day.getUTCDay() + 6) % 7;
+  return Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() - sinceMonday);
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const upper = sorted[middle] ?? 0;
+  return sorted.length % 2 === 1 ? upper : ((sorted[middle - 1] ?? 0) + upper) / 2;
+}
+
+/** The current week and the 7 full weeks before it, oldest first. */
+export function weeklyFigures(
+  issues: readonly Pick<ProgressIssue, "status" | "created_at" | "closed_at">[],
+  now: number
+): WeekFigures[] {
+  const first = weekStart(now) - (CHART_WEEKS - 1) * WEEK_MS;
+  const weekOf = (time: number) => {
+    const week = Math.floor((time - first) / WEEK_MS);
+    return time > now || week < 0 || week >= CHART_WEEKS ? undefined : week;
+  };
+  const created = new Array<number>(CHART_WEEKS).fill(0);
+  const leads = Array.from({ length: CHART_WEEKS }, (): number[] => []);
+  for (const issue of issues) {
+    const opened = Date.parse(issue.created_at);
+    const openedWeek = weekOf(opened);
+    if (openedWeek !== undefined) created[openedWeek] = (created[openedWeek] ?? 0) + 1;
+    if (issue.closed_at === null || !isClosed(issue.status)) continue;
+    const closed = Date.parse(issue.closed_at);
+    const closedWeek = weekOf(closed);
+    if (closedWeek !== undefined) leads[closedWeek]?.push((closed - opened) / DAY_MS);
+  }
+  return leads.map((weekLeads, week) => ({
+    start: first + week * WEEK_MS,
+    partial: week === CHART_WEEKS - 1,
+    created: created[week] ?? 0,
+    closed: weekLeads.length,
+    medianLeadDays: median(weekLeads),
+  }));
+}
