@@ -205,7 +205,7 @@ describe("AppShell", () => {
     );
   });
 
-  test("draws the inverted L: the sidebar on the window's ground, main in an inset card", async () => {
+  test("draws the inverted L: the sidebar on the window's ground, main in an inset rounded card", async () => {
     viewport(1440);
     const view = await mount();
     const sidebar = view.container.querySelector('[data-testid="sidebar"]');
@@ -213,7 +213,14 @@ describe("AppShell", () => {
     expect(sidebar?.className).toContain("bg-background");
     expect(sidebar?.className).not.toContain("border-r");
     expect(panel?.contains(view.container.querySelector("main"))).toBe(true);
-    for (const name of ["bg-card", "md:border", "md:my-(--panel-inset)", "md:mr-(--panel-inset)"]) {
+    for (const name of [
+      "bg-card",
+      "md:border",
+      "md:rounded-lg",
+      "md:overflow-clip",
+      "md:my-(--panel-inset)",
+      "md:mr-(--panel-inset)",
+    ]) {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");
