@@ -24,7 +24,7 @@ export const RULES = {
   focus: "focus is drawn in the focus token alone (`outline-focus`), at full strength",
   textOpacity: "text at reduced opacity loses its contrast; use a text token",
   radius:
-    "radius outside the theme: 0, `--radius` or one of its steps (0.5 to 1.5 times it), or `rounded-full` for a circle",
+    "radius outside the theme: 0, a corner token of the theme (`--radius`, a step of it or a role that names one), or `rounded-full` for a circle",
   round: "only a dot or an avatar is round: `rounded-full` goes with a numeric `size-N`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
@@ -40,43 +40,36 @@ export const RULES = {
 
 // ---- Declarations, from the compiled classes and from the app's own stylesheets ----
 
-/** The theme's custom properties: the colours and the radii a rule may name. */
+/** The theme's custom properties: the colours and shadows, and the corners a rule may name or
+ *  compile to. */
 export interface ThemeTokens {
   colours: ReadonlySet<string>;
+  /** Each corner token's name. */
   radii: ReadonlySet<string>;
+  /** Each corner token's value: the theme's `rounded-*` classes compile to these. */
+  radiusValues: ReadonlySet<string>;
 }
 
-/** How many times `--radius` a theme radius is: `var(--radius)` is 1, `calc(var(--radius) * 0.5)` 0.5. */
-function radiusScale(value: string): number | undefined {
-  if (value === "var(--radius)") return 1;
-  const scaled = /^calc\(var\(--radius\)\s*\*\s*(\d+(\.\d+)?)\)$/.exec(value);
-  return scaled === null ? undefined : Number(scaled[1]);
-}
-
-/** The steps a corner may take: `--radius` times 0.5 to 1.5. */
-const inSteps = (scale: number) => scale >= 0.5 && scale <= 1.5;
-
-/** Whether a corner is 0, a circle's, or the theme's: `--radius`, a step of it, or a role token. */
+/** The theme's colours and corners. The UI package's own test holds each corner token to a step
+ *  of `--radius`, so this check takes the theme's corners as they are. */
 export function themeTokens(...stylesheets: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
-  // A role token names a step (`--radius-badge: var(--radius-sm)`), so it is read after them.
-  const roles: [string, string][] = [];
+  const radiusValues = new Set<string>();
   for (const css of stylesheets) {
     for (const { property, value, context } of parseCss(css).declarations) {
       if (/^--radius(-|$)/.test(property)) {
-        const scale = property === "--radius" ? 1 : radiusScale(value);
-        if (scale !== undefined && inSteps(scale)) radii.add(property);
-        else roles.push([property, value]);
-      } else if (property.startsWith("--") && context.at(-1)?.startsWith(":root"))
+        radii.add(property);
+        radiusValues.add(property === "--radius" ? "var(--radius)" : value);
+      } else if (
+        property.startsWith("--") &&
+        (context.at(-1)?.startsWith(":root") || property.startsWith("--shadow-"))
+      )
+        // A shadow token lives in `@theme` and holds its colour, so a shadow may name it.
         colours.add(property);
     }
   }
-  for (const [property, value] of roles) {
-    const step = /^var\(\s*(--radius-[\w-]+)\s*\)$/.exec(value)?.[1];
-    if (step !== undefined && radii.has(step)) radii.add(property);
-  }
-  return { colours, radii };
+  return { colours, radii, radiusValues };
 }
 
 const NAMED_COLOURS = new Set(
@@ -133,18 +126,18 @@ function varNames(value: string): string[] {
   return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1] as string);
 }
 
-function radiusAllowed(value: string, radii: ReadonlySet<string>, circle: boolean): boolean {
+function radiusAllowed(
+  value: string,
+  { radii, radiusValues }: ThemeTokens,
+  circle: boolean
+): boolean {
   if (value === "0" || value === "0px") return true;
   if (value === "calc(infinity * 1px)") return circle;
-  // The theme's radii compile inline, as `--radius` times their scale.
-  const scale = radiusScale(value);
-  if (scale !== undefined) return inSteps(scale);
-  const references = [...value.matchAll(/var\(\s*(--[\w-]+)\s*(,[^)]*)?\)/g)];
-  if (references.length === 0) return false;
-  if (references.some((match) => !radii.has(match[1] as string) || match[2] !== undefined)) {
-    return false;
-  }
-  return !/\d(px|r?em|%|vh|vw|ch|ex|pt)\b|var\(/i.test(value.replace(/var\([^)]*\)/g, ""));
+  // The theme's corners compile inline, to the value of their token.
+  if (radiusValues.has(value)) return true;
+  // Or it names one corner token, with no fallback and nothing around it.
+  const name = /^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1];
+  return name !== undefined && radii.has(name);
 }
 
 /**
@@ -180,7 +173,7 @@ export function declarationProblems(
       problems.push(RULES.textOpacity);
     }
   }
-  if (/radius$/.test(property) && !radiusAllowed(value, tokens.radii, circle)) {
+  if (/radius$/.test(property) && !radiusAllowed(value, tokens, circle)) {
     problems.push(RULES.radius);
   }
   if (MOTION_PROPERTY.test(property) && !context.some((prelude) => MOTION_GUARD.test(prelude))) {
