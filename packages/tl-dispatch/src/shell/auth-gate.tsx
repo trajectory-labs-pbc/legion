@@ -13,15 +13,18 @@ import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider
 import "@upstream-dispatch/features/writes/kinds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, Suspense, useEffect, useState } from "react";
+import { lazyNamed } from "@/loading/lazy-named";
 
 import { AppShell } from "./app-shell";
 import { ConnectionErrorPage } from "./connection-error-page";
 import { forgetReads } from "./forget-reads";
 import { ShellSkeleton } from "./shell-skeleton";
-import { SignInPage } from "./sign-in-page";
 import { signIns } from "./sign-ins";
 import { useSignInChannel } from "./use-sign-in-channel";
+
+// A signed-in reader never needs the sign-in page's code.
+const SignInPage = lazyNamed(() => import("./sign-in-page"), "SignInPage");
 
 function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
   const queryClient = useQueryClient();
@@ -71,7 +74,11 @@ export function AuthGate(): ReactNode {
     return <ShellSkeleton />;
   }
   if (signedOut) {
-    return <SignInPage />;
+    return (
+      <Suspense fallback={<ShellSkeleton />}>
+        <SignInPage />
+      </Suspense>
+    );
   }
   if (whoAmI.data !== undefined) {
     return shellFor === whoAmI.data.login ? (
