@@ -164,7 +164,7 @@ describe("the sidebar", () => {
     expect(rows.map((row) => row.href)).toEqual(
       NAV_DESTINATIONS.map((d) => NAV_PAGES[d.name].path)
     );
-    for (const { row } of rows) expect(row.className).toContain("h-7");
+    for (const { row } of rows) expect(row.className).toContain("h-control-sm");
   });
 
   test("shows no key at rest: a row's G chord is in its tooltip", async () => {
@@ -256,7 +256,7 @@ describe("the sidebar", () => {
     // The app's tooltip names Unpin, not the browser's.
     expect(unpin?.hasAttribute("title")).toBe(false);
     const link = unpin?.closest("li")?.querySelector("a");
-    expect(link?.className).toContain("h-7");
+    expect(link?.className).toContain("h-control-sm");
     expect(link?.getAttribute("aria-current")).toBe("page");
     expect(unpin?.closest("li")?.hasAttribute("aria-current")).toBe(false);
   });
