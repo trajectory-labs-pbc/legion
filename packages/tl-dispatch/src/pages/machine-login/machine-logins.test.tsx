@@ -509,3 +509,38 @@ test("MLS-09 a machine login approved on the page joins the list", async () => {
     approveCredentialRecord.mockRestore();
   }
 });
+
+test("MLS-10 Tab reaches a cut name only while it is cut, and a sentence in the approver cell wraps", async () => {
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockImplementation(async () => ({
+    credentials: [adaPod, devbox],
+  }));
+  // happy-dom lays nothing out; a span reads as cut while these stand on its own prototype.
+  const proto = HTMLSpanElement.prototype;
+  const cutNames = () => {
+    Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
+    Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => 100 });
+  };
+
+  try {
+    const { unmount } = renderPage();
+    const name = await screen.findByText("devbox.example.com");
+    expect(name).not.toHaveAttribute("tabindex");
+    const sentence = screen.getByText(
+      "No one: BROKER_POD_OPERATORS maps system:serviceaccount:people:ada to you"
+    );
+    expect(sentence.className).toContain("whitespace-normal");
+    expect(sentence).not.toHaveAttribute("data-slot", "tooltip-trigger");
+    unmount();
+
+    cutNames();
+    renderPage();
+    const cut = await screen.findByText("devbox.example.com");
+    await waitFor(() => expect(cut).toHaveAttribute("tabindex", "0"));
+    expect(cut.className).toContain("focus-visible:outline-focus");
+  } finally {
+    cleanup();
+    Reflect.deleteProperty(proto, "scrollWidth");
+    Reflect.deleteProperty(proto, "clientWidth");
+    getMachineLogins.mockRestore();
+  }
+});
