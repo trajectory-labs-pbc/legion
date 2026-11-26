@@ -139,6 +139,7 @@ func (r *clusterRoutedRuntime) Spawn(ctx context.Context, spec runtime.SpawnSpec
 // unfinished launch with its API unanswered, past a Deployment's progress deadline, and the claim
 // failed (LEGION-653).
 func TestABootAnswersHealthzBeforeItRelaunchesAnUnfinishedLaunchAndTheRelaunchRegisters(t *testing.T) {
+	t.Parallel()
 	cfg := testConfig(t)
 	token, _ := putUnfinished(t, cfg, "LEGION-3", claim.RolePlanner)
 	// One wait of the launcher bounds the boot: a boot that waits for the relaunch answers only
@@ -199,6 +200,7 @@ func (r *coldStartRuntime) Spawn(ctx context.Context, spec runtime.SpawnSpec) (r
 // whole cold start, or its whole launch budget, to the time before the API answered, so two could
 // outlast a Deployment's progress deadline whatever worker_boot_timeout_seconds is (LEGION-653).
 func TestABootWaitsForNoneOfItsUnfinishedLaunches(t *testing.T) {
+	t.Parallel()
 	cfg := testConfig(t)
 	tokens := []claim.Token{}
 	for _, issue := range []string{"LEGION-3", "LEGION-4"} {
@@ -269,8 +271,21 @@ func (r *stopsEarlierRuntime) Spawn(ctx context.Context, spec runtime.SpawnSpec)
 
 // dialShimUntilAcked dials as worker-shim does, again after a refused hello until one is acked,
 // and returns the acknowledged connection: a claim's stream slot is free again once the listener
-// has read its previous connection's close.
+// has read its previous connection's close. It fails the test naming the boot token and the last
+// refusal once no hello is acked within 10 s (ackedShim).
 func dialShimUntilAcked(t *testing.T, address, bootToken string) *shim {
+	t.Helper()
+	acked, err := ackedShim(t, address, bootToken)
+	if err != nil {
+		t.Fatalf("no hello with %s was acked: %v", bootToken, err)
+	}
+	return acked
+}
+
+// ackedShim is dialShimUntilAcked's dialing, answering the shim's last refusal rather than failing
+// the test, for a caller that can say more of why the daemon refused the boot token than the
+// refusal does: the worker stream closes a refused hello with no frame, which reads here as an EOF.
+func ackedShim(t *testing.T, address, bootToken string) (*shim, error) {
 	t.Helper()
 	var last error
 	var acked *shim
@@ -300,9 +315,9 @@ func dialShimUntilAcked(t *testing.T, address, bootToken string) *shim {
 		last = fmt.Errorf("hello refused: %v", err)
 		return false
 	}) {
-		t.Fatalf("no hello with %s was acked: %v", bootToken, last)
+		return nil, last
 	}
-	return acked
+	return acked, nil
 }
 
 // What restoration's gate keeps from a hello, the boot still keeps. A hello still waits until every
@@ -316,6 +331,7 @@ func dialShimUntilAcked(t *testing.T, address, bootToken string) *shim {
 // The store refuses the release at first, which holds the window open: a successful boot
 // reconciliation, restoration closed, the release retried at each orphan sweep.
 func TestAPreRestartProcessAdmittedBeforeItsRelaunchNeitherMovesItsClaimNorLocksOutTheNext(t *testing.T) {
+	t.Parallel()
 	cfg := testConfig(t)
 	token, oldBootToken := putUnfinished(t, cfg, "LEGION-3", claim.RolePlanner)
 	letRelease := refuseRelease(t, cfg, token)
