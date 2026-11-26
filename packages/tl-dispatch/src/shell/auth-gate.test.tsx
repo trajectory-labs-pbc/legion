@@ -1,12 +1,19 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
+import { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import { http } from "msw";
+import type { EventPages } from "@upstream-dispatch/api/event-feed";
+import { liveSocketFor } from "@upstream-dispatch/api/live-socket";
+import type { DispatchEvent } from "@upstream-dispatch/api/types";
+import { answerDraft, setAnswerDraft } from "@upstream-dispatch/features/inbox/answer-drafts";
+import { writesOf } from "@upstream-dispatch/features/writes/write-store";
+import { http, type RequestHandler } from "msw";
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { holdReads, holdShellReads } from "../../tests/network";
+import { answerShellReads, holdReads, json } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
+import { pressWrite, reader } from "../../tests/writes";
 import { AuthGate } from "./auth-gate";
 
 const cleanups: (() => void)[] = [];
@@ -27,6 +34,16 @@ function mount(client = newClient()) {
   );
   cleanups.push(() => view.unmount());
   return view.container;
+}
+
+/** Mounts the gate for `reader`, whose shell's own reads stay pending, and waits for the shell. */
+async function mountSignedIn(client = newClient(), ...handlers: RequestHandler[]) {
+  answerShellReads((url) => (url.endsWith("/auth/whoami") ? json(reader) : undefined));
+  if (handlers.length > 0) answerRequests(...handlers);
+  const container = mount(client);
+  await waitFor(() => expect(container.querySelector('[data-testid="app-shell"]')).not.toBeNull());
+  await shellChunksArrive();
+  return container;
 }
 
 describe("AuthGate", () => {
@@ -94,19 +111,85 @@ describe("AuthGate", () => {
     await waitFor(() => expect(container.textContent).toContain("Sign in"));
   });
 
+  test("SHL-14 a write a reload cut off goes out again once the same person is signed in", async () => {
+    // The page before the reload kept the write it was sending when it went.
+    const before = newClient();
+    writesOf(before).signedIn(reader.login);
+    await pressWrite(before, {
+      write: (bounds) => {
+        bounds.sent?.({ body: { status: "done" }, method: "PATCH", path: "/api/v1/issues/AB-1" });
+        return new Promise<never>(() => {});
+      },
+    });
+    // The page after it.
+    const sent: unknown[] = [];
+    await mountSignedIn(
+      newClient(),
+      http.patch("/api/v1/issues/AB-1", async ({ request }) => {
+        sent.push(await request.json());
+        return Response.json({ key: "AB-1" });
+      })
+    );
+    await waitFor(() => expect(sent).toEqual([{ status: "done" }]));
+  });
+
+  test("SHL-18 a draft is kept for the person signed in, and goes with their sign-out", async () => {
+    const client = newClient();
+    await mountSignedIn(client);
+    settle(() => setAnswerDraft("ask-1", "Yes, ship it"));
+    expect(window.sessionStorage.getItem("dispatch.draft:answer:ask-1")).toContain(
+      '"login":"reader"'
+    );
+    settle(() => writesOf(client).signedOut(reader.login));
+    expect(answerDraft("ask-1")).toBe("");
+    expect(window.sessionStorage.getItem("dispatch.draft:answer:ask-1")).toBeNull();
+  });
+
+  test("SHL-20 a live event reaches the page's cache once the person is signed in", async () => {
+    const sockets = installFakeLiveSockets();
+    cleanups.push(() => sockets.restore());
+    const client = newClient();
+    cleanups.push(() => liveSocketFor(client).close());
+    const log: EventPages = { pageParams: [null], pages: [[]] };
+    client.setQueryData(["events", "AB-1"], log);
+    await mountSignedIn(client);
+    const socket = sockets.latest();
+    settle(() => socket.open());
+    const { sub } = socket.subscribed("events");
+    const event = {
+      actor: { id: "alice", kind: "user" },
+      created_at: "2026-11-01T00:00:00Z",
+      id: 1,
+      issue_key: "AB-1",
+      notify: true,
+      payload: { key: "AB-1", title: "Ship the shell" },
+      project: "AB",
+      seq: 1,
+      type: "issue.updated",
+    } as DispatchEvent;
+    settle(() => {
+      socket.receive({ type: "events_start", sub, since: "0", replay_complete: true });
+      socket.receive({ type: "event", sub, id: "1", event });
+    });
+    expect(client.getQueryData<EventPages>(["events", "AB-1"])?.pages[0]).toEqual([event]);
+  });
+
+  // SignedInParts' duties have their own tests; this says only that the gate mounts it.
+  test("SHL-2 the signed-in shell sits in its keys: ? opens the shortcuts", async () => {
+    await mountSignedIn();
+    settle(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true, cancelable: true })
+      );
+    });
+    const sheet = () => document.body.querySelector('[data-slot="sheet-content"]');
+    // The sheet's code loads when it first opens, and it takes the focus a moment after.
+    await waitFor(() => expect(sheet()?.contains(document.activeElement)).toBe(true));
+    expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
+  });
+
   test("a person draws the shell for them", async () => {
-    // The shell's own reads stay pending; only the sign-in check answers.
-    holdShellReads();
-    answerRequests(
-      http.get("/auth/whoami", () =>
-        Response.json({ kind: "user", login: "reader", event_head: "0" })
-      )
-    );
-    const container = mount();
-    await waitFor(() =>
-      expect(container.querySelector('[data-testid="app-shell"]')).not.toBeNull()
-    );
-    await shellChunksArrive();
+    const container = await mountSignedIn();
     // From 768 px the sidebar names the account.
     expect(container.textContent).toContain("Signed in as reader");
   });

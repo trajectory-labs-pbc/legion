@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
+import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
+import { liveViewsOf } from "@upstream-dispatch/features/agent-view/live-views";
+import { readRecents } from "@upstream-dispatch/features/search/recents";
 import { http } from "msw";
 import { act } from "react";
 
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { holdShellReads } from "../../tests/network";
-import { render, settle } from "../../tests/react";
+import { holdReads, holdShellReads } from "../../tests/network";
+import { render, settle, sleep } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
+import { reader, signedInClient } from "../../tests/writes";
 import { AppShell } from "./app-shell";
+import { SignedInParts } from "./signed-in-parts";
 
 beforeEach(() => {
   holdShellReads();
@@ -39,13 +43,13 @@ function viewport(width: number) {
 }
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
-async function mount(path = "/no-such-page") {
+async function mount(path = "/no-such-page", client = signedInClient()) {
   const view = render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryNavigationProvider path={path}>
-        <KeymapProvider>
-          <AppShell user={{ kind: "user", login: "reader", event_head: "0" }} />
-        </KeymapProvider>
+        <SignedInParts>
+          <AppShell user={reader} />
+        </SignedInParts>
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
@@ -236,6 +240,44 @@ describe("AppShell", () => {
     expect(panel?.lastElementChild?.className.split(" ")).toEqual(
       expect.arrayContaining(["md:overflow-clip", "md:rounded-b-lg", "md:rounded-t-lg"])
     );
+  });
+
+  test("SHL-12 the issue a person opens joins their recent items", async () => {
+    // The issue page's own reads.
+    holdReads("/api/v1/issues/AB-1", "/api/v1/issues/AB-1/*", "/api/v1/me/state");
+    mounted.push({ unmount: () => window.localStorage.clear() });
+    await mount("/issues/AB-1");
+    await act(async () => {
+      await import("@upstream-dispatch/features/issue-page/IssuePage");
+      await sleep(0);
+    });
+    expect(readRecents(reader.login)).toEqual([{ label: "AB-1", path: "/issues/AB-1" }]);
+  });
+
+  // Each part's duty has its own test; these say only that the shell mounts the part.
+  test("SHL-3 the shell gives its pages their contexts: the margin draws in them", async () => {
+    const view = await mount();
+    expect(view.container.querySelector('[data-testid="margin-sheet"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="error-boundary"]')).toBeNull();
+  });
+
+  test("SHL-13 the shell hands the live views the person's pins", async () => {
+    const client = signedInClient();
+    client.setQueryData(userAgentStateQuery().queryKey, {
+      pinned: { pinned_at: "2026-11-01T00:00:00Z", unread_replies: 0 },
+    });
+    await mount(undefined, client);
+    // A draft written and then emptied leaves a view that only a pin keeps.
+    settle(() => {
+      liveViewsOf(client).setDraft("pinned", "Hi");
+      liveViewsOf(client).setDraft("pinned", "");
+    });
+    expect(Object.keys(window.__dispatchLiveViews?.views ?? {})).toEqual(["pinned"]);
+  });
+
+  test("SHL-15 the shell mounts its status corner", async () => {
+    const view = await mount();
+    expect(view.container.querySelector('[data-testid="connection-status"]')).not.toBeNull();
   });
 
   test("SHL-31 the skip link leads to main, which takes the focus, and draws the app's focus ring", async () => {

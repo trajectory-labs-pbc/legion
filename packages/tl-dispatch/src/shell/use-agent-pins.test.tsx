@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
+import { liveViewsOf } from "@upstream-dispatch/features/agent-view/live-views";
 import { legacyPinnedAgentsKey } from "@upstream-dispatch/features/shell/userPreference";
 
-import { render } from "../../tests/react";
-import { type PinWrite, usePinsMigration } from "./use-agent-pins";
+import { holdReads } from "../../tests/network";
+import { render, settle } from "../../tests/react";
+import { type PinWrite, useLiveViewPins, usePinsMigration } from "./use-agent-pins";
 
 function Probe({ login, write }: { login: string; write: PinWrite }) {
   usePinsMigration(login, write);
@@ -60,5 +64,37 @@ describe("usePinsMigration", () => {
     view.rerender(<Probe login="reader" write={writer("b")} />);
     await settleWrites();
     expect(written).toEqual(["a s1"]);
+  });
+});
+
+describe("useLiveViewPins", () => {
+  function Pins() {
+    useLiveViewPins();
+    return null;
+  }
+
+  test("SHL-13 a pinned agent's view is kept with nothing left in it, and an unpinned one's goes", () => {
+    holdReads("/api/v1/me/agents/state");
+    const client = new QueryClient();
+    client.setQueryData(userAgentStateQuery().queryKey, {
+      pinned: { pinned_at: "2026-11-01T00:00:00Z", unread_replies: 0 },
+      unpinned: { unread_replies: 0 },
+    });
+    mounted.push(
+      render(
+        <QueryClientProvider client={client}>
+          <Pins />
+        </QueryClientProvider>
+      )
+    );
+    const views = liveViewsOf(client);
+    // A draft written and then emptied leaves a view that only a pin keeps.
+    settle(() => {
+      for (const sessionId of ["pinned", "unpinned"]) {
+        views.setDraft(sessionId, "Hi");
+        views.setDraft(sessionId, "");
+      }
+    });
+    expect(Object.keys(window.__dispatchLiveViews?.views ?? {})).toEqual(["pinned"]);
   });
 });

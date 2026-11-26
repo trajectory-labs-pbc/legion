@@ -19,26 +19,26 @@ The package's README, "Checks", has the rules.
 
 | ID | Region | Item | Mark | Note |
 | --- | --- | --- | --- | --- |
-| SHL-1 | Providers | The query client and the router | untested | No test mounts the shell under its query client and router |
-| SHL-2 | Providers | `KeymapProvider` | untested | No test presses a shortcut through the shell's keymap |
-| SHL-3 | Providers | `MarginProvider` | untested | No test reads the margin's state through the shell |
-| SHL-4 | Providers | `ReferenceNamesProvider` | untested | No test resolves a reference's name through the shell |
-| SHL-5 | Providers | `MarginSlotProvider` | untested | No test fills the margin slot through the shell |
-| SHL-6 | Providers | `ShellNavigationContext` | untested | No test navigates through the shell's navigation context |
-| SHL-7 | Providers | `ShortcutHelpOpener` | untested | No test opens the shortcut help from the shell |
-| SHL-8 | Providers | `TextAskCard` | untested | No test answers a text ask through the shell's card |
-| SHL-9 | Background parts | `AgentRegistryPoller` | untested | No test polls the agent registry from the shell |
-| SHL-10 | Background parts | `RefPreviewHost` | untested | No test opens a reference's preview from the shell |
+| SHL-1 | Providers | The query client and the router | | |
+| SHL-2 | Providers | `KeymapProvider` | | |
+| SHL-3 | Providers | `MarginProvider` | | |
+| SHL-4 | Providers | `ReferenceNamesProvider` | | |
+| SHL-5 | Providers | `MarginSlotProvider` | | |
+| SHL-6 | Providers | `ShellNavigationContext` | | |
+| SHL-7 | Providers | `ShortcutHelpOpener` | | |
+| SHL-8 | Providers | `TextAskCard` | | Its test finds the card; no test yet answers a text ask |
+| SHL-9 | Background parts | `AgentRegistryPoller` | | |
+| SHL-10 | Background parts | `RefPreviewHost` | | |
 | SHL-11 | Background parts | `InboxDrawer` | | |
-| SHL-12 | Background parts | `useRecordRecents` | untested | No test records a visited page in the recents |
-| SHL-13 | Background parts | The pinned agents | untested | The pins' move is tested; the live views' pins (`setPinned`) are not |
-| SHL-14 | Writes | The write store's resume | untested | No test resumes an unsent write after a reload |
-| SHL-15 | Writes | `PendingWritesIndicator` | untested | No test shows the count of pending writes |
-| SHL-16 | Writes | `DraftsNotKept` | untested | No test shows the notice of drafts not kept |
-| SHL-17 | Writes | `KeptWrites` | untested | No test shows the kept writes |
-| SHL-18 | Writes | The draft stores' sign-in and sign-out | untested | No test moves the drafts on sign-in and clears them on sign-out |
-| SHL-19 | Writes | The import that registers the write kinds | untested | No test sends a write of each kind after the shell loads |
-| SHL-20 | Sign-in | The live event feed (`useEventFeed`) | untested | No test applies a live event to the cache |
+| SHL-12 | Background parts | `useRecordRecents` | | |
+| SHL-13 | Background parts | The pinned agents | | |
+| SHL-14 | Writes | The write store's resume | | |
+| SHL-15 | Writes | `PendingWritesIndicator` | | |
+| SHL-16 | Writes | `DraftsNotKept` | | |
+| SHL-17 | Writes | `KeptWrites` | | |
+| SHL-18 | Writes | The draft stores' sign-in and sign-out | | |
+| SHL-19 | Writes | The import that registers the write kinds | | |
+| SHL-20 | Sign-in | The live event feed (`useEventFeed`) | | |
 | SHL-21 | Sign-in | The sign-in channel's listener | | |
 | SHL-22 | Sign-in | The cache clear on a 401 | | |
 | SHL-23 | Sign-in | The sign-in page | | |

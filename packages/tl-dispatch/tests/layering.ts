@@ -1,13 +1,6 @@
 import { join, sep } from "node:path";
 
-import {
-  filesWith,
-  type Import,
-  importsOf,
-  ownFiles,
-  packageRelative,
-  resolutionCache,
-} from "./imports";
+import { filesWith, type Import, ownFiles, ownOrUpstream, packageRelative, reach } from "./imports";
 import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
 
 export interface LayerViolation {
@@ -28,7 +21,6 @@ const NEVER_LOADED = new Map([
 const RUNTIME = new Set(["static", "dynamic", "require"]);
 
 const own = (path: string) => path.startsWith(SRC + sep);
-const followed = (path: string) => own(path) || path.startsWith(UPSTREAM_WEB + sep);
 
 /** The folder under `src/` a file sits in, by path segment: `src/shell/sidebar.tsx` is in `shell`. */
 export function layerOf(path: string): string | undefined {
@@ -74,13 +66,6 @@ function rulesFor(entry: Import): string[] {
   return rules;
 }
 
-/** Upstream's files are read from disk alone, so one view and one cache serve every walk. */
-const upstream = {
-  files: filesWith(),
-  cache: resolutionCache(),
-  imports: new Map<string, Import[]>(),
-};
-
 /**
  * Every layer rule `files` and the modules they reach break. Imports are resolved as the build
  * resolves them and followed through upstream's code, so a chain that reaches upstream's app
@@ -88,42 +73,27 @@ const upstream = {
  */
 export function layerViolations(files: readonly SourceFile[]): LayerViolation[] {
   const overlay = ownFiles(files);
-  const disk = filesWith(overlay);
-  const cache = resolutionCache();
-  const importsFor = (path: string): Import[] => {
-    if (own(path)) return importsOf(path, disk, cache);
-    let found = upstream.imports.get(path);
-    if (found === undefined) {
-      found = importsOf(path, upstream.files, upstream.cache);
-      upstream.imports.set(path, found);
-    }
-    return found;
-  };
-
   const violations: LayerViolation[] = [];
-  const reachedBy = new Map<string, Import>();
-  const queue = [...overlay.keys()];
-  const seen = new Set(queue);
-  for (let index = 0; index < queue.length; index += 1) {
-    const path = queue[index] as string;
-    for (const entry of importsFor(path)) {
-      if (own(path)) {
-        for (const rule of rulesFor(entry)) {
-          violations.push({
-            file: packageRelative(path),
-            line: entry.line,
-            specifier: entry.specifier ?? "(not a literal)",
-            rule,
-          });
+  const { reachedBy } = reach(
+    overlay.keys(),
+    (entry) => entry.file !== undefined && RUNTIME.has(entry.kind) && ownOrUpstream(entry.file),
+    {
+      files: filesWith(overlay),
+      visit: (path, imports) => {
+        if (!own(path)) return;
+        for (const entry of imports) {
+          for (const rule of rulesFor(entry)) {
+            violations.push({
+              file: packageRelative(path),
+              line: entry.line,
+              specifier: entry.specifier ?? "(not a literal)",
+              rule,
+            });
+          }
         }
-      }
-      if (entry.file === undefined || !RUNTIME.has(entry.kind) || !followed(entry.file)) continue;
-      if (seen.has(entry.file)) continue;
-      seen.add(entry.file);
-      reachedBy.set(entry.file, entry);
-      queue.push(entry.file);
+      },
     }
-  }
+  );
 
   for (const [target, name] of NEVER_LOADED) {
     const chain: Import[] = [];

@@ -80,6 +80,9 @@
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthenticatedApp",
     "copy": "src/shell/auth-gate.tsx",
+    "also": [
+      "src/shell/signed-in-parts.tsx"
+    ],
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "8ad293a3407793cca7c2baff2ae50d57bf104536ce00eaffc20024971e3ef358"
   },
