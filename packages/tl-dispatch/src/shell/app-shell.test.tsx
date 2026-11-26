@@ -255,10 +255,13 @@ describe("AppShell", () => {
     );
   });
 
-  test("the skip link draws the app's focus ring, not the browser's", async () => {
+  test("SHL-31 the skip link leads to main, which takes the focus, and draws the app's focus ring", async () => {
     const view = await mount();
     const skip = view.container.querySelector('a[href="#main-content"]');
     expect(skip?.className).toContain("focus-visible:outline-focus");
+    const main = view.container.querySelector<HTMLElement>("#main-content");
+    expect(main?.tagName).toBe("MAIN");
+    expect(main?.getAttribute("tabindex")).toBe("-1");
   });
 
   test("$mod+k opens the search palette at once: a key typed next is the palette's", async () => {
@@ -307,7 +310,7 @@ describe("AppShell", () => {
       expect(menu()).toBeNull();
     });
 
-    test("i closes the menu and opens the inbox drawer", async () => {
+    test("SHL-11 i closes the menu and opens the inbox drawer", async () => {
       await openMenu();
       press({ key: "i", code: "KeyI" });
       await until(() => menu() === null);

@@ -41,6 +41,16 @@ export interface ShellLayout {
 }
 
 /**
+ * What main shows while a page's code loads: the issue frame's outline, an issue page's tabs, or,
+ * on any other page, a skeleton with no issue tabs. Upstream shows an issue page's tabs on every
+ * page that is not the frame.
+ */
+export function pageFallbackOf(issueFrame: boolean, issue: string | undefined): () => ReactNode {
+  if (issueFrame) return IssueFrameFallback;
+  return issue === undefined ? PageFallback : IssuePageFallback;
+}
+
+/**
  * The current page's layout on this viewport. It also fits main to the on-screen keyboard and
  * moves focus to main when another page opens.
  */
@@ -65,11 +75,7 @@ export function useShellLayout(): ShellLayout {
     compact,
     marginBeside,
     issueFrame,
-    pageFallback: issueFrame
-      ? IssueFrameFallback
-      : layout.issue === undefined
-        ? PageFallback
-        : IssuePageFallback,
+    pageFallback: pageFallbackOf(issueFrame, layout.issue),
     inDrawer: compact || issueFrame,
     fillsViewport,
     hasMargin: layout.margin === true,

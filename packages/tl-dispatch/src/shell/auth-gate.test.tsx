@@ -14,8 +14,9 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-function mount() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+function mount(client = newClient()) {
   const view = render(
     <QueryClientProvider client={client}>
       {/* An address whose page has no chunk, so none arrives while a test waits or after it. */}
@@ -29,7 +30,7 @@ function mount() {
 }
 
 describe("AuthGate", () => {
-  test("draws the skeleton while Dispatch has not said who is here, in the shell's own panel", () => {
+  test("SHL-25 draws the skeleton while Dispatch has not said who is here, in the shell's own panel", () => {
     holdReads("/auth/whoami");
     const container = mount();
     const skeleton = container.querySelector('[aria-busy="true"]');
@@ -49,7 +50,7 @@ describe("AuthGate", () => {
     }
   });
 
-  test("a 401 draws the sign-in page", async () => {
+  test("SHL-23 a 401 draws the sign-in page", async () => {
     answerRequests(
       http.get("/auth/whoami", () =>
         Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 })
@@ -59,7 +60,21 @@ describe("AuthGate", () => {
     await waitFor(() => expect(container.textContent).toContain("Sign in"));
   });
 
-  test("a failed check announces that Dispatch is out of reach, and Retry asks again", async () => {
+  test("SHL-22 a 401 drops every read made for the person who left, but who is here", async () => {
+    answerRequests(
+      http.get("/auth/whoami", () =>
+        Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 })
+      )
+    );
+    const client = newClient();
+    client.setQueryData(["issues"], ["AB-1"]);
+    const container = mount(client);
+    await waitFor(() => expect(container.textContent).toContain("Sign in"));
+    expect(client.getQueryData(["issues"])).toBeUndefined();
+    expect(client.getQueryState(["whoami"])?.status).toBe("error");
+  });
+
+  test("SHL-24 a failed check announces that Dispatch is out of reach, and Retry asks again", async () => {
     let down = true;
     answerRequests(
       http.get("/auth/whoami", () =>

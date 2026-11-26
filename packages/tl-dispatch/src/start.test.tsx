@@ -9,7 +9,7 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-test("installs the stale-chunk recovery before React takes the root for its first render", async () => {
+test("SHL-38 installs the stale-chunk recovery before React takes the root for its first render", async () => {
   // The sign-in check never answers: the app stays on its loading screen.
   holdReads("/auth/whoami");
   const root = document.createElement("div");

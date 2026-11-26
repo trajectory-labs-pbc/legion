@@ -5,6 +5,7 @@ import { join, relative } from "node:path";
 import ts from "typescript";
 
 import { replacedViews } from "@/views";
+import { git } from "../git";
 import { PACKAGE_ROOT, REPO_ROOT, UPSTREAM_WEB } from "../source";
 import { parseScript } from "../typescript";
 import { namedImports, routeTargets, topLevelNames, upstreamAppFile } from "./source";
@@ -245,12 +246,7 @@ export function unexplainedPins(
   return problems;
 }
 
-function git(args: readonly string[]): { ok: boolean; out: string; err: string } {
-  const run = Bun.spawnSync(["git", ...args], { cwd: REPO_ROOT });
-  return { ok: run.exitCode === 0, out: run.stdout.toString(), err: run.stderr.toString().trim() };
-}
-
-/** The pins at the merge base of HEAD and `target`. */
+/** The pins at the merge base of HEAD and `target`; none when the base has no copies.json. */
 export function basePins(target: string): Copy[] {
   const base = git(["merge-base", "HEAD", target]);
   if (!base.ok) throw new Error(`git merge-base HEAD ${target} failed: ${base.err}`);

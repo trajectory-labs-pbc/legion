@@ -8,9 +8,10 @@ import {
   routeIsInbox,
   routeProjectOf,
 } from "@upstream-dispatch/features/refs/routes";
+import { isValidElement } from "react";
 import { pageHref } from "@/navigation/page-route";
 import { pageAt, pages } from "@/pages/index";
-import { inbox } from "./inbox";
+import { InboxPage, inbox } from "./inbox";
 import type { PageLayout } from "./page";
 
 describe("the route tree", () => {
@@ -19,12 +20,17 @@ describe("the route tree", () => {
     expect(paths.filter((path, index) => paths.indexOf(path) !== index)).toEqual([]);
   });
 
-  test("finds the page an address opens, with its params, as the router ranks routes", () => {
+  test("SHL-41 finds the page an address opens, with its params, as the router ranks routes", () => {
     const at = (path: string) => {
       const found = pageAt(path);
       return found && [found.page.id, found.route.path, found.params];
     };
     expect(at("/")).toEqual(["inbox", "/", {}]);
+    // The old credentials addresses draw the Inbox, except the machine login page.
+    expect(at("/credentials/abc")?.[0]).toBe("credentials");
+    const element = pageAt("/credentials/abc")?.route.element;
+    expect(isValidElement(element) && element.type).toBe(InboxPage);
+    expect(at("/credentials/machine")?.[0]).toBe("machine-login");
     expect(at("/issues/AB-1/plan")).toEqual([
       "issue",
       "/issues/:key/*",
@@ -39,7 +45,7 @@ describe("the route tree", () => {
     expect(at("/nowhere/at/all")?.[0]).toBe("not-found");
   });
 
-  test("the old Replies address lands where upstream's builder sends it", () => {
+  test("SHL-42 the old Replies address lands where upstream's builder sends it", () => {
     expect(pageHref(inbox.routes.home, {}, { type: "reply" })).toBe(
       buildInboxPath({ filters: { type: ["reply"] } })
     );
@@ -124,7 +130,7 @@ const ADDRESSES = [
 ];
 
 describe("each page's layout", () => {
-  test.each(ADDRESSES)("at %s, follows upstream's rules for the frame", (address) => {
+  test.each(ADDRESSES)("SHL-30 at %s, follows upstream's rules for the frame", (address) => {
     const url = new URL(address, "https://dispatch.test");
     expect(declaredLayout(url.pathname, url.search)).toEqual(
       upstreamLayout(url.pathname, url.search)

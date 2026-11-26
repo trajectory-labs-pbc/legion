@@ -16,7 +16,7 @@ function Probe({ channel }: { channel: Pick<SignInChannel, "listen"> }) {
 }
 
 describe("useSignInChannel", () => {
-  test("listens while mounted and answers another tab with this tab's unsent writes", () => {
+  test("SHL-21 listens while mounted and answers another tab with this tab's unsent writes", () => {
     let heard: Handlers | undefined;
     let stopped = 0;
     const channel = {
@@ -38,7 +38,7 @@ describe("useSignInChannel", () => {
     expect(stopped).toBe(1);
   });
 
-  test("a tab gone mid sign-out sends Dispatch a whoami, to settle the writes it held", async () => {
+  test("SHL-21 a tab gone mid sign-out sends Dispatch a whoami, to settle the writes it held", async () => {
     let heard: Handlers | undefined;
     const channel = {
       listen: (handlers: Handlers) => {

@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("PageFallback", () => {
-  test("draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
+  test("SHL-43 draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
     await onFakeClock(async () => {
       const view = render(<PageFallback />);
       cleanups.push(() => view.unmount());
