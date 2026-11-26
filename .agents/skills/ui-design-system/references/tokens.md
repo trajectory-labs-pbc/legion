@@ -5,7 +5,8 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 ## The fixed choices
 
 - Monochrome. Colour shows meaning only: a failed state, a state that waits on a person, a passed state, and a destructive action.
-- Square corners: `--radius` is 0. In tl-dispatch only a dot or an avatar is round (`rounded-full` with a `size-*`); see SU6.
+- Corners are steps of one `--radius` (8 px): sm 4, md 6, lg 8 and xl 12 px; `--radius-badge` names sm. In tl-dispatch only a dot or an avatar is round (`rounded-full` with a `size-*`); see SU6.
+- Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
 - Geist for text (`font-sans`), Geist Mono for code values (`font-mono`).
 - Focus is a 2 px outline, offset 2 px, in `--focus` (`outline-focus`). Nothing else draws focus.
 - Dark follows the operating system.

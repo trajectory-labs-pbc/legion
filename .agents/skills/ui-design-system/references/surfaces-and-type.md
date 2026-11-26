@@ -4,7 +4,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 ## Surfaces (SU)
 
-**SU1** No shadow on any surface: a control, a row, a card, a panel, a menu, a dialog, a toast. Surfaces separate by a background step or a 1 px border. A modal overlay adds the scrim. Linear: surfaces that step in lightness for elevation; Linear still draws a soft shadow under floating layers, which this theme leaves out. Pages: all. Check: the design-rule tests refuse a Tailwind shadow class (`shadow-sm`) as a raw colour; `packages/ui`'s style test refuses any shadow but the 1 px inset edge in the components; reviewer for a shadow drawn from a token.
+**SU1** A surface at rest has no shadow: a control, a row, a card, a panel, a toast. A floating layer (menu, popover, select, combobox, tooltip, hover card) takes `shadow-popover`, and a dialog, an alert dialog or a drawer takes `shadow-dialog`: two tokens of `packages/ui/src/styles/theme.css`, in the scheme's `--shadow-tint`. Surfaces at rest separate by a background step or a 1 px border. A modal overlay adds the scrim. Linear: surfaces that step in lightness, with a soft shadow under floating layers. Pages: all. Check: the design-rule tests refuse a Tailwind shadow class (`shadow-sm`) and any shadow but a theme token; `packages/ui`'s style test refuses any shadow but the theme's two and the 1 px inset edge in the components; reviewer for a shadow on a surface at rest.
 
 **SU2** No coloured stripe on the left of a card, a row or a block (`border-l-2`, `border-l-4` with a colour). A state shows by its glyph and its word. Upstream draws such stripes; a rebuilt page draws none. Pages: all. Check: (new) a design-rule test fails on a `border-l-*` width.
 
@@ -12,9 +12,9 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **SU4** No divider between rows of a list. A 1 px `border-border` line separates the header from the content, the properties panel from the main column, and one section from the next. Linear: the 2026 refresh's fewer separators. Check: reviewer.
 
-**SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, sheet, drawer) is `bg-background` with `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
+**SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, alert dialog, drawer) is `bg-popover` with `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
 
-**SU6** Square corners everywhere. In tl-dispatch only a dot or an avatar is round. `packages/ui/README.md` lists the parts that are round in the components. Linear's corners are round; this theme's are not. Check: the design-rule radius tests.
+**SU6** Corners are steps of one `--radius` (8 px): `rounded-sm` 4, `rounded-md` 6, `rounded-lg` 8 and `rounded-xl` 12 px, and `rounded-badge` for a badge. One edit of `--radius` changes every corner. Only a dot or an avatar is round. `packages/ui/README.md` lists the parts that are round in the components. Linear: round corners at small radii. Check: the design-rule radius tests.
 
 ## Density (TY1 to TY3)
 
