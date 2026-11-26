@@ -24,7 +24,7 @@ describe("PageFallback", () => {
       const boxes = [...(skeleton?.querySelectorAll('[data-slot="skeleton"]') ?? [])];
       expect(
         boxes.map((box) => box.className.split(" ").find((word) => word.startsWith("h-")))
-      ).toEqual(["h-7", "h-9", "h-9", "h-9", "h-9"]);
+      ).toEqual(["h-control-sm", "h-9", "h-9", "h-9", "h-9"]);
     } finally {
       realClock();
     }
