@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations } from "./design-rules";
+import { type DesignViolation, designViolations, themeTokens } from "./design-rules";
 import { sourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -131,6 +131,16 @@ describe("design rules", () => {
       }
     }
     expect(clean).toEqual([]);
+  });
+
+  test("takes corners from the theme alone: a corner token the app declares is none", () => {
+    const tokens = themeTokens(
+      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); }",
+      ":root { --radius-card: 3px; --brand: var(--primary); }"
+    );
+    expect([...tokens.radii]).toEqual(["--radius", "--radius-sm"]);
+    expect([...tokens.radiusValues]).toEqual(["var(--radius)", "calc(var(--radius) * 0.5)"]);
+    expect(tokens.colours.has("--brand")).toBe(true);
   });
 
   test("a file is exempt only by the list: a file that says it maps upstream is checked", async () => {
