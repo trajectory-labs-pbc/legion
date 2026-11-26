@@ -510,37 +510,43 @@ test("MLS-09 a machine login approved on the page joins the list", async () => {
   }
 });
 
-test("MLS-10 Tab reaches a cut name only while it is cut, and a sentence in the approver cell wraps", async () => {
+test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows it in full; an uncut one is plain text", async () => {
   const getMachineLogins = spyOn(api, "getMachineLogins").mockImplementation(async () => ({
     credentials: [adaPod, devbox],
   }));
-  // happy-dom lays nothing out; a span reads as cut while these stand on its own prototype.
-  const proto = HTMLSpanElement.prototype;
+  const sentence = "No one: BROKER_POD_OPERATORS maps system:serviceaccount:people:ada to you";
+  // happy-dom lays nothing out; a name reads as cut while these stand.
+  const prototypes = [HTMLSpanElement.prototype, HTMLButtonElement.prototype];
   const cutNames = () => {
-    Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
-    Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => 100 });
+    for (const proto of prototypes) {
+      Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
+      Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => 100 });
+    }
   };
 
   try {
     const { unmount } = renderPage();
-    const name = await screen.findByText("devbox.example.com");
-    expect(name).not.toHaveAttribute("tabindex");
-    const sentence = screen.getByText(
-      "No one: BROKER_POD_OPERATORS maps system:serviceaccount:people:ada to you"
-    );
-    expect(sentence.className).toContain("whitespace-normal");
-    expect(sentence).not.toHaveAttribute("data-slot", "tooltip-trigger");
+    expect(await screen.findByText("devbox.example.com")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "devbox.example.com" })).toBeNull();
+    expect(screen.queryByRole("button", { name: sentence })).toBeNull();
     unmount();
 
     cutNames();
     renderPage();
-    const cut = await screen.findByText("devbox.example.com");
-    await waitFor(() => expect(cut).toHaveAttribute("tabindex", "0"));
-    expect(cut.className).toContain("focus-visible:outline-focus");
+    const name = await screen.findByRole("button", { name: "devbox.example.com" });
+    expect(screen.getByRole("button", { name: sentence })).toBeDefined();
+    const user = userEvent.setup();
+    for (let presses = 0; presses < 20 && document.activeElement !== name; presses += 1) {
+      await user.tab();
+    }
+    expect(name).toHaveFocus();
+    await waitFor(() => expect(screen.getAllByText("devbox.example.com")).toHaveLength(2));
   } finally {
     cleanup();
-    Reflect.deleteProperty(proto, "scrollWidth");
-    Reflect.deleteProperty(proto, "clientWidth");
+    for (const proto of prototypes) {
+      Reflect.deleteProperty(proto, "scrollWidth");
+      Reflect.deleteProperty(proto, "clientWidth");
+    }
     getMachineLogins.mockRestore();
   }
 });

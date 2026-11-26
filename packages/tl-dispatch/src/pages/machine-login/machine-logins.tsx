@@ -30,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/t
 import { textVariants } from "@legion/ui/lib/typography";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useCallback, useRef, useState } from "react";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/features/read-failure";
 import { WriteFailure } from "@/writes/write-failure";
 import {
@@ -60,28 +60,34 @@ const CUT_CELL = "w-1/4 max-w-0";
 
 /** A long name cut to its cell, and shown in full in a tooltip. Its cell is `max-w-0` with a share
  *  of the width, so the table fits the page and the name takes what the other columns leave.
- *  While the name is cut, Tab reaches it, so the keyboard opens the tooltip too. */
+ *  While the name is cut it is a button, so the keyboard reaches it and opens the tooltip too. */
 function Cut({ text }: { text: string }): ReactNode {
-  const span = useRef<HTMLSpanElement>(null);
   const [cut, setCut] = useState(false);
-  useEffect(() => {
-    const el = span.current;
-    if (el === null) return;
-    const measure = () => setCut(el.scrollWidth > el.clientWidth);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
+  // Each element drawn is measured, and again whenever its width changes.
+  const measure = useCallback((element: HTMLElement | null) => {
+    if (element === null) return;
+    const check = () => setCut(element.scrollWidth > element.clientWidth);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  const name = "block w-full truncate text-left";
   return (
     <Tooltip>
       <TooltipTrigger
+        // A new name is a new element, so it is measured anew.
+        key={text}
+        ref={measure}
         render={
-          <span
-            className="block truncate rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            ref={span}
-            tabIndex={cut ? 0 : undefined}
-          />
+          cut ? (
+            <button
+              className={`${name} rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
+              type="button"
+            />
+          ) : (
+            <span className={name} />
+          )
         }
       >
         {text}
@@ -91,9 +97,9 @@ function Cut({ text }: { text: string }): ReactNode {
   );
 }
 
-/** A pod login (`person` set) and a service's token login have no approver. The cell says so in a
- *  sentence, which wraps rather than cuts. */
-function noApprover(login: LauncherCredentialResp): string {
+// A pod login (`person` set) and a service's token login have no approver.
+function approvedBy(login: LauncherCredentialResp): string {
+  if (login.subject == null) return login.approved_by;
   if (login.person != null) return `No one: BROKER_POD_OPERATORS maps ${login.subject} to you`;
   return `No one: ${login.subject}`;
 }
@@ -230,11 +236,7 @@ function LoginRows({
           ) : null}
         </TableCell>
         <TableCell className={textVariants({ className: CUT_CELL, tone: "muted" })}>
-          {login.subject == null ? (
-            <Cut text={login.approved_by} />
-          ) : (
-            <span className="block whitespace-normal wrap-anywhere">{noApprover(login)}</span>
-          )}
+          <Cut text={approvedBy(login)} />
         </TableCell>
         <TableCell className={MUTED}>
           <Timestamp at={login.issued_at} className="whitespace-nowrap tabular-nums" />
