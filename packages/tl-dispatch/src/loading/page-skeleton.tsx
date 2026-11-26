@@ -20,7 +20,7 @@ function useAfter(ms: number): boolean {
 export function PageSkeleton({ label }: { label: string }): ReactNode {
   return (
     <div aria-busy="true" aria-label={label} role="status">
-      <Skeleton className="h-7 w-1/3" />
+      <Skeleton className="h-control-sm w-1/3" />
       <div className="mt-6 space-y-1">
         {ROWS.map((row) => (
           <Skeleton className="h-9 w-full" key={row} />
