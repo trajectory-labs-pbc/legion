@@ -994,6 +994,23 @@
       ]
     },
     {
+      "name": "text",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
       "name": "textarea",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],
