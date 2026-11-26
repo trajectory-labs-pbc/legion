@@ -486,10 +486,12 @@
     "file": "packages/dispatch/web/src/features/sidebar/Sidebar.tsx",
     "part": "*",
     "copy": "src/shell/sidebar.tsx",
-    "also": ["src/shell/sidebar-data.ts"],
-    "commit": "1986e0055471a91c9ea73872ede38392a019b059",
-    "sha256": "14522612766f5b9f2da9147d29d7d61a33790556fd0bbc205c6e5d9e82b8f98f",
-    "outcome": "ported",
-    "reason": "The shell's sidebar replaces this file, so the whole file is pinned in place of its part Sidebar: any change to it is a port."
+    "also": [
+      "src/shell/sidebar-data.ts"
+    ],
+    "commit": "c6e674809a210e7f3076d15e88f4027c8e2d1661",
+    "sha256": "6ea23d1895fdb70cb566b034aa5fd11596fa33194ea4cf979b0e5cefebf8b436",
+    "outcome": "closed",
+    "reason": "The shell's sidebar replaces this file whole. Upstream's change rewords the Priorities row's hover detail, which the shell's sidebar does not draw."
   }
 ]
