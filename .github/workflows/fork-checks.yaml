@@ -1,8 +1,6 @@
 name: Fork checks
 
-# This repository is a fork, and this file, which upstream does not have, checks what the fork
-# adds: its whole diff against upstream's main stays on .github/fork-allowlist.txt. Upstream's own
-# jobs in ci.yaml run beside it.
+# The fork's own checks; the rules are in .github/fork-allowlist.txt.
 on:
   pull_request:
   push:
@@ -11,6 +9,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: fork-checks-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   allowlist:
@@ -21,6 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: blob:none
+          sparse-checkout: .github
           persist-credentials: false
 
       # The parent is read from the API, so no file of this fork names it.

@@ -160,8 +160,18 @@ list "$root" "packages/app/index.ts"
 change "$root" more packages/app/index.ts
 run_check "$root"
 check "fails" "$(is "$status" 1)"
-check "the annotation's file property holds neither" \
-  "$(contains "$out" "^::error file=docs/abc.md::docs/a,b:c.md differs")"
+check "the annotation's file property encodes both" \
+  "$(contains "$out" "^::error file=docs/a%2Cb%3Ac.md::docs/a,b:c.md differs")"
+
+echo "case: a path that holds a percent sign"
+root=$(fixture percent)
+change "$root" fork "docs/100%.md"
+list "$root" "packages/app/index.ts"
+change "$root" more packages/app/index.ts
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "the property and the message encode it" \
+  "$(contains "$out" "^::error file=docs/100%25.md::docs/100%25.md differs")"
 
 echo "case: a line with white space before the path"
 root=$(fixture indented)
