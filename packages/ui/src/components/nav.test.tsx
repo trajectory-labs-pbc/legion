@@ -33,4 +33,20 @@ describe("NavRow", () => {
     );
     expect(screen.getByRole("button", { name: "Open" }).getAttribute("data-slot")).toBe("nav-row");
   });
+
+  it("draws hover a half step under the current row, and keeps the current label's weight", () => {
+    render(<NavRow href="#inbox">Inbox</NavRow>);
+    const tokens = screen.getByRole("link", { name: "Inbox" }).className.split(" ");
+    expect(tokens).toContain("hover:bg-sidebar-accent/50");
+    expect(tokens).toContain("aria-[current=page]:bg-sidebar-accent");
+    expect(tokens.filter((token) => token.includes("font-"))).toEqual([]);
+  });
+
+  it("gives a ghost button on the surface the rows' hover", () => {
+    render(<NavSurface aria-label="Navigation" />);
+    const tokens = screen.getByRole("complementary", { name: "Navigation" }).className.split(" ");
+    for (const hover of ["bg-sidebar-accent/50", "text-sidebar-accent-foreground"]) {
+      expect(tokens).toContain(`[&_[data-slot=button][data-variant=ghost]]:hover:${hover}`);
+    }
+  });
 });
