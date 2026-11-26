@@ -1,6 +1,12 @@
 {
   "root": false,
   "extends": "//",
+  "overrides": [
+    {
+      "includes": ["tests/map/copies.json"],
+      "formatter": { "enabled": false }
+    }
+  ],
   "linter": {
     "rules": {
       "style": {
