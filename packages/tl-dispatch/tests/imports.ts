@@ -4,7 +4,7 @@ import ts from "typescript";
 
 import { importedPath, lineAt, parseCss } from "./css";
 import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
-import { parseScript } from "./typescript";
+import { literal, parseScript } from "./typescript";
 
 export type ImportKind = "static" | "type" | "dynamic" | "require" | "css";
 
@@ -125,13 +125,6 @@ function resolveSpecifier(
   } catch {
     return { file: undefined, pkg, resolved: false };
   }
-}
-
-function literal(node: ts.Node | undefined): string | undefined {
-  return node !== undefined &&
-    (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
-    ? node.text
-    : undefined;
 }
 
 /** The imports a script file writes: static, re-exports, `import()`, `require`, and type-only. */

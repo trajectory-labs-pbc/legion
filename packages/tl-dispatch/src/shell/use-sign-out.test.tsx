@@ -11,7 +11,7 @@ import { SignOutQuestion } from "./sign-out-question";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";
 
 describe("unsentLabels", () => {
-  test("lists each change once, this tab's label first", () => {
+  test("SHL-26 lists each change once, this tab's label first", () => {
     expect(
       unsentLabels(
         [
@@ -85,7 +85,7 @@ describe("useSignOut", () => {
     expect(signOut()?.error).toBeUndefined();
   });
 
-  test("asks first while a change is unsent: Cancel keeps the session, Sign out ends it", async () => {
+  test("SHL-26 asks first while a change is unsent: Cancel keeps the session, Sign out ends it", async () => {
     const { client, sent, signOut } = mount(() => Response.json({ ok: true }));
     // A write is the person's whom whoami names.
     client.setQueryData(["whoami"], { kind: "user", login: "reader", event_head: "0" });

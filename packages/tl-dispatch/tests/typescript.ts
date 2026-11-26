@@ -10,3 +10,11 @@ export function parseScript(path: string, text = readFileSync(path, "utf8")): ts
       : ts.ScriptKind.TSX;
   return ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
 }
+
+/** The text of a string literal, or of a template with no substitution. */
+export function literal(node: ts.Node | undefined): string | undefined {
+  return node !== undefined &&
+    (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    ? node.text
+    : undefined;
+}

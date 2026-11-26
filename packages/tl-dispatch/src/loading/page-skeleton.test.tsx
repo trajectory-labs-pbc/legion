@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("PageFallback", () => {
-  test("draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
+  test("SHL-43 draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
     jest.useFakeTimers();
     try {
       const view = render(<PageFallback />);

@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe("useDetailsDrawer", () => {
-  test("opens for the issue on screen, and another issue closes it", () => {
+  test("SHL-29 opens for the issue on screen, and another issue closes it", () => {
     const view = render(<Probe frame issue="AB-1" />);
     mounted.push(view);
     expect(drawer?.open).toBe(false);
@@ -28,7 +28,7 @@ describe("useDetailsDrawer", () => {
     expect(drawer?.open).toBe(false);
   });
 
-  test("control: outside the issue frame there is no drawer", () => {
+  test("SHL-29 control: outside the issue frame there is no drawer", () => {
     mounted.push(render(<Probe frame={false} issue="AB-1" />));
     expect(drawer).toBeUndefined();
   });

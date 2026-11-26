@@ -227,6 +227,18 @@ load no page module:
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
   outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
+- `bun run check:parity`: `scripts/check-parity.ts` holds each parity list in `tests/parity` to the
+  test names. Each list has a `Region | Rebuilt` table and an `ID | Region | Item | Mark | Note`
+  table. A row of a rebuilt region needs a test whose name starts with its ID, and a test whose
+  name starts with an ID needs a row. A row marked `changed` gives its reason in Note; a row
+  marked `After next sync` gives upstream's commit, which git must know and this branch must not
+  have yet; a row marked `inside` gives the full name of upstream's test that covers it; a row
+  marked `untested` gives in Note why it has no test yet, and fails the check once a test names
+  it, until the mark goes. CI fetches upstream's main only when
+  a row is marked `After next sync` (`bun scripts/check-parity.ts --waiting-commits` prints their
+  commits). The script reads the titles of the `test`, `it` and `.each` calls of the `.test` and
+  `.e2e` files under `src`, `tests`, `scripts` and `e2e`, and a title that starts with a loop's or
+  a `.each` table's first value gives one name for each row.
 - `bun run build && bun run check:entry-budget`: the entry chunk, with the chunks the page preloads beside it, stays within its budget. The
   shortcuts sheet and the tooltips are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.

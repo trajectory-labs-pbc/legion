@@ -37,14 +37,14 @@ function mount(pathname: string) {
 }
 
 describe("useFocusMainOnPageChange", () => {
-  test("leaves focus alone on the first page and moves it to main on another", () => {
+  test("SHL-32 leaves focus alone on the first page and moves it to main on another", () => {
     const shell = mount("/");
     expect(shell.focused()).toBe("button");
     shell.go("/agents");
     expect(shell.focused()).toBe("main");
   });
 
-  test("control: another tab of the same issue is the same page, so focus stays", () => {
+  test("SHL-32 control: another tab of the same issue is the same page, so focus stays", () => {
     const shell = mount("/issues/AB-1");
     shell.go("/issues/AB-1/plan");
     expect(shell.focused()).toBe("button");
@@ -52,7 +52,7 @@ describe("useFocusMainOnPageChange", () => {
     expect(shell.focused()).toBe("main");
   });
 
-  test("an issue's tabs and a project's views are one page each", () => {
+  test("SHL-32 an issue's tabs and a project's views are one page each", () => {
     expect(identity("/issues/AB-1/plan")).toBe(identity("/issues/AB-1"));
     expect(identity("/projects/AB/issues")).toBe(identity("/projects/AB"));
     expect(identity("/agents")).not.toBe(identity("/machines"));
@@ -65,7 +65,7 @@ describe("useFocusMainOnPageChange", () => {
     "/projects/ab",
     "/agents/s-1/live",
     "/",
-  ])("at %s, is upstream's: the issue, else the project page, else the address", (pathname) => {
+  ])("SHL-32 at %s, is upstream's: the issue, else the project page, else the address", (pathname) => {
     expect(identity(pathname)).toBe(
       parseIssuePath(pathname)?.key ?? parseProjectPath(pathname)?.project ?? pathname
     );
