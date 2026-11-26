@@ -24,6 +24,15 @@
   }
 }
 
+/* Upstream scrolls the issue's details line sideways, which on a desktop cuts its last item
+   (Subscribers) at the card's edge. Wider than a phone, the line wraps instead; it still scrolls
+   an item wider than itself, and with nothing to scroll upstream's trailing fade goes. */
+@media (min-width: 48rem) {
+  [data-testid="issue-metadata-rail"] {
+    flex-wrap: wrap;
+  }
+}
+
 /* A field the focus moves to scrolls clear of the folded sidebar's stuck row: the inset and 44 px. */
 html:has([data-testid="panel-header"]) {
   scroll-padding-top: calc(var(--spacing) * 13);

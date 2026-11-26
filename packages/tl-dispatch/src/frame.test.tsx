@@ -100,3 +100,12 @@ test("while the folded sidebar's row is drawn, a focused field scrolls clear of 
     ['html:has([data-testid="panel-header"])', "calc(var(--spacing) * 13)"],
   ]);
 });
+
+test("wider than a phone, the issue's details line wraps rather than scrolls", () => {
+  const rail = parseCss(FRAME_CSS).declarations.filter(
+    (declaration) => declaration.context.at(-1) === '[data-testid="issue-metadata-rail"]'
+  );
+  expect(rail.map(({ context, property, value }) => [context[0], property, value])).toEqual([
+    ["@media (min-width: 48rem)", "flex-wrap", "wrap"],
+  ]);
+});
