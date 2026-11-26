@@ -2,7 +2,8 @@ import { cn } from "@legion/ui/lib/utils";
 import type { ReactNode, RefObject } from "react";
 import { CommandButton } from "@/commands/command-button";
 
-/** The inverted L's content panel: a card inset 8 px from the window. The outline issue page frames itself. */
+/** The inverted L's content panel: a card with the theme's large corner, inset 8 px from the window
+ *  and clipped to that corner. The outline issue page frames itself. */
 export function ContentPanel({
   children,
   fillsViewport,
@@ -27,7 +28,7 @@ export function ContentPanel({
           ? "contents"
           : cn(
               // The inset and the top row are variables, so the margin sheet keeps clear of both (frame.css).
-              "flex min-w-0 flex-1 flex-col border-border bg-card [--panel-inset:--spacing(2)] max-md:border-t md:order-2 md:my-(--panel-inset) md:mr-(--panel-inset) md:border",
+              "flex min-w-0 flex-1 flex-col border-border bg-card [--panel-inset:--spacing(2)] max-md:border-t md:order-2 md:my-(--panel-inset) md:mr-(--panel-inset) md:overflow-clip md:rounded-lg md:border",
               fillsViewport ? "min-h-0" : "md:min-h-[calc(100dvh-2*var(--panel-inset))]",
               sidebarFolded ? "md:ml-(--panel-inset) [--panel-row:--spacing(11)]" : null,
               marginRail ? "xl:mr-16" : null
