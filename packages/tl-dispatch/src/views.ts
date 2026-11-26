@@ -65,5 +65,13 @@ export const sharedViews: Readonly<Record<string, readonly string[]>> = {
  * until it is ported or closed.
  */
 export const replacedViews: Readonly<Record<string, string>> = {
+  "features/credentials/CredentialDecisionButtons.tsx":
+    "src/pages/machine-login/decision-buttons.tsx",
+  "features/credentials/CredentialRecordFacts.tsx": "src/pages/machine-login/record-facts.tsx",
+  "features/credentials/MachineLoginPage.tsx": "src/pages/machine-login/machine-login-page.tsx",
+  "features/credentials/MachineLoginRoute.tsx": "src/pages/machine-login/machine-login-route.tsx",
+  "features/credentials/MachineLoginsSection.tsx": "src/pages/machine-login/machine-logins.tsx",
+  "features/credentials/RevocableList.tsx": "src/pages/machine-login/machine-logins.tsx",
+  "features/shell/NotFoundPage.tsx": "src/pages/not-found/not-found.tsx",
   "features/sidebar/Sidebar.tsx": "src/shell/sidebar.tsx",
 };
