@@ -844,7 +844,7 @@ const SHADOWS: readonly (readonly [
         upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
         "div"
       ),
-    NONE,
+    "inset 0 0 0 var(--border-width) var(--input)",
     VIEWS.wide,
   ],
   [
@@ -1294,6 +1294,32 @@ describe("the repaint of upstream's pages", async () => {
     expect(rulesSetting("--repaint-light")).toEqual(rulesSetting("--background"));
     expect(rootValues(declarations, "light").get("--repaint-light")).toBe("100%");
     expect(rootValues(declarations, "dark").get("--repaint-light")).toBe("0%");
+  });
+
+  // The browser draws a search field's clear button blue, out of reach of the checks on colours.
+  test("paints the clear button of upstream's search fields in a colour of the theme", () => {
+    const fields = (readdirSync(upstreamSrc, { recursive: true }) as string[]).filter(
+      (file) =>
+        /\.tsx$/.test(file) &&
+        readFileSync(join(upstreamSrc, file), "utf8").includes('type="search"')
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    const held = rootValues(declarations, "light");
+    const clear = (hover: boolean, property: string) =>
+      declarations.find(
+        (declaration) =>
+          declaration.property === property &&
+          declaration.context.some(
+            (rule) =>
+              rule.startsWith('input[type="search"]::-webkit-search-cancel-button') &&
+              rule.endsWith(":hover") === hover
+          )
+      )?.value;
+    expect(clear(false, "appearance")).toBe("none");
+    for (const hover of [false, true]) {
+      const token = clear(hover, "background-color")?.match(/^var\((--[\w-]+)\)$/)?.[1];
+      expect(token !== undefined && held.has(token)).toBe(true);
+    }
   });
 
   test("leaves no slate, sky or blue shade, and no other palette colour, a blue", () => {
