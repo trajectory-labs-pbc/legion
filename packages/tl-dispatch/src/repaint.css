@@ -405,6 +405,10 @@
 }
 
 :is(.dispatch-doc, .dispatch-markdown) [data-proof-block-badge] {
+  /* A badge in a document takes the Badge's corner and type, as upstream's pills do below. */
+  border-radius: var(--radius-badge);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
   background-color: var(--muted);
   color: var(--muted-foreground);
 }
@@ -572,42 +576,111 @@ button[class~="disabled:opacity-40"]:disabled {
 }
 
 /* Upstream's pills and chips are `rounded-full` with side padding; a dot, an avatar or a round
-   icon button has none. A pill takes the Badge's corner, a theme token, and keeps its own padding
-   and colours. A floating button (`shadow-lg`) keeps its shape. */
+   icon button has none. A pill takes the Badge's corner, a theme token, and sentence case, and
+   keeps its own padding and colours. A floating button (`shadow-lg`) keeps its shape. */
 .rounded-full[class*="px-"]:not(.shadow-lg) {
   border-radius: var(--radius-badge);
-}
-
-/* A small pill, a status or a count, takes the Badge's type too. A pill set in body text (a
-   header's label or assignee control, a view switch) keeps the size of the text beside it. */
-.rounded-full[class*="px-"]:not(.shadow-lg, .text-sm, .text-base) {
-  font-size: var(--text-xs);
-  line-height: var(--tw-leading, var(--text-xs--line-height));
-  font-weight: var(--font-weight-medium);
   letter-spacing: normal;
   text-transform: none;
 }
 
-/* Under a mouse a pill upstream sizes only for touch (44 px) takes a control's height. */
+/* A small pill, a status or a count, takes the Badge's type too. A pill set in body text (a
+   header's status or assignee control, a view switch) keeps the size of the text beside it. */
+.rounded-full[class*="px-"]:not(.shadow-lg, .text-sm, .text-base) {
+  font-size: var(--text-xs);
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+  font-weight: var(--font-weight-medium);
+}
+
+/* A round link around a pill takes the pill's corner, so its focus ring follows the pill. */
+.rounded-full:not([class*="px-"], .shadow-lg):has(.rounded-full[class*="px-"]) {
+  border-radius: var(--radius-badge);
+}
+
+/* Under a mouse a pill upstream sizes only for touch (44 px) takes a small control's height. */
 @media (pointer: fine) {
   .rounded-full.min-h-11[class*="px-"]:not(.shadow-lg, [class*=":min-h-"]) {
-    min-height: calc(var(--spacing) * 7);
+    min-height: var(--spacing-control-sm);
   }
 }
 
-/* Upstream's small corner is Tailwind's 0.25rem: it takes the theme's smallest step, unless the
-   element sets a corner of its own. */
-.rounded:not([class*="rounded-"]) {
+/* Upstream's small corner is Tailwind's 0.25rem, and its own corners are pixel values: each takes
+   the nearest theme step, unless the element sets another corner at some width. */
+.rounded:not([class*="rounded-"]),
+.rounded-\[5px\]:not([class*=":rounded-"]) {
   border-radius: var(--radius-sm);
 }
 
-/* An ask's or a decision's card marks its urgency with a 4 px stripe down its left edge, which
-   its pill already says. The stripe goes; a card with a border keeps that border on this side. */
-.rounded-xl.border-l-4 {
-  border-left-width: 0;
+:is(.rounded-\[6px\], .rounded-\[7px\]):not([class*=":rounded-"]) {
+  border-radius: var(--radius-md);
 }
 
-.rounded-xl.border.border-l-4 {
-  border-left-width: thin;
+:is(.rounded-\[8px\], .rounded-\[10px\]):not([class*=":rounded-"]) {
+  border-radius: var(--radius-lg);
+}
+
+.rounded-2xl:not([class*=":rounded-"]) {
+  border-radius: var(--radius-xl);
+}
+
+/* Upstream's shadows. A menu or a popover takes the theme's popover shadow, a drawer or a sheet
+   the dialog's. A surface at rest casts none: a card keeps its edge, the waiting ask its ring and
+   the stuck header its bottom line, in the theme's edge width. */
+:is(.shadow-lg, .shadow-xl, [class~="shadow-[0_12px_30px_rgba(28,25,23,0.18)]"]):not(
+    [class*=":shadow-"]
+  ) {
+  --tw-shadow: var(--shadow-popover);
+}
+
+:is(
+    [class~="shadow-[-12px_0_30px_rgba(28,25,23,0.14)]"],
+    [class~="shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"],
+    [class~="shadow-[0_-10px_30px_rgba(0,0,0,0.2)]"]
+  ) {
+  --tw-shadow: var(--shadow-dialog);
+}
+
+:is(.shadow-sm, [class~="shadow-[0_2px_12px_rgba(28,25,23,0.07)]"]):not([class*=":shadow-"]) {
+  --tw-shadow: initial;
+}
+
+[class~="shadow-[0_0_0_1px_var(--color-page-waiting),0_2px_12px_rgba(28,25,23,0.07)]"] {
+  --tw-shadow: 0 0 0 var(--border-width) var(--warning);
+}
+
+[class~="shadow-[0_1px_0_var(--color-page-line),0_6px_14px_rgba(28,25,23,0.06)]"] {
+  --tw-shadow: 0 var(--border-width) 0 var(--border);
+}
+
+/* An ask's or a decision's card marks its urgency with a 4 px stripe down its left edge, which
+   its pill already says. The stripe goes: the left side takes the theme's edge width. */
+.rounded-xl.border-l-4 {
+  border-left-width: var(--border-width);
+}
+
+/* An ask card whose only edge was the stripe takes the theme's edge on all four sides. */
+.rounded-xl.border-l-4:not(.border) {
+  border-width: var(--border-width);
+  border-color: var(--border);
+}
+
+/* A bordered card's left side takes the colour of its other three: the theme's edge, or, on a
+   selected decision, the selection's, which its stripe's own colour then names. */
+.rounded-xl.border.border-l-4:not([class~="border-sky-500"]) {
   border-left-color: var(--border);
+}
+
+.rounded-xl.border.border-l-4[class~="border-sky-500"][class~="border-l-amber-700"] {
+  --color-amber-700: var(--color-sky-500);
+  --color-amber-400: var(--color-sky-400);
+}
+
+/* The plan's and the verification's rows mark a step or a statement with a stripe too, which
+   their cells already say. Where a row is drawn as a card (under 761 px) that side takes the
+   row's edge: `--color-page-line` is the muted fill. */
+[class~="border-page-line"]:is([class~="border-l-4"], [class~="max-[761px]:border-l-4"]) {
+  @variant max-[761px] {
+    border-left-width: var(--border-width);
+    border-left-color: var(--muted);
+  }
 }
