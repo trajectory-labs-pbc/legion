@@ -192,6 +192,9 @@ mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'GH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$PR_TEXT_TEST_DIR/calls"
+# A case that names another repository (PR_TEXT_TEST_REPO) reads example/repo's answers.
+prefix="repos/$GITHUB_REPOSITORY/"
+set -- "$1" "${2/#"$prefix"/repos/example/repo/}" "${@:3}"
 # page <route> <url>: the page of a comment route the url's `page=N` asks for.
 page() {
   local file="$PR_TEXT_TEST_DIR/$1.${2##*&page=}"
@@ -256,7 +259,7 @@ run_pr_text() {
   if [ $# -gt 0 ]; then write_pr_text "$@"; fi
   : > "$work/calls"
   set +e
-  out=$(GITHUB_EVENT_PATH="$work/event.json" GITHUB_REPOSITORY=example/repo \
+  out=$(GITHUB_EVENT_PATH="$work/event.json" GITHUB_REPOSITORY="${PR_TEXT_TEST_REPO:-example/repo}" \
     GITHUB_SERVER_URL="file://$work/remote" PR_TEXT_TEST_DIR="$work" PATH="$work/bin:$PATH" \
     "$pr_text_script" 2>&1)
   status=$?
