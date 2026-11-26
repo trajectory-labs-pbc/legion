@@ -301,3 +301,73 @@ describe("progress figures", () => {
     expect(figuresFor(built, "ALPHA-404")).toBeUndefined();
   });
 });
+
+/** The state of a root ALPHA-1 with one child ALPHA-2, and asks on either. */
+function stateOfTree(root: IssueFields, child: IssueFields, asks: readonly ProgressAsk[] = []) {
+  return figuresOf(
+    [issue("ALPHA-1", root), issue("ALPHA-2", { ...child, parent: "ALPHA-1" })],
+    "ALPHA-1",
+    asks
+  ).state;
+}
+
+describe("progress states", () => {
+  test("one tree of each state", () => {
+    const working = { status: "in_progress", updated: DAY };
+    expect(stateOfTree({}, working)).toBe("on-track");
+    expect(stateOfTree({ updated: 10 * DAY }, { ...working, updated: 10 * DAY })).toBe("at-risk");
+    expect(stateOfTree({ updated: 20 * DAY }, { ...working, updated: 20 * DAY })).toBe("off-track");
+    expect(stateOfTree({}, { status: "todo" })).toBe("parked");
+    expect(stateOfTree({}, { status: "done" })).toBe("ready-to-close");
+    expect(stateOfTree({ status: "done" }, { status: "done" })).toBe("closed");
+  });
+
+  test("a waiting ask is At risk only when more than 2 days old", () => {
+    const working = { status: "in_progress" };
+    expect(stateOfTree({}, working, [ask("a1", "ALPHA-2", 2 * DAY)])).toBe("on-track");
+    expect(stateOfTree({}, working, [ask("a1", "ALPHA-2", 2 * DAY + MINUTE)])).toBe("at-risk");
+  });
+
+  test("the off-track-limit test: a last change is At risk past 7 days and Off track past 14", () => {
+    const at = (age: number) =>
+      stateOfTree({ updated: age }, { status: "in_progress", updated: age });
+    expect(at(7 * DAY)).toBe("on-track");
+    expect(at(7 * DAY + MINUTE)).toBe("at-risk");
+    expect(at(14 * DAY)).toBe("at-risk");
+    expect(at(14 * DAY + MINUTE)).toBe("off-track");
+  });
+
+  test("the parked-and-old test: no work in flight is Parked, however old", () => {
+    expect(
+      stateOfTree({ updated: 20 * DAY }, { status: "todo", updated: 20 * DAY }, [
+        ask("a1", "ALPHA-2", 3 * DAY),
+      ])
+    ).toBe("parked");
+  });
+
+  test("every descendant closed with the root in flight is Ready to close, however old", () => {
+    expect(
+      stateOfTree({ status: "in_progress", updated: 20 * DAY }, { status: "done" }, [
+        ask("a1", "ALPHA-1", 3 * DAY),
+      ])
+    ).toBe("ready-to-close");
+  });
+
+  test("an old last change and an old ask give Off track", () => {
+    expect(
+      stateOfTree({ updated: 20 * DAY }, { status: "in_progress", updated: 20 * DAY }, [
+        ask("a1", "ALPHA-2", 3 * DAY),
+      ])
+    ).toBe("off-track");
+  });
+
+  test("the closed-root test: a closed root with old work in flight below it is Off track", () => {
+    expect(stateOfTree({ status: "done" }, { status: "in_progress", updated: 20 * DAY })).toBe(
+      "off-track"
+    );
+  });
+
+  test("a closed root with every descendant closed is Closed", () => {
+    expect(stateOfTree({ status: "done", updated: 40 * DAY }, { status: "done" })).toBe("closed");
+  });
+});

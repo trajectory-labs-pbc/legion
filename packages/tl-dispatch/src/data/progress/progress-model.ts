@@ -133,6 +133,25 @@ export interface ProgressFigures {
   readonly waitingAsks: number;
   /** The `created_at` of the oldest waiting ask, or null when none waits. */
   readonly oldestAsk: number | null;
+  readonly state: ProgressState;
+}
+
+export type SubtreeCounts = Omit<ProgressFigures, "issue" | "state"> & {
+  readonly issue: Pick<ProgressIssue, "status">;
+};
+
+/** The first rule that applies gives the state. */
+export function stateOf(counts: SubtreeCounts, now: number): ProgressState {
+  const allBelowClosed = counts.descendantsClosed === counts.descendants;
+  if (allBelowClosed) return isClosed(counts.issue.status) ? "closed" : "ready-to-close";
+  if (counts.inFlight === 0) return "parked";
+  const { lastChange, oldestAsk } = counts;
+  if (lastChange !== null && moreThanDays(lastChange, now, CHANGE_OFF_TRACK_DAYS)) {
+    return "off-track";
+  }
+  const changeLate = lastChange !== null && moreThanDays(lastChange, now, CHANGE_AT_RISK_DAYS);
+  const askLate = oldestAsk !== null && moreThanDays(oldestAsk, now, ASK_AT_RISK_DAYS);
+  return changeLate || askLate ? "at-risk" : "on-track";
 }
 
 export interface ProgressModel {
@@ -214,9 +233,14 @@ function ownTotals(model: ProgressModel, issue: ProgressIssue): Totals {
   };
 }
 
-function figuresFrom(issue: ProgressIssue, own: Totals, below: Totals): ProgressFigures {
+function figuresFrom(
+  issue: ProgressIssue,
+  own: Totals,
+  below: Totals,
+  now: number
+): ProgressFigures {
   const all = addTotals(own, below);
-  return {
+  const counts = {
     issue,
     descendants: below.size,
     descendantsClosed: below.closed,
@@ -228,6 +252,7 @@ function figuresFrom(issue: ProgressIssue, own: Totals, below: Totals): Progress
     waitingAsks: all.waitingAsks,
     oldestAsk: all.oldestAsk,
   };
+  return { ...counts, state: stateOf(counts, now) };
 }
 
 /** Walks children before their parent, so each issue's totals add to its parent's. */
@@ -244,7 +269,7 @@ function foldSubtree(
     if (!met.has(child.key)) below = addTotals(below, foldSubtree(model, child, met, figures));
   }
   const own = ownTotals(model, issue);
-  if (children.length > 0) figures.set(issue.key, figuresFrom(issue, own, below));
+  if (children.length > 0) figures.set(issue.key, figuresFrom(issue, own, below, model.now));
   return addTotals(own, below);
 }
 
