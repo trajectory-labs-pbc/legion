@@ -1,18 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
+import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
 import { liveViewsOf } from "@upstream-dispatch/features/agent-view/live-views";
 import { readRecents } from "@upstream-dispatch/features/search/recents";
+import { userPreferenceStorageKey } from "@upstream-dispatch/features/shell/userPreference";
 import { http } from "msw";
-import { act } from "react";
 
 import { commandStore } from "@/commands/command-store";
-import { MemoryNavigationProvider } from "../../tests/navigation";
-import { holdReads, holdShellReads } from "../../tests/network";
+import { MemoryNavigationProvider, type TakeMove } from "../../tests/navigation";
+import { holdReads, holdShellReads, waitFor } from "../../tests/network";
 import { render, settle, sleep } from "../../tests/react";
-import { shellChunksArrive } from "../../tests/shell-chunks";
+import { chunksArrive, shellChunksArrive } from "../../tests/shell-chunks";
 import { setWidth } from "../../tests/viewport";
 import { reader, signedInClient } from "../../tests/writes";
 import { AppShell } from "./app-shell";
@@ -36,10 +37,10 @@ afterEach(() => {
 });
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
-async function mount(path = "/no-such-page", client = signedInClient()) {
+async function mount(path = "/no-such-page", client = signedInClient(), takeMove?: TakeMove) {
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path={path}>
+      <MemoryNavigationProvider path={path} takeMove={takeMove}>
         <SignedInParts>
           <AppShell user={reader} />
         </SignedInParts>
@@ -51,12 +52,26 @@ async function mount(path = "/no-such-page", client = signedInClient()) {
   return view;
 }
 
-/** Waits, a step at a time, for the menu's sheet, whose code loads when it first opens. */
-async function until(done: () => boolean) {
-  for (let tries = 0; tries < 40 && !done(); tries += 1) {
-    await sleep(25);
-  }
+/** Mounts the shell at `path`, and gives back the move to another address, as a followed link. */
+async function mountMovable(path: string) {
+  let move: ((to: string) => void) | undefined;
+  const view = await mount(path, signedInClient(), (next) => {
+    move = next;
+  });
+  const moveTo = (to: string) =>
+    settle(() => {
+      if (move === undefined) throw new Error("the router has not handed over its move");
+      move(to);
+    });
+  return { view, moveTo };
 }
+
+const issuePageArrives = () =>
+  chunksArrive(() => import("@upstream-dispatch/features/issue-page/IssuePage"));
+
+/** Keeps the issue page's reads of AB-1 pending. */
+const holdIssueReads = () =>
+  holdReads("/api/v1/issues/AB-1", "/api/v1/issues/AB-1/*", "/api/v1/me/state");
 
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
@@ -71,7 +86,7 @@ describe("AppShell", () => {
       [...document.body.querySelectorAll("button")].find((b) => b.textContent === text);
     settle(() => menuButton(document.body)?.click());
     const account = "Signed in as reader";
-    await until(() => button(account) !== undefined);
+    await waitFor(() => button(account) !== undefined);
     const accountButton = button(account);
     if (accountButton === undefined) throw new Error("no account button");
     await userEvent.setup().click(accountButton);
@@ -90,9 +105,9 @@ describe("AppShell", () => {
     }
     expect(alert()).toContain("did not go through");
     click("Close navigation");
-    await until(() => button(account) === undefined);
+    await waitFor(() => button(account) === undefined);
     settle(() => menuButton(document.body)?.click());
-    await until(() => button(account) !== undefined);
+    await waitFor(() => button(account) !== undefined);
     expect(alert()).toContain("did not go through");
   });
 
@@ -104,7 +119,7 @@ describe("AppShell", () => {
     settle(() => commandStore.run("global.sign-out"));
     const alert = () => document.body.querySelector('[role="alert"]');
     // The sign-out first waits for the other tabs' answers.
-    await until(() => alert() !== null);
+    await waitFor(() => alert() !== null);
     expect(alert()?.textContent).toContain("did not go through");
     expect(alert()?.querySelector("button")?.textContent).toBe("Retry");
   });
@@ -253,14 +268,100 @@ describe("AppShell", () => {
   });
 
   test("SHL-12 the issue a person opens joins their recent items", async () => {
-    // The issue page's own reads.
-    holdReads("/api/v1/issues/AB-1", "/api/v1/issues/AB-1/*", "/api/v1/me/state");
+    holdIssueReads();
     await mount("/issues/AB-1");
-    await act(async () => {
-      await import("@upstream-dispatch/features/issue-page/IssuePage");
-      await sleep(0);
-    });
+    await issuePageArrives();
     expect(readRecents(reader.login)).toEqual([{ label: "AB-1", path: "/issues/AB-1" }]);
+  });
+
+  test("SHL-27 a live view outlives its route: it stays mounted while the person is on another page", async () => {
+    // The conversation's own reads.
+    holdReads("/api/v1/agents/s-1/*");
+    const { view, moveTo } = await mountMovable("/agents/s-1/live");
+    const live = () =>
+      view.container.querySelector<HTMLElement>('main [data-testid="agent-live-view"]');
+    // The view's code loads when the first live view opens; until then it draws nothing.
+    await waitFor(() => (live()?.childElementCount ?? 0) > 0);
+    const opened = live();
+    expect(opened?.dataset.front).toBe("true");
+    moveTo("/no-such-page");
+    expect(live()).toBe(opened);
+    expect(opened?.dataset.front).toBe("false");
+    // Back on its address, the same view is in front again, and stops lingering.
+    moveTo("/agents/s-1/live");
+    expect(live()).toBe(opened);
+    expect(opened?.dataset.front).toBe("true");
+  });
+
+  test("SHL-28 from 1280 px the margin is a column beside the page", async () => {
+    holdIssueReads();
+    setWidth(1280);
+    const view = await mount("/issues/AB-1");
+    await issuePageArrives();
+    const column = view.container.querySelector<HTMLElement>(
+      '[data-testid="desktop-margin-shell"]'
+    );
+    expect(column?.hidden).toBe(false);
+    expect(column?.parentElement).toBe(view.container.querySelector("main")?.parentElement);
+  });
+
+  /** The headings of the error fallbacks the shell draws, or those inside `within`. */
+  const fallbacks = (view: { container: HTMLElement }, within = "") =>
+    [...view.container.querySelectorAll(`${within} [data-testid="error-boundary"] h2`)].map(
+      (heading) => heading.textContent
+    );
+
+  test("SHL-40 a page that fails to draw says so in main, the shell stays, and the next page clears it", async () => {
+    quietConsoleError();
+    holdIssueReads();
+    // An issue the page cannot draw.
+    answerRequests(http.get("/api/v1/issues/AB-1", () => Response.json(null)));
+    setWidth(1440);
+    const { view, moveTo } = await mountMovable("/issues/AB-1");
+    await issuePageArrives();
+    await waitFor(() => fallbacks(view, "main").length > 0);
+    expect(fallbacks(view, "main")).toEqual(["Something went wrong in this page."]);
+    expect(view.container.querySelector('[data-testid="sidebar"]')).not.toBeNull();
+    moveTo("/no-such-page");
+    expect(fallbacks(view, "main")).toEqual([]);
+  });
+
+  test("SHL-40 a margin that fails to draw says so in the margin, the page stays, and the next page clears it", async () => {
+    quietConsoleError();
+    holdIssueReads();
+    // Comments in a shape the margin cannot draw.
+    answerRequests(
+      http.get("/api/v1/issues/AB-1/comments", () => Response.json({ comments: "none" }))
+    );
+    setWidth(1440);
+    const { view, moveTo } = await mountMovable("/issues/AB-1");
+    await issuePageArrives();
+    await waitFor(() => fallbacks(view).length > 0);
+    // Only the margin's: the page and the sidebar are still drawn.
+    expect(fallbacks(view)).toEqual(["Something went wrong in the margin."]);
+    expect(view.container.querySelector('[data-testid="sidebar"]')).not.toBeNull();
+    moveTo("/no-such-page");
+    expect(fallbacks(view)).toEqual([]);
+  });
+
+  test("SHL-44 an issue in the outline frame has the icon rail in the sidebar's place, which opens the navigation, and main fills the frame", async () => {
+    holdIssueReads();
+    window.localStorage.setItem(userPreferenceStorageKey(reader.login, "issue.page"), "outline");
+    setWidth(1440);
+    const view = await mount("/issues/AB-1");
+    await issuePageArrives();
+    const rail = view.container.querySelector('[data-testid="icon-rail"]');
+    expect(rail).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="sidebar"]')).toBeNull();
+    expect(view.container.querySelector("main")?.getAttribute("data-shell-layout")).toBe(
+      "full-width"
+    );
+    // The navigation is a drawer here, and the rail opens it.
+    settle(() => rail?.querySelector<HTMLElement>('[aria-label="Open navigation"]')?.click());
+    const drawer = () => document.body.querySelector('[data-slot="sheet-content"][data-open]');
+    // The drawer's code loads when it first opens, and it takes the focus a moment after.
+    await waitFor(() => drawer()?.contains(document.activeElement) === true);
+    expect(drawer()?.textContent).toContain("Signed in as reader");
   });
 
   // Each part's duty has its own test; these say only that the shell mounts the part.
@@ -319,7 +420,7 @@ describe("AppShell", () => {
       await mount();
       settle(() => menuButton(document.body)?.click());
       // The menu takes the focus a moment after it opens.
-      await until(() => menu()?.contains(document.activeElement) === true);
+      await waitFor(() => menu()?.contains(document.activeElement) === true);
     };
     const press = (init: KeyboardEventInit) =>
       settle(() => {
@@ -332,7 +433,7 @@ describe("AppShell", () => {
       await openMenu();
       press({ key: "k", code: "KeyK", ctrlKey: true });
       expect(document.body.querySelector('input[placeholder="Search Dispatch"]')).not.toBeNull();
-      await until(() => menu() === null);
+      await waitFor(() => menu() === null);
       expect(menu()).toBeNull();
     });
 
@@ -340,14 +441,14 @@ describe("AppShell", () => {
       await openMenu();
       press({ key: "g", code: "KeyG" });
       press({ key: "i", code: "KeyI" });
-      await until(() => menu() === null);
+      await waitFor(() => menu() === null);
       expect(menu()).toBeNull();
     });
 
     test("SHL-11 i closes the menu and opens the inbox drawer", async () => {
       await openMenu();
       press({ key: "i", code: "KeyI" });
-      await until(() => menu() === null);
+      await waitFor(() => menu() === null);
       expect(menu()).toBeNull();
       expect(document.body.querySelector('[data-testid="inbox-drawer"]')).not.toBeNull();
     });
