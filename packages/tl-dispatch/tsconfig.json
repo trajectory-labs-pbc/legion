@@ -19,5 +19,12 @@
       "proof-sdk-upstream/src/*": ["../proof-editor/upstream/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "scripts/**/*.ts", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "vite.config.ts",
+    "../dispatch/web/src/features/agent-view/live-views.ts"
+  ]
 }
