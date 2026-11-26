@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
+import { LabelPill, StatusPill } from "@upstream-dispatch/components/Pill";
+import { UnreadDot } from "@upstream-dispatch/features/project/UnreadDot";
 import {
   ASK_BLOCK_PILL_BLOCKING_BG,
   ASK_BLOCK_PILL_HIGH_BG,
@@ -19,10 +21,15 @@ import {
   decisionUnsureBorder,
   issueStatusScale,
   PAGE_COLORS,
+  pageLineBorder,
   primaryButtonBg,
   primaryButtonDisabled,
+  selectedCardBg,
+  selectedCardBorder,
 } from "@upstream-dispatch/theme/classes";
 import { contrastRatio, type Oklch } from "@upstream-dispatch/theme/contrast";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { type CssDeclaration, parseCss } from "./css";
 import { PACKAGE_ROOT } from "./source";
@@ -314,11 +321,13 @@ const UNDERLINE = {
 
 /** Each declaration of `declarations` whose property `wanted` takes and whose rule matches
  *  `target`, in the order the cascade applies them: a rule outside every layer outranks a layered
- *  one, then specificity, then the later rule. A rule inside a media query is left out. */
+ *  one, then specificity, then the later rule. A rule inside a media query is left out, unless
+ *  it is `media`, the query a test views the page at. */
 function cascade(
   declarations: readonly CssDeclaration[],
   target: Element,
-  wanted: (property: string) => boolean
+  wanted: (property: string) => boolean,
+  media?: string
 ): { property: string; value: string }[] {
   const matches = (selector: string) => {
     try {
@@ -332,7 +341,7 @@ function cascade(
     .flatMap(({ property, value, context }, index) => {
       if (!wanted(property)) return [];
       const around = context.filter((rule) => rule.startsWith("@") && !MIX_SUPPORT.test(rule));
-      if (around.some((rule) => !rule.startsWith("@layer"))) return [];
+      if (around.some((rule) => !rule.startsWith("@layer") && rule !== media)) return [];
       // A nested rule's selector is a descendant of its parent's.
       const rules = context.filter((rule) => !rule.startsWith("@"));
       const parents = rules.slice(0, -1).map((rule) => `:is(${rule}) `);
@@ -393,87 +402,199 @@ const BADGE = {
 const ROUND = "calc(infinity * 1px)";
 
 /** An element with `classes`. */
-function withClasses(classes: string): Element {
-  const element = document.createElement("span");
+function withClasses(classes: string, tag = "span"): Element {
+  const element = document.createElement(tag);
   element.className = classes;
   return element;
 }
 
-/** Each class list upstream's sources write with `rounded-full` in it: the words of a string or
- *  a template, outside its `${}`, that read as classes. */
-const roundedFull = [
-  ...new Set(
-    (readdirSync(upstreamSrc, { recursive: true }) as string[])
-      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
-      .flatMap((file) =>
-        [...readFileSync(join(upstreamSrc, file), "utf8").matchAll(/(["`])([^"`]*)\1/g)].map(
-          ([, , body]) =>
-            (body ?? "")
-              .replace(/\$\{[^}]*(\}|$)/g, " ")
-              .split(/\s+/)
-              .filter((word) => /^[\w:[\]/.%()#,&>*=!-]+$/.test(word) && /[a-z]/.test(word))
-              .join(" ")
-        )
-      )
-      .filter((classes) => classes.split(" ").includes("rounded-full"))
-  ),
-];
+/** The first element `html` holds that matches `selector`. */
+function sample(html: string, selector: string): Element {
+  const host = document.createElement("div");
+  host.innerHTML = html;
+  return host.querySelector(selector) as Element;
+}
 
-/** A pill is `rounded-full` with side padding and is not a floating button. */
-const isPill = (classes: string) =>
-  /(^|[ :])px-/.test(classes) && !classes.split(" ").includes("shadow-lg");
-/** A pill set in body text keeps its own type; every other pill takes the Badge's. */
-const inBodyText = (classes: string) =>
-  classes.split(" ").some((name) => name === "text-sm" || name === "text-base");
+/** The class list of the string or template in upstream's `file` that holds `anchor`, its `${}`
+ *  taken out, so a sample follows upstream's markup. */
+function upstreamClasses(file: string, anchor: string): string {
+  const text = readFileSync(join(upstreamSrc, file), "utf8");
+  const body = [...text.matchAll(/(["`])([^"`]*)\1/g)]
+    .map(([, , found]) => found ?? "")
+    .find((found) => found.includes(anchor));
+  if (body === undefined) throw new Error(`${file}: no class list holds "${anchor}"`);
+  return body
+    .replace(/\$\{[^}]*\}/g, " ")
+    .trim()
+    .split(/\s+/)
+    .join(" ");
+}
 
-/** Each of upstream's `rounded-full` class lists whose corner or type is not what it should be:
- *  the Badge's for a pill, the circle for anything else. */
-function pillProblems(declarations: readonly CssDeclaration[]): string[] {
-  return roundedFull.flatMap((classes) => {
-    const element = withClasses(classes);
-    const corner = { "border-radius": isPill(classes) ? BADGE["border-radius"] : ROUND };
-    const want: Record<string, string> = isPill(classes) && !inBodyText(classes) ? BADGE : corner;
+/** Upstream's round and pill-shaped parts, as it renders them, with the shape each must take. */
+const SHAPES: Record<string, [() => Element, Record<string, string>]> = {
+  "a status pill": [
+    () => sample(renderToStaticMarkup(createElement(StatusPill, null, "In progress")), "span"),
+    BADGE,
+  ],
+  "a status pill's dot": [
+    () => sample(renderToStaticMarkup(createElement(StatusPill, null, "In progress")), "span span"),
+    { "border-radius": ROUND },
+  ],
+  "an unread dot": [
+    () => sample(renderToStaticMarkup(createElement(UnreadDot)), "span"),
+    { "border-radius": ROUND },
+  ],
+  "an avatar": [
+    () =>
+      withClasses(
+        upstreamClasses("features/issue/AssigneeControl.tsx", "before:content-[attr(data-initial)]")
+      ),
+    { "border-radius": ROUND },
+  ],
+  "a floating button": [
+    () =>
+      withClasses(
+        upstreamClasses("features/agent-view/AgentThread.tsx", "-translate-x-1/2 rounded-full"),
+        "button"
+      ),
+    { "border-radius": ROUND },
+  ],
+  "a status control in the issue header": [
+    () =>
+      withClasses(
+        upstreamClasses("features/issue/IssueHeader.tsx", "rounded-full border px-2 text-sm"),
+        "button"
+      ),
+    {
+      "border-radius": BADGE["border-radius"],
+      "font-size": "var(--text-sm)",
+      "letter-spacing": "normal",
+      "text-transform": "none",
+    },
+  ],
+  "a label link": [
+    () =>
+      sample(
+        `<a class="${upstreamClasses("features/agents/AgentsPage.tsx", "items-center rounded-full")}">${renderToStaticMarkup(createElement(LabelPill, null, "dispatch"))}</a>`,
+        "a"
+      ),
+    { "border-radius": BADGE["border-radius"] },
+  ],
+  "a block's badge in a document": [
+    () => sample('<div class="dispatch-doc"><span data-proof-block-badge>ask</span></div>', "span"),
+    {
+      "border-radius": BADGE["border-radius"],
+      "font-size": BADGE["font-size"],
+      "font-weight": BADGE["font-weight"],
+    },
+  ],
+};
+
+/** Each sample whose corner or type is not what it should be. */
+function shapeProblems(declarations: readonly CssDeclaration[]): string[] {
+  return Object.entries(SHAPES).flatMap(([name, [render, want]]) => {
+    const element = render();
     return Object.entries(want).flatMap(([property, value]) => {
       const got = computed(declarations, element, property);
-      return got === value ? [] : [`${classes}: ${property} ${got}`];
+      return got === value ? [] : [`${name}: ${property} ${got}`];
     });
   });
 }
 
-/** The cards upstream marks with a stripe down the left edge, with the classes they are drawn
- *  with. The ask on the issue page takes that page's colours. */
+/** Each rule of upstream's stylesheet, outside the layers, that draws an element round, with no
+ *  rule of the repaint giving the same selector the Badge's corner. */
+function roundRuleProblems(declarations: readonly CssDeclaration[]): string[] {
+  const outside = declarations.filter(
+    ({ context }) => !context.some((at) => at.startsWith("@layer"))
+  );
+  const selector = ({ context }: CssDeclaration) => selectorKey(context.join(" "));
+  return outside
+    .filter(({ property, value }) => property === "border-radius" && /9999px|infinity/.test(value))
+    .filter(
+      (round) =>
+        !outside.some(
+          (rule) =>
+            rule.property === "border-radius" &&
+            rule.value === BADGE["border-radius"] &&
+            selector(rule) === selector(round)
+        )
+    )
+    .map((round) => `${selector(round)}: border-radius ${round.value}`);
+}
+
+/** The cards and rows upstream marks with a stripe down the left edge, with their classes. The ask
+ *  on the issue page takes that page's colours; the plan's and the verification's rows are cards
+ *  under 761 px. */
 const STRIPED_CARDS: Record<string, string> = {
   "an ask in the margin": `relative rounded-xl border-l-4 shadow-sm ${card} ${askUrgencyAccent.high}`,
   "an ask on the issue page":
     "relative rounded-xl border-l-4 shadow-sm border-page-hair bg-page-paper border-l-page-waiting",
   "a decision its asker is unsure of": `rounded-xl border p-3 text-sm shadow-sm ${card} border-l-4 ${decisionUnsureBorder}`,
+  "a selected decision its asker is unsure of": `rounded-xl border p-3 text-sm shadow-sm ${selectedCardBorder} ${selectedCardBg} border-l-4 ${decisionUnsureBorder}`,
   "a decision in a document": `proof-typed-block my-5 rounded-xl border border-l-4 px-4 pt-3 pb-4 shadow-sm ${borderDefault} ${askUrgencyAccent.high} ${askBlockTint.high}`,
+  "a statement in the verification view": `grid rounded-[8px] border ${pageLineBorder} min-[761px]:rounded-none min-[761px]:border-x-0 border-l-4 border-l-page-statement`,
+  "a step in the plan": `border-t max-[761px]:rounded-lg max-[761px]:border max-[761px]:border-l-4 max-[761px]:border-l-page-step ${pageLineBorder}`,
 };
 
-/** Each striped card whose left edge is not its border: none, or `thin` beside a `border`. */
-function stripeProblems(declarations: readonly CssDeclaration[]): string[] {
+/** The width 761 px and up, where the plan's and the verification's rows are a table's, and under
+ *  it, where they are cards. */
+const VIEWS = { narrow: "@media (width < 761px)", wide: "@media (width >= 761px)" } as const;
+
+/** Each striped card whose left side is not drawn as its right one, in light, at `media`. */
+function stripeProblems(declarations: readonly CssDeclaration[], media?: string): string[] {
+  const held = rootValues(declarations, "light");
   return Object.entries(STRIPED_CARDS).flatMap(([name, classes]) => {
-    const element = withClasses(classes);
-    const want = element.classList.contains("border") ? "thin" : "0";
-    const got = computed(declarations, element, "border-left-width");
-    return got === want ? [] : [`${name}: a left edge of ${got}`];
+    const element = withClasses(classes, "div");
+    const side = (edge: "left" | "right") => {
+      const last = (part: string) =>
+        cascade(
+          declarations,
+          element,
+          (p) => [`border-${part}`, `border-inline-${part}`, `border-${edge}-${part}`].includes(p),
+          media
+        ).at(-1)?.value;
+      // A colour the card names through a variable it sets itself is that variable's value.
+      const colour = (last("color") ?? "").replace(
+        /var\((--[\w-]+)\)/g,
+        (whole, variable: string) => computed(declarations, element, variable) ?? whole
+      );
+      const drawn = evaluate(colour, "light", held);
+      return {
+        colour: drawn === undefined ? colour : drawn.map((c) => c.toFixed(3)).join(" "),
+        width: last("width"),
+      };
+    };
+    const [left, right] = [side("left"), side("right")];
+    // A side with no width draws no colour.
+    const same =
+      left.width === right.width &&
+      (/^0(px)?$/.test(left.width ?? "") || left.colour === right.colour);
+    return same
+      ? []
+      : [`${name}: left ${left.width} ${left.colour}, right ${right.width} ${right.colour}`];
   });
 }
 
-/** Each declaration of a rule here that shapes a pill or a card and holds a value other than a
- *  theme token: a length, a number or a colour written out. A `var()`, a token's multiple, `0`
- *  and a keyword are tokens. */
+/** The sizes, weights and widths a rule here sets, which the design rules do not read (they hold
+ *  the corners, the colours and the shadows), as anything but a theme token: a length or a number
+ *  written out, or a size keyword. A `var()`, a token's multiple and `0` are tokens. */
+const SHAPE_PROPERTY =
+  /^(font-size|font-weight|line-height|min-height|height|border(-(top|right|bottom|left))?-width)$/;
+const SIZE_KEYWORD =
+  /\b(thin|medium|thick|bold|bolder|lighter|smaller|larger|(x{1,3}-)?(small|large))\b/;
 function shapeLiterals(repaint: string): string[] {
   return parseCss(repaint).declarations.flatMap(({ property, value, context }) => {
-    const selector = context.filter((rule) => !rule.startsWith("@")).join(" ");
-    if (!/\.rounded|\.border-l-4/.test(selector)) return [];
+    if (!SHAPE_PROPERTY.test(property)) return [];
     let rest = value;
     for (let last = ""; last !== rest; ) {
       last = rest;
       rest = rest.replace(/var\(--[\w-]+(?:,\s*)?\)/g, "");
     }
     rest = rest.replace(/\*\s*[\d.]+/g, "").replace(/\b0\b/g, "");
-    return /[\d#]/.test(rest) ? [`${selector} { ${property}: ${value} }`] : [];
+    const selector = context.filter((rule) => !rule.startsWith("@")).join(" ");
+    return /\d/.test(rest) || SIZE_KEYWORD.test(rest)
+      ? [`${selector} { ${property}: ${value} }`]
+      : [];
   });
 }
 
@@ -943,48 +1064,64 @@ describe("the repaint of upstream's pages", async () => {
     expect(computed(declarations, create, "color")).toBe("var(--muted-foreground)");
   });
 
-  test("draws each pill upstream writes with the Badge's corner and type, and a dot round", () => {
+  test("draws each pill upstream renders with the Badge's corner and type, and a dot round", () => {
     for (const badgeClass of ["rounded-badge", "text-xs", "font-medium"]) {
       expect(badgeText).toContain(badgeClass);
     }
-    expect(roundedFull.filter(isPill).length).toBeGreaterThanOrEqual(30);
-    expect(roundedFull.filter((classes) => !isPill(classes)).length).toBeGreaterThanOrEqual(20);
-    expect(pillProblems(declarations)).toEqual([]);
+    expect(shapeProblems(declarations)).toEqual([]);
+    expect(roundRuleProblems(declarations)).toEqual([]);
   });
 
-  test("fails when the pill rule reaches a dot", async () => {
+  test("fails when the pill rule reaches a dot, or a stylesheet pill keeps its circle", async () => {
     const pill = '.rounded-full[class*="px-"]:not(.shadow-lg) {';
     expect(repaintText).toContain(pill);
-    const problems = pillProblems(await generate(repaintText.replace(pill, ".rounded-full {")));
-    expect(problems).toContainEqual(
-      expect.stringMatching(/size-2 rounded-full.*: border-radius var\(--radius-badge\)$/)
+    expect(shapeProblems(await generate(repaintText.replace(pill, ".rounded-full {")))).toEqual(
+      expect.arrayContaining(["an unread dot: border-radius var(--radius-badge)"])
     );
+    const badge = /(\[data-proof-block-badge\] \{\s*\/\*[^*]*\*\/\s*)border-radius: [^;]+;/;
+    expect(repaintText).toMatch(badge);
+    const kept = await generate(repaintText.replace(badge, "$1"));
+    expect(roundRuleProblems(kept)).toHaveLength(1);
   });
 
-  test("takes the stripe off each card upstream marks with one", () => {
-    expect(stripeProblems(declarations)).toEqual([]);
+  test.each(
+    Object.entries(VIEWS)
+  )("draws a striped card's left side as its right, %s", (_view, media) => {
+    expect(stripeProblems(declarations, media)).toEqual([]);
   });
 
-  test("fails when a card's stripe comes back", async () => {
-    const rule = /\.rounded-xl\.border-l-4 \{[^}]*\}/;
-    expect(repaintText).toMatch(rule);
-    expect(stripeProblems(await generate(repaintText.replace(rule, "")))).toEqual([
-      "an ask in the margin: a left edge of 4px",
-      "an ask on the issue page: a left edge of 4px",
+  test("fails when a card's stripe comes back, or a selected card's left side keeps the theme's edge", async () => {
+    const stripe = /\.rounded-xl\.border-l-4 \{[^}]*\}/;
+    expect(repaintText).toMatch(stripe);
+    expect(
+      stripeProblems(await generate(repaintText.replace(stripe, "")), VIEWS.narrow).map((problem) =>
+        problem.replace(/:.*/, "")
+      )
+    ).toEqual([
+      "a decision its asker is unsure of",
+      "a selected decision its asker is unsure of",
+      "a decision in a document",
     ]);
+    const selected = /\.rounded-xl\.border\.border-l-4\[class~="border-sky-500"\][^{]*\{[^}]*\}/;
+    expect(repaintText).toMatch(selected);
+    expect(
+      stripeProblems(await generate(repaintText.replace(selected, "")), VIEWS.narrow).map(
+        (problem) => problem.replace(/:.*/, "")
+      )
+    ).toEqual(["a selected decision its asker is unsure of"]);
   });
 
-  test("shapes pills and cards with theme tokens only", () => {
+  test("sizes pills and cards with theme tokens only", () => {
     expect(shapeLiterals(repaintText)).toEqual([]);
   });
 
   test.each([
-    ["border-radius: var(--radius-badge);", "border-radius: 4px;"],
     ["font-size: var(--text-xs);", "font-size: 12px;"],
     ["font-weight: var(--font-weight-medium);", "font-weight: 500;"],
-    ["min-height: calc(var(--spacing) * 7);", "min-height: 1.75rem;"],
-    ["border-left-color: var(--border);", "border-left-color: #262626;"],
-  ])("fails when a pill or card rule names a literal: %s", (token, literal) => {
+    ["min-height: var(--spacing-control-sm);", "min-height: 1.75rem;"],
+    ["border-left-width: var(--border-width);", "border-left-width: thin;"],
+    ["border-width: var(--border-width);", "border-width: thick;"],
+  ])("fails when a size names a literal: %s", (token, literal) => {
     expect(repaintText).toContain(token);
     expect(shapeLiterals(repaintText.replace(token, literal))).toHaveLength(1);
   });
