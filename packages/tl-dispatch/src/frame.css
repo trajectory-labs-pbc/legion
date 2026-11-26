@@ -18,9 +18,10 @@
 /* Upstream's sticky margin sheet stays under the panel's top border, or its stuck top row. */
 @media (min-width: 80rem) {
   [data-testid="content-panel"] [data-testid="margin-sheet"] {
-    top: calc(var(--panel-inset) + max(var(--panel-row, 0px), 1px));
-    height: calc(100dvh - 2 * var(--panel-inset) - max(var(--panel-row, 0px), 1px) - 1px);
-    max-height: calc(100dvh - 2 * var(--panel-inset) - max(var(--panel-row, 0px), 1px) - 1px);
+    --sheet-above: max(var(--panel-row, 0px), var(--border-width));
+    top: calc(var(--panel-inset) + var(--sheet-above));
+    height: calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width));
+    max-height: calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width));
   }
 }
 

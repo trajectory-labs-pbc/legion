@@ -1,10 +1,38 @@
 import { cn } from "@legion/ui/lib/utils";
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { CommandButton } from "@/commands/command-button";
 
+/** Whether the sticky row has left its place at the panel's top: the page scrolled under it. The
+ *  mark before the row stays where the row would be. */
+function useStuck(
+  mark: RefObject<HTMLElement | null>,
+  row: RefObject<HTMLElement | null>,
+  on: boolean
+): boolean {
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (!on) return;
+    const measure = () => {
+      const [at, now] = [mark.current, row.current].map(
+        (part) => part?.getBoundingClientRect().top
+      );
+      setStuck(at !== undefined && now !== undefined && at < now);
+    };
+    measure();
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [mark, row, on]);
+  return on && stuck;
+}
+
 /** The inverted L's content panel: a card with the theme's large corner, inset 8 px from the window.
- *  Its content is clipped to the corner; the sticky row above it is not, so the row's strip still
- *  covers the panel's side edges in the inset. The outline issue page frames itself. */
+ *  Its content is clipped to the corner; the sticky row above it is not. At rest the row has the
+ *  panel's top corners; stuck, it is square, and its strip hides the page in the inset and draws
+ *  the panel's top edge across the side edges. The outline issue page frames itself. */
 export function ContentPanel({
   children,
   fillsViewport,
@@ -22,6 +50,9 @@ export function ContentPanel({
   /** The sidebar is folded away, so the panel fills the window and its top row shows the sidebar again. */
   sidebarFolded: boolean;
 }) {
+  const mark = useRef<HTMLDivElement>(null);
+  const row = useRef<HTMLDivElement>(null);
+  const stuck = useStuck(mark, row, sidebarFolded && !issueFrame);
   return (
     <div
       className={
@@ -37,12 +68,14 @@ export function ContentPanel({
       }
       data-testid={issueFrame ? undefined : "content-panel"}
     >
+      {sidebarFolded && !issueFrame ? <div aria-hidden ref={mark} /> : null}
       {sidebarFolded && !issueFrame ? (
-        // A sticky row for Show sidebar, with the panel's top corners; its strip hides the page
-        // scrolled into the inset above.
+        // A sticky row for Show sidebar. Its strip is drawn only while it is stuck.
         <div
-          className="sticky top-(--panel-inset) z-10 flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg before:absolute before:-inset-x-px before:bottom-full before:h-(--panel-inset) before:border-b before:border-border before:bg-background"
+          className="sticky top-(--panel-inset) z-10 flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg md:data-stuck:rounded-t-none before:absolute before:-inset-x-(--border-width) before:bottom-full before:hidden before:h-(--panel-inset) before:border-b before:border-border before:bg-background data-stuck:before:block"
+          data-stuck={stuck || undefined}
           data-testid="panel-header"
+          ref={row}
         >
           <CommandButton
             commandId="global.toggle-sidebar"
