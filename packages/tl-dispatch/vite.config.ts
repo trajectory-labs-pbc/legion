@@ -108,7 +108,6 @@ export default defineConfig({
       "@legion/ui/components": at("../ui/src/components"),
       "@legion/ui/lib": at("../ui/src/lib"),
       "decode-named-character-reference": characterReferenceDecoder,
-      "@legion/contracts/repo": at("../contracts/src/repo.ts"),
       "@legion/contracts/dispatch-snippet": at("../contracts/src/dispatch-snippet.ts"),
       "@legion/contracts/dispatch-tools": at("../contracts/src/dispatch-tools.ts"),
       "@legion/contracts": at("../contracts/src/index.ts"),

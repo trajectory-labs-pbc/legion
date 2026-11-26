@@ -66,8 +66,8 @@
     "file": "packages/dispatch/web/vite.config.ts",
     "part": "default.resolve",
     "copy": "vite.config.ts",
-    "commit": "d079920d94ff294516874c008228b088019af777",
-    "sha256": "b76054052c07701ed7b7401b6aecdf2755d6cc181f92ac31a139ff0082526295"
+    "commit": "85f90626dfd3e8e4f81f46036e9673933f771411",
+    "sha256": "5350b4da99ac53cf6947daf273f339d303bc8fd4982bc80c1cfc134642929d6c"
   },
   {
     "file": "packages/dispatch/web/vite.config.ts",
@@ -285,5 +285,12 @@
     "copy": "src/pages/inbox.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "551a13bc2c05904356062afe9fa88a9f9a50222570c75fdd240aa273f6727ae9"
+  },
+  {
+    "file": "packages/dispatch/web/src/app.tsx",
+    "part": "PersonPage",
+    "copy": "src/pages/people.tsx",
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "476d4a15dbf62a778ab5b94ed35c3dcb038a8867f59c0077a3412ab36abe52ef"
   }
 ]
