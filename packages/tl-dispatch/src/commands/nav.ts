@@ -20,9 +20,7 @@ interface NavDestination {
   label: string;
   icon: CommandIcon;
   /** The letter after `G`: upstream's where it binds one, else the first letter of the label that
-   *  no other `G` chord holds, taken in sidebar order. `r` stays for the Progress page below
-   *  Priorities. A chord that can be shut takes a letter no single key holds, since its second
-   *  press then runs alone. */
+   *  no other `G` chord holds, taken in sidebar order. */
   key: string;
 }
 
