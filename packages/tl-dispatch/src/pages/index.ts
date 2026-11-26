@@ -9,6 +9,7 @@ import { issue } from "./issue";
 import { machines } from "./machines";
 import { notFound } from "./not-found";
 import type { Page, PageLayout } from "./page";
+import { people } from "./people";
 import { priorities } from "./priorities";
 import { project } from "./project";
 import { settings } from "./settings";
@@ -25,6 +26,7 @@ export const pages = [
   credentials,
   settings,
   delivery,
+  people,
   notFound,
 ] as const satisfies readonly Page[];
 
