@@ -57,7 +57,9 @@ installs from the default branch, not from the ref you asked for.
   in the `prefers-color-scheme: dark` block, which must match; a `.light` class on the root keeps
   light when the OS is dark), the corners (steps of the one `--radius`, and `--radius-badge` for a
   badge), the two shadows (`shadow-popover`, `shadow-dialog`, in the scheme's `--shadow-tint`),
-  the table row (`h-row`) and the icon stroke (`--icon-stroke`).
+  the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`),
+  a small control (`h-control-sm`) and the icon stroke (`--icon-stroke`). Faint text takes the
+  muted colour on an entry's accent fill, where it would not hold 4.5:1.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and

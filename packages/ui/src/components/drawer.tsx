@@ -32,7 +32,7 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-xl border-t bg-background pb-[env(safe-area-inset-bottom)] outline-hidden",
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-xl border-t bg-popover text-popover-foreground shadow-dialog pb-[env(safe-area-inset-bottom)] outline-hidden",
             "transform-[translateY(var(--drawer-swipe-movement-y))] data-swiping:duration-0 data-swiping:select-none",
             modalPopupMotion,
             coveredClass,
