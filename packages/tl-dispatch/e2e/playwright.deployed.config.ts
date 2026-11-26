@@ -11,5 +11,7 @@ export default defineConfig({
   ...commonConfig,
   ...PHASES[phase],
   reporter: "list",
+  // A retry would seed the run's records again under the same name, which the server refuses.
+  retries: 0,
   use: { ...commonUse, baseURL, storageState },
 });
