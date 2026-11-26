@@ -8,7 +8,14 @@ import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale"
 import { type CssDeclaration, importedPath, parseCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
-import { PACKAGE_ROOT, type SourceFile, UI_STYLESHEET, UPSTREAM_WEB } from "./source";
+import {
+  APP_STYLESHEET,
+  PACKAGE_ROOT,
+  type SourceFile,
+  SRC_DIR,
+  UI_STYLESHEET,
+  UPSTREAM_WEB,
+} from "./source";
 import { parseScript } from "./typescript";
 
 export interface DesignViolation {
@@ -214,16 +221,14 @@ export function declarationProblems(
   return problems;
 }
 
-const STYLES = join(PACKAGE_ROOT, "src/styles.css");
-
 /**
  * What the app's entry stylesheet loads, as references: Tailwind, upstream's theme and plugins,
  * and ours, so a class compiles here exactly as in the build, with nothing else emitted.
  */
 function compilerInput(): string {
-  const imports = parseCss(readFileSync(STYLES, "utf8"))
+  const imports = parseCss(readFileSync(APP_STYLESHEET, "utf8"))
     .statements.filter((statement) => statement.name === "import")
-    .map((statement) => resolve(join(PACKAGE_ROOT, "src"), importedPath(statement.prelude) ?? ""));
+    .map((statement) => resolve(SRC_DIR, importedPath(statement.prelude) ?? ""));
   return [
     ...imports.map((path) => `@import ${JSON.stringify(path)} reference;`),
     "@tailwind utilities;",

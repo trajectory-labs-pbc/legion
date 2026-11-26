@@ -211,6 +211,8 @@ load no page module:
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
   checked in `packages/ui`.
+  `tests/upstream-classes.test.ts` fails, naming the class and its file, when a class of
+  upstream's sources that upstream's stylesheet compiles has no rule in the app's CSS.
   `tests/skill-paths.test.ts` fails on a path that one of the fork's skills under `.agents/skills`
   or this package's `AGENTS.md` names in an inline code span and that does not exist, read from
   the roots `AGENTS.md` ("Paths") gives: a path, a file name, or a path among the words of a

@@ -13,6 +13,11 @@ export const REPO_ROOT = join(PACKAGE_ROOT, "../..");
 export const UI_STYLESHEET = join(PACKAGE_ROOT, "../ui/src/styles/theme.css");
 /** Upstream's web app, whose pages this app shows and whose code the checks read. */
 export const UPSTREAM_WEB = join(PACKAGE_ROOT, "../dispatch/web/src");
+/** Upstream's document editor, whose classes upstream's pages draw. */
+export const PROOF_EDITOR_SRC = join(PACKAGE_ROOT, "../proof-editor/src");
+/** The app's sources, and the stylesheet the build compiles from them. */
+export const SRC_DIR = join(PACKAGE_ROOT, "src");
+export const APP_STYLESHEET = join(SRC_DIR, "styles.css");
 
 const SOURCE = /\.(tsx?|[cm]?jsx?|css)$/;
 
