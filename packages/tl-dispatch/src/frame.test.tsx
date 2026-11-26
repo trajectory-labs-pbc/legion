@@ -102,10 +102,10 @@ test("while the folded sidebar's row is drawn, a focused field scrolls clear of 
 });
 
 test("wider than a phone, the issue's details line wraps rather than scrolls", () => {
-  const rail = parseCss(FRAME_CSS).declarations.filter(
-    (declaration) => declaration.context.at(-1) === '[data-testid="issue-metadata-rail"]'
+  const rail = parseCss(FRAME_CSS).declarations.filter((declaration) =>
+    declaration.context.includes('[data-testid="issue-metadata-rail"]')
   );
-  expect(rail.map(({ context, property, value }) => [context[0], property, value])).toEqual([
-    ["@media (min-width: 48rem)", "flex-wrap", "wrap"],
+  expect(rail.map(({ context, property, value }) => [context.at(-1), property, value])).toEqual([
+    ["@variant md", "flex-wrap", "wrap"],
   ]);
 });

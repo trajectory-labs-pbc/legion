@@ -217,13 +217,17 @@ describe("AppShell", () => {
       "bg-card",
       "md:border",
       "md:rounded-lg",
-      "md:overflow-clip",
       "md:my-(--panel-inset)",
       "md:mr-(--panel-inset)",
     ]) {
       expect(panel?.className.split(" ")).toContain(name);
     }
     expect(panel?.className).not.toContain("shadow");
+    // The content is clipped to the corner, not the panel, whose sticky row reaches past its edges.
+    expect(panel?.className).not.toContain("overflow-clip");
+    expect(panel?.lastElementChild?.className.split(" ")).toEqual(
+      expect.arrayContaining(["md:overflow-clip", "md:rounded-b-lg", "md:rounded-t-lg"])
+    );
   });
 
   test("the skip link draws the app's focus ring, not the browser's", async () => {
