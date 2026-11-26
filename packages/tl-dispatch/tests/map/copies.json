@@ -472,7 +472,7 @@
     "file": "packages/dispatch/web/src/features/sidebar/Sidebar.tsx",
     "part": "Sidebar",
     "copy": "src/shell/sidebar-data.ts",
-    "commit": "1986e0055471a91c9ea73872ede38392a019b059",
-    "sha256": "734adc3642af6482f5429bdfbe5ca34657291b90d1e5cff7b49e85fac9fdf5c3"
+    "commit": "c6e674809a210e7f3076d15e88f4027c8e2d1661",
+    "sha256": "50225272efbe5138f4a46a0945f6c9166d7dff18ca55d31ccdcafb7546cacd14"
   }
 ]
