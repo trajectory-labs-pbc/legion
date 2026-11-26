@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 import { importedPath, parseCss } from "./css";
+import { forkSrc } from "./map/source";
 import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
 import { literal, parseScript } from "./typescript";
 
@@ -222,6 +223,68 @@ export function importsOf(path: string, files: Files, cache: ts.ModuleResolution
 
 export function resolutionCache(): ts.ModuleResolutionCache {
   return ts.createModuleResolutionCache(PACKAGE_ROOT, (name) => name, OPTIONS);
+}
+
+/** Whether `path` is a file of this app's `src/` or of upstream's web app: the code a walk follows. */
+export const ownOrUpstream = (path: string) =>
+  path.startsWith(forkSrc + sep) || path.startsWith(UPSTREAM_WEB + sep);
+
+/** Upstream's files are read from disk alone, so one view and one cache serve every walk. */
+const upstream = {
+  files: filesWith(),
+  cache: resolutionCache(),
+  imports: new Map<string, Import[]>(),
+};
+
+/** What a walk reached: every file, and the import that first reached each one past the roots. */
+export interface Reach {
+  reached: Set<string>;
+  reachedBy: Map<string, Import>;
+}
+
+/**
+ * The files `roots` load, breadth first, through each import `follow` accepts. This app's files
+ * are read through `files`, upstream's from disk once per run. `visit` is told each file's
+ * imports as the walk reads them, and the walk stops once `done` holds.
+ */
+export function reach(
+  roots: Iterable<string>,
+  follow: (entry: Import) => boolean,
+  {
+    files = filesWith(),
+    visit,
+    done,
+  }: {
+    files?: Files;
+    visit?: (path: string, imports: readonly Import[]) => void;
+    done?: (reached: ReadonlySet<string>) => boolean;
+  } = {}
+): Reach {
+  const cache = resolutionCache();
+  const importsFor = (path: string): Import[] => {
+    if (!path.startsWith(UPSTREAM_WEB + sep)) return importsOf(path, files, cache);
+    let found = upstream.imports.get(path);
+    if (found === undefined) {
+      found = importsOf(path, upstream.files, upstream.cache);
+      upstream.imports.set(path, found);
+    }
+    return found;
+  };
+  const queue = [...roots];
+  const reached = new Set(queue);
+  const reachedBy = new Map<string, Import>();
+  for (let index = 0; index < queue.length && done?.(reached) !== true; index += 1) {
+    const path = queue[index] as string;
+    const imports = importsFor(path);
+    visit?.(path, imports);
+    for (const entry of imports) {
+      if (entry.file === undefined || reached.has(entry.file) || !follow(entry)) continue;
+      reached.add(entry.file);
+      reachedBy.set(entry.file, entry);
+      queue.push(entry.file);
+    }
+  }
+  return { reached, reachedBy };
 }
 
 /** The app's own source: every script and stylesheet under `src/`, by absolute path. */

@@ -6,10 +6,6 @@ import {
   draftStoresSignedIn,
   draftStoresSignedOut,
 } from "@upstream-dispatch/features/conversation/unsent-drafts";
-import { TextAskBlockCard } from "@upstream-dispatch/features/doc/AskBlockCard";
-import { AgentRegistryPoller } from "@upstream-dispatch/features/refs/agent-registry";
-import { TextAskCard } from "@upstream-dispatch/features/refs/markdown-cards";
-import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
 import "@upstream-dispatch/features/writes/kinds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";
@@ -21,6 +17,7 @@ import { ConnectionErrorPage } from "./connection-error-page";
 import { forgetReads } from "./forget-reads";
 import { ShellSkeleton } from "./shell-skeleton";
 import { signIns } from "./sign-ins";
+import { SignedInParts } from "./signed-in-parts";
 import { useSignInChannel } from "./use-sign-in-channel";
 
 // A signed-in reader never needs the sign-in page's code.
@@ -35,12 +32,9 @@ function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
   }, [login, queryClient]);
   useEventFeed();
   return (
-    <KeymapProvider>
-      <AgentRegistryPoller />
-      <TextAskCard.Provider value={TextAskBlockCard}>
-        <AppShell user={user} />
-      </TextAskCard.Provider>
-    </KeymapProvider>
+    <SignedInParts>
+      <AppShell user={user} />
+    </SignedInParts>
   );
 }
 

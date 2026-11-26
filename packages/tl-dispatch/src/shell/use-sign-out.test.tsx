@@ -3,10 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { SendStoppedError } from "@upstream-dispatch/features/writes/keyed-write";
-import { plainWrite, writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { http } from "msw";
 
 import { render, settle } from "../../tests/react";
+import { pressWrite } from "../../tests/writes";
 import { SignOutQuestion } from "./sign-out-question";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";
 
@@ -91,19 +91,8 @@ describe("useSignOut", () => {
 
   test("SHL-26 asks first while a change is unsent: Cancel keeps the session, Sign out ends it", async () => {
     const { client, sent, signOut } = mount(() => Response.json({ ok: true }));
-    // A write is the person's whom whoami names.
-    client.setQueryData(["whoami"], { kind: "user", login: "reader", event_head: "0" });
     // The sign-out stops the unsent write, so its press ends with the stop.
-    const stopped = writesOf(client)
-      .run({
-        detail: null,
-        kind: plainWrite,
-        label: "CORE-1 set to done",
-        method: "PATCH",
-        presentation: "indicator",
-        write: () => new Promise<never>(() => {}),
-      })
-      .catch((error: unknown) => error);
+    const { outcome: stopped } = await pressWrite(client, { label: "CORE-1 set to done" });
     const question = () => document.body.querySelector<HTMLElement>('[role="alertdialog"]');
     const answer = (name: string) =>
       [...(question()?.querySelectorAll("button") ?? [])].find((b) => b.textContent === name);

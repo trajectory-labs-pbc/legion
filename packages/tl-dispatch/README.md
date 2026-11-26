@@ -165,7 +165,8 @@ then, a swap means running both routers.
   loads when it first opens; the global keys still run in it.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
 - `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
-  `connection-error-page.tsx`, or the shell for the person signed in.
+  `connection-error-page.tsx`, or the shell for the person signed in, inside
+  `signed-in-parts.tsx` (the keys, the agent registry's poller and the ask card).
 - `page-fallbacks.tsx`: what main shows while a page's code loads.
 
 ## Install
