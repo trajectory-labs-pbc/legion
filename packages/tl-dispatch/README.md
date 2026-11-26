@@ -245,5 +245,38 @@ load no page module:
 - `bun run build && bun run check:entry-budget`: the entry chunk, with the chunks the page preloads beside it, stays within its budget. The
   shortcuts sheet and the tooltips are their own chunks for it.
 - `bun run typecheck`, `bun run lint`.
+- `bun run test:browser`: the browser tests (`e2e/*.e2e.ts`) in the local mode. Upstream's
+  harness (`packages/dispatch/e2e`) starts a Go server on this app's `dist` (`e2e/server.ts`),
+  a Postgres and its fakes, and each test starts from an emptied database and a context signed
+  in at dev sign-in. It builds the contracts and this app first, and needs Go,
+  `bunx playwright install chromium`, and a Postgres: `DISPATCH_E2E_PG_IMAGE` (an image with
+  `vector`, run by Docker) or `DISPATCH_E2E_PG_BIN`. It refuses to start while `DATABASE_URL` is
+  set, because upstream's harness would empty that database, unless `DISPATCH_E2E_REUSE_SERVERS=1`
+  reuses a stack upstream's `harness-up.ts` started. It leaves out `*.multiprocess.e2e.ts`, as
+  upstream's default run does.
+- `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
+  `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
+  sign-in's storage state and an agent token with no scope.
 
 The `tl-dispatch` job of `.github/workflows/fork-checks.yaml` runs all of them.
+
+### The deployed mode
+
+`bun run test:browser:deployed` runs the same browser tests against a Dispatch this run did not
+start. It reads three settings from the shell: `PLAYWRIGHT_BASE_URL`, `E2E_AGENT_TOKEN` (an agent
+token of that Dispatch) and `E2E_STORAGE_STATE` (a Playwright storage-state file that holds a
+`dsession` cookie for that host). It starts no server and empties no database: it refuses to
+start while `DATABASE_URL` or `DISPATCH_E2E_STACKS` is set, and refuses a test that sets
+`signedIn`. A deployed Dispatch serves no dev sign-in, and a sign-out would end every session of
+the signed-in person, so two paths refuse them: the worker's `fetch`, which upstream's seed
+helpers call, refuses dev sign-in (a seed `as: "user"`) and `/auth/logout`, and each context the
+`test` gives aborts the browser's `/auth/logout` (`e2e/deployed-guards.e2e.ts`). Neither reaches
+`page.request`, `context.request` or a context made with `browser.newContext()`, so a
+deployed-mode test sends nothing through them. A seed goes `as: "agent"`.
+
+`E2E_PHASE` chooses the files: `routes-and-flows`, the default, runs every file but
+`*.multiprocess.e2e.ts` and `accessibility.e2e.ts`; `switch-write` and `switch-read` run
+`switch.multiprocess.e2e.ts` alone, a file the switch test adds; until then they match no file.
+Each record a run makes carries the run's name,
+`E2E_RUN_NAME` (a project key; the run picks one when it is not set), and a test reads only
+records it made. `e2e/modes.ts` holds these rules.

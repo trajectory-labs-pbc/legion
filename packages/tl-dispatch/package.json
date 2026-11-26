@@ -8,6 +8,10 @@
     "dev": "vite",
     "build": "vite build",
     "test": "bun test --timeout 60000",
+    "build:contracts": "bun run --cwd ../contracts build:dispatch",
+    "test:browser": "bun run build:contracts && vite build && bunx playwright test --config e2e/playwright.config.ts",
+    "test:browser:deployed": "bun run build:contracts && bunx playwright test --config e2e/playwright.deployed.config.ts",
+    "test:browser:deployed-local": "bun e2e/local-stack.ts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
     "check:entry-budget": "bun scripts/check-entry-budget.ts",
@@ -27,6 +31,7 @@
   "rootPackages": [
     "@biomejs/biome",
     "@happy-dom/global-registrator",
+    "@playwright/test",
     "@tailwindcss/vite",
     "@tanstack/react-query",
     "@testing-library/react",
