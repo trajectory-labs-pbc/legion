@@ -24,8 +24,11 @@
   /* A menu, a list box or a tooltip over the page, and a dialog over the scrim. */
   --shadow-popover: 0 8px 24px -8px var(--shadow-tint);
   --shadow-dialog: 0 24px 64px -16px var(--shadow-tint);
-  /* A table row. */
+  /* A table row, and a small control: a small button, a menu entry, a pill under a mouse. */
   --spacing-row: calc(var(--spacing) * 8);
+  --spacing-control-sm: calc(var(--spacing) * 7);
+  /* Every edge Tailwind draws (`border`, `border-t`, `divide-y`) is the one --border-width. */
+  --default-border-width: var(--border-width);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -124,6 +127,7 @@
   --scrim: #000;
   --shadow-tint: rgb(20 19 17 / 0.14);
   --radius: 8px;
+  --border-width: 1px;
   --icon-stroke: 1.75;
 }
 
@@ -233,9 +237,22 @@
   }
 }
 
-/* Icons draw their lines at the theme's stroke. */
 @layer base {
-  svg.lucide {
+  /* Icons draw their lines at the theme's stroke, unless one sets its own (lucide writes 2 when
+     none is given). */
+  svg.lucide[stroke-width="2"] {
     stroke-width: var(--icon-stroke);
+  }
+
+  /* Faint text holds 4.5:1 on the panels, not on the accent fill of a highlighted, open, current
+     or hovered entry: there it takes the muted colour. */
+  :where(
+      [data-highlighted],
+      [data-popup-open],
+      [aria-current="page"],
+      [class*="hover:bg-accent"]:hover,
+      [class*="hover:bg-sidebar-accent"]:hover
+    ) {
+    --faint-foreground: var(--muted-foreground);
   }
 }
