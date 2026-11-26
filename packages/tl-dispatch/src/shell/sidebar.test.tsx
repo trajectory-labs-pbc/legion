@@ -48,7 +48,7 @@ function Commands({ enabled, onPeek }: { enabled: boolean; onPeek?: () => void }
     goTo: enabled ? run : () => {},
     openDocuments: undefined,
     openAnswers: run,
-    openMachineLogins: undefined,
+    openMachineLogins: run,
     signOut: run,
     toggleInboxDrawer: onPeek,
     toggleSidebar: undefined,

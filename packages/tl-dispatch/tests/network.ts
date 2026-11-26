@@ -17,7 +17,6 @@ const SHELL_READS = [
   "/api/v1/inbox",
   "/api/v1/issues",
   "/api/v1/credential-requests",
-  "/api/v1/credentials/capabilities",
   "/api/v1/me/agents/state",
   "/api/v1/me/replies",
   "/api/v1/priorities",
