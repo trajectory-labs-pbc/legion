@@ -80,6 +80,15 @@ describe("NavigationPanel", () => {
     expect(started).toBe(1);
   });
 
+  test("the account's menu opens the reader's own page", async () => {
+    const container = mount(panel({}));
+    await openAccount(container);
+    const page = [...document.body.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')].find(
+      (item) => item.textContent === "Your page"
+    );
+    expect(page?.getAttribute("href")).toBe("/people/reader");
+  });
+
   test("shows the shell's refusal with a Retry; both show they are busy while a sign-out is out", () => {
     let started = 0;
     const start = () => (started += 1);
