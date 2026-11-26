@@ -47,6 +47,9 @@ function Commands({ enabled, onPeek }: { enabled: boolean; onPeek?: () => void }
     createIssue: run,
     goTo: enabled ? run : () => {},
     openDocuments: undefined,
+    openAnswers: run,
+    openMachineLogins: undefined,
+    signOut: run,
     toggleInboxDrawer: onPeek,
     toggleSidebar: undefined,
     toggleMargin: undefined,
@@ -136,7 +139,6 @@ const destination = (name: string, count?: SidebarData["destinations"][number]["
     icon: found.icon,
     page: NAV_PAGES[found.name],
     current: false,
-    keyed: "key" in found,
     count,
   };
 };

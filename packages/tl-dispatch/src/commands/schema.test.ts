@@ -104,21 +104,24 @@ describe("the app's catalog", () => {
     }
   });
 
-  test("adds only the pages with no letter, as palette commands", () => {
+  test("adds only the frame's own: a G chord for each page upstream gives none, and palette rows", () => {
     const live = new Set(shellBindings().map((binding) => binding.id));
     const added = appCatalog.commandsOf("global").filter((command) => !live.has(command.id));
     expect(added.map((command) => `${command.id} ${command.keys?.join() ?? ""}`)).toEqual([
-      "global.go-priorities ",
-      "global.go-delivery ",
-      "global.go-pipeline ",
-      "global.go-machines ",
+      "global.go-priorities g o",
+      "global.go-delivery g e",
+      "global.go-pipeline g l",
+      "global.go-machines g m",
+      "global.go-answered ",
+      "global.go-machine-logins g n",
+      "global.sign-out ",
     ]);
   });
 
-  test("gives each sidebar destination one command, with its chord when it has a key", () => {
+  test("gives each sidebar destination one command, with its chord", () => {
     for (const destination of NAV_DESTINATIONS) {
       const command = appCatalog.command(`global.${navCommandName(destination.name)}`);
-      expect(command.keys).toEqual("key" in destination ? [`g ${destination.key}`] : []);
+      expect(command.keys).toEqual([`g ${destination.key}`]);
     }
   });
 });
