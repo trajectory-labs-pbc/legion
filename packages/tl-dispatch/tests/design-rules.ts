@@ -50,15 +50,17 @@ export interface ThemeTokens {
   radiusValues: ReadonlySet<string>;
 }
 
-/** The theme's colours and corners. The UI package's own test holds each corner token to a step
- *  of `--radius`, so this check takes the theme's corners as they are. */
-export function themeTokens(...stylesheets: string[]): ThemeTokens {
+/** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
+ *  package's own test holds each of the theme's corner tokens to a step of `--radius`, so this
+ *  check takes them as they are; a corner token the app declares is no corner. */
+export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
-  for (const css of stylesheets) {
+  for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
       if (/^--radius(-|$)/.test(property)) {
+        if (css !== theme) continue;
         radii.add(property);
         radiusValues.add(property === "--radius" ? "var(--radius)" : value);
       } else if (
