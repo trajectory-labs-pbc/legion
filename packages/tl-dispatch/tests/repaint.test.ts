@@ -32,7 +32,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { type CssDeclaration, parseCss } from "./css";
-import { PACKAGE_ROOT } from "./source";
+import { APP_STYLESHEET, PACKAGE_ROOT, PROOF_EDITOR_SRC, SRC_DIR } from "./source";
 
 // `src/repaint.css` maps the palette upstream's pages paint with onto the theme's tokens. These
 // tests compile the app's stylesheet as the build does, resolve each colour as the cascade does
@@ -53,13 +53,10 @@ const DARK_QUERY = "@media (prefers-color-scheme: dark)";
 /** Tailwind's own fallback for a browser without `color-mix()`: the real rule is beside it. */
 const MIX_SUPPORT = /^@supports \(color: ?color-mix\(in lab, ?red, ?red\)\)$/;
 
-const srcDir = join(PACKAGE_ROOT, "src");
-const stylesText = readFileSync(join(srcDir, "styles.css"), "utf8");
-const repaintText = readFileSync(join(srcDir, "repaint.css"), "utf8");
+const stylesText = readFileSync(APP_STYLESHEET, "utf8");
+const repaintText = readFileSync(join(SRC_DIR, "repaint.css"), "utf8");
 /** The editor's own stylesheet. A document page loads it after the app's, outside every layer. */
-const editorCss = parseCss(
-  readFileSync(join(PACKAGE_ROOT, "../proof-editor/src/lib.css"), "utf8")
-).declarations;
+const editorCss = parseCss(readFileSync(join(PROOF_EDITOR_SRC, "lib.css"), "utf8")).declarations;
 const REPAINT_IMPORT = '@import "./repaint.css";';
 
 /** The classes the app's sources write. No test changes a source, so one scan serves them all. */
@@ -68,7 +65,7 @@ let classes: string[] | undefined;
 /** The CSS Tailwind generates for the app, with every neutral shade's class added. */
 async function generate(repaint = repaintText): Promise<CssDeclaration[]> {
   const compiler = await compile(stylesText.replace(REPAINT_IMPORT, repaint), {
-    base: srcDir,
+    base: SRC_DIR,
     onDependency: () => {},
   });
   classes ??= new Scanner({ sources: compiler.sources }).scan();
@@ -239,11 +236,15 @@ function place(context: readonly string[]): { selector: string; around: string[]
   };
 }
 
+/** Whether the at-rule `rule` holds in `scheme`, on a page viewed at `media`. */
+const queryHolds = (rule: string, scheme: Scheme, media?: string) =>
+  rule.startsWith("@layer") || rule === media || (scheme === "dark" && rule === DARK_QUERY);
+
 /** Whether a rule at `context` applies to the root element in `scheme`, and how strongly. */
 function rootRule(context: readonly string[], scheme: Scheme): number | undefined {
   const { selector, around } = place(context);
-  if (around.some((rule) => rule.startsWith("@media") && rule !== DARK_QUERY)) return undefined;
-  if (around.includes(DARK_QUERY) && scheme !== "dark") return undefined;
+  const queries = around.filter((rule) => rule.startsWith("@media"));
+  if (!queries.every((rule) => queryHolds(rule, scheme))) return undefined;
   const parts = split(selector, ",");
   const specificity = parts.includes(":root:not(.light)") ? 2 : parts.includes(":root") ? 1 : 0;
   if (specificity === 0) return undefined;
@@ -323,12 +324,13 @@ const UNDERLINE = {
 /** Each declaration of `declarations` whose property `wanted` takes and whose rule matches
  *  `target`, in the order the cascade applies them: a rule outside every layer outranks a layered
  *  one, then specificity, then the later rule. A rule inside a media query is left out, unless
- *  it is `media`, the query a test views the page at. */
+ *  it is `media`, the query a test views the page at, or the dark query in `scheme` dark. */
 function cascade(
   declarations: readonly CssDeclaration[],
   target: Element,
   wanted: (property: string) => boolean,
-  media?: string
+  media?: string,
+  scheme: Scheme = "light"
 ): { property: string; value: string }[] {
   const matches = (selector: string) => {
     try {
@@ -342,7 +344,7 @@ function cascade(
     .flatMap(({ property, value, context }, index) => {
       if (!wanted(property)) return [];
       const around = context.filter((rule) => rule.startsWith("@") && !MIX_SUPPORT.test(rule));
-      if (around.some((rule) => !rule.startsWith("@layer") && rule !== media)) return [];
+      if (!around.every((rule) => queryHolds(rule, scheme, media))) return [];
       // A nested rule's selector is a descendant of its parent's.
       const rules = context.filter((rule) => !rule.startsWith("@"));
       const parents = rules.slice(0, -1).map((rule) => `:is(${rule}) `);
@@ -357,9 +359,15 @@ function cascade(
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
 }
 
-/** The value `target` computes for `property`, or undefined when no rule sets it. */
-const computed = (declarations: readonly CssDeclaration[], target: Element, property: string) =>
-  cascade(declarations, target, (wanted) => wanted === property).at(-1)?.value;
+/** The value `target` computes for `property`, at `media` and in `scheme`, or undefined when no
+ *  rule sets it. */
+const computed = (
+  declarations: readonly CssDeclaration[],
+  target: Element,
+  property: string,
+  media?: string,
+  scheme: Scheme = "light"
+) => cascade(declarations, target, (wanted) => wanted === property, media, scheme).at(-1)?.value;
 
 /** The underline `target` computes at rest. */
 function underline(declarations: readonly CssDeclaration[], target: Element): typeof UNDERLINE {
@@ -920,9 +928,13 @@ const STRIPED_CARDS: Record<string, string> = {
   "a step in the plan": `border-t max-[761px]:rounded-lg max-[761px]:border max-[761px]:border-l-4 max-[761px]:border-l-page-step ${pageLineBorder}`,
 };
 
-/** Each striped card whose left side is not drawn as its right one, in light, at `media`. */
-function stripeProblems(declarations: readonly CssDeclaration[], media?: string): string[] {
-  const held = rootValues(declarations, "light");
+/** Each striped card whose left side is not drawn as its right one, at `media`, in `scheme`. */
+function stripeProblems(
+  declarations: readonly CssDeclaration[],
+  media: string,
+  scheme: Scheme
+): string[] {
+  const held = rootValues(declarations, scheme);
   return Object.entries(STRIPED_CARDS).flatMap(([name, classes]) => {
     const element = withClasses(classes, "div");
     const side = (edge: "left" | "right") => {
@@ -931,14 +943,16 @@ function stripeProblems(declarations: readonly CssDeclaration[], media?: string)
           declarations,
           element,
           (p) => [`border-${part}`, `border-inline-${part}`, `border-${edge}-${part}`].includes(p),
-          media
+          media,
+          scheme
         ).at(-1)?.value;
       // A colour the card names through a variable it sets itself is that variable's value.
       const colour = (last("color") ?? "").replace(
         /var\((--[\w-]+)\)/g,
-        (whole, variable: string) => computed(declarations, element, variable) ?? whole
+        (whole, variable: string) =>
+          computed(declarations, element, variable, media, scheme) ?? whole
       );
-      const drawn = evaluate(colour, "light", held);
+      const drawn = evaluate(colour, scheme, held);
       return {
         colour: drawn === undefined ? colour : drawn.map((c) => c.toFixed(3)).join(" "),
         width: last("width"),
@@ -954,6 +968,10 @@ function stripeProblems(declarations: readonly CssDeclaration[], media?: string)
       : [`${name}: left ${left.width} ${left.colour}, right ${right.width} ${right.colour}`];
   });
 }
+
+/** The names of the cards `stripeProblems` reports. */
+const stripedCards = (declarations: readonly CssDeclaration[], media: string, scheme: Scheme) =>
+  stripeProblems(declarations, media, scheme).map((problem) => problem.replace(/:.*/, ""));
 
 /** The sizes, weights and widths a rule here sets, which the design rules do not read (they hold
  *  the corners, the colours and the shadows), as anything but a theme token: a length or a number
@@ -1544,18 +1562,38 @@ describe("the repaint of upstream's pages", async () => {
   });
 
   test.each(
-    Object.entries(VIEWS)
-  )("draws a striped card's left side as its right, %s", (_view, media) => {
-    expect(stripeProblems(declarations, media)).toEqual([]);
+    SCHEMES.flatMap((scheme) =>
+      Object.entries(VIEWS).map(([view, media]) => [scheme, view, media] as const)
+    )
+  )("draws a striped card's left side as its right, in %s, %s", (scheme, _view, media) => {
+    expect(stripeProblems(declarations, media, scheme)).toEqual([]);
+  });
+
+  const waiting = `.rounded-xl.border-l-4[class~="border-l-page-waiting"]`;
+  test.each([
+    [
+      "a rule under the dark query",
+      `${DARK_QUERY} { ${waiting} { border-left-color: var(--destructive); } }`,
+    ],
+    [
+      "a token that differs in dark",
+      `${waiting} { border-left-color: var(--left-control); }
+       :root { --left-control: var(--border); }
+       ${DARK_QUERY} { :root:not(.light) { --left-control: var(--destructive); } }`,
+    ],
+  ])("fails, in dark alone, when a card's left side differs from its right through %s", async (_how, rule) => {
+    const changed = await generate(`${repaintText}\n${rule}`);
+    for (const media of Object.values(VIEWS)) {
+      expect(stripedCards(changed, media, "light")).toEqual([]);
+      expect(stripedCards(changed, media, "dark")).toEqual(["an ask on the issue page"]);
+    }
   });
 
   test("fails when a card's stripe comes back, or a selected card's left side keeps the theme's edge", async () => {
     const stripe = /\.rounded-xl\.border-l-4 \{[^}]*\}/;
     expect(repaintText).toMatch(stripe);
     expect(
-      stripeProblems(await generate(repaintText.replace(stripe, "")), VIEWS.narrow).map((problem) =>
-        problem.replace(/:.*/, "")
-      )
+      stripedCards(await generate(repaintText.replace(stripe, "")), VIEWS.narrow, "light")
     ).toEqual([
       "a decision its asker is unsure of",
       "a selected decision its asker is unsure of",
@@ -1564,9 +1602,7 @@ describe("the repaint of upstream's pages", async () => {
     const selected = /\.rounded-xl\.border\.border-l-4\[class~="border-sky-500"\][^{]*\{[^}]*\}/;
     expect(repaintText).toMatch(selected);
     expect(
-      stripeProblems(await generate(repaintText.replace(selected, "")), VIEWS.narrow).map(
-        (problem) => problem.replace(/:.*/, "")
-      )
+      stripedCards(await generate(repaintText.replace(selected, "")), VIEWS.narrow, "light")
     ).toEqual(["a selected decision its asker is unsure of"]);
   });
 
