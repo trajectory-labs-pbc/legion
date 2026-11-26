@@ -3,7 +3,7 @@ import { type ReactNode, type RefObject, useEffect, useRef, useState } from "rea
 import { CommandButton } from "@/commands/command-button";
 
 /** Whether the sticky row has left its place at the panel's top: the page scrolled under it. The
- *  mark before the row stays where the row would be. */
+ *  mark before the row stays where the row would be, and rises above the row's line with the page. */
 function useStuck(
   mark: RefObject<HTMLElement | null>,
   row: RefObject<HTMLElement | null>,
@@ -11,20 +11,17 @@ function useStuck(
 ): boolean {
   const [stuck, setStuck] = useState(false);
   useEffect(() => {
-    if (!on) return;
-    const measure = () => {
-      const [at, now] = [mark.current, row.current].map(
-        (part) => part?.getBoundingClientRect().top
-      );
-      setStuck(at !== undefined && now !== undefined && at < now);
-    };
-    measure();
-    window.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure);
-    return () => {
-      window.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-    };
+    const at = mark.current;
+    if (!on || at === null || row.current === null) return;
+    const line = Number.parseFloat(getComputedStyle(row.current).top) || 0;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry) setStuck(!entry.isIntersecting && entry.boundingClientRect.top < line);
+      },
+      { rootMargin: `${-line}px 0px 0px 0px` }
+    );
+    observer.observe(at);
+    return () => observer.disconnect();
   }, [mark, row, on]);
   return on && stuck;
 }

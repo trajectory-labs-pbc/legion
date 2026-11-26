@@ -79,29 +79,86 @@ describe("frame.css on upstream's forms", () => {
   });
 });
 
-test("the margin sheet stays under the panel's top border, or under its stuck top row", () => {
+/** Works out a length in px: `vars` gives each custom property, `vh` the viewport's height. */
+function px(value: string | undefined, vars: Record<string, number>, vh = 800): number {
+  const source = (value ?? "")
+    .replace(/var\(--([\w-]+)(?:,\s*([\d.]+)px)?\)/g, (_, name: string, fallback?: string) => {
+      const known = vars[name] ?? (fallback === undefined ? undefined : Number(fallback));
+      if (known === undefined) throw new Error(`--${name} has no value`);
+      return String(known);
+    })
+    .replace(/([\d.]+)dvh/g, (_, count: string) => String((Number(count) * vh) / 100))
+    .replaceAll("px", "");
+  const tokens = source.match(/max|calc|[\d.]+|[-+*/(),]/g) ?? [];
+  let at = 0;
+  const sum = (): number => {
+    let total = product();
+    while (tokens[at] === "+" || tokens[at] === "-") {
+      const sign = tokens[at++] === "+" ? 1 : -1;
+      total += sign * product();
+    }
+    return total;
+  };
+  const product = (): number => {
+    let total = term();
+    while (tokens[at] === "*" || tokens[at] === "/") {
+      total = tokens[at++] === "*" ? total * term() : total / term();
+    }
+    return total;
+  };
+  const term = (): number => {
+    const token = tokens[at++];
+    if (token !== "calc" && token !== "max" && token !== "(") return Number(token);
+    if (token !== "(") at++;
+    const values = [sum()];
+    while (tokens[at] === ",") {
+      at++;
+      values.push(sum());
+    }
+    at++;
+    return Math.max(...values);
+  };
+  return sum();
+}
+
+/** The panel's inset and folded row, in spacing units, as content-panel.tsx sets them. */
+const PANEL_SOURCE = readFileSync(join(PACKAGE_ROOT, "src/shell/content-panel.tsx"), "utf8");
+const spacingOf = (name: string) =>
+  Number(new RegExp(`\\[--${name}:--spacing\\(([\\d.]+)\\)\\]`).exec(PANEL_SOURCE)?.[1]);
+
+test("the margin sheet runs from under the panel's top border, or its stuck row, to one border over its bottom", () => {
   const sheet = parseCss(FRAME_CSS).declarations.filter((declaration) =>
     declaration.context.at(-1)?.includes('[data-testid="margin-sheet"]')
   );
-  const at = (property: string) => sheet.find((declaration) => declaration.property === property);
-  // Stuck, the row covers where the panel's top border was.
-  expect(at("--sheet-above")?.value).toBe("max(var(--panel-row, 0px), var(--border-width))");
-  expect(at("top")?.value).toBe("calc(var(--panel-inset) + var(--sheet-above))");
-  // So the sheet's bottom stays one border over the panel's bottom inset.
-  expect(at("height")?.value).toBe(
-    "calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width))"
-  );
-  expect(at("max-height")?.value).toBe(at("height")?.value);
+  const at = (property: string) =>
+    sheet.find((declaration) => declaration.property === property)?.value;
+  const vh = 800;
+  const inset = 8;
+  const border = 1;
+  for (const row of [undefined, 44]) {
+    const vars: Record<string, number> = { "border-width": border, "panel-inset": inset };
+    if (row !== undefined) vars["panel-row"] = row;
+    vars["sheet-above"] = px(at("--sheet-above"), vars, vh);
+    const top = px(at("top"), vars, vh);
+    const height = px(at("height"), vars, vh);
+    // Stuck, the row covers where the panel's top border was.
+    expect(top).toBe(inset + (row ?? border));
+    expect(top + height).toBe(vh - inset - border);
+    expect(px(at("max-height"), vars, vh)).toBe(height);
+  }
 });
 
 test("while the folded sidebar's row is drawn, a focused field scrolls clear of it", () => {
   const padding = parseCss(FRAME_CSS).declarations.filter(
     (declaration) => declaration.property === "scroll-padding-top"
   );
-  // The panel's inset is spacing 2 and its row spacing 11 (content-panel.tsx).
-  expect(padding.map((declaration) => [declaration.context.at(-1), declaration.value])).toEqual([
-    ['html:has([data-testid="panel-header"])', "calc(var(--spacing) * 13)"],
+  expect(padding.map((declaration) => declaration.context.at(-1))).toEqual([
+    'html:has([data-testid="panel-header"])',
   ]);
+  const spacing = 4;
+  const below = (spacingOf("panel-inset") + spacingOf("panel-row")) * spacing;
+  expect(below).toBeGreaterThan(0);
+  expect(px(padding[0]?.value, { spacing })).toBeGreaterThanOrEqual(below);
 });
 
 test("wider than a phone, the issue's details line wraps rather than scrolls", () => {
