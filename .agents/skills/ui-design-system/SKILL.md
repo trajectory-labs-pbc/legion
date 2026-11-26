@@ -5,7 +5,7 @@ description: "Use when you build or review a page, a layout, a list, a menu, an 
 
 # The design system
 
-tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, square corners, Geist, colour for meaning only, no shadows, and a 2 px focus outline. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another written rule disagrees with these, these hold. Where a test disagrees with a rule here, never weaken the test: say so in the pull request. A check marked (new) in a reference is a test that does not exist yet; write it with the first change that needs it.
+tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, corners that are steps of one `--radius`, Geist, colour for meaning only, a shadow only under a floating layer or a dialog, and a 2 px focus outline. Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`; a page names the token and never writes a literal. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another written rule disagrees with these, these hold. Where a test disagrees with a rule here, never weaken the test: say so in the pull request. A check marked (new) in a reference is a test that does not exist yet; write it with the first change that needs it.
 
 ## Read first
 
@@ -23,7 +23,7 @@ tl-dispatch follows Linear's layout and interaction as closely as the theme allo
 3. **LR3** The pointer and the keyboard share one highlight per list. `j`/`k` and the arrows move it; the pointer moves it on hover.
 4. **LR5** `x` selects the highlighted row; Shift+click and Shift+arrow extend; `$mod+a` selects all. A selected row shows a checked box. A bar at the bottom names the count and the actions; Escape clears.
 5. **IV3** Space opens the highlighted record in a peek at the right. The list stays usable; `j`/`k` move the peek; Enter opens the page; Escape or Space closes it.
-6. **SU1, SU2** Surfaces separate by a background step or a 1 px border, never by a shadow. No coloured stripe on the left of a card or a row.
+6. **SU1, SU2** Surfaces at rest separate by a background step or a 1 px border, never by a shadow; only a floating layer (`shadow-popover`) or a dialog (`shadow-dialog`) casts one. No coloured stripe on the left of a card or a row.
 7. **SP1** A status shows as a 14 px icon whose shape follows the lifecycle; a priority as bars. Neither uses colour; colour marks only a failed, a waiting or a passed state.
 8. **KB2, KB3** Every action has one command, and every surface shows its key: tooltip, menu row, palette row. `s`, `p` and `l` open the status, priority and label pickers for the selection, else the highlighted row, else the record in view.
 9. **IE1** A property changes where it is shown: a click on it opens its picker in place. The write shows at once and rolls back with a toast if the server refuses it.
@@ -41,7 +41,7 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 4. Add a component to `packages/ui` when it renders from props alone (no query, no router, no command store, no app state) and it is a control, an overlay, a layout part or a value display. Add it with `shadcn add` or write it in the same style, give it a test file beside it, and run the package's `registry` script, which writes the root `registry.json`.
 5. Keep a component that reads data, the router or the command store in tl-dispatch, beside the page or the shell that uses it.
 6. Fix a `packages/ui` component in `packages/ui`. Never copy it into tl-dispatch to change it.
-7. The components follow these rules too: no shadow (SU1) and fades only (MO2). Remove a shadow or a scale animation you find there.
+7. The components follow these rules too: a shadow only from the theme's two shadow tokens (SU1) and fades only (MO2). Remove any other shadow or a scale animation you find there.
 
 ## Checks
 
