@@ -1,11 +1,13 @@
 name: Fork sync
 
 # This repository is a fork. This file, which upstream does not have, merges upstream's main into a
-# sync branch every week, or when someone starts it, and keeps one pull request open from that
+# sync branch every day, or when someone starts it, and keeps one pull request open from that
 # branch. A person reads the pull request's CI and the workflow changes its body lists, approves
 # it, and merges it with a merge commit, so main holds upstream's commits and the next run
 # fast-forwards the sync branch. Never squash or rebase a sync pull request. Closing it does not
-# stop the sync: the next run opens another. To stop the sync, disable this workflow.
+# stop the sync: the next run opens another. To stop the sync, disable this workflow. A scheduled
+# run leaves an open sync pull request as it is, so its head and approval stay; a run someone
+# starts updates it.
 #
 # Base main keeps the branch fork-sync; any other base, which a dispatch names, keeps
 # fork-sync-<base>. A run pushes only when the sync branch gains an upstream commit, and only as a
@@ -22,8 +24,8 @@ name: Fork sync
 # from the merged tree; the script's header says how it reads that tree.
 on:
   schedule:
-    # Monday 06:17 UTC, off the hour.
-    - cron: '17 6 * * 1'
+    # Every day at 06:17 UTC, off the hour.
+    - cron: '17 6 * * *'
   workflow_dispatch:
     inputs:
       base:

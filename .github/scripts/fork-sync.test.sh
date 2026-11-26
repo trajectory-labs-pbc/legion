@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests for `fork-sync.sh`, the weekly sync of this fork.
+# Tests for `fork-sync.sh`, the daily sync of this fork.
 #
 # Each case builds two bare repositories on disk, this fork and upstream, and runs the script as
 # the workflow does, with git's https addresses for both rewritten to those directories and a stub
@@ -96,15 +96,16 @@ up_commit() {
 # own branch, or with cross=true from another fork's branch of the same name.
 pr_open() { printf '[{"number":7,"isCrossRepository":%s}]\n' "${2:-false}" > "$1/pr-open"; }
 
-# run_sync <dir> <run> [base]: one run of the script, in <dir>/<run>. Sets status.
+# run_sync <dir> <run> [base] [event]: one run of the script, in <dir>/<run>, started by a person
+# unless event names another trigger. Sets status.
 run_sync() {
-  local dir=$1 run=$2 base=${3:-main}
+  local dir=$1 run=$2 base=${3:-main} event=${4:-workflow_dispatch}
   mkdir -p "$dir/$run"
   set +e
   (
     cd "$dir/$run"
     env -i PATH="$work/bin:$PATH" HOME="$dir/$run" GH_TOKEN=token APP_SLUG=syncer BASE="$base" \
-      REPOSITORY=fork/legion GITHUB_STEP_SUMMARY="$dir/$run/summary.md" STUB_LOG="$dir/$run/gh.log" \
+      REPOSITORY=fork/legion GITHUB_EVENT_NAME="$event" GITHUB_STEP_SUMMARY="$dir/$run/summary.md" STUB_LOG="$dir/$run/gh.log" \
       STUB_DIR="$dir/$run" STUB_PR="$dir/pr-open" \
       GIT_CONFIG_COUNT=2 \
       GIT_CONFIG_KEY_0="url.$dir/origin.git.insteadOf" GIT_CONFIG_VALUE_0=https://github.com/fork/legion.git \
@@ -152,6 +153,12 @@ check "it pushes nothing" "$(is "$(sync_head "$d")" "$first_head")"
 check "it updates the pull request and opens none" \
   "$(is "$(has "$d/rerun/patch.json") $(has "$d/rerun/post.json")" 'true false')"
 up_commit "$d" "third" docs/b.md $'b\n'
+run_sync "$d" scheduled main schedule
+check "a scheduled run with the pull request open passes" "$(is "$status" 0)"
+check "it pushes nothing and neither updates nor opens a pull request" \
+  "$(is "$(sync_head "$d") $(has "$d/scheduled/patch.json") $(has "$d/scheduled/post.json")" "$first_head false false")"
+check "it says the open pull request holds the sync" \
+  "$(contains "$(text "$d/scheduled/summary.md")" '^Pull request #7 is open')"
 run_sync "$d" advance
 check "a run after upstream moved on passes" "$(is "$status" 0)"
 check "it fast-forwards the sync branch to upstream's new commit" \
@@ -160,8 +167,8 @@ check "it fast-forwards the sync branch to upstream's new commit" \
 check "it updates the open pull request" "$(has "$d/advance/patch.json")"
 git --git-dir="$d/origin.git" update-ref refs/heads/main "$(sync_head "$d")"
 rm "$d/pr-open"
-run_sync "$d" merged
-check "a run after the merge passes" "$(is "$status" 0)"
+run_sync "$d" merged main schedule
+check "a scheduled run after the merge passes" "$(is "$status" 0)"
 check "it neither opens nor updates a pull request" \
   "$(is "$(has "$d/merged/post.json") $(has "$d/merged/patch.json")" 'false false')"
 

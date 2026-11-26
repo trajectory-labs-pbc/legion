@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The weekly sync of this fork (.github/workflows/fork-sync.yaml runs it): merge upstream's main
+# The daily sync of this fork (.github/workflows/fork-sync.yaml runs it): merge upstream's main
 # into the sync branch, scan the merged tree's workflow files, push, and open or update one pull
 # request from the sync branch.
 #
 # Inputs, from the environment: GH_TOKEN (the sync App's token), APP_SLUG (the App's slug), BASE
-# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork) and GITHUB_STEP_SUMMARY.
+# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork), GITHUB_EVENT_NAME and
+# GITHUB_STEP_SUMMARY.
 # It works in the current directory: the merged tree goes to ./work, and the lists it builds sit
 # beside it.
 #
@@ -75,6 +76,13 @@ short=$(git rev-parse --short=12 "$up")
 # the same name.
 open_pr=$(gh pr list -R "$REPOSITORY" --head "$sync" --base "$BASE" --state open \
   --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+
+# A push to the open pull request dismisses its approval and starts its CI again, so a scheduled
+# run leaves it as it is. The next scheduled sync starts after it merges or closes.
+if [ -n "$open_pr" ] && [ "$GITHUB_EVENT_NAME" = schedule ]; then
+  summary "Pull request #$open_pr is open, so this scheduled run leaves it as it is. Start this workflow to update it."
+  exit 0
+fi
 
 conflict() {
   local what=$1 paths
