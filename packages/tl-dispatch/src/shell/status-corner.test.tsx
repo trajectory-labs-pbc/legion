@@ -1,5 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, jest, spyOn, test } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { onFakeClock } from "@upstream-dispatch/__tests__/fake-clock";
+import { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
+import { liveSocketFor } from "@upstream-dispatch/api/live-socket";
 import { createDraftStore, DRAFT_KEPT_UNITS } from "@upstream-dispatch/features/inbox/draft-store";
 
 import { render, settle } from "../../tests/react";
@@ -49,5 +52,45 @@ describe("StatusCorner", () => {
     expect(view.container.querySelector('[data-testid="drafts-not-kept"]')?.textContent).toContain(
       "longer than"
     );
+  });
+
+  test("SHL-33 the connection pill says the live feed is reconnecting, and offers a reload once it is stuck", async () => {
+    const sockets = installFakeLiveSockets();
+    mounted.push({ unmount: () => sockets.restore() });
+    const reload = spyOn(window.location, "reload").mockImplementation(() => undefined);
+    mounted.push({ unmount: () => reload.mockRestore() });
+    const client = signedInClient();
+    const view = mount(client);
+    // The page's event feed opens the socket; both go once the corner is gone.
+    const live = liveSocketFor(client);
+    const stopFeed = live.subscribeEvents({
+      since: () => null,
+      onStart: () => {},
+      onEvent: () => {},
+    });
+    mounted.push({
+      unmount: () => {
+        stopFeed();
+        live.close();
+      },
+    });
+    const pill = () => view.container.querySelector('[data-testid="connection-pill"]');
+    await onFakeClock(async () => {
+      settle(() => sockets.latest().open());
+      expect(pill()).toBeNull();
+      settle(() => sockets.latest().drop());
+      expect(pill()?.textContent).toBe("Reconnecting…");
+      // Every reconnect fails, as it starts, for two minutes.
+      settle(() => {
+        for (let waited = 0; waited < 120_000; waited += 500) {
+          jest.advanceTimersByTime(500);
+          const socket = sockets.latest();
+          if (socket.readyState === 0) socket.drop();
+        }
+      });
+      expect(pill()?.textContent).toContain("Live updates are not reaching this page");
+      settle(() => pill()?.querySelector("button")?.click());
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 });
