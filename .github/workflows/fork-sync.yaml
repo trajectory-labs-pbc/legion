@@ -72,7 +72,5 @@ jobs:
           APP_SLUG: ${{ steps.token.outputs.app-slug }}
           BASE: ${{ inputs.base || 'main' }}
           REPOSITORY: ${{ github.repository }}
-          # Only a run someone starts pushes to an open sync pull request: a push dismisses its approval.
-          MERGE_INTO_OPEN_PR: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: trusted/.github/scripts/fork-sync.sh

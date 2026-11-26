@@ -97,15 +97,15 @@ up_commit() {
 pr_open() { printf '[{"number":7,"isCrossRepository":%s}]\n' "${2:-false}" > "$1/pr-open"; }
 
 # run_sync <dir> <run> [base]: one run of the script, in <dir>/<run>, as a run someone starts;
-# with merge=false before it, as a scheduled run. Sets status.
+# with event=schedule before it, as a scheduled run. Sets status.
 run_sync() {
-  local dir=$1 run=$2 base=${3:-main} merge=${merge:-true}
+  local dir=$1 run=$2 base=${3:-main} event=${event:-workflow_dispatch}
   mkdir -p "$dir/$run"
   set +e
   (
     cd "$dir/$run"
     env -i PATH="$work/bin:$PATH" HOME="$dir/$run" GH_TOKEN=token APP_SLUG=syncer BASE="$base" \
-      REPOSITORY=fork/legion MERGE_INTO_OPEN_PR="$merge" GITHUB_STEP_SUMMARY="$dir/$run/summary.md" STUB_LOG="$dir/$run/gh.log" \
+      REPOSITORY=fork/legion GITHUB_EVENT_NAME="$event" GITHUB_STEP_SUMMARY="$dir/$run/summary.md" STUB_LOG="$dir/$run/gh.log" \
       STUB_DIR="$dir/$run" STUB_PR="$dir/pr-open" \
       GIT_CONFIG_COUNT=2 \
       GIT_CONFIG_KEY_0="url.$dir/origin.git.insteadOf" GIT_CONFIG_VALUE_0=https://github.com/fork/legion.git \
@@ -153,7 +153,7 @@ check "it pushes nothing" "$(is "$(sync_head "$d")" "$first_head")"
 check "it updates the pull request and opens none" \
   "$(is "$(has "$d/rerun/patch.json") $(has "$d/rerun/post.json")" 'true false')"
 up_commit "$d" "third" docs/b.md $'b\n'
-merge=false run_sync "$d" scheduled
+event=schedule run_sync "$d" scheduled
 check "a scheduled run with the pull request open passes" "$(is "$status" 0)"
 check "it pushes nothing and opens no pull request" \
   "$(is "$(sync_head "$d") $(has "$d/scheduled/post.json")" "$first_head false")"
@@ -174,7 +174,7 @@ check "a run after the merge passes" "$(is "$status" 0)"
 check "it neither opens nor updates a pull request" \
   "$(is "$(has "$d/merged/post.json") $(has "$d/merged/patch.json")" 'false false')"
 up_commit "$d" "fourth" docs/c.md $'c\n'
-merge=false run_sync "$d" next
+event=schedule run_sync "$d" next
 check "a scheduled run with no pull request open after upstream moved on passes" "$(is "$status" 0)"
 check "it pushes upstream's new commit to the sync branch and opens a pull request" \
   "$(is "$(git --git-dir="$d/origin.git" merge-base --is-ancestor "$(up_head "$d")" fork-sync \
@@ -184,7 +184,7 @@ echo "an open pull request from another fork's branch of the same name"
 d=$work/cross
 setup "$d"
 pr_open "$d" true
-merge=false run_sync "$d" run
+event=schedule run_sync "$d" run
 check "a scheduled run opens a pull request of its own and updates none" \
   "$(is "$status $(has "$d/run/post.json") $(has "$d/run/patch.json")" '0 true false')"
 
@@ -198,7 +198,7 @@ git -C "$d/person" checkout -q fork-sync
 commit "$d/person" "add a workflow" .github/workflows/evil.yaml $'on: push\njobs:\n  x:\n    runs-on: ubuntu-24.04\n    environment: upstream-sync\n    steps:\n      - run: echo\n'
 git -C "$d/person" push -q origin fork-sync
 person_head=$(sync_head "$d")
-merge=false run_sync "$d" again
+event=schedule run_sync "$d" again
 check "a scheduled run fails" "$(is "$status" 1)"
 check "it refuses the file" "$(contains "$(text "$d/again/summary.md")" '^\*\*Refused:\*\*.*upstream-sync')"
 check "it names the file" "$(contains "$(text "$d/again/summary.md")" 'evil.yaml')"
