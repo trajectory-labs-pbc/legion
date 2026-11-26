@@ -438,6 +438,55 @@
   color: var(--muted-foreground);
 }
 
+/* The editor's corners take the nearest theme step, and a pill's (999px) the Badge's. The mark
+   popover and its touch strip are drawn on the body, so their rules sit under `:root`. */
+.dispatch-doc .milkdown code,
+.dispatch-doc .dispatch-mark-pulse {
+  border-radius: var(--radius-sm);
+}
+
+.dispatch-doc .milkdown pre,
+:root .mark-popover-actions button,
+:root .mark-popover-entry,
+:root .mark-popover-textarea {
+  border-radius: var(--radius-md);
+}
+
+:root .mark-popover {
+  border-radius: var(--radius-lg);
+}
+
+.dispatch-doc .proof-mermaid-block,
+:root .mark-mobile-card,
+:root .mark-mobile-summary,
+:root .mark-mobile-strip-actions,
+:root .mark-mobile-strip.mark-mobile-strip-expanded,
+:root .mark-mobile-strip.mark-mobile-strip-selection .mark-mobile-strip-actions {
+  border-radius: var(--radius-xl);
+}
+
+:root .mark-popover.mark-popover-sheet {
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.dispatch-doc .dispatch-action-bar,
+.dispatch-doc .dispatch-action-bar button:hover,
+:root .mark-mobile-strip-actions button,
+:root .mark-mobile-strip-done,
+:root .mark-mobile-summary-cta,
+:root .mark-mobile-undo,
+:root .mark-mobile-undo button {
+  border-radius: var(--radius-badge);
+}
+
+/* The action bar floats over the document, as a popover does. */
+.dispatch-doc .dispatch-action-bar {
+  box-shadow: var(--shadow-popover);
+}
+
 @keyframes repaint-mark-pulse {
   0% {
     box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 45%, transparent);
@@ -605,43 +654,120 @@ button[class~="disabled:opacity-40"]:disabled {
 }
 
 /* Upstream's small corner is Tailwind's 0.25rem, and its own corners are pixel values: each takes
-   the nearest theme step, unless the element sets another corner at some width. */
-.rounded:not([class*="rounded-"]),
-.rounded-\[5px\]:not([class*=":rounded-"]) {
+   the nearest theme step, the smaller of two as near. */
+.rounded,
+.rounded-\[5px\] {
   border-radius: var(--radius-sm);
 }
 
-:is(.rounded-\[6px\], .rounded-\[7px\]):not([class*=":rounded-"]) {
+:is(.rounded-\[6px\], .rounded-\[7px\]) {
   border-radius: var(--radius-md);
 }
 
-:is(.rounded-\[8px\], .rounded-\[10px\]):not([class*=":rounded-"]) {
+:is(.rounded-\[8px\], .rounded-\[10px\]) {
   border-radius: var(--radius-lg);
 }
 
-.rounded-2xl:not([class*=":rounded-"]) {
+.rounded-2xl {
   border-radius: var(--radius-xl);
 }
 
-/* Upstream's shadows. A menu or a popover takes the theme's popover shadow, a drawer or a sheet
-   the dialog's. A surface at rest casts none: a card keeps its edge, the waiting ask its ring and
-   the stuck header its bottom line, in the theme's edge width. */
+.rounded-t-\[14px\] {
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+}
+
+/* A corner the element sets at a width: there it outranks the rules above, as upstream's does. */
+@media (width < 761px) {
+  .max-\[761px\]\:rounded-none {
+    border-radius: 0;
+  }
+
+  .max-\[761px\]\:rounded-\[5px\] {
+    border-radius: var(--radius-sm);
+  }
+}
+
+@media (width >= 761px) {
+  .min-\[761px\]\:rounded-none {
+    border-radius: 0;
+  }
+
+  .min-\[761px\]\:rounded-\[10px\] {
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* The corners upstream's stylesheet and the typography plugin write, at the nearest step. */
+.dispatch-markdown [data-markdown-task-checkbox],
+:is(.dispatch-doc, .dispatch-markdown)
+  .proof-typed-block-ask
+  [data-dispatch-ask-footer]
+  .dispatch-markdown
+  pre {
+  border-radius: var(--radius-sm);
+}
+
+[data-node-words] [data-dispatch-picture]:has(img) {
+  border-radius: var(--radius-md);
+}
+
+.prose :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)),
+.prose-sm :where(kbd):not(:where([class~="not-prose"], [class~="not-prose"] *)),
+.prose-sm :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: var(--radius-sm);
+}
+
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-radius: var(--radius-md);
+}
+
+/* Upstream's shadows, by what casts them, not by their size. A menu, a popover, a toast or a
+   floating bar or button takes the theme's popover shadow. A dialog or a drawer takes the
+   dialog's: upstream's `shadow-2xl`, a modal `shadow-xl`, and the margin's and the contents'
+   sheets. A surface at rest casts none: a card keeps its edge, the waiting ask its ring and the
+   stuck header its bottom line, in the theme's edge width. Nor does a switch's thumb. */
 :is(.shadow-lg, .shadow-xl, [class~="shadow-[0_12px_30px_rgba(28,25,23,0.18)]"]):not(
+    [aria-modal],
     [class*=":shadow-"]
   ) {
   --tw-shadow: var(--shadow-popover);
 }
 
+/* The modal one is a selector of its own: inside `:is()` its weight would outrank the margin
+   sheet's rule below. */
 :is(
+    .shadow-2xl,
     [class~="shadow-[-12px_0_30px_rgba(28,25,23,0.14)]"],
     [class~="shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"],
     [class~="shadow-[0_-10px_30px_rgba(0,0,0,0.2)]"]
-  ) {
+  ),
+.shadow-xl[aria-modal] {
   --tw-shadow: var(--shadow-dialog);
 }
 
-:is(.shadow-sm, [class~="shadow-[0_2px_12px_rgba(28,25,23,0.07)]"]):not([class*=":shadow-"]) {
+:is(.shadow-sm, [class~="shadow-[0_2px_12px_rgba(28,25,23,0.07)]"]):not([class*=":shadow-"]),
+[role="switch"] .shadow-lg {
   --tw-shadow: initial;
+}
+
+/* The margin's sheet is a column from 1280 px, where upstream takes its shadow away. */
+@media (width >= 80rem) {
+  .xl\:shadow-none {
+    --tw-shadow: initial;
+  }
+}
+
+/* A focused row is marked by its tint: the 3 px stripe down its left edge goes. A node's card keeps
+   its edge, in the theme's width; a step's row in the plan keeps its ring under 761 px. */
+[class~="shadow-[0_0_0_1px_var(--color-page-hair),inset_3px_0_0_var(--color-page-muted)]"] {
+  --tw-shadow: 0 0 0 var(--border-width) var(--border);
+}
+
+@media (width >= 761px) {
+  [class~="shadow-[inset_3px_0_0_var(--color-page-step)]"] {
+    --tw-shadow: initial;
+  }
 }
 
 [class~="shadow-[0_0_0_1px_var(--color-page-waiting),0_2px_12px_rgba(28,25,23,0.07)]"] {
@@ -670,16 +796,28 @@ button[class~="disabled:opacity-40"]:disabled {
   border-left-color: var(--border);
 }
 
+/* The design rules let a colour here name only the theme's tokens, so the card redefines the
+   stripe's shades, and its children take them back: a pill inside keeps its own colour. */
+:root {
+  --repaint-amber-700: var(--color-amber-700);
+  --repaint-amber-400: var(--color-amber-400);
+}
+
 .rounded-xl.border.border-l-4[class~="border-sky-500"][class~="border-l-amber-700"] {
   --color-amber-700: var(--color-sky-500);
   --color-amber-400: var(--color-sky-400);
 }
 
+.rounded-xl.border.border-l-4[class~="border-sky-500"][class~="border-l-amber-700"] > * {
+  --color-amber-700: var(--repaint-amber-700);
+  --color-amber-400: var(--repaint-amber-400);
+}
+
 /* The plan's and the verification's rows mark a step or a statement with a stripe too, which
    their cells already say. Where a row is drawn as a card (under 761 px) that side takes the
    row's edge: `--color-page-line` is the muted fill. */
-[class~="border-page-line"]:is([class~="border-l-4"], [class~="max-[761px]:border-l-4"]) {
-  @variant max-[761px] {
+@media (width < 761px) {
+  [class~="border-page-line"]:is([class~="border-l-4"], [class~="max-[761px]:border-l-4"]) {
     border-left-width: var(--border-width);
     border-left-color: var(--muted);
   }

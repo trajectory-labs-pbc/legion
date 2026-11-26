@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
@@ -141,8 +141,9 @@ function split(text: string, separator: string): string[] {
   let depth = 0;
   let part = "";
   for (const char of text) {
-    if (char === "(") depth += 1;
-    if (char === ")") depth -= 1;
+    // A class in an attribute selector holds commas too: `[class~="shadow-[0_0_0_1px_x,0_2px_y]"]`.
+    if (char === "(" || char === "[") depth += 1;
+    if (char === ")" || char === "]") depth -= 1;
     if (char === separator && depth === 0) {
       parts.push(part.trim());
       part = "";
@@ -349,7 +350,8 @@ function cascade(
         .map((part) => parents.join("") + part)
         .filter(matches);
       if (matched.length === 0) return [];
-      const rank = (around.length === 0 ? 1e9 : 0) + Math.max(...matched.map(specificity));
+      const layered = around.some((rule) => rule.startsWith("@layer"));
+      const rank = (layered ? 0 : 1e9) + Math.max(...matched.map(specificity));
       return [{ index, property, rank, value }];
     })
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
@@ -501,25 +503,407 @@ function shapeProblems(declarations: readonly CssDeclaration[]): string[] {
   });
 }
 
-/** Each rule of upstream's stylesheet, outside the layers, that draws an element round, with no
- *  rule of the repaint giving the same selector the Badge's corner. */
-function roundRuleProblems(declarations: readonly CssDeclaration[]): string[] {
-  const outside = declarations.filter(
-    ({ context }) => !context.some((at) => at.startsWith("@layer"))
-  );
-  const selector = ({ context }: CssDeclaration) => selectorKey(context.join(" "));
-  return outside
-    .filter(({ property, value }) => property === "border-radius" && /9999px|infinity/.test(value))
+/** The width 761 px and up, where the plan's and the verification's rows are a table's, and under
+ *  it, where they are cards. */
+const VIEWS = { narrow: "@media (width < 761px)", wide: "@media (width >= 761px)" } as const;
+
+/** Each class list upstream's sources write: the words of a string or a template, outside its
+ *  `${}`, that read as classes. */
+const upstreamLists = [
+  ...new Set(
+    (readdirSync(upstreamSrc, { recursive: true }) as string[])
+      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+      .flatMap((file) =>
+        [...readFileSync(join(upstreamSrc, file), "utf8").matchAll(/(["`])([^"`]*)\1/g)].map(
+          ([, , body]) =>
+            (body ?? "")
+              .replace(/\$\{[^}]*(\}|$)/g, " ")
+              .split(/\s+/)
+              .filter((word) => /^[\w:[\]/.%()#,&>*=!-]+$/.test(word) && /[a-z]/.test(word))
+              .join(" ")
+        )
+      )
+  ),
+];
+const roundedFull = upstreamLists.filter((classes) => classes.split(" ").includes("rounded-full"));
+
+/** A pill is `rounded-full` with side padding and is not a floating button. */
+const isPill = (classes: string) =>
+  /(^|[ :])px-/.test(classes) && !classes.split(" ").includes("shadow-lg");
+/** A pill set in body text keeps its own size and weight. */
+const inBodyText = (classes: string) =>
+  classes.split(" ").some((name) => name === "text-sm" || name === "text-base");
+
+/** Each of upstream's `rounded-full` class lists whose corner or type is not what it should be:
+ *  the Badge's for a pill, the circle for anything else. */
+function pillProblems(declarations: readonly CssDeclaration[]): string[] {
+  return roundedFull.flatMap((classes) => {
+    const element = withClasses(classes);
+    const { "font-size": _size, "font-weight": _weight, ...shape } = BADGE;
+    const want: Record<string, string> = !isPill(classes)
+      ? { "border-radius": ROUND }
+      : inBodyText(classes)
+        ? shape
+        : BADGE;
+    return Object.entries(want).flatMap(([property, value]) => {
+      const got = computed(declarations, element, property);
+      return got === value ? [] : [`${classes}: ${property} ${got}`];
+    });
+  });
+}
+
+// ---- Corners ----
+
+const CORNERS = [
+  "border-top-left-radius",
+  "border-top-right-radius",
+  "border-bottom-right-radius",
+  "border-bottom-left-radius",
+] as const;
+const CORNER_PROPERTY = /^border(-(top|bottom)-(left|right))?-radius$/;
+/** The theme's corner steps by size in pixels, smallest first. */
+const STEPS = [
+  [4, "var(--radius-sm)"],
+  [6, "var(--radius-md)"],
+  [8, "var(--radius-lg)"],
+  [12, "var(--radius-xl)"],
+] as const;
+const THEME_CORNER = /^(0|var\(--radius(-(sm|md|lg|xl|badge))?\)|calc\(infinity \* 1px\))$/;
+
+/** The corner the theme draws for one of upstream's: the nearest step (the smaller of two as
+ *  near), the Badge's for a pill's 999px or more, and a theme corner or `0` as it is. A variable
+ *  that is not the theme's is its value on the root, in `root`. */
+function themeCorner(value: string, root: ReadonlyMap<string, string>): string {
+  return value
+    .split(/\s+/)
+    .map((part) => {
+      const variable = /^var\((--[\w-]+)\)$/.exec(part)?.[1];
+      const length =
+        THEME_CORNER.test(part) || variable === undefined ? part : (root.get(variable) ?? part);
+      if (THEME_CORNER.test(length) || /^0[a-z]*$/.test(length))
+        return length.replace(/^0[a-z]+$/, "0");
+      const size = /^([\d.]+)(px|r?em)$/.exec(length);
+      if (size === null) return part;
+      const pixels = Number(size[1]) * (size[2] === "px" ? 1 : 16);
+      if (pixels >= 999) return BADGE["border-radius"];
+      let best: (typeof STEPS)[number] = STEPS[0];
+      for (const step of STEPS) {
+        if (Math.abs(step[0] - pixels) < Math.abs(best[0] - pixels)) best = step;
+      }
+      return best[1];
+    })
+    .join(" ");
+}
+
+/** The four corners `element` computes, at `media`: a later longhand outranks the shorthand. */
+function cornersOf(
+  declarations: readonly CssDeclaration[],
+  element: Element,
+  media?: string
+): (string | undefined)[] {
+  const corners: (string | undefined)[] = [undefined, undefined, undefined, undefined];
+  for (const { property, value } of cascade(
+    declarations,
+    element,
+    (p) => CORNER_PROPERTY.test(p),
+    media
+  )) {
+    const longhand = CORNERS.indexOf(property as (typeof CORNERS)[number]);
+    if (longhand >= 0) corners[longhand] = value;
+    else {
+      const [first, second = first, third = first, fourth = second] = value.split(/\s+/);
+      corners.splice(0, 4, first, second, third, fourth);
+    }
+  }
+  return corners;
+}
+
+/** Each class list of upstream's that sets a corner, `rounded-full` aside (the pills' check), whose
+ *  corners at either width are not the theme's for what upstream draws there. */
+function cornerProblems(
+  declarations: readonly CssDeclaration[],
+  bare: readonly CssDeclaration[]
+): string[] {
+  const root = rootValues(bare, "light");
+  return upstreamLists
     .filter(
-      (round) =>
-        !outside.some(
-          (rule) =>
-            rule.property === "border-radius" &&
-            rule.value === BADGE["border-radius"] &&
-            selector(rule) === selector(round)
+      (classes) => /(^|[ :])rounded(-|\s|$)/.test(classes) && !classes.includes("rounded-full")
+    )
+    .flatMap((classes) =>
+      Object.entries(VIEWS).flatMap(([view, media]) => {
+        const element = withClasses(classes, "div");
+        const want = cornersOf(bare, element, media).map((corner) =>
+          corner === undefined ? undefined : themeCorner(corner, root)
+        );
+        const got = cornersOf(declarations, element, media);
+        return want.join() === got.join() ? [] : [`${classes} (${view}): ${got.join(" ")}`];
+      })
+    );
+}
+
+/** Each corner a rule of upstream's stylesheet (`app`), outside the utility classes, or of the
+ *  editor's (`editor`) sets that is not the theme's, with no rule here setting the theme's for
+ *  the same selector: `app`'s as it is, the editor's under `.dispatch-doc` or `:root`, which
+ *  outrank it. */
+function cornerRuleProblems(
+  declarations: readonly CssDeclaration[],
+  app: readonly CssDeclaration[],
+  editor: readonly CssDeclaration[]
+): string[] {
+  const root = rootValues(app, "light");
+  const own = declarations.filter(({ context }) => !context.some((at) => at.startsWith("@layer")));
+  const keyOf = (context: readonly string[]) =>
+    selectorKey(context.filter((rule) => !rule.startsWith("@")).join(" "));
+  const set = (selector: string, property: string, value: string) =>
+    own.some(
+      (rule) =>
+        rule.property === property &&
+        rule.value === value &&
+        split(keyOf(rule.context), ",").some((part) => part.trim() === selector)
+    );
+  const literal = ({ property, value }: CssDeclaration) =>
+    CORNER_PROPERTY.test(property) && /\d/.test(value) && themeCorner(value, root) !== value;
+  const utility = ({ context }: CssDeclaration) =>
+    /^\.[^ ]*rounded/.test(context.find((rule) => !rule.startsWith("@")) ?? "");
+  const fromApp = app
+    .filter((rule) => literal(rule) && !utility(rule))
+    .flatMap((rule) => {
+      const selector = keyOf(rule.context);
+      return set(selector, rule.property, themeCorner(rule.value, root))
+        ? []
+        : [`${selector} { ${rule.property}: ${rule.value} }`];
+    });
+  const fromEditor = editor.filter(literal).flatMap((rule) => {
+    const selector = keyOf(rule.context);
+    if (Object.keys(UNREACHED).some((key) => selector.startsWith(key))) return [];
+    const want = themeCorner(rule.value, root);
+    // A shorthand of four corners may be set as its longhands.
+    const [a, b = a, c = a, d = b] = want.split(/\s+/);
+    return [".dispatch-doc ", ":root "].some(
+      (scope) =>
+        set(`${scope}${selector}`, rule.property, want) ||
+        CORNERS.every((corner, index) =>
+          set(`${scope}${selector}`, corner, [a, b, c, d][index] ?? "")
         )
     )
-    .map((round) => `${selector(round)}: border-radius ${round.value}`);
+      ? []
+      : [`${selector} { ${rule.property}: ${rule.value} }`];
+  });
+  return [...fromApp, ...fromEditor];
+}
+
+// ---- Shadows ----
+
+const POPOVER = "var(--shadow-popover)";
+const DIALOG = "var(--shadow-dialog)";
+const NONE = "initial";
+/** Upstream's own shadow, kept: a ring or a rule a component draws in the page's own colours. */
+const UPSTREAMS = "upstream's own";
+
+/** One element for each shadow class upstream writes, drawn as upstream draws it, with the
+ *  shadow its role takes. */
+const SHADOWS: readonly (readonly [
+  role: string,
+  draw: () => Element,
+  want: string,
+  media?: string,
+])[] = [
+  [
+    "a menu",
+    () => withClasses(upstreamClasses("features/inbox/ViewMenu.tsx", "shadow-lg"), "div"),
+    POPOVER,
+  ],
+  [
+    "a toast",
+    () =>
+      withClasses(upstreamClasses("features/shell/DeploymentResilience.tsx", "shadow-lg"), "div"),
+    POPOVER,
+  ],
+  [
+    "a floating button",
+    () =>
+      withClasses(
+        upstreamClasses("features/agent-view/AgentThread.tsx", "rounded-full px-4"),
+        "button"
+      ),
+    POPOVER,
+  ],
+  [
+    "a floating bar",
+    () =>
+      withClasses(
+        upstreamClasses("features/project/issues-table-controls.tsx", "shadow-xl"),
+        "div"
+      ),
+    POPOVER,
+  ],
+  [
+    "an issue's actions menu",
+    () =>
+      withClasses(
+        upstreamClasses("features/issue-page/IssueActionsMenu.tsx", "shadow-[0_12px"),
+        "div"
+      ),
+    POPOVER,
+  ],
+  [
+    "a switch's thumb",
+    () =>
+      sample(
+        // DeliveryPage.tsx's Swimlanes switch; its template's quotes hide it from upstreamClasses.
+        '<button role="switch"><span class="block h-4 w-4 rounded-full shadow-lg"></span></button>',
+        "span"
+      ),
+    NONE,
+  ],
+  [
+    "a dialog",
+    () => withClasses(upstreamClasses("features/issue/CreateIssueDialog.tsx", "shadow-2xl"), "div"),
+    DIALOG,
+  ],
+  [
+    "a modal dialog upstream casts as a menu",
+    () => {
+      const dialog = withClasses(
+        upstreamClasses("features/doc/NameVersionDialog.tsx", "shadow-xl"),
+        "div"
+      );
+      dialog.setAttribute("aria-modal", "true");
+      return dialog;
+    },
+    DIALOG,
+  ],
+  [
+    "the margin's drawer",
+    // Margin.tsx's drawer; its template's quotes hide it from upstreamClasses.
+    () =>
+      withClasses(
+        "fixed inset-y-0 right-0 border-l shadow-[-12px_0_30px_rgba(28,25,23,0.14)]",
+        "aside"
+      ),
+    DIALOG,
+  ],
+  [
+    "the contents' sheet",
+    () =>
+      withClasses(
+        upstreamClasses("features/issue-page/contents-frame.tsx", "shadow-[0_-10px"),
+        "div"
+      ),
+    DIALOG,
+  ],
+  [
+    "the margin's sheet",
+    () => withClasses("border-t shadow-[0_-8px_24px_rgba(15,23,42,0.08)] xl:shadow-none", "aside"),
+    DIALOG,
+  ],
+  [
+    "the margin's column, from 1280 px",
+    () => withClasses("border-t shadow-[0_-8px_24px_rgba(15,23,42,0.08)] xl:shadow-none", "aside"),
+    NONE,
+    "@media (width >= 80rem)",
+  ],
+  [
+    "a card at rest",
+    () => withClasses(upstreamClasses("features/margin/DecisionCard.tsx", "shadow-sm"), "div"),
+    NONE,
+  ],
+  [
+    "a card at rest on the issue page",
+    () => withClasses("rounded-xl shadow-[0_2px_12px_rgba(28,25,23,0.07)]", "div"),
+    NONE,
+  ],
+  [
+    "the waiting ask",
+    () =>
+      withClasses(
+        "shadow-[0_0_0_1px_var(--color-page-waiting),0_2px_12px_rgba(28,25,23,0.07)]",
+        "div"
+      ),
+    "0 0 0 var(--border-width) var(--warning)",
+  ],
+  [
+    "the stuck header",
+    () =>
+      withClasses(upstreamClasses("features/issue-page/IssueHeader.tsx", "shadow-[0_1px_0"), "div"),
+    "0 var(--border-width) 0 var(--border)",
+  ],
+  [
+    "a focused node's card",
+    () =>
+      withClasses(
+        "bg-page-pane shadow-[0_0_0_1px_var(--color-page-hair),inset_3px_0_0_var(--color-page-muted)]",
+        "div"
+      ),
+    "0 0 0 var(--border-width) var(--border)",
+  ],
+  [
+    "a focused step's row",
+    () =>
+      withClasses(
+        upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
+        "div"
+      ),
+    NONE,
+    VIEWS.wide,
+  ],
+  [
+    "a focused step's row, as a card",
+    () =>
+      withClasses(
+        upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
+        "div"
+      ),
+    UPSTREAMS,
+    VIEWS.narrow,
+  ],
+  [
+    "a folded node's halo",
+    () => withClasses("shadow-[0_0_0_4px_var(--color-page-hair)]", "div"),
+    UPSTREAMS,
+  ],
+  [
+    "a status chip's edge",
+    () =>
+      withClasses(
+        upstreamClasses("features/issue-page/IssuePropertiesRow.tsx", "shadow-[inset_0_0_0_1px"),
+        "span"
+      ),
+    UPSTREAMS,
+  ],
+  [
+    "the rule at the reader's own words",
+    () => withClasses("shadow-[inset_2px_0_0_var(--color-page-ink)] pl-2.5", "div"),
+    UPSTREAMS,
+  ],
+  [
+    "the icon rail's current entry",
+    () =>
+      withClasses("bg-icon-rail-active shadow-[inset_3px_0_0_var(--color-icon-rail-accent)]", "a"),
+    UPSTREAMS,
+  ],
+];
+
+/** Every shadow class upstream's sources write. */
+const upstreamShadows = new Set(
+  upstreamLists.flatMap((classes) =>
+    classes.split(" ").filter((name) => /(^|:)shadow-(sm|md|lg|xl|2xl|none|inner|\[)/.test(name))
+  )
+);
+
+/** Each sample whose shadow is not its role's. */
+function shadowProblems(
+  declarations: readonly CssDeclaration[],
+  bare: readonly CssDeclaration[]
+): string[] {
+  const shadowOf = (from: readonly CssDeclaration[], element: Element, media?: string) =>
+    cascade(from, element, (property) => property === "--tw-shadow", media).at(-1)?.value;
+  return SHADOWS.flatMap(([role, draw, want, media]) => {
+    const element = draw();
+    const expected = want === UPSTREAMS ? shadowOf(bare, element, media) : want;
+    const got = shadowOf(declarations, element, media);
+    return got === expected ? [] : [`${role}: ${got}`];
+  });
 }
 
 /** The cards and rows upstream marks with a stripe down the left edge, with their classes. The ask
@@ -535,10 +919,6 @@ const STRIPED_CARDS: Record<string, string> = {
   "a statement in the verification view": `grid rounded-[8px] border ${pageLineBorder} min-[761px]:rounded-none min-[761px]:border-x-0 border-l-4 border-l-page-statement`,
   "a step in the plan": `border-t max-[761px]:rounded-lg max-[761px]:border max-[761px]:border-l-4 max-[761px]:border-l-page-step ${pageLineBorder}`,
 };
-
-/** The width 761 px and up, where the plan's and the verification's rows are a table's, and under
- *  it, where they are cards. */
-const VIEWS = { narrow: "@media (width < 761px)", wide: "@media (width >= 761px)" } as const;
 
 /** Each striped card whose left side is not drawn as its right one, in light, at `media`. */
 function stripeProblems(declarations: readonly CssDeclaration[], media?: string): string[] {
@@ -829,6 +1209,8 @@ const selectorKey = (selector: string) => selector.replace(/\s+/g, " ").replace(
 const UNREACHED: Record<string, string> = {
   ".bg-\\[color\\:\\#123456\\]": "a class upstream's own tests write; no page draws it",
   ".markdown-link-action-card": "a card of the editor's library that no code makes",
+  ".mark-selection-bar":
+    "the editor library's selection bar, which the document's own bar replaces",
   ".milkdown pre code .token.":
     "the editor's code theme, kept whole: its hues mark syntax, on a ground dark in both schemes",
   ".proof-editor { --a4-color }": "a provenance colour; the editor Dispatch mounts draws none",
@@ -898,6 +1280,8 @@ function literalProblems(
 
 describe("the repaint of upstream's pages", async () => {
   const declarations = await generate();
+  /** The app's stylesheet without the repaint: what upstream draws. */
+  const bare = await generate("");
   /** Every rule a document page holds, in the order it loads them. */
   const documentPage = [...declarations, ...editorCss];
 
@@ -1069,19 +1453,68 @@ describe("the repaint of upstream's pages", async () => {
       expect(badgeText).toContain(badgeClass);
     }
     expect(shapeProblems(declarations)).toEqual([]);
-    expect(roundRuleProblems(declarations)).toEqual([]);
   });
 
-  test("fails when the pill rule reaches a dot, or a stylesheet pill keeps its circle", async () => {
+  test("draws each pill upstream writes with the Badge's corner and type, and a dot round", () => {
+    expect(roundedFull.filter(isPill).length).toBeGreaterThanOrEqual(30);
+    expect(roundedFull.filter((classes) => !isPill(classes)).length).toBeGreaterThanOrEqual(20);
+    expect(pillProblems(declarations)).toEqual([]);
+  });
+
+  test("fails when the pill rule reaches a dot", async () => {
     const pill = '.rounded-full[class*="px-"]:not(.shadow-lg) {';
     expect(repaintText).toContain(pill);
-    expect(shapeProblems(await generate(repaintText.replace(pill, ".rounded-full {")))).toEqual(
+    const reached = await generate(repaintText.replace(pill, ".rounded-full {"));
+    expect(shapeProblems(reached)).toEqual(
       expect.arrayContaining(["an unread dot: border-radius var(--radius-badge)"])
     );
+    expect(pillProblems(reached)).toContainEqual(
+      expect.stringMatching(/size-2 rounded-full.*: border-radius var\(--radius-badge\)$/)
+    );
+  });
+
+  test("gives each corner upstream draws the theme's nearest step, at either width", () => {
+    expect(cornerProblems(declarations, bare)).toEqual([]);
+    expect(cornerRuleProblems(declarations, bare, editorCss)).toEqual([]);
+  });
+
+  test("fails when a corner set at a width is lost, or a stylesheet's corner stays its own", async () => {
+    const reset = /\.min-\\\[761px\\\]\\:rounded-none \{[^}]*\}/;
+    expect(repaintText).toMatch(reset);
+    expect(cornerProblems(await generate(repaintText.replace(reset, "")), bare)).toEqual([
+      expect.stringMatching(
+        /rounded-\[8px\].*min-\[761px\]:rounded-none.* \(wide\): var\(--radius-lg\)/
+      ),
+    ]);
     const badge = /(\[data-proof-block-badge\] \{\s*\/\*[^*]*\*\/\s*)border-radius: [^;]+;/;
     expect(repaintText).toMatch(badge);
     const kept = await generate(repaintText.replace(badge, "$1"));
-    expect(roundRuleProblems(kept)).toHaveLength(1);
+    expect(cornerRuleProblems(kept, bare, editorCss)).toHaveLength(1);
+    const popover = /:root \.mark-popover \{[^}]*\}/;
+    expect(repaintText).toMatch(popover);
+    const editor = await generate(repaintText.replace(popover, ""));
+    expect(cornerRuleProblems(editor, bare, editorCss)).toEqual([
+      ".mark-popover { border-radius: 8px }",
+    ]);
+  });
+
+  test("casts each shadow upstream writes by its role: popover, dialog, none or its own", () => {
+    const sampled = new Set(SHADOWS.flatMap(([, draw]) => [...draw().classList]));
+    expect([...upstreamShadows].filter((name) => !sampled.has(name))).toEqual([]);
+    expect(shadowProblems(declarations, bare)).toEqual([]);
+  });
+
+  test("fails when a modal shadow-xl is cast as a popover, or a thumb casts one", async () => {
+    const modal = ",\n.shadow-xl[aria-modal] {";
+    expect(repaintText).toContain(modal);
+    expect(shadowProblems(await generate(repaintText.replace(modal, " {")), bare)).toEqual([
+      expect.stringMatching(/^a modal dialog upstream casts as a menu: /),
+    ]);
+    const thumb = ',\n[role="switch"] .shadow-lg {';
+    expect(repaintText).toContain(thumb);
+    expect(shadowProblems(await generate(repaintText.replace(thumb, " {")), bare)).toEqual([
+      `a switch's thumb: ${POPOVER}`,
+    ]);
   });
 
   test.each(
@@ -1109,6 +1542,16 @@ describe("the repaint of upstream's pages", async () => {
         (problem) => problem.replace(/:.*/, "")
       )
     ).toEqual(["a selected decision its asker is unsure of"]);
+  });
+
+  test("recolours a selected decision's stripe alone: a pill inside keeps its shade", () => {
+    const card = sample(
+      `<div class="${STRIPED_CARDS["a selected decision its asker is unsure of"]}"><span class="rounded-full px-2"></span></div>`,
+      "div"
+    );
+    const pill = card.querySelector("span") as Element;
+    expect(computed(declarations, card, "--color-amber-700")).toBe("var(--color-sky-500)");
+    expect(computed(declarations, pill, "--color-amber-700")).toBe("var(--repaint-amber-700)");
   });
 
   test("sizes pills and cards with theme tokens only", () => {
