@@ -463,9 +463,12 @@
   },
   {
     "file": "packages/dispatch/web/src/features/sidebar/Sidebar.tsx",
-    "part": "Sidebar",
-    "copy": "src/shell/sidebar-data.ts",
+    "part": "*",
+    "copy": "src/shell/sidebar.tsx",
+    "also": ["src/shell/sidebar-data.ts"],
     "commit": "1986e0055471a91c9ea73872ede38392a019b059",
-    "sha256": "734adc3642af6482f5429bdfbe5ca34657291b90d1e5cff7b49e85fac9fdf5c3"
+    "sha256": "14522612766f5b9f2da9147d29d7d61a33790556fd0bbc205c6e5d9e82b8f98f",
+    "outcome": "ported",
+    "reason": "The shell's sidebar replaces this file, so the whole file is pinned in place of its part Sidebar: any change to it is a port."
   }
 ]

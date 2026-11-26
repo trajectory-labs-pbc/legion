@@ -58,3 +58,12 @@ export const sharedViews: Readonly<Record<string, readonly string[]>> = {
     "features/project/issues-table-controls.tsx",
   ],
 };
+
+/**
+ * Upstream view files the fork replaced, each to the file of this app that draws its region. Each
+ * needs a whole-file pin in tests/map/copies.json, so an upstream change to it stops the sync
+ * until it is ported or closed.
+ */
+export const replacedViews: Readonly<Record<string, string>> = {
+  "features/sidebar/Sidebar.tsx": "src/shell/sidebar.tsx",
+};
