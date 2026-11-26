@@ -21,6 +21,11 @@
 .github/workflows/fork-worker-image.yaml
 .github/workflows/release-envoy-listener.yaml
 
+# The leak scan masks links to the pull request's own repository, which on a fork is not upstream's.
+.github/scripts/check-pr-text.sh
+.github/scripts/check-private-names-test-lib.sh
+.github/scripts/check-private-names.test.sh
+
 # A fix not yet upstream.
 packages/daemon/internal/ghbranch/ghbranch.go
 packages/daemon/internal/ghbranch/ghbranch_test.go
