@@ -82,20 +82,24 @@ function ask(id: string, on: string | null, age: number, waitingOn = "human"): P
   };
 }
 
+/** The registry before its first read: every state is unknown. */
+const UNKNOWN: ProgressAgents = { known: false, state: () => "unknown", titles: new Map() };
+
 function model(
   issues: readonly ProgressIssue[],
   asks: readonly ProgressAsk[] = [],
-  agents: ProgressAgents | null = null
+  agents: ProgressAgents = UNKNOWN
 ) {
   return progressModel({ issues, asks, agents }, NOW);
 }
 
-/** A registry that lists the named sessions; every other id is not running. */
+/** A read registry that lists the named sessions; every other id is not running. */
 function registry(
   states: Readonly<Record<string, AgentState>>,
   titles: Readonly<Record<string, string>> = {}
 ): ProgressAgents {
   return {
+    known: true,
     state: (id) => states[id] ?? "not-running",
     titles: new Map(Object.entries(titles)),
   };
@@ -481,9 +485,11 @@ describe("progress agents", () => {
   });
 
   test("with the registry unknown the model gives no agent figures", () => {
-    const built = model(tree(child("ALPHA-2", { claim: "s1" })), [], registry({ s1: "unknown" }));
-    expect(built.figures.get("ALPHA-1")).toMatchObject({ agents: 0, notRunningClaims: 0 });
-    const unknown = model(tree(child("ALPHA-2", { claim: "s1" })));
+    const unknown = model(
+      tree(child("ALPHA-2", { claim: "s1" }), child("ALPHA-3", { claim: "s2" })),
+      [],
+      { ...registry({ s1: "running" }, { s2: "Legion tester · ALPHA-3" }), known: false }
+    );
     expect(unknown.figures.get("ALPHA-1")).toMatchObject({ agents: null, notRunningClaims: null });
     expect(agentsOf(unknown, "ALPHA-1")).toEqual([]);
     expect(notRunningClaims(unknown, "ALPHA-1")).toEqual([]);

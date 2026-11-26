@@ -64,6 +64,19 @@ describe("weekly figures", () => {
     );
   });
 
+  test("a week starts on Monday in UTC whatever the browser's time zone", () => {
+    const zone = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    try {
+      expect(new Date(weekStart(Date.parse("2026-03-09T00:00:00Z"))).toISOString()).toBe(
+        "2026-03-09T00:00:00.000Z"
+      );
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
+
   test("the boundary test: an issue closed on Sunday 23:59 UTC is in the week before", () => {
     const weeks = weeklyFigures(
       [issue("ALPHA-2", "2026-02-20T10:00:00Z", "2026-03-08T23:59:00Z")],

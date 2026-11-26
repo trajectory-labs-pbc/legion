@@ -92,6 +92,7 @@ function generate() {
   for (let n = 0; n < SESSIONS; n += 2)
     titles.set(`s${n}`, `Legion implementer · ${pick(issues).key}`);
   const agents: ProgressAgents = {
+    known: true,
     state: (id): AgentState => (Number(id.slice(1)) % 4 === 0 ? "not-running" : "running"),
     titles,
   };

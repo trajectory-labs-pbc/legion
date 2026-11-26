@@ -49,6 +49,8 @@ export const STATE_LABELS = {
 export const ASK_AT_RISK_DAYS = 2;
 export const CHANGE_AT_RISK_DAYS = 7;
 export const CHANGE_OFF_TRACK_DAYS = 14;
+/** R1's stale term, apart from R2's limits. */
+export const STALE_DAYS = 7;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const IN_FLIGHT: ReadonlySet<string> = new Set(["in_progress", "testing", "needs_review", "retro"]);
@@ -116,6 +118,8 @@ export function subtreeIssues(index: ProgressIndex, key: string): readonly Progr
 
 /** The agent registry as the model reads it, by bare session id. */
 export interface ProgressAgents {
+  /** False before the first read lands and after a failed read: no agent figures then. */
+  readonly known: boolean;
   state(sessionId: string): AgentState;
   readonly titles: ReadonlyMap<string, string>;
 }
@@ -123,8 +127,7 @@ export interface ProgressAgents {
 export interface ProgressInput {
   readonly issues: readonly ProgressIssue[];
   readonly asks: readonly ProgressAsk[];
-  /** Null while the registry's state is unknown: the model then gives no agent figures. */
-  readonly agents: ProgressAgents | null;
+  readonly agents: ProgressAgents;
 }
 
 const CLAUDE_CODE_PREFIX = "claude-code:";
@@ -194,6 +197,7 @@ export function stateOf(counts: SubtreeCounts, now: number): ProgressState {
 export interface ProgressModel {
   readonly now: number;
   readonly index: ProgressIndex;
+  /** Null while the registry is unknown. */
   readonly agents: ProgressAgents | null;
   /** The running sessions whose title names each issue. */
   readonly titledSessions: ReadonlyMap<string, readonly string[]>;
@@ -293,9 +297,7 @@ function linksOf(model: ProgressModel, issue: ProgressIssue): IssueLinks {
 }
 
 function isStale(issue: ProgressIssue, now: number): boolean {
-  return (
-    isInFlight(issue.status) && moreThanDays(Date.parse(issue.updated_at), now, CHANGE_AT_RISK_DAYS)
-  );
+  return isInFlight(issue.status) && moreThanDays(Date.parse(issue.updated_at), now, STALE_DAYS);
 }
 
 function ownTotals(model: ProgressModel, issue: ProgressIssue): Totals {
@@ -320,12 +322,11 @@ function ownTotals(model: ProgressModel, issue: ProgressIssue): Totals {
 
 function figuresFrom(
   issue: ProgressIssue,
-  own: Totals,
+  all: Totals,
   below: Totals,
   now: number,
   known: boolean
 ): ProgressFigures {
-  const all = addTotals(own, below);
   const counts = {
     issue,
     descendants: below.size,
@@ -356,10 +357,11 @@ function foldSubtree(
   for (const child of children) {
     if (!met.has(child.key)) below = addTotals(below, foldSubtree(model, child, met, figures));
   }
-  const own = ownTotals(model, issue);
-  if (children.length > 0)
-    figures.set(issue.key, figuresFrom(issue, own, below, model.now, model.agents !== null));
-  return addTotals(own, below);
+  const all = addTotals(ownTotals(model, issue), below);
+  if (children.length > 0) {
+    figures.set(issue.key, figuresFrom(issue, all, below, model.now, model.agents !== null));
+  }
+  return all;
 }
 
 function asksOfOpenIssues(
@@ -395,11 +397,12 @@ function sessionsByTitle(agents: ProgressAgents | null): Map<string, string[]> {
 export function progressModel(input: ProgressInput, now: number): ProgressModel {
   const index = indexIssues(input.issues);
   const figures = new Map<string, ProgressFigures>();
+  const agents = input.agents.known ? input.agents : null;
   const model: ProgressModel = {
     now,
     index,
-    agents: input.agents,
-    titledSessions: sessionsByTitle(input.agents),
+    agents,
+    titledSessions: sessionsByTitle(agents),
     asksByIssue: asksOfOpenIssues(index, input.asks),
     figures,
   };
@@ -486,7 +489,7 @@ export function weekStart(time: number): number {
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   const upper = sorted[middle] ?? 0;
   return sorted.length % 2 === 1 ? upper : ((sorted[middle - 1] ?? 0) + upper) / 2;
@@ -499,6 +502,7 @@ export function weeklyFigures(
 ): WeekFigures[] {
   const first = weekStart(now) - (CHART_WEEKS - 1) * WEEK_MS;
   const weekOf = (time: number) => {
+    if (!Number.isFinite(time)) return undefined;
     const week = Math.floor((time - first) / WEEK_MS);
     return time > now || week < 0 || week >= CHART_WEEKS ? undefined : week;
   };
