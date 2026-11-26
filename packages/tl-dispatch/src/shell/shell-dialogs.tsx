@@ -33,7 +33,7 @@ export function ShellDialogs({
         sections={shortcuts.sections}
       />
       {createOpen ? <CreateIssueDialog onClose={closeCreate} /> : null}
-      <RefPreviewHost />
+      <RefPreviewHost surface="reference-hover-card" />
     </>
   );
 }

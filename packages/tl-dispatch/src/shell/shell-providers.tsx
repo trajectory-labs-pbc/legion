@@ -2,13 +2,13 @@ import {
   type MarginDrawer,
   MarginSlotProvider,
 } from "@upstream-dispatch/features/issue-page/margin-slot";
-import { ReferenceNamesProvider } from "@upstream-dispatch/features/issue-page/reference-names";
 import {
   type ShellNavigation,
   ShellNavigationContext,
 } from "@upstream-dispatch/features/issue-page/shell-navigation";
 import { ShortcutHelpOpener } from "@upstream-dispatch/features/issue-page/shortcut-help-opener";
 import { MarginProvider } from "@upstream-dispatch/features/margin/margin-context";
+import { ReferenceNamesProvider } from "@upstream-dispatch/features/refs/reference-names";
 import type { ReactNode } from "react";
 
 /** The contexts upstream's pages read from the shell. */
