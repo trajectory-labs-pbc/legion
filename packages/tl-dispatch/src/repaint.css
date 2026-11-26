@@ -81,7 +81,7 @@
   );
   --color-sky-200: color-mix(
     in oklab,
-    color-mix(in oklab, var(--border) 88%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--border) 84%, var(--muted-foreground)) var(--repaint-light),
     color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground))
   );
   --color-sky-300: color-mix(
@@ -96,7 +96,7 @@
   );
   --color-sky-500: color-mix(
     in oklab,
-    color-mix(in oklab, var(--border) 25%, var(--muted-foreground)) var(--repaint-light),
+    color-mix(in oklab, var(--border) 30%, var(--muted-foreground)) var(--repaint-light),
     color-mix(in oklab, var(--muted-foreground) 65%, var(--input))
   );
   --color-sky-600: color-mix(in oklab, var(--primary) var(--repaint-light), var(--input));
@@ -113,7 +113,7 @@
   --color-sky-900: color-mix(
     in oklab,
     color-mix(in oklab, var(--foreground) 85%, var(--muted-foreground)) var(--repaint-light),
-    var(--accent)
+    color-mix(in oklab, var(--accent) 50%, var(--secondary))
   );
   --color-sky-950: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--secondary));
 
@@ -539,4 +539,75 @@
   --tw-prose-invert-pre-bg: var(--tw-prose-pre-bg);
   --tw-prose-invert-th-borders: var(--tw-prose-th-borders);
   --tw-prose-invert-td-borders: var(--tw-prose-td-borders);
+}
+
+/* Upstream edges cards, dialogs, tables and buttons with slate-200 and, in dark, slate-800, which
+   is the muted fill there and faint on the panel. Each takes the theme's border, except while a
+   hover or a focus border of its own applies. */
+[class~="dark:border-slate-800"]:not(
+    [class*="hover:border-"]:hover,
+    [class*="focus:border-"]:focus
+  ) {
+  border-color: var(--border);
+}
+
+/* Upstream dims a disabled pager button to 40 %, which takes its edge too. It keeps its edge and
+   takes the faint text. */
+button[class~="disabled:opacity-40"]:disabled {
+  opacity: 1;
+  color: var(--faint-foreground);
+}
+
+/* Upstream's refused primary button is a strong grey, brighter in dark than the outlined button
+   beside it. It takes the muted fill and text. */
+[class~="refused:bg-slate-300"]:is(:disabled, [aria-disabled="true"]) {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* A field upstream edges with the faint slate-200 (`borderDefault`, slate-800 in dark) takes the
+   theme's field edge, which holds 3:1 on the ground, except while a focus border of its own applies. */
+:is(input, textarea, select)[class~="border-slate-200"]:not([class*="focus:border-"]:focus) {
+  border-color: var(--input);
+}
+
+/* Upstream's pills and chips are `rounded-full` with side padding; a dot, an avatar or a round
+   icon button has none. A pill takes the Badge's corner, a theme token, and keeps its own padding
+   and colours. A floating button (`shadow-lg`) keeps its shape. */
+.rounded-full[class*="px-"]:not(.shadow-lg) {
+  border-radius: var(--radius-badge);
+}
+
+/* A small pill, a status or a count, takes the Badge's type too. A pill set in body text (a
+   header's label or assignee control, a view switch) keeps the size of the text beside it. */
+.rounded-full[class*="px-"]:not(.shadow-lg, .text-sm, .text-base) {
+  font-size: var(--text-xs);
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Under a mouse a pill upstream sizes only for touch (44 px) takes a control's height. */
+@media (pointer: fine) {
+  .rounded-full.min-h-11[class*="px-"]:not(.shadow-lg, [class*=":min-h-"]) {
+    min-height: calc(var(--spacing) * 7);
+  }
+}
+
+/* Upstream's small corner is Tailwind's 0.25rem: it takes the theme's smallest step, unless the
+   element sets a corner of its own. */
+.rounded:not([class*="rounded-"]) {
+  border-radius: var(--radius-sm);
+}
+
+/* An ask's or a decision's card marks its urgency with a 4 px stripe down its left edge, which
+   its pill already says. The stripe goes; a card with a border keeps that border on this side. */
+.rounded-xl.border-l-4 {
+  border-left-width: 0;
+}
+
+.rounded-xl.border.border-l-4 {
+  border-left-width: thin;
+  border-left-color: var(--border);
 }
