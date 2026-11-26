@@ -1,7 +1,8 @@
-import { Fact, FactList } from "@legion/ui/components/fact";
+import { Heading, HeadingSection } from "@legion/ui/components/heading";
+import { textVariants } from "@legion/ui/lib/typography";
 import type { ReactNode } from "react";
 
-import { machineName, type RecordResponse, Timestamp } from "./upstream";
+import { type RecordResponse, Timestamp } from "./upstream";
 
 const LIFETIME_UNITS: ReadonlyArray<{ seconds: number; unit: string }> = [
   { seconds: 86400, unit: "day" },
@@ -10,7 +11,7 @@ const LIFETIME_UNITS: ReadonlyArray<{ seconds: number; unit: string }> = [
 ];
 
 function formatLifetime(seconds: number | null): string {
-  if (seconds === null) return "Until the session ends";
+  if (seconds === null) return "until the session ends";
   for (const { seconds: unitSeconds, unit } of LIFETIME_UNITS) {
     if (seconds >= unitSeconds) {
       const count = Math.round(seconds / unitSeconds);
@@ -23,41 +24,55 @@ function formatLifetime(seconds: number | null): string {
 // The approver a record names when any signed-in person may decide it.
 const ANYONE_APPROVER = "anyone";
 
-/** A looked-up machine login's facts, the agent's stated reason, and what approving it grants. */
+/** A looked-up machine login: what it asks, its durations, its approver and its reason. */
 export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
-  const identifiers = record.identifiers ?? [];
+  const pending = record.state === "pending";
   return (
-    <div className="space-y-4">
-      <FactList>
-        <Fact label="Kind">Machine login</Fact>
-        <Fact label="Identifiers">{identifiers.join(", ")}</Fact>
-        <Fact label="Lifetime">{formatLifetime(record.lifetime_seconds)}</Fact>
-        <Fact label="Requested">
-          <Timestamp at={record.requested_at} className="tabular-nums" />
-        </Fact>
-        <Fact label="Expires">
-          <Timestamp at={record.expires_at} className="tabular-nums" />
-        </Fact>
-        <Fact label="Policy version">
-          <span className="font-mono text-xs">{record.rules_version}</span>
-        </Fact>
-        <Fact label="Approver">
+    <div className="space-y-3">
+      <Heading className="text-pretty" size="section">
+        <span className="wrap-anywhere">{(record.identifiers ?? []).join(", ")}</span>{" "}
+        {pending ? "asks" : "asked"} to start{" "}
+        {record.service ? `worker pods as ${record.service}` : "agent sessions as you"}
+      </Heading>
+      <div className={textVariants()}>
+        <p className="flex h-8 items-center">
+          Login lasts {formatLifetime(record.lifetime_seconds)}
+        </p>
+        {pending || record.state === "expired" ? (
+          <p className="flex h-8 items-center gap-1">
+            Request {pending ? "expires" : "expired"}
+            <Timestamp at={record.expires_at} className="tabular-nums" />
+          </p>
+        ) : null}
+        <p className="flex h-8 items-center">
+          Approver:{" "}
           {record.approver === ANYONE_APPROVER ? "Anyone signed in to Dispatch" : record.approver}
-        </Fact>
-      </FactList>
+        </p>
+        <p className={textVariants({ size: "caption", tone: "muted" })}>
+          Requested <Timestamp at={record.requested_at} className="tabular-nums" /> · Policy{" "}
+          <span className="font-mono">{record.rules_version}</span>
+        </p>
+      </div>
       {record.reason === "" ? null : (
         <div>
-          <h2 className="text-sm font-medium text-muted-foreground">The agent's stated reason</h2>
-          <blockquote className="mt-1 border-l-2 border-border pl-3 text-sm whitespace-pre-wrap text-foreground">
-            {record.reason}
-          </blockquote>
+          <HeadingSection>
+            <Heading size="group" tone="muted">
+              The agent's stated reason
+            </Heading>
+            <blockquote
+              className={textVariants({
+                className: "mt-1 border-l-2 border-border pl-3 whitespace-pre-wrap",
+              })}
+            >
+              {record.reason}
+            </blockquote>
+          </HeadingSection>
         </div>
       )}
-      {record.state === "pending" ? (
-        <p className="text-sm font-medium text-pretty text-foreground">
-          {record.service
-            ? `${machineName({ host: identifiers[0] ?? "", service: record.service })} is a service's login from before services logged in with their own Kubernetes token, and no one can approve it any more: deny it, or let it expire.`
-            : `Approving lets ${machineName({ host: identifiers[0] ?? "", service: null })} start agent sessions as you.`}
+      {pending && record.service ? (
+        <p className={textVariants({ className: "text-pretty", tone: "muted" })}>
+          It is a service's login from before services logged in with their own Kubernetes token,
+          and no one can approve it any more: deny it, or let it expire.
         </p>
       ) : null}
     </div>

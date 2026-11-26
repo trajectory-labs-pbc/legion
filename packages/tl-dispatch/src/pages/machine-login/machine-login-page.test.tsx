@@ -156,6 +156,7 @@ test("MLP-04 a pending service login offers Deny alone", async () => {
     );
     expect(await screen.findByRole("button", { name: "Deny" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.getByText("Approver: Anyone signed in to Dispatch")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Deny" }));
     await waitFor(() =>
@@ -319,5 +320,28 @@ test.each(
     lookup.mockRestore();
     getMachineLogins.mockRestore();
     decide.mockRestore();
+  }
+});
+
+test("MLP-09 Look up waits for a code, keeps the focus while it is out, and a refused lookup is announced", async () => {
+  const user = userEvent.setup();
+  const answer = Promise.withResolvers<never>();
+  const lookup = spyOn(api, "lookupMachineCredential").mockReturnValue(answer.promise);
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  try {
+    renderPage();
+    const button = screen.getByRole("button", { name: "Look up" });
+    expect(button).toBeDisabled();
+    await user.click(screen.getByLabelText("Code shown on the machine"));
+    await user.paste("abcd1234");
+    await user.click(button);
+    await waitFor(() => expect(button).toHaveAttribute("aria-busy", "true"));
+    expect(button).toHaveFocus();
+    answer.reject(new ApiError(404, { code: "NOT_FOUND", error: "No login waits on that code." }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No login waits on that code.");
+  } finally {
+    cleanup();
+    lookup.mockRestore();
+    getMachineLogins.mockRestore();
   }
 });

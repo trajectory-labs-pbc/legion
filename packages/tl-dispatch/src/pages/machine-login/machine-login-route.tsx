@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
-
+import { ReadFailure, readFailureOf } from "@/features/read-failure";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageFallback } from "@/loading/page-skeleton";
 import { NotFound } from "../not-found/not-found";
-import { ReadFailure, readFailureOf } from "./read-failure";
 import { credentialCapabilitiesQuery } from "./upstream";
 
 const loadPage = () => import("./machine-login-page");

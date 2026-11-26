@@ -1,14 +1,16 @@
 // Upstream's features/credentials/MachineLoginsSection.test.tsx, against the rebuilt list.
+// Changed from upstream, MLS-01 to MLS-08: Revoke asks in a dialog, not the browser's confirm. Its
+// title names the machine; its description names the credential and what the revoke ends.
 import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
 import type { ApproverGrantResp } from "@upstream-dispatch/api/types";
 import { GrantsSection } from "@upstream-dispatch/features/credentials/GrantsSection";
-
+import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginPage } from "./machine-login-page";
 import { MachineLogins } from "./machine-logins";
@@ -16,6 +18,15 @@ import { api, type LauncherCredentialResp } from "./upstream";
 
 /** A row's Revoke, whose name is the row's. */
 const revoke = { name: /^Revoke the machine login for / };
+
+/** Presses the row's Revoke and returns the question it opens, once its words are checked. */
+async function ask(user: UserEvent, row: HTMLElement | null, title: string, description: string) {
+  if (row === null) throw new Error("no row");
+  await user.click(within(row).getByRole("button", revoke));
+  const question = await screen.findByRole("alertdialog", { name: title });
+  expect(question).toHaveAccessibleDescription(description);
+  return within(question);
+}
 
 const devbox: LauncherCredentialResp = {
   approved_by: "ada@example.com",
@@ -100,7 +111,6 @@ test("MLS-01 an expired login whose sessions still run is listed and marked so, 
   const revokeMachineLogin = spyOn(api, "revokeMachineLogin").mockImplementation(async (id) => {
     live = live.filter((login) => login.credential_id !== id);
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(true);
 
   try {
     renderPage();
@@ -111,6 +121,7 @@ test("MLS-01 an expired login whose sessions still run is listed and marked so, 
     expect(section.getAllByText("expired, sessions still running")).toHaveLength(1);
 
     await user.click(within(staleRow).getByRole("button", revoke));
+    await confirmRevoke(user);
     await waitFor(() =>
       expect(revokeMachineLogin).toHaveBeenCalledWith("cred-stale", keyedAttempt)
     );
@@ -120,7 +131,6 @@ test("MLS-01 an expired login whose sessions still run is listed and marked so, 
     expect(section.getByText("devbox.example.com")).toBeDefined();
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
@@ -153,7 +163,6 @@ test("MLS-02 revoking a machine login refreshes Live grants", async () => {
     logins = [];
     grants = [];
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(true);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   try {
@@ -168,6 +177,7 @@ test("MLS-02 revoking a machine login refreshes Live grants", async () => {
     const section = within(screen.getByRole("region", { name: "Machine logins" }));
 
     await user.click(await section.findByRole("button", revoke));
+    await confirmRevoke(user);
     await waitFor(() =>
       expect(revokeMachineLogin).toHaveBeenCalledWith("cred-devbox", keyedAttempt)
     );
@@ -175,7 +185,6 @@ test("MLS-02 revoking a machine login refreshes Live grants", async () => {
     expect(liveGrants.queryByText("WORKER_TOKEN")).not.toBeInTheDocument();
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     getCredentialGrants.mockRestore();
     revokeMachineLogin.mockRestore();
@@ -198,7 +207,6 @@ test("MLS-03 the machine-login page lists the viewer's machine logins, and Revok
     await revokeAnswer.promise;
     live = live.filter((login) => login.credential_id !== id);
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(false);
 
   try {
     renderPage();
@@ -207,18 +215,21 @@ test("MLS-03 the machine-login page lists the viewer's machine logins, and Revok
     expect(devboxRow).not.toBeNull();
     expect(section.getByText("laptop.example.com")).toBeDefined();
 
-    await user.click(within(devboxRow as HTMLElement).getByRole("button", revoke));
-    expect(confirm.mock.calls).toEqual([
-      [
-        "Revoke the machine login for devbox.example.com, credential cred-devbox? Every agent session it started loses its secrets at once, and the machine needs a new login.",
-      ],
-    ]);
+    const question = await ask(
+      user,
+      devboxRow,
+      "Revoke devbox.example.com?",
+      "Credential cred-devbox. Every agent session it started loses its secrets at once, and the machine needs a new login."
+    );
+    // Focus starts on Cancel, the answer that changes nothing.
+    await waitFor(() => expect(question.getByRole("button", { name: "Cancel" })).toHaveFocus());
+    await user.click(question.getByRole("button", { name: "Cancel" }));
     // A mutation calls its function a few microtasks after the click; a timer runs after them all.
     await tick(0);
     expect(revokeMachineLogin).not.toHaveBeenCalled();
 
-    confirm.mockReturnValue(true);
     await user.click(within(devboxRow as HTMLElement).getByRole("button", revoke));
+    await confirmRevoke(user);
     await waitFor(() =>
       expect(revokeMachineLogin).toHaveBeenCalledWith("cred-devbox", keyedAttempt)
     );
@@ -231,7 +242,6 @@ test("MLS-03 the machine-login page lists the viewer's machine logins, and Revok
   } finally {
     realClock();
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
@@ -246,7 +256,6 @@ test("MLS-04 a service's login someone else approved is listed by its service an
   const revokeMachineLogin = spyOn(api, "revokeMachineLogin").mockImplementation(async (id) => {
     live = live.filter((login) => login.credential_id !== id);
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(true);
 
   try {
     renderPage();
@@ -259,12 +268,13 @@ test("MLS-04 a service's login someone else approved is listed by its service an
     const devboxRow = section.getByText("devbox.example.com").closest("tr");
     expect(within(devboxRow as HTMLElement).getByText("ada@example.com")).toBeDefined();
 
-    await user.click(within(daemonRow as HTMLElement).getByRole("button", revoke));
-    expect(confirm.mock.calls).toEqual([
-      [
-        "Revoke the machine login for legion-daemon on cluster.example.com, credential cred-daemon? Every session it started, its worker pods included, ends at once.",
-      ],
-    ]);
+    await ask(
+      user,
+      daemonRow,
+      "Revoke legion-daemon on cluster.example.com?",
+      "Credential cred-daemon. Every session it started, its worker pods included, ends at once."
+    );
+    await confirmRevoke(user);
     await waitFor(() =>
       expect(revokeMachineLogin).toHaveBeenCalledWith("cred-daemon", keyedAttempt)
     );
@@ -274,7 +284,6 @@ test("MLS-04 a service's login someone else approved is listed by its service an
     expect(section.getByText("devbox.example.com")).toBeDefined();
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
@@ -294,7 +303,6 @@ test("MLS-05 a service's login from a broker that sends no subject is shown as o
   const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({
     credentials: [fromOlderBroker],
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(false);
 
   try {
     renderPage();
@@ -302,15 +310,14 @@ test("MLS-05 a service's login from a broker that sends no subject is shown as o
     const row = (await section.findByText("legion-daemon on cluster.example.com")).closest("tr");
     expect(within(row as HTMLElement).getByText("bob@example.com")).toBeDefined();
     expect(section.queryByText(/undefined/)).not.toBeInTheDocument();
-    await user.click(within(row as HTMLElement).getByRole("button", revoke));
-    expect(confirm.mock.calls).toEqual([
-      [
-        "Revoke the machine login for legion-daemon on cluster.example.com, credential cred-daemon? Every session it started, its worker pods included, ends at once.",
-      ],
-    ]);
+    await ask(
+      user,
+      row,
+      "Revoke legion-daemon on cluster.example.com?",
+      "Credential cred-daemon. Every session it started, its worker pods included, ends at once."
+    );
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
   }
 });
@@ -328,7 +335,6 @@ test("MLS-06 a service's token login names its ServiceAccount, and its Revoke sa
     credentials: [tokenLogin],
   });
   const revokeMachineLogin = spyOn(api, "revokeMachineLogin").mockResolvedValue(undefined);
-  const confirm = spyOn(window, "confirm").mockReturnValue(false);
 
   try {
     renderPage();
@@ -341,16 +347,15 @@ test("MLS-06 a service's token login names its ServiceAccount, and its Revoke sa
         "No one: system:serviceaccount:legion-system:legion-daemon-legion"
       )
     ).toBeDefined();
-    await user.click(within(row as HTMLElement).getByRole("button", revoke));
-    expect(confirm.mock.calls).toEqual([
-      [
-        "Revoke the machine login for legion-daemon on legion-system/legion-daemon-legion, credential cred-token? Every session it started, its worker pods included, ends at once, and a running pod stays without secrets until it is replaced; legion-daemon logs in again with its Kubernetes token, for the pods it launches next, unless system:serviceaccount:legion-system:legion-daemon-legion is removed from the broker's BROKER_SERVICE_LOGINS.",
-      ],
-    ]);
+    await ask(
+      user,
+      row,
+      "Revoke legion-daemon on legion-system/legion-daemon-legion?",
+      "Credential cred-token. Every session it started, its worker pods included, ends at once, and a running pod stays without secrets until it is replaced; legion-daemon logs in again with its Kubernetes token, for the pods it launches next, unless system:serviceaccount:legion-system:legion-daemon-legion is removed from the broker's BROKER_SERVICE_LOGINS."
+    );
     expect(revokeMachineLogin).not.toHaveBeenCalled();
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
@@ -373,7 +378,6 @@ test("MLS-07 a person's pod login reads as the viewer's own pod, and its Revoke 
     credentials: [adaPod, serviceToken],
   });
   const revokeMachineLogin = spyOn(api, "revokeMachineLogin").mockResolvedValue(undefined);
-  const confirm = spyOn(window, "confirm").mockReturnValue(false);
 
   try {
     renderPage();
@@ -394,16 +398,15 @@ test("MLS-07 a person's pod login reads as the viewer's own pod, and its Revoke 
       )
     ).toBeDefined();
 
-    await user.click(within(podRow).getByRole("button", revoke));
-    expect(confirm.mock.calls).toEqual([
-      [
-        "Revoke the machine login for people/ada (your pod), credential cred-ada-pod? Every session it started ends at once. The pod logs in again with its token, under a new login, while the broker's BROKER_SERVICE_LOGINS names its Kubernetes account, and that login is yours while BROKER_POD_OPERATORS maps the account to you.",
-      ],
-    ]);
+    await ask(
+      user,
+      podRow,
+      "Revoke people/ada (your pod)?",
+      "Credential cred-ada-pod. Every session it started ends at once. The pod logs in again with its token, under a new login, while the broker's BROKER_SERVICE_LOGINS names its Kubernetes account, and that login is yours while BROKER_POD_OPERATORS maps the account to you."
+    );
     expect(revokeMachineLogin).not.toHaveBeenCalled();
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
@@ -427,7 +430,6 @@ test("MLS-08 two logins of one service on one host are told apart by their crede
   const revokeMachineLogin = spyOn(api, "revokeMachineLogin").mockImplementation(async (id) => {
     live = live.filter((login) => login.credential_id !== id);
   });
-  const confirm = spyOn(window, "confirm").mockReturnValue(true);
 
   try {
     renderPage();
@@ -441,19 +443,19 @@ test("MLS-08 two logins of one service on one host are told apart by their crede
     // Each Revoke, and the question it asks, names its own credential.
     const name = "the machine login for legion-daemon on cluster.example.com, credential";
     expect(section.getByRole("button", { name: `Revoke ${name} cred-daemon` })).toBeDefined();
-    await user.click(section.getByRole("button", { name: `Revoke ${name} cred-copy` }));
-    expect(confirm.mock.calls).toEqual([
-      [
-        `Revoke ${name} cred-copy? Every session it started, its worker pods included, ends at once.`,
-      ],
-    ]);
+    await ask(
+      user,
+      copyRow,
+      "Revoke legion-daemon on cluster.example.com?",
+      "Credential cred-copy. Every session it started, its worker pods included, ends at once."
+    );
+    await confirmRevoke(user);
     await waitFor(() => expect(revokeMachineLogin).toHaveBeenCalledWith("cred-copy", keyedAttempt));
     await waitFor(() => expect(section.queryByText("cred-copy")).not.toBeInTheDocument());
     expect(section.getByText("cred-daemon")).toBeDefined();
     expect(revokeMachineLogin).toHaveBeenCalledTimes(1);
   } finally {
     cleanup();
-    confirm.mockRestore();
     getMachineLogins.mockRestore();
     revokeMachineLogin.mockRestore();
   }
