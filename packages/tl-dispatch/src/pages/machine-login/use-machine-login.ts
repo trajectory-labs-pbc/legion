@@ -22,7 +22,7 @@ interface MachineLoginView {
 }
 
 interface MachineLogin {
-  /** The code in the field, formatted. */
+  /** The code in the field, formatted; a decision made here empties it for the next machine. */
   code: string;
   typeCode(typed: string): void;
   /** Looks the field's code up, forgetting any decision made on the login shown before. */
@@ -60,6 +60,7 @@ export function useMachineLogin(): MachineLogin {
     label: () => "Approval of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
+      setCode("");
       void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
       void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
       if (decided === null) lookup.mutate(lookedUpCode);
@@ -73,6 +74,7 @@ export function useMachineLogin(): MachineLogin {
     label: () => "Denial of a machine login",
     onSettled: () => submitGuard.release(),
     onSuccess: (decided) => {
+      setCode("");
       void queryClient.invalidateQueries({ queryKey: credentialPendingQuery().queryKey });
       if (decided === null) lookup.mutate(lookedUpCode);
     },
