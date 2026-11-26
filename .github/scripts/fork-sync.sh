@@ -4,8 +4,8 @@
 # request from the sync branch.
 #
 # Inputs, from the environment: GH_TOKEN (the sync App's token), APP_SLUG (the App's slug), BASE
-# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork), GITHUB_EVENT_NAME and
-# GITHUB_STEP_SUMMARY.
+# (the branch to merge into), REPOSITORY (<owner>/<name> of this fork), MERGE_INTO_OPEN_PR (true
+# when a run may push to an open sync pull request) and GITHUB_STEP_SUMMARY.
 # It works in the current directory: the merged tree goes to ./work, and the lists it builds sit
 # beside it.
 #
@@ -77,11 +77,12 @@ short=$(git rev-parse --short=12 "$up")
 open_pr=$(gh pr list -R "$REPOSITORY" --head "$sync" --base "$BASE" --state open \
   --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
 
-# A push to the open pull request dismisses its approval and starts its CI again, so a scheduled
-# run leaves it as it is. The next scheduled sync starts after it merges or closes.
-if [ -n "$open_pr" ] && [ "$GITHUB_EVENT_NAME" = schedule ]; then
-  summary "Pull request #$open_pr is open, so this scheduled run leaves it as it is. Start this workflow to update it."
-  exit 0
+# A push to an open pull request dismisses its approval, so this run syncs only to the upstream
+# commit the sync branch holds: it pushes nothing, and still scans the branch and rewrites the body.
+if [ -n "$open_pr" ] && [ "$MERGE_INTO_OPEN_PR" != true ] && ! git merge-base --is-ancestor "$up" "$start"; then
+  echo "::warning::pull request #$open_pr is open, so this run merges nothing into it; start this workflow to merge upstream's main at $short"
+  up=$(git merge-base "$start" "$up")
+  short=$(git rev-parse --short=12 "$up")
 fi
 
 conflict() {
