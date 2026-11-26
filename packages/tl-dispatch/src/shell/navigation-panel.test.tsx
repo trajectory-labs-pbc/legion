@@ -8,12 +8,19 @@ import { GlobalCommands } from "../../tests/global-shell";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
+import { shellChunksArrive } from "../../tests/shell-chunks";
 import { NavigationPanel } from "./navigation-panel";
 import type { SignOut } from "./use-sign-out";
 
 const user = { kind: "user", login: "reader", event_head: "0" } as const;
 const cleanups: (() => void)[] = [];
-beforeAll(() => loadHotkeyTooltip());
+beforeAll(async () => {
+  await loadHotkeyTooltip();
+  // The account's menu is its own chunk: draw it once, so each test starts with it in place.
+  mount(panel({}));
+  await shellChunksArrive();
+  for (const cleanup of cleanups.splice(0)) cleanup();
+});
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
