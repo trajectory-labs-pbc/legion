@@ -18,7 +18,7 @@ tl-dispatch follows Linear's layout and interaction as closely as the theme allo
 
 ## The rules that matter most
 
-1. **FR2** The frame is an inverted L: the sidebar and the window behind the content share `bg-background`; the content panel is `bg-card` with a 1 px `border-border` edge. No shadow.
+1. **FR2** The frame is an inverted L: the sidebar and the window behind the content share `bg-background`; the content panel is `bg-card` with the `lg` corner and a 1 px `border-border` edge. No shadow.
 2. **LR1** A list row is one line, 36 px high, with no border between rows. The title truncates; nothing wraps.
 3. **LR3** The pointer and the keyboard share one highlight per list. `j`/`k` and the arrows move it; the pointer moves it on hover.
 4. **LR5** `x` selects the highlighted row; Shift+click and Shift+arrow extend; `$mod+a` selects all. A selected row shows a checked box. A bar at the bottom names the count and the actions; Escape clears.
@@ -46,6 +46,6 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 ## Checks
 
 - `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, and a control height outside the scale.
-- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, and of the focus outline and the field and state edges. In the components it also refuses a shadow other than the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
+- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, and of the focus outline and the field and state edges. In the components it also refuses a shadow other than the theme's two and the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
 - A reviewer checks each rule in the references that no test holds. Each rule there says how it is checked.
 - A change to a visible surface comes with a light and a dark screenshot of each page it changes.
