@@ -2,6 +2,7 @@ import { cn } from "@legion/ui/lib/utils";
 import { MountedLiveViews } from "@upstream-dispatch/features/agent-view/MountedLiveViews";
 import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
+import { DOCUMENT_SCROLL_ATTRIBUTE } from "@upstream-dispatch/hooks/useFootInset";
 import { type RefObject, Suspense } from "react";
 import { PageRoutes } from "@/pages/index";
 import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
@@ -44,6 +45,7 @@ export function MainRegion({
         issueFrame || (sidebarHidden && !marginColumnShown) ? "full-width" : "standard"
       }
       {...(issueFrame ? { [NO_HOVER_PREVIEW_ATTRIBUTE]: "" } : {})}
+      {...(!issueFrame && !fillsViewport ? { [DOCUMENT_SCROLL_ATTRIBUTE]: "" } : {})}
       data-testid="main-content"
       id="main-content"
       ref={mainRef}

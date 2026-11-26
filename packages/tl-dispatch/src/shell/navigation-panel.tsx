@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { CommandButton } from "@/commands/command-button";
 import { PageLink } from "@/navigation/page-link";
 import { inbox } from "@/pages/inbox";
+import { people } from "@/pages/people";
 import { Sidebar } from "./sidebar";
 import type { SignOut } from "./use-sign-out";
 
@@ -70,7 +71,18 @@ export function NavigationPanel({
       </div>
       <Sidebar onNavigate={compact ? onClose : undefined} user={user} />
       <div className="mt-auto flex flex-col items-start gap-1 border-t border-sidebar-border pt-4 text-sm">
-        <p className="px-2 text-muted-foreground">Signed in as {user.login}</p>
+        {/* The login opens the reader's own page. The underline tells the link from the text. */}
+        <p className="px-2 text-muted-foreground">
+          Signed in as{" "}
+          <PageLink
+            className="text-foreground underline underline-offset-4"
+            onClick={onClose}
+            page={people.routes.person}
+            params={{ login: user.login }}
+          >
+            {user.login}
+          </PageLink>
+        </p>
         <Button disabled={signOut.pending} onClick={signOut.start} size="xs" variant="link">
           Sign out
         </Button>

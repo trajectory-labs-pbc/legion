@@ -101,8 +101,8 @@
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "NavigationContents",
     "copy": "src/shell/navigation-panel.tsx",
-    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
-    "sha256": "9c8abba2f1adf73bac87f7eaa1c94e010658dae5dcfd99052705080a753e05de"
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "db12da4fb11ea43f25ce739ebe720f5c313ac7c856ef3b65eeda6f31ddb01bb9"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
@@ -115,8 +115,8 @@
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AppShell",
     "copy": "src/shell/app-shell.tsx",
-    "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
-    "sha256": "5472681908a7b749ff0237b22662a717d8787fdf3213d7c9335a49d028a11412"
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "e4bf9ee5c39fa96656899884693071701c0b5809710db4934be66cd0c97c5497"
   },
   {
     "file": "packages/dispatch/web/src/main.tsx",
