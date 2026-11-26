@@ -49,7 +49,7 @@ export const STATE_LABELS = {
 export const ASK_AT_RISK_DAYS = 2;
 export const CHANGE_AT_RISK_DAYS = 7;
 export const CHANGE_OFF_TRACK_DAYS = 14;
-/** R1's stale term, apart from R2's limits. */
+/** How old an in-flight issue's own change is before it counts as stale; no state limit. */
 export const STALE_DAYS = 7;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,14 +78,17 @@ export interface ProgressIndex {
 
 const NO_ISSUES: readonly ProgressIssue[] = [];
 
+function addTo<T>(groups: Map<string, T[]>, key: string, item: T): void {
+  const group = groups.get(key);
+  if (group === undefined) groups.set(key, [item]);
+  else group.push(item);
+}
+
 export function indexIssues(issues: readonly ProgressIssue[]): ProgressIndex {
   const byKey = new Map(issues.map((issue) => [issue.key, issue]));
   const children = new Map<string, ProgressIssue[]>();
   for (const issue of issues) {
-    if (issue.parent === null) continue;
-    const siblings = children.get(issue.parent);
-    if (siblings === undefined) children.set(issue.parent, [issue]);
-    else siblings.push(issue);
+    if (issue.parent !== null) addTo(children, issue.parent, issue);
   }
   const roots = issues.filter(
     (issue) => children.has(issue.key) && (issue.parent === null || !byKey.has(issue.parent))
@@ -373,10 +376,7 @@ function asksOfOpenIssues(
     const key = each.owner.issue?.key;
     if (each.waiting_on !== "human" || key === undefined) continue;
     const issue = index.byKey.get(key);
-    if (issue === undefined || isClosed(issue.status)) continue;
-    const held = byIssue.get(key);
-    if (held === undefined) byIssue.set(key, [each]);
-    else held.push(each);
+    if (issue !== undefined && !isClosed(issue.status)) addTo(byIssue, key, each);
   }
   return byIssue;
 }
@@ -386,10 +386,7 @@ function sessionsByTitle(agents: ProgressAgents | null): Map<string, string[]> {
   if (agents === null) return byIssue;
   for (const [sessionId, title] of agents.titles) {
     const key = workedIssueOf(title);
-    if (key === undefined || !isRunning(agents.state(sessionId))) continue;
-    const held = byIssue.get(key);
-    if (held === undefined) byIssue.set(key, [sessionId]);
-    else held.push(sessionId);
+    if (key !== undefined && isRunning(agents.state(sessionId))) addTo(byIssue, key, sessionId);
   }
   return byIssue;
 }
@@ -451,11 +448,8 @@ export interface ProgressAgent {
 export function agentsOf(model: ProgressModel, key: string): ProgressAgent[] {
   const bySession = new Map<string, ProgressIssue[]>();
   for (const issue of subtreeIssues(model.index, key)) {
-    for (const sessionId of new Set(linksOf(model, issue).agents)) {
-      const held = bySession.get(sessionId);
-      if (held === undefined) bySession.set(sessionId, [issue]);
-      else held.push(issue);
-    }
+    for (const sessionId of new Set(linksOf(model, issue).agents))
+      addTo(bySession, sessionId, issue);
   }
   return [...bySession].map(([sessionId, issues]) => ({ sessionId, issues }));
 }
