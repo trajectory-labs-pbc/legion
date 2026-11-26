@@ -20,7 +20,7 @@ export function ShellSkeleton(): ReactNode {
         </div>
         <div aria-label="Loading navigation" className="mt-2 space-y-0.5" role="status">
           {ROWS.map((row) => (
-            <Skeleton className="h-7 w-full" key={row} />
+            <Skeleton className="h-control-sm w-full" key={row} />
           ))}
         </div>
       </NavSurface>

@@ -44,7 +44,7 @@ describe("AuthGate", () => {
     ];
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
-      expect(row.className).toContain("h-7");
+      expect(row.className).toContain("h-control-sm");
       expect(row.className).not.toContain("bg-sidebar");
     }
   });

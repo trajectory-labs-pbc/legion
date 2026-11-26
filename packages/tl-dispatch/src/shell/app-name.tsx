@@ -3,7 +3,10 @@ import { cn } from "@legion/ui/lib/utils";
 import { PageLink } from "@/navigation/page-link";
 import { inbox } from "@/pages/inbox";
 
-const NAME = cn(headingVariants({ size: "group" }), "flex h-7 shrink-0 items-center truncate px-2");
+const NAME = cn(
+  headingVariants({ size: "group" }),
+  "flex h-control-sm shrink-0 items-center truncate px-2"
+);
 
 /** The app's name at the top of the sidebar, the drawer and the narrow header: a link home. */
 export function AppName({ className, onClick }: { className?: string; onClick?: () => void }) {
