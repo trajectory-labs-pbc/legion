@@ -84,9 +84,13 @@ jobs:
       # reason, so a sync that changed a copied part or a replaced view says it ported or closed it.
       - name: Check the pins changed since the base
         if: github.event_name == 'pull_request'
+        # A stacked pull request's event names the trunk as its base; the API names its own.
         env:
-          BASE_REF: ${{ github.base_ref }}
-        run: bun tests/map/copies.ts --check-base "origin/$BASE_REF"
+          GH_TOKEN: ${{ github.token }}
+          PULL: ${{ github.event.pull_request.number }}
+        run: |
+          base=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL" --jq .base.ref)
+          bun tests/map/copies.ts --check-base "origin/$base"
       - name: Test (layers, design rules, route map, view map, copied upstream code)
         run: bun run test
       - name: Build
