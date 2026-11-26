@@ -243,6 +243,11 @@ load no page module:
   set, because upstream's harness would empty that database, unless `DISPATCH_E2E_REUSE_SERVERS=1`
   reuses a stack upstream's `harness-up.ts` started. It leaves out `*.multiprocess.e2e.ts`, as
   upstream's default run does.
+  `e2e/routes.e2e.ts` opens each route of the route map in both modes, and fails on a route
+  whose mark, a heading, a labelled region or a text only that route's page shows, does not
+  show, on a console error, and on a route with no mark in `e2e/route-marks.ts`. That file's
+  header names what each mode seeds for each route, and the mark the deployed mode expects where
+  it seeds nothing.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.
@@ -268,4 +273,5 @@ deployed-mode test sends nothing through them. A seed goes `as: "agent"`.
 `switch.multiprocess.e2e.ts` alone, a file the switch test adds; until then they match no file.
 Each record a run makes carries the run's name,
 `E2E_RUN_NAME` (a project key; the run picks one when it is not set), and a test reads only
-records it made. `e2e/modes.ts` holds these rules.
+records it made. `e2e/modes.ts` holds these rules. The route test ends the priority it made and
+retracts its open ask, in both modes, and leaves its project, issue, document and session file.
