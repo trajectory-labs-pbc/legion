@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import type { AgentState } from "@upstream-dispatch/features/refs/agent-registry";
 
 import {
   ASK_AT_RISK_DAYS,
+  agentsOf,
+  bareSessionId,
   CHANGE_AT_RISK_DAYS,
   CHANGE_OFF_TRACK_DAYS,
   figuresFor,
@@ -9,6 +12,8 @@ import {
   isClosed,
   isInFlight,
   moreThanDays,
+  notRunningClaims,
+  type ProgressAgents,
   type ProgressAsk,
   type ProgressIssue,
   progressModel,
@@ -16,6 +21,7 @@ import {
   staleIssues,
   subtreeIssues,
   waitingAsks,
+  workedIssueOf,
 } from "./progress-model";
 
 const NOW = Date.parse("2026-03-11T12:00:00Z");
@@ -76,8 +82,23 @@ function ask(id: string, on: string | null, age: number, waitingOn = "human"): P
   };
 }
 
-function model(issues: readonly ProgressIssue[], asks: readonly ProgressAsk[] = []) {
-  return progressModel({ issues, asks }, NOW);
+function model(
+  issues: readonly ProgressIssue[],
+  asks: readonly ProgressAsk[] = [],
+  agents: ProgressAgents | null = null
+) {
+  return progressModel({ issues, asks, agents }, NOW);
+}
+
+/** A registry that lists the named sessions; every other id is not running. */
+function registry(
+  states: Readonly<Record<string, AgentState>>,
+  titles: Readonly<Record<string, string>> = {}
+): ProgressAgents {
+  return {
+    state: (id) => states[id] ?? "not-running",
+    titles: new Map(Object.entries(titles)),
+  };
 }
 
 function figuresOf(issues: readonly ProgressIssue[], key: string, asks?: readonly ProgressAsk[]) {
@@ -369,5 +390,119 @@ describe("progress states", () => {
 
   test("a closed root with every descendant closed is Closed", () => {
     expect(stateOfTree({ status: "done", updated: 40 * DAY }, { status: "done" })).toBe("closed");
+  });
+});
+
+describe("progress agents", () => {
+  const tree = (...below: ProgressIssue[]) => [issue("ALPHA-1"), ...below];
+  const child = (key: string, fields: IssueFields = {}) =>
+    issue(key, { parent: "ALPHA-1", ...fields });
+
+  test("a running or unresponsive holder is an agent; a not-running holder's claim is listed", () => {
+    const built = model(
+      tree(
+        child("ALPHA-2", { claim: "s1" }),
+        child("ALPHA-3", { claim: "s2" }),
+        child("ALPHA-4", { claim: "s3" })
+      ),
+      [],
+      registry({ s1: "running", s2: "unresponsive" })
+    );
+    expect(built.figures.get("ALPHA-1")).toMatchObject({ agents: 2, notRunningClaims: 1 });
+    expect(
+      agentsOf(built, "ALPHA-1")
+        .map((agent) => agent.sessionId)
+        .sort()
+    ).toEqual(["s1", "s2"]);
+    expect(keys(notRunningClaims(built, "ALPHA-1"))).toEqual(["ALPHA-4"]);
+  });
+
+  test("the prefixed-claim test: a claude-code: claim matches the bare id the registry lists", () => {
+    expect(bareSessionId("claude-code:s1")).toBe("s1");
+    expect(bareSessionId("s1")).toBe("s1");
+    const built = model(
+      tree(child("ALPHA-2", { claim: "claude-code:s1" })),
+      [],
+      registry({ s1: "running" })
+    );
+    expect(built.figures.get("ALPHA-1")).toMatchObject({ agents: 1, notRunningClaims: 0 });
+  });
+
+  test("a session titled for an open issue of the tree is an agent", () => {
+    const built = model(
+      tree(child("ALPHA-2"), child("ALPHA-3", { status: "done" })),
+      [],
+      registry(
+        { s1: "running", s2: "running", s3: "running", s4: "running" },
+        {
+          s1: "Legion implementer · ALPHA-2",
+          s2: "Legion implementer · ALPHA-3",
+          s3: "Legion controller · ALPHA",
+          s4: "Legion painter · ALPHA-2",
+        }
+      )
+    );
+    expect(agentsOf(built, "ALPHA-1")).toEqual([{ sessionId: "s1", issues: [child("ALPHA-2")] }]);
+  });
+
+  test("the title is read as Legion writes it", () => {
+    expect(workedIssueOf("  Legion reviewer · ALPHA-7  ")).toBe("ALPHA-7");
+    expect(workedIssueOf("Legion controller · ALPHA")).toBeUndefined();
+    expect(workedIssueOf("Legion painter · ALPHA-7")).toBeUndefined();
+    expect(workedIssueOf("Legion reviewer · ")).toBeUndefined();
+    expect(workedIssueOf("Reviewer · ALPHA-7")).toBeUndefined();
+  });
+
+  test("a session linked to two open issues of a tree is one agent", () => {
+    const built = model(
+      tree(child("ALPHA-2", { claim: "s1" }), child("ALPHA-3", { claim: "s1" }), child("ALPHA-4")),
+      [],
+      registry({ s1: "running" }, { s1: "Legion tester · ALPHA-4" })
+    );
+    expect(built.figures.get("ALPHA-1")?.agents).toBe(1);
+    expect(keys(agentsOf(built, "ALPHA-1")[0]?.issues ?? []).sort()).toEqual([
+      "ALPHA-2",
+      "ALPHA-3",
+      "ALPHA-4",
+    ]);
+  });
+
+  test("a claim on a closed issue, or held by a person, is neither an agent nor listed", () => {
+    const built = model(
+      tree(
+        child("ALPHA-2", { status: "done", claim: "s1" }),
+        child("ALPHA-3", { status: "done", claim: "s2" }),
+        child("ALPHA-4", { claim: "ada@example.test", claimKind: "user" })
+      ),
+      [],
+      registry({ s1: "running" })
+    );
+    expect(built.figures.get("ALPHA-1")).toMatchObject({ agents: 0, notRunningClaims: 0 });
+  });
+
+  test("with the registry unknown the model gives no agent figures", () => {
+    const built = model(tree(child("ALPHA-2", { claim: "s1" })), [], registry({ s1: "unknown" }));
+    expect(built.figures.get("ALPHA-1")).toMatchObject({ agents: 0, notRunningClaims: 0 });
+    const unknown = model(tree(child("ALPHA-2", { claim: "s1" })));
+    expect(unknown.figures.get("ALPHA-1")).toMatchObject({ agents: null, notRunningClaims: null });
+    expect(agentsOf(unknown, "ALPHA-1")).toEqual([]);
+    expect(notRunningClaims(unknown, "ALPHA-1")).toEqual([]);
+  });
+
+  test("agents add up the tree as a set of sessions", () => {
+    const built = model(
+      [
+        issue("ALPHA-1"),
+        issue("ALPHA-2", { parent: "ALPHA-1", claim: "s1" }),
+        issue("ALPHA-3", { parent: "ALPHA-2", claim: "s2" }),
+        issue("ALPHA-4", { parent: "ALPHA-1" }),
+        issue("ALPHA-5", { parent: "ALPHA-4", claim: "s1" }),
+      ],
+      [],
+      registry({ s1: "running", s2: "running" })
+    );
+    expect(built.figures.get("ALPHA-2")?.agents).toBe(2);
+    expect(built.figures.get("ALPHA-4")?.agents).toBe(1);
+    expect(built.figures.get("ALPHA-1")?.agents).toBe(2);
   });
 });

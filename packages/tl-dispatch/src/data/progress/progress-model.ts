@@ -1,4 +1,6 @@
+import { isLegionRole } from "@legion/contracts";
 import type { Issue, OpenAsk } from "@upstream-dispatch/api/types";
+import type { AgentState } from "@upstream-dispatch/features/refs/agent-registry";
 
 /** The fields of an issue read that the model uses. */
 export type ProgressIssue = Pick<
@@ -112,10 +114,41 @@ export function subtreeIssues(index: ProgressIndex, key: string): readonly Progr
   return found;
 }
 
+/** The agent registry as the model reads it, by bare session id. */
+export interface ProgressAgents {
+  state(sessionId: string): AgentState;
+  readonly titles: ReadonlyMap<string, string>;
+}
+
 export interface ProgressInput {
   readonly issues: readonly ProgressIssue[];
   readonly asks: readonly ProgressAsk[];
+  /** Null while the registry's state is unknown: the model then gives no agent figures. */
+  readonly agents: ProgressAgents | null;
 }
+
+const CLAUDE_CODE_PREFIX = "claude-code:";
+const LEGION_TITLE_PREFIX = "Legion ";
+const LEGION_TITLE_SEPARATOR = " · ";
+
+/** The agents read lists bare ids, and a claim can carry Claude Code's prefix. */
+export function bareSessionId(id: string): string {
+  return id.startsWith(CLAUDE_CODE_PREFIX) ? id.slice(CLAUDE_CODE_PREFIX.length) : id;
+}
+
+/** The issue a Legion role's title `Legion <role> · <KEY>` names; a controller's names none. */
+export function workedIssueOf(title: string): string | undefined {
+  const trimmed = title.trim();
+  if (!trimmed.startsWith(LEGION_TITLE_PREFIX)) return undefined;
+  const rest = trimmed.slice(LEGION_TITLE_PREFIX.length);
+  const at = rest.indexOf(LEGION_TITLE_SEPARATOR);
+  if (at < 0) return undefined;
+  const role = rest.slice(0, at).trim();
+  const subject = rest.slice(at + LEGION_TITLE_SEPARATOR.length).trim();
+  return subject !== "" && isLegionRole(role) ? subject : undefined;
+}
+
+const isRunning = (state: AgentState) => state === "running" || state === "unresponsive";
 
 /** The figures of one subtree: the issue's own counts, then its descendants'. */
 export interface ProgressFigures {
@@ -133,6 +166,10 @@ export interface ProgressFigures {
   readonly waitingAsks: number;
   /** The `created_at` of the oldest waiting ask, or null when none waits. */
   readonly oldestAsk: number | null;
+  /** Distinct running sessions linked to an open issue; null while the registry is unknown. */
+  readonly agents: number | null;
+  /** Claims on open issues that sessions not running hold; null while the registry is unknown. */
+  readonly notRunningClaims: number | null;
   readonly state: ProgressState;
 }
 
@@ -157,6 +194,9 @@ export function stateOf(counts: SubtreeCounts, now: number): ProgressState {
 export interface ProgressModel {
   readonly now: number;
   readonly index: ProgressIndex;
+  readonly agents: ProgressAgents | null;
+  /** The running sessions whose title names each issue. */
+  readonly titledSessions: ReadonlyMap<string, readonly string[]>;
   /** The waiting asks of each open issue that has one. */
   readonly asksByIssue: ReadonlyMap<string, readonly ProgressAsk[]>;
   /** The figures of every issue with children that a walk from a root meets. */
@@ -172,7 +212,11 @@ interface Totals {
   readonly stale: number;
   readonly waitingAsks: number;
   readonly oldestAsk: number | null;
+  readonly agents: ReadonlySet<string>;
+  readonly notRunningClaims: number;
 }
+
+const NO_SESSIONS: ReadonlySet<string> = new Set();
 
 const NO_TOTALS: Totals = {
   size: 0,
@@ -183,6 +227,8 @@ const NO_TOTALS: Totals = {
   stale: 0,
   waitingAsks: 0,
   oldestAsk: null,
+  agents: NO_SESSIONS,
+  notRunningClaims: 0,
 };
 
 const NO_ASKS: readonly ProgressAsk[] = [];
@@ -197,6 +243,18 @@ function older(a: number | null, b: number | null): number | null {
   return b === null ? a : Math.min(a, b);
 }
 
+/** Shares a set when the other adds nothing, so a tree with few agents copies few sets. */
+function union(a: ReadonlySet<string>, b: ReadonlySet<string>): ReadonlySet<string> {
+  const [large, small] = a.size >= b.size ? [a, b] : [b, a];
+  let merged: Set<string> | undefined;
+  for (const id of small) {
+    if (large.has(id)) continue;
+    merged ??= new Set(large);
+    merged.add(id);
+  }
+  return merged ?? large;
+}
+
 function addTotals(a: Totals, b: Totals): Totals {
   return {
     size: a.size + b.size,
@@ -207,7 +265,31 @@ function addTotals(a: Totals, b: Totals): Totals {
     stale: a.stale + b.stale,
     waitingAsks: a.waitingAsks + b.waitingAsks,
     oldestAsk: older(a.oldestAsk, b.oldestAsk),
+    agents: union(a.agents, b.agents),
+    notRunningClaims: a.notRunningClaims + b.notRunningClaims,
   };
+}
+
+interface IssueLinks {
+  readonly agents: readonly string[];
+  readonly notRunningClaim: boolean;
+}
+
+const NO_LINKS: IssueLinks = { agents: [], notRunningClaim: false };
+
+/** The running sessions an open issue's claim or a title links to it, and a not-running claim. */
+function linksOf(model: ProgressModel, issue: ProgressIssue): IssueLinks {
+  const registry = model.agents;
+  if (registry === null || isClosed(issue.status)) return NO_LINKS;
+  const titled = model.titledSessions.get(issue.key) ?? [];
+  const claim = issue.claim;
+  if (claim === null || claim.actor.kind !== "session") {
+    return titled.length === 0 ? NO_LINKS : { agents: titled, notRunningClaim: false };
+  }
+  const holder = bareSessionId(claim.actor.id);
+  const state = registry.state(holder);
+  if (isRunning(state)) return { agents: [holder, ...titled], notRunningClaim: false };
+  return { agents: titled, notRunningClaim: state === "not-running" };
 }
 
 function isStale(issue: ProgressIssue, now: number): boolean {
@@ -221,6 +303,7 @@ function ownTotals(model: ProgressModel, issue: ProgressIssue): Totals {
   const asks = model.asksByIssue.get(issue.key) ?? NO_ASKS;
   let oldestAsk: number | null = null;
   for (const each of asks) oldestAsk = older(oldestAsk, Date.parse(each.created_at));
+  const links = linksOf(model, issue);
   return {
     size: 1,
     closed: open ? 0 : 1,
@@ -230,6 +313,8 @@ function ownTotals(model: ProgressModel, issue: ProgressIssue): Totals {
     stale: isStale(issue, model.now) ? 1 : 0,
     waitingAsks: asks.length,
     oldestAsk,
+    agents: links.agents.length === 0 ? NO_SESSIONS : new Set(links.agents),
+    notRunningClaims: links.notRunningClaim ? 1 : 0,
   };
 }
 
@@ -237,7 +322,8 @@ function figuresFrom(
   issue: ProgressIssue,
   own: Totals,
   below: Totals,
-  now: number
+  now: number,
+  known: boolean
 ): ProgressFigures {
   const all = addTotals(own, below);
   const counts = {
@@ -251,6 +337,8 @@ function figuresFrom(
     stale: all.stale,
     waitingAsks: all.waitingAsks,
     oldestAsk: all.oldestAsk,
+    agents: known ? all.agents.size : null,
+    notRunningClaims: known ? all.notRunningClaims : null,
   };
   return { ...counts, state: stateOf(counts, now) };
 }
@@ -269,7 +357,8 @@ function foldSubtree(
     if (!met.has(child.key)) below = addTotals(below, foldSubtree(model, child, met, figures));
   }
   const own = ownTotals(model, issue);
-  if (children.length > 0) figures.set(issue.key, figuresFrom(issue, own, below, model.now));
+  if (children.length > 0)
+    figures.set(issue.key, figuresFrom(issue, own, below, model.now, model.agents !== null));
   return addTotals(own, below);
 }
 
@@ -290,12 +379,27 @@ function asksOfOpenIssues(
   return byIssue;
 }
 
+function sessionsByTitle(agents: ProgressAgents | null): Map<string, string[]> {
+  const byIssue = new Map<string, string[]>();
+  if (agents === null) return byIssue;
+  for (const [sessionId, title] of agents.titles) {
+    const key = workedIssueOf(title);
+    if (key === undefined || !isRunning(agents.state(sessionId))) continue;
+    const held = byIssue.get(key);
+    if (held === undefined) byIssue.set(key, [sessionId]);
+    else held.push(sessionId);
+  }
+  return byIssue;
+}
+
 export function progressModel(input: ProgressInput, now: number): ProgressModel {
   const index = indexIssues(input.issues);
   const figures = new Map<string, ProgressFigures>();
   const model: ProgressModel = {
     now,
     index,
+    agents: input.agents,
+    titledSessions: sessionsByTitle(input.agents),
     asksByIssue: asksOfOpenIssues(index, input.asks),
     figures,
   };
@@ -332,4 +436,28 @@ export function waitingAsks(model: ProgressModel, key: string): ProgressAsk[] {
   return subtreeIssues(model.index, key)
     .flatMap((issue) => model.asksByIssue.get(issue.key) ?? NO_ASKS)
     .sort(byTime((each) => each.created_at));
+}
+
+export interface ProgressAgent {
+  readonly sessionId: string;
+  /** The open issues of the subtree that it holds or works on. */
+  readonly issues: readonly ProgressIssue[];
+}
+
+/** The agents of a subtree, each with its issues; none while the registry is unknown. */
+export function agentsOf(model: ProgressModel, key: string): ProgressAgent[] {
+  const bySession = new Map<string, ProgressIssue[]>();
+  for (const issue of subtreeIssues(model.index, key)) {
+    for (const sessionId of new Set(linksOf(model, issue).agents)) {
+      const held = bySession.get(sessionId);
+      if (held === undefined) bySession.set(sessionId, [issue]);
+      else held.push(issue);
+    }
+  }
+  return [...bySession].map(([sessionId, issues]) => ({ sessionId, issues }));
+}
+
+/** The open issues of a subtree whose claim a session not running holds. */
+export function notRunningClaims(model: ProgressModel, key: string): ProgressIssue[] {
+  return subtreeIssues(model.index, key).filter((issue) => linksOf(model, issue).notRunningClaim);
 }
