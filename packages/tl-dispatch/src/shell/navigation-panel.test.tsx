@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import userEvent from "@testing-library/user-event";
 import { act, type ReactNode } from "react";
 
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
@@ -33,6 +34,18 @@ const buttonNamed = (container: HTMLElement, name: string) =>
     (button) => (button.getAttribute("aria-label") ?? button.textContent) === name
   );
 
+const ACCOUNT = "Signed in as reader";
+
+/** Opens the account's menu, drawn in a portal on the body, and gives its Sign out. */
+async function openAccount(container: HTMLElement) {
+  const account = buttonNamed(container, ACCOUNT);
+  if (account === undefined) throw new Error("no account button");
+  await userEvent.setup().click(account);
+  return [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (item) => item.textContent === "Sign out"
+  );
+}
+
 function panel(signOut: Partial<SignOut>, compact = false, onClose = () => {}) {
   return (
     <>
@@ -49,11 +62,14 @@ function panel(signOut: Partial<SignOut>, compact = false, onClose = () => {}) {
 }
 
 describe("NavigationPanel", () => {
-  test("names the account, and its Sign out runs the shell's sign-out", () => {
+  test("names the account, and its menu's Sign out runs the shell's sign-out", async () => {
     let started = 0;
     const container = mount(panel({ start: () => (started += 1) }));
-    expect(container.textContent).toContain("Signed in as reader");
-    settle(() => buttonNamed(container, "Sign out")?.click());
+    // Two steps: no Sign out on the panel itself, and opening the menu signs nobody out.
+    expect(buttonNamed(container, "Sign out")).toBeUndefined();
+    const signOut = await openAccount(container);
+    expect(started).toBe(0);
+    settle(() => signOut?.click());
     expect(started).toBe(1);
   });
 
@@ -69,11 +85,16 @@ describe("NavigationPanel", () => {
     for (const cleanup of cleanups.splice(0)) cleanup();
 
     const busy = mount(panel({ error, pending: true, start }));
-    for (const name of ["Sign out", "Retry"]) {
+    for (const name of [ACCOUNT, "Retry"]) {
       expect(buttonNamed(busy, name)?.getAttribute("aria-busy")).toBe("true");
     }
     settle(() => buttonNamed(busy, "Retry")?.click());
     expect(started).toBe(1);
+  });
+
+  test("while a sign-out is out, the account's menu does not open", async () => {
+    const busy = mount(panel({ pending: true }));
+    expect(await openAccount(busy)).toBeUndefined();
   });
 
   test("wide, its name row offers search, new issue and hiding the sidebar, as icons", () => {
@@ -87,12 +108,9 @@ describe("NavigationPanel", () => {
     expect(row?.className).toContain("h-11");
   });
 
-  test("names the account on one row, beside Sign out", () => {
+  test("names the account on one control, which announces its menu", () => {
     const container = mount(panel({}));
-    const account = [...container.querySelectorAll("p")].find((p) =>
-      p.textContent?.startsWith("Signed in as")
-    );
-    expect(account?.parentElement).toBe(buttonNamed(container, "Sign out")?.parentElement);
+    expect(buttonNamed(container, ACCOUNT)?.getAttribute("aria-haspopup")).toBe("menu");
   });
 
   test("in a drawer, Close ends it, and there is no sidebar to hide", () => {
