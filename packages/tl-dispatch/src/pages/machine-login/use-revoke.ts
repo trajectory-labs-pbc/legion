@@ -1,54 +1,53 @@
-import { useKeyedWrite, useRefusalOfSubject, useSubmitGuard, type WriteBounds } from "./upstream";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  api,
+  credentialGrantsQuery,
+  type LauncherCredentialResp,
+  machineLoginsQuery,
+  useKeyedWrite,
+  useRefusalOfSubject,
+  useSubmitGuard,
+} from "./upstream";
 
-export interface Revoke<Row> {
-  /** Asks first, then revokes the row. */
-  press: (row: Row) => void;
-  /** A revoke is out. */
-  pending: boolean;
-  /** The row whose revoke failed, while it is still listed. */
-  refused: Row | undefined;
+export interface Revoke {
+  /** Revokes the login; one revoke is out at a time. */
+  send: (login: LauncherCredentialResp) => void;
+  /** The login whose revoke is out. */
+  pending: LauncherCredentialResp | undefined;
+  /** The login whose revoke failed, while it is still listed. */
+  refused: LauncherCredentialResp | undefined;
   /** Why that revoke failed. */
   error: unknown;
 }
 
-/** Revokes one row of a list, after its question, and holds the failure while the row is listed. */
-export function useRevoke<Row>({
-  confirm,
-  label,
-  listed,
-  onRevoked,
-  revoke,
-  rowKey,
-}: {
-  /** The question a Revoke asks first. */
-  confirm: (row: Row) => string;
-  /** The revoke as the pending writes name it. */
-  label: (row: Row) => string;
-  /** The rows the list shows now. */
-  listed: readonly Row[] | undefined;
-  onRevoked: () => void;
-  revoke: (row: Row, bounds: WriteBounds) => Promise<void>;
-  rowKey: (row: Row) => string;
-}): Revoke<Row> {
+/** Whether `login` is still in the list. */
+export const isListed = (
+  listed: readonly LauncherCredentialResp[] | undefined,
+  login: LauncherCredentialResp
+) => listed?.some((other) => other.credential_id === login.credential_id) === true;
+
+/** Revokes one machine login at a time, and holds the failure while the login is listed. */
+export function useRevoke(listed: readonly LauncherCredentialResp[] | undefined): Revoke {
+  const queryClient = useQueryClient();
   const submitGuard = useSubmitGuard();
   const mutation = useKeyedWrite({
     method: "POST",
     inline: true,
-    label,
+    label: (login: LauncherCredentialResp) => `Machine logins: revoke ${login.credential_id}`,
     onSettled: () => submitGuard.release(),
-    onSuccess: onRevoked,
-    write: revoke,
-  });
-  // The refusal goes once its row leaves the list.
-  const refused = useRefusalOfSubject(
-    mutation,
-    (row) => listed?.some((other) => rowKey(other) === rowKey(row)) === true
-  );
-  return {
-    press: (row) => {
-      if (window.confirm(confirm(row))) submitGuard.guard(() => mutation.mutate(row));
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: machineLoginsQuery().queryKey });
+      void queryClient.invalidateQueries({ queryKey: credentialGrantsQuery().queryKey });
     },
-    pending: mutation.isPending,
+    write: (login, bounds) => api.revokeMachineLogin(login.credential_id, bounds),
+  });
+  // The refusal goes once its login leaves the list.
+  const refused = useRefusalOfSubject(mutation, (login) => isListed(listed, login));
+  return {
+    send: (login) => {
+      submitGuard.guard(() => mutation.mutate(login));
+    },
+    pending: mutation.isPending ? mutation.variables : undefined,
     refused: refused ? mutation.variables : undefined,
     error: mutation.error,
   };
