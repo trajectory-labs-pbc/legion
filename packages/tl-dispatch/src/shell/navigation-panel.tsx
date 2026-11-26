@@ -64,7 +64,12 @@ export function NavigationPanel({
       <div className="mt-auto flex flex-col gap-1 pt-4">
         {/* The row keeps its height while the menu's code loads. */}
         <div className="min-h-control-sm">
-          <AccountMenu login={user.login} onSignOut={signOut.start} pending={signOut.pending} />
+          <AccountMenu
+            login={user.login}
+            onNavigate={compact ? onClose : undefined}
+            onSignOut={signOut.start}
+            pending={signOut.pending}
+          />
         </div>
         {signOut.error === undefined ? null : (
           <Alert size="compact" variant="danger">
