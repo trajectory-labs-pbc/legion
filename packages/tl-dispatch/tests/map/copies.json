@@ -450,7 +450,7 @@
   {
     "file": "packages/dispatch/web/src/features/credentials/RevocableList.tsx",
     "part": "*",
-    "copy": "src/pages/machine-login/revocable-table.tsx",
+    "copy": "src/pages/machine-login/machine-logins.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0ee3aa5cad6b6d25af2c57c3ce8d3b0a8d436a154d6f744363ea6a482221bd78"
   },
