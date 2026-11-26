@@ -24,7 +24,7 @@ export const RULES = {
   focus: "focus is drawn in the focus token alone (`outline-focus`), at full strength",
   textOpacity: "text at reduced opacity loses its contrast; use a text token",
   radius:
-    "radius outside the theme: 0, a theme radius no larger than `--radius`, or `rounded-full` for a circle",
+    "radius outside the theme: 0, `--radius` or one of its steps (0.5 to 1.5 times it), or `rounded-full` for a circle",
   round: "only a dot or an avatar is round: `rounded-full` goes with a numeric `size-N`",
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
@@ -46,25 +46,35 @@ export interface ThemeTokens {
   radii: ReadonlySet<string>;
 }
 
-/** How many times `--radius` a theme radius is: `var(--radius)` is 1, `calc(var(--radius) * 0.6)` 0.6. */
+/** How many times `--radius` a theme radius is: `var(--radius)` is 1, `calc(var(--radius) * 0.5)` 0.5. */
 function radiusScale(value: string): number | undefined {
   if (value === "var(--radius)") return 1;
   const scaled = /^calc\(var\(--radius\)\s*\*\s*(\d+(\.\d+)?)\)$/.exec(value);
   return scaled === null ? undefined : Number(scaled[1]);
 }
 
-/** The theme's colours, and its radii no larger than `--radius`: a larger one draws a pill. */
+/** The steps a corner may take: `--radius` times 0.5 to 1.5. */
+const inSteps = (scale: number) => scale >= 0.5 && scale <= 1.5;
+
+/** Whether a corner is 0, a circle's, or the theme's: `--radius`, a step of it, or a role token. */
 export function themeTokens(...stylesheets: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
+  // A role token names a step (`--radius-badge: var(--radius-sm)`), so it is read after them.
+  const roles: [string, string][] = [];
   for (const css of stylesheets) {
     for (const { property, value, context } of parseCss(css).declarations) {
       if (/^--radius(-|$)/.test(property)) {
         const scale = property === "--radius" ? 1 : radiusScale(value);
-        if (scale !== undefined && scale <= 1) radii.add(property);
+        if (scale !== undefined && inSteps(scale)) radii.add(property);
+        else roles.push([property, value]);
       } else if (property.startsWith("--") && context.at(-1)?.startsWith(":root"))
         colours.add(property);
     }
+  }
+  for (const [property, value] of roles) {
+    const step = /^var\(\s*(--radius-[\w-]+)\s*\)$/.exec(value)?.[1];
+    if (step !== undefined && radii.has(step)) radii.add(property);
   }
   return { colours, radii };
 }
@@ -128,7 +138,7 @@ function radiusAllowed(value: string, radii: ReadonlySet<string>, circle: boolea
   if (value === "calc(infinity * 1px)") return circle;
   // The theme's radii compile inline, as `--radius` times their scale.
   const scale = radiusScale(value);
-  if (scale !== undefined) return scale <= 1;
+  if (scale !== undefined) return inSteps(scale);
   const references = [...value.matchAll(/var\(\s*(--[\w-]+)\s*(,[^)]*)?\)/g)];
   if (references.length === 0) return false;
   if (references.some((match) => !radii.has(match[1] as string) || match[2] !== undefined)) {
