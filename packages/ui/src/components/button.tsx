@@ -30,8 +30,9 @@ const buttonVariants = cva(
           "border border-input bg-field hover:bg-secondary hover:text-secondary-foreground [&>[data-slot=spinner]]:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 [&>[data-slot=spinner]]:text-secondary-foreground",
+        // On a navigation surface, a ghost button hovers as a row does.
         ghost:
-          "hover:bg-secondary hover:text-secondary-foreground [&>[data-slot=spinner]]:text-foreground",
+          "hover:bg-secondary hover:text-secondary-foreground in-data-[slot=nav-surface]:hover:bg-sidebar-accent/50 in-data-[slot=nav-surface]:hover:text-sidebar-accent-foreground [&>[data-slot=spinner]]:text-foreground",
         link: "text-foreground underline-offset-4 hover:underline [&>[data-slot=spinner]]:text-foreground",
         // A destructive action beside others: danger text, the danger tint on hover.
         "quiet-danger": "text-danger hover:bg-danger-tint [&>[data-slot=spinner]]:text-danger",
@@ -41,7 +42,7 @@ const buttonVariants = cva(
       size: {
         default: "h-8 px-3 has-data-[icon=inline-start]:pl-2.5 has-data-[icon=inline-end]:pr-2.5",
         xs: "h-6 gap-1 px-2 text-xs has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-end]:pr-1.5 [&_svg:not([class*='size-'])]:size-3 [&>[data-slot=spinner]]:size-3",
-        sm: "h-7 gap-1.5 px-2.5 has-data-[icon=inline-start]:pl-2 has-data-[icon=inline-end]:pr-2",
+        sm: "h-control-sm gap-1.5 px-2.5 has-data-[icon=inline-start]:pl-2 has-data-[icon=inline-end]:pr-2",
         lg: "h-9 px-4 has-data-[icon=inline-start]:pl-3 has-data-[icon=inline-end]:pr-3",
         icon: "size-8",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3 [&>[data-slot=spinner]]:size-3",
