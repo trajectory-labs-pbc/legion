@@ -1,10 +1,12 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
 import { FoldsControl, useBlockFolds } from "./block-folds-part";
 import { CountsLine } from "./counts-line";
 import { moveToBlock } from "./moves";
-import type { PartsProps } from "./parts-slot";
+import { OutlineNav, useOutline } from "./outline";
+import { type BlockCounts, blockCounts } from "./outline-entries";
+import type { PartsEntry, PartsProps } from "./parts-slot";
 import { ReadFirst, useReadFirst } from "./read-first";
 import { type AidedDocument, useAidedDocument } from "./reads";
 import { useMeasuredRender } from "./timing";
@@ -14,6 +16,28 @@ import { useChangeMarks } from "./use-change-marks";
 function AidCommands({ actions }: { actions: AidActions }): null {
   useAidCommands(actions);
   return null;
+}
+
+/** With no document resolved, the outline counts nothing. */
+const NO_COUNTS: ReadonlyMap<string, BlockCounts> = new Map();
+
+/** The shown editor's outline, and its keys merged with the other parts' into one registration. */
+function ShownAids({
+  actions,
+  counts,
+  entry,
+}: {
+  actions: AidActions;
+  counts: ReadonlyMap<string, BlockCounts>;
+  entry: PartsEntry;
+}) {
+  const outline = useOutline(entry, counts);
+  return (
+    <>
+      <AidCommands actions={{ ...actions, ...outline.actions }} />
+      <OutlineNav outline={outline} />
+    </>
+  );
 }
 
 function DocumentParts({ document, entry, shown }: PartsProps & { document: AidedDocument }) {
@@ -26,7 +50,9 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
     (blockId: string) => moveToBlock(entry, blockId, "click"),
     [entry]
   );
-  const { step } = readFirst;
+  const { decisions, step } = readFirst;
+  const changes = marks?.state === "shown" ? marks.shown?.summary.byBlock : undefined;
+  const counts = useMemo(() => blockCounts(changes, decisions), [changes, decisions]);
   return (
     <>
       <ReadFirst document={document} state={readFirst} />
@@ -37,12 +63,14 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
         read={baseline}
       />
       {shown ? (
-        <AidCommands
+        <ShownAids
           actions={{
             ...folds,
             nextDecision: step && (() => step(1)),
             previousDecision: step && (() => step(-1)),
           }}
+          counts={counts}
+          entry={entry}
         />
       ) : null}
     </>
@@ -53,5 +81,5 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
 export function AidParts(props: PartsProps) {
   const document = useAidedDocument(props.entry.documentRef);
   if (document !== undefined) return <DocumentParts {...props} document={document} />;
-  return props.shown ? <AidCommands actions={{}} /> : null;
+  return props.shown ? <ShownAids actions={{}} counts={NO_COUNTS} entry={props.entry} /> : null;
 }

@@ -65,6 +65,9 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
 - `--reading-gutter-width` (in `packages/ui/src/styles/theme.css`): the reading aids' gutter at the left of a document's text, where the change marks' labels stand.
+- `--reading-outline-width` (in `packages/ui/src/styles/theme.css`): the width of the reading aids' outline at the left of a document's text.
+- `--reading-outline-gap` (in `packages/ui/src/styles/theme.css`): the room between the outline and the text.
+- `--reading-measure` (in `packages/ui/src/styles/theme.css`): the reading measure, the third part of the width the article's border box needs, beside the outline's width and its gap, for the outline to show.
 - Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. On a page, `SurfaceTitle` is the `h1` and `Heading` starts at `h2`; inside an overlay, `OverlayOutline` makes the title an `h2` and the first `Heading` an `h3`. `Heading` takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
 
 | Recipe | Use |

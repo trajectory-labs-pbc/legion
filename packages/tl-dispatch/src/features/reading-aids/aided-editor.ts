@@ -60,7 +60,7 @@ function aidedHandle(handle: EditorHandle, aids: EditorAids): EditorHandle {
 }
 
 /** The aids `load` answers, or none when it fails: a failed aid never hides the document. */
-const aidsOrNone = (load: () => Promise<EditorAids>) =>
+const aidsOrNone = (load: () => Promise<EditorAids | undefined>) =>
   load().catch((error: unknown) => {
     console.error("Dispatch: the reading aids failed to load", error);
     return undefined;
@@ -68,11 +68,13 @@ const aidsOrNone = (load: () => Promise<EditorAids>) =>
 
 /** Upstream's `createEditor`, with the aids `load` answers on a host's document editor. */
 export const aidedEditor =
-  (load: () => Promise<EditorAids>): CreateEditor =>
+  (load: () => Promise<EditorAids | undefined>): CreateEditor =>
   async (root, options) => {
     const place = aidedPlace(root, options.documentRef);
     if (place === undefined) return createEditor(root, options);
-    const [handle, aids] = await Promise.all([createEditor(root, options), aidsOrNone(load)]);
+    // The aids first, so they install in the task that draws the text, before its first paint.
+    const aids = await aidsOrNone(load);
+    const handle = await createEditor(root, options);
     if (aids === undefined) return handle;
     const aided = aidedHandle(handle, aids);
     const { plugins } = handle.view.state;
@@ -87,4 +89,19 @@ export const aidedEditor =
     }
   };
 
-export const createAidedEditor = aidedEditor(() => importWhenOnline(() => import("./editor-aids")));
+/** `load`, shared while it runs and kept once it gives the aids; after a failure, run again. */
+export function sharedLoad(load: () => Promise<EditorAids>): () => Promise<EditorAids | undefined> {
+  let loading: Promise<EditorAids | undefined> | undefined;
+  return () => {
+    loading ??= aidsOrNone(load).then((aids) => {
+      if (aids === undefined) loading = undefined;
+      return aids;
+    });
+    return loading;
+  };
+}
+
+/** The host pages' aids: a host starts the load as it mounts, ahead of its editor. */
+export const loadHostAids = sharedLoad(() => importWhenOnline(() => import("./editor-aids")));
+
+export const createAidedEditor = aidedEditor(loadHostAids);

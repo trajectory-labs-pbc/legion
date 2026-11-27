@@ -7,7 +7,7 @@ import {
 import { type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { createAidedEditor, HOST_ATTRIBUTE } from "./aided-editor";
+import { createAidedEditor, HOST_ATTRIBUTE, loadHostAids } from "./aided-editor";
 import { type PartsEntry, reportingSync, usePartsOf } from "./parts-slot";
 import { recordReadMarks } from "./visit";
 
@@ -37,6 +37,10 @@ export function ReadingAidsHost({ children }: { children: ReactNode }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
   useEffect(() => recordReadMarks(queryClient), [queryClient]);
+  // The aids load while the document's text and connection do, so its editor seldom waits.
+  useEffect(() => {
+    void loadHostAids();
+  }, []);
   const entries = usePartsOf(host);
   const shown = useShownEntry(entries);
   return (
