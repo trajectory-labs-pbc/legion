@@ -399,9 +399,10 @@ describe("design rules", () => {
       "a layer names its theme token",
     ],
     ["--tw-ring-color", "red", ["@media x", "*, ::before, ::after, ::backdrop"], "focus"],
-  ] as const)("checks compiled %s: %s in %j, which is not Tailwind's own block", (property, value, context, rule) => {
-    const tokens = themeTokens(":root { --layer-overlay: 50; }");
-    const problems = declarationProblems({ property, value, context }, tokens, { fromClass: true });
+  ] as const)("refuses a class's (fromClass) %s: %s in %j: not a --tw-* initial value on Tailwind's block", (property, value, context, rule) => {
+    const problems = declarationProblems({ property, value, context }, themeTokens(""), {
+      fromClass: true,
+    });
     expect(problems.join("\n")).toContain(rule);
   });
 
