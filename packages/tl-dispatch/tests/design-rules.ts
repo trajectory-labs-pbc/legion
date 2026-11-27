@@ -41,7 +41,7 @@ export const RULES = {
   duration:
     "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
   themeOnly:
-    "a layer, a fade's length (`--default-transition-duration` too) and the disabled opacity are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
+    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and the theme keys that name them (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -74,6 +74,8 @@ export interface ThemeTokens {
   /** Each layer token's name (`--layer-*`) and each fade length's (`--duration-*`). */
   layers: ReadonlySet<string>;
   durations: ReadonlySet<string>;
+  /** Each theme key that names one of those or the disabled opacity (`--z-index-overlay`). */
+  aliases: ReadonlySet<string>;
 }
 
 /** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
@@ -85,9 +87,12 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const radiusValues = new Set<string>();
   const layers = new Set<string>();
   const durations = new Set<string>();
+  const aliases = new Set<string>();
   for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
-      if (/^--(layer|duration)-/.test(property)) {
+      if (css === theme && THEME_ONLY.test(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "")) {
+        aliases.add(property);
+      } else if (/^--(layer|duration)-/.test(property)) {
         if (css === theme) (property.startsWith("--layer-") ? layers : durations).add(property);
       } else if (/^--radius(-|$)/.test(property)) {
         if (css === theme) {
@@ -102,7 +107,7 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
         colours.add(property);
     }
   }
-  return { colours, radii, radiusValues, layers, durations };
+  return { colours, radii, radiusValues, layers, durations, aliases };
 }
 
 const NAMED_COLOURS = new Set(
@@ -259,7 +264,7 @@ export function declarationProblems(
   ) {
     problems.push(RULES.duration);
   }
-  if (THEME_ONLY.test(property)) problems.push(RULES.themeOnly);
+  if (THEME_ONLY.test(property) || tokens.aliases.has(property)) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
