@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 
 /** A file of this package: its path from the package root, with `/`, and its text. */
 export interface SourceFile {
@@ -8,7 +7,7 @@ export interface SourceFile {
   text: string;
 }
 
-export const PACKAGE_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+export const PACKAGE_ROOT = join(import.meta.dirname, "..");
 export const REPO_ROOT = join(PACKAGE_ROOT, "../..");
 /** The UI package's theme, which holds every token the app's classes may name. */
 export const UI_STYLESHEET = join(PACKAGE_ROOT, "../ui/src/styles/theme.css");
