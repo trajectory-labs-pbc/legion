@@ -1226,6 +1226,33 @@
           "target": "@lib/typography.ts"
         }
       ]
+    },
+    {
+      "name": "view-header",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/view-header.tsx",
+          "type": "registry:component",
+          "target": "@components/view-header.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/count.tsx",
+          "type": "registry:ui",
+          "target": "@ui/count.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
     }
   ]
 }
