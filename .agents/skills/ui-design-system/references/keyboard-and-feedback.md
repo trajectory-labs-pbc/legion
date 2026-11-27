@@ -44,6 +44,20 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **ES4** While data loads, a list shows still skeleton rows at the row height, with no shimmer, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Check: reviewer.
 
+## Error states (ER)
+
+A failed read draws through `ReadFailure` (`packages/tl-dispatch/src/features/read-failure.tsx`); `readFailureOf` and `refreshFailureOf` sort each failure. Write no second sort.
+
+**ER1** A failed read shows its error inside the part it fills: the panel, a section or the line under a bar. The sidebar, the header and the rest of the page stay. Linear: a failed view keeps the app's frame. Pages: all. Check: the machine login route tests (MLR-04); the sidebar and compact header tests.
+
+**ER2** The error says what failed ("Could not load machine logins.") and what to do: Retry, or nothing where nothing can help. Check: `read-failure.test.tsx`.
+
+**ER3** Retry shows only where a second try can work: a 5xx, a network failure or a time-out. A failed refresh keeps the rows it shows. Check: `read-failure.test.tsx`; RVL-09 and RVL-13.
+
+**ER4** A 403 gets no Retry and says the reader cannot see it. A 404 gets no Retry, and a 404 of the page's own record shows not-found. A refused count beside a sidebar row draws nothing. A 409 on a write gets no Retry, as a second try sends the same stale write: the refresh at the write's end shows the current value. Linear: a missing issue opens its not-found page. Check: MLR-06, MLR-07, MLS-11, MLS-12 and the sidebar and compact header tests; (new) a 409 test with the shared write helper.
+
+**ER5** When a read that can work again failed beside a refused one, Retry stays: it asks every read again. Check: `read-failure.test.tsx`.
+
 ## Toasts (TO)
 
 **TO1** A toast is one line in the bottom-right corner (the shell's status corner): an icon, the text, and at most one action. A reversible write offers Undo. A toast about a moved or created record links to it. Linear: toasts with Undo and links. Pages: all. Check: the status-corner tests.
