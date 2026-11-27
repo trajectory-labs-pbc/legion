@@ -10,7 +10,7 @@ export const sleep = (ms: number) =>
 
 /** Moves a mouse onto `element`, or off it with `leave`. */
 export function hover(element: Element, leave = false): void {
-  settle(() => {
+  act(() => {
     const [pointer, mouse] = leave
       ? ["pointerleave", "mouseleave"]
       : ["pointerenter", "mouseenter"];
