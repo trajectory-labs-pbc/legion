@@ -1193,6 +1193,28 @@
       ]
     },
     {
+      "name": "filter-chips",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/filter-chips.tsx",
+          "type": "registry:component",
+          "target": "@components/filter-chips.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
       "name": "group-header",
       "type": "registry:block",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6", "lucide-react@1.70.0"],
