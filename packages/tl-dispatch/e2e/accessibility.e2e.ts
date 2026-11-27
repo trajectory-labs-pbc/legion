@@ -513,8 +513,9 @@ async function focusColour(page: Page): Promise<string> {
 /** The element that has the focus, read in the page, and marked as a stop of this walk: as its
  *  first stop on the walk's first press. The body stands for nothing having the focus. It is
  *  marked only as a first stop, so a page with no stop comes round, and the focus can leave the
- *  page more than once before Tab comes back. */
-function readStop({
+ *  page more than once before Tab comes back. It reads once the focus settles: a dialog's focus
+ *  guard takes the focus from Tab and moves it on in the next animation frame. */
+async function readStop({
   first,
   focus,
   left,
@@ -524,7 +525,10 @@ function readStop({
   focus: string;
   left: readonly string[];
   region: string;
-}): Stop {
+}): Promise<Stop> {
+  await new Promise<void>((settled) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => settled()))
+  );
   const element = document.activeElement ?? document.body;
   const nothing = element === document.body;
   const mark = element.getAttribute("data-tab-walk");
