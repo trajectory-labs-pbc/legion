@@ -1,6 +1,8 @@
 import { cn } from "cn";
 import { type ComponentProps, type ReactNode, useId } from "react";
 
+import { Glyph } from "#registry/legion/ui/glyph";
+
 /** The share of the circle a pie fills: a quarter, a half, three quarters, nearly whole. */
 type PieLevel = 1 | 2 | 3 | 4;
 
@@ -79,26 +81,13 @@ function shapeOf(shape: StateShape): ReactNode {
 /** A state as one monochrome glyph whose shape follows a lifecycle. The caller gives the shape and
  *  the name a reader hears. */
 function StateGlyph({
-  className,
-  label,
   shape,
   ...props
-}: Omit<ComponentProps<"svg">, "aria-label" | "children" | "role"> & {
-  shape: StateShape;
-  label: string;
-}) {
+}: Omit<ComponentProps<typeof Glyph>, "children"> & { shape: StateShape }) {
   return (
-    <svg
-      aria-label={label}
-      data-kind={shape.kind}
-      data-slot="state-glyph"
-      role="img"
-      viewBox="0 0 16 16"
-      className={cn("size-3.5 shrink-0", className)}
-      {...props}
-    >
+    <Glyph data-kind={shape.kind} data-slot="state-glyph" {...props}>
       {shapeOf(shape)}
-    </svg>
+    </Glyph>
   );
 }
 

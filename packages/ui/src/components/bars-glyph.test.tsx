@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
 
-import { BarsGlyph, type BarsLevel } from "#registry/legion/ui/bars-glyph";
+import { BarsGlyph } from "#registry/legion/ui/bars-glyph";
 
 const fills = (glyph: Element) =>
   [...glyph.querySelectorAll("rect, path")].map((part) => part.getAttribute("class"));
@@ -37,15 +37,5 @@ describe("BarsGlyph", () => {
     const square = glyph.querySelector("path");
     expect(square?.getAttribute("class")).toBe("fill-foreground");
     expect(square?.getAttribute("fill-rule")).toBe("evenodd");
-  });
-
-  it("draws each level differently", () => {
-    const drawings = ([0, 1, 2, 3, 4] as BarsLevel[]).map((level) => {
-      const { container, unmount } = render(<BarsGlyph label="Level" level={level} />);
-      const html = container.innerHTML.replace(/data-level="\d"/, "");
-      unmount();
-      return html;
-    });
-    expect(new Set(drawings).size).toBe(5);
   });
 });

@@ -377,6 +377,11 @@
           "path": "packages/ui/src/components/bars-glyph.tsx",
           "type": "registry:ui",
           "target": "@ui/bars-glyph.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
         }
       ]
     },
@@ -690,6 +695,18 @@
       ]
     },
     {
+      "name": "glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
+        }
+      ]
+    },
+    {
       "name": "heading",
       "type": "registry:ui",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
@@ -980,6 +997,11 @@
           "path": "packages/ui/src/components/state-glyph.tsx",
           "type": "registry:ui",
           "target": "@ui/state-glyph.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
         }
       ]
     },

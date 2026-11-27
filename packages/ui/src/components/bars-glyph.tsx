@@ -1,5 +1,6 @@
-import { cn } from "cn";
 import type { ComponentProps } from "react";
+
+import { Glyph } from "#registry/legion/ui/glyph";
 
 /** 0: no level, as three dashes; 1 to 3: that many of three bars; 4: the top level, as a filled
  *  square with an exclamation mark. */
@@ -18,52 +19,28 @@ const TOP_LEVEL =
 /** A level as bars: monochrome, its filled part in the foreground and the rest muted. The caller
  *  gives the name a reader hears. */
 function BarsGlyph({
-  className,
   level,
-  label,
   ...props
-}: Omit<ComponentProps<"svg">, "aria-label" | "children" | "role"> & {
-  level: BarsLevel;
-  label: string;
-}) {
+}: Omit<ComponentProps<typeof Glyph>, "children"> & { level: BarsLevel }) {
+  const dash = level === 0;
   return (
-    <svg
-      aria-label={label}
-      data-level={level}
-      data-slot="bars-glyph"
-      role="img"
-      viewBox="0 0 16 16"
-      className={cn("size-3.5 shrink-0", className)}
-      {...props}
-    >
+    <Glyph data-level={level} data-slot="bars-glyph" {...props}>
       {level === 4 ? (
         <path className="fill-foreground" d={TOP_LEVEL} fillRule="evenodd" />
       ) : (
-        BARS.map((bar, index) =>
-          level === 0 ? (
-            <rect
-              className="fill-muted-foreground"
-              height={1.5}
-              key={bar.x}
-              rx={0.75}
-              width={3}
-              x={bar.x}
-              y={7.25}
-            />
-          ) : (
-            <rect
-              className={index < level ? "fill-foreground" : "fill-muted-foreground"}
-              height={bar.height}
-              key={bar.x}
-              rx={1}
-              width={3}
-              x={bar.x}
-              y={bar.y}
-            />
-          )
-        )
+        BARS.map((bar, index) => (
+          <rect
+            className={!dash && index < level ? "fill-foreground" : "fill-muted-foreground"}
+            height={dash ? 1.5 : bar.height}
+            key={bar.x}
+            rx={dash ? 0.75 : 1}
+            width={3}
+            x={bar.x}
+            y={dash ? 7.25 : bar.y}
+          />
+        ))
       )}
-    </svg>
+    </Glyph>
   );
 }
 
