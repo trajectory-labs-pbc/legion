@@ -458,9 +458,9 @@ const CONTROLS = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 /** What may hold a small control without meeting it: a link with no other role or a `role="link"`
- *  row, a tree row, or a focusable element that is no control: no control tag and no role, or the
- *  role region, group or tabpanel (a scroll section, a group, a tab panel). Any other control that
- *  holds one meets it. */
+ *  row, a tree row, or a focusable element that is no control: no control tag and no `role`
+ *  attribute, or the role region, group or tabpanel (a scroll region, a group, a tab panel). Any
+ *  other control that holds one meets it. */
 const HOLDERS = [
   "a[href]:not([role])",
   "[role=link]",
@@ -499,8 +499,8 @@ async function cutRows(page: Page): Promise<Locator> {
 /** What breaks PT2 at `control`. `misses`: each probe of its centre square that the pointer does
  *  not reach it at. `meets`: each other control whose target meets its target. Left out: what the
  *  control holds, a holder in HOLDERS, an element not drawn (1 px or less on a side, as Base UI's
- *  focus guards are, or not visible), Base UI's hidden inputs (`aria-hidden`, `tabindex="-1"`),
- *  and the other thumbs of the same slider. */
+ *  focus guards are, or not visible), Base UI's hidden inputs (an input that is `aria-hidden` at
+ *  `tabindex="-1"`), and the other thumbs of the same slider. */
 async function targetFaults(control: Locator): Promise<{ misses: string[]; meets: string[] }> {
   await control.scrollIntoViewIfNeeded();
   return control.evaluate(
@@ -543,8 +543,9 @@ async function targetFaults(control: Locator): Promise<{ misses: string[]; meets
         if (element.contains(other)) return [];
         if (other.contains(element) && other.matches(holders)) return [];
         // Base UI draws its hidden inputs at 1 px, but below 1280 px upstream's stylesheet floors
-        // an input at 44 px, so the drawn test alone does not drop them.
-        if (other.matches('[aria-hidden="true"][tabindex="-1"]')) return [];
+        // an input at 44 px, so the drawn test alone does not drop them. Only an input: a visible
+        // button can carry the same two attributes.
+        if (other.matches('input[aria-hidden="true"][tabindex="-1"]')) return [];
         if (getComputedStyle(other).visibility !== "visible") return [];
         const thumb = other.closest('[data-slot="slider-thumb"]');
         if (slider !== null && thumb !== null && slider.contains(thumb)) return [];
@@ -600,9 +601,13 @@ test("a control whose box sits in a small control's target meets it, unless it i
 }) => {
   const control = (await cutRows(page)).first();
   const tiny = "display: block; width: 2px; height: 2px; padding: 0";
-  await drawBelow(control, -11, `<button aria-hidden="true" style="${tiny}"></button>`);
+  await drawBelow(
+    control,
+    -11,
+    `<button aria-hidden="true" tabindex="-1" style="${tiny}"></button>`
+  );
   await drawBelow(control, -7, `<button style="${tiny}; visibility: hidden"></button>`);
-  // 1 px, as Base UI draws its hidden inputs and focus guards.
+  // 1 px, as Base UI draws its focus guards.
   await drawBelow(
     control,
     -3,
