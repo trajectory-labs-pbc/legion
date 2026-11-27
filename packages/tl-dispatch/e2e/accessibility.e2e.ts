@@ -712,6 +712,27 @@ test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
   ]);
 });
 
+test("a Tab loop that never comes back to the first stop fails the Tab walk", async ({ page }) => {
+  await openRegion(page, machineLogin);
+  await page.locator(MAIN).evaluate((at) => {
+    const [one, two] = ["Loop one", "Loop two"].map((name) => {
+      const button = document.createElement("button");
+      button.textContent = name;
+      button.style.outline = "2px solid var(--focus)";
+      at.append(button);
+      return button;
+    });
+    two?.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab" || event.shiftKey) return;
+      event.preventDefault();
+      one?.focus();
+    });
+  });
+  await expect(walk(page, machineLogin)).rejects.toThrow(
+    'Tab came back to button "Loop one" before its first stop'
+  );
+});
+
 /** Adds content 2000 px wide and 1 px high to the main element, wider than each width the check
  *  reads, in a box that scrolls when `inBox`. Content with no height adds nothing to scroll to. */
 const appendWide = (page: Page, inBox: boolean) =>
