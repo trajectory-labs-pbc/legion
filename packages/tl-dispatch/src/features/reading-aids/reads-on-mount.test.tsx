@@ -12,12 +12,18 @@ const LONG_AGO = { updatedAt: Date.now() - STALE_MS - 1_000 };
 const ISSUE_DOCUMENT: AidedDocument = {
   artifactId: "a-spec",
   owner: { key: "CORE-1", kind: "issue" },
+  picker: "spec",
+  readsMark: true,
   slug: "spec",
+  versions: [],
 };
 const PROJECT_DOCUMENT: AidedDocument = {
   artifactId: "a-notes",
   owner: { kind: "project", project: "CORE" },
+  picker: "artifact",
+  readsMark: false,
   slug: "notes-md",
+  versions: [],
 };
 
 const unexpected = () => Promise.reject(new Error("A read the page does not make."));
@@ -79,7 +85,7 @@ test.each<[string, string, AidedDocument, readonly Seed[]]>([
     "dispatch://CORE/artifact/notes-md",
     PROJECT_DOCUMENT,
     [
-      [["artifact-ref", "CORE/notes-md"], { id: "a-notes", slug: "notes-md" }],
+      [["artifact-ref", "CORE/notes-md"], { id: "a-notes", slug: "notes-md", versions: [] }],
       [["artifact", "a-notes", "asks"], []],
     ],
   ],

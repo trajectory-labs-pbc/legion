@@ -143,6 +143,15 @@ async function mount(
   if (entry === undefined) throw new Error("the editor got no aids");
   spyOn(api, "getIssue").mockReturnValue(issueRead);
   const asksRead = spyOn(api, "listIssueAsks").mockImplementation(async () => asks(blocks));
+  // The counts line's read of the version a request approved.
+  spyOn(api, "getArtifactVersion").mockImplementation(async (_id, number) => ({
+    authors: [],
+    created_at: "2026-11-20T10:00:00Z",
+    markdown,
+    named: false,
+    number,
+    summary: null,
+  }));
   const focusBlock = spyOn(handle, "focusBlock").mockImplementation(() => {});
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(

@@ -1,13 +1,30 @@
-// The aids' one file of upstream's reads, each under upstream's own key, so its event refresh
-// updates them and the page makes no request it would not make without them.
-import { type QueryClient, queryOptions, useQuery } from "@tanstack/react-query";
+// The aids' one file of reads: upstream's under its own keys, which its event refresh keeps
+// fresh, and each baseline version under the aids' key, filled from upstream's version read.
+import {
+  hashKey,
+  keepPreviousData,
+  type QueryClient,
+  type QueryState,
+  queryOptions,
+  skipToken,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { isText } from "@upstream-dispatch/api/artifact-version";
 import { api } from "@upstream-dispatch/api/client";
 import { issueQuery } from "@upstream-dispatch/api/queries";
-import type { Artifact, IssueDetails } from "@upstream-dispatch/api/types";
+import type { Artifact, IssueDetails, Version } from "@upstream-dispatch/api/types";
+import { versionsNewestFirst } from "@upstream-dispatch/features/artifacts/ArtifactHeader";
 import {
+  type DispatchReferenceRoute,
   type ProjectDocumentRoute,
   parseNodeReference,
 } from "@upstream-dispatch/features/refs/routes";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+
+import { type ReadFault, refusalOf, useReadFailure } from "@/features/read-failure";
+
+import { READ_MARK } from "./visit";
 
 export type AidedOwner = { kind: "issue"; key: string } | { kind: "project"; project: string };
 
@@ -16,6 +33,12 @@ export interface AidedDocument {
   readonly artifactId: string;
   readonly slug: string;
   readonly owner: AidedOwner;
+  /** Its versions, newest first. */
+  readonly versions: readonly Version[];
+  /** The version picker upstream draws above it: the issue's spec tab's, or an artifact's. */
+  readonly picker: "spec" | "artifact";
+  /** Whether upstream reads the reader's read mark of it: an issue's spec on its page. */
+  readonly readsMark: boolean;
 }
 
 // The page's own observers keep these reads fresh, so the parts' mount reads nothing again.
@@ -50,31 +73,73 @@ const useProjectDocumentRead = (route: ProjectDocumentRoute | undefined) =>
     ...NO_REFETCH_ON_MOUNT,
   });
 
-/**
- * A version of the document, read once for the visit: a version never changes, and with no
- * observer an invalidation of the document's queries reads nothing again.
- */
-export const readVersion = (queryClient: QueryClient, artifactId: string, version: number) =>
+/** A version of the document, read once: upstream's own read of it when it has one. */
+const readVersion = (queryClient: QueryClient, artifactId: string, version: number) =>
   queryClient.ensureQueryData({
-    gcTime: Number.POSITIVE_INFINITY,
     queryFn: () => api.getArtifactVersion(artifactId, version),
     queryKey: ["artifact", artifactId, "version", version],
   });
 
-/** The document `documentRef` names, from the issue's documents or the project document read. */
+/**
+ * The version the marks compare with, under the aids' own key: a version never changes, and
+ * each one the visit opens stays for the visit; during a pick the last version shows. Its
+ * `text` is undefined for a version that is a file.
+ */
+export function useBaselineVersionRead(artifactId: string, version: number | undefined) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    // A refused version is not asked again in the visit, so its refusal shows at once.
+    enabled: (query) => refusalOf(query.state.error) === undefined,
+    gcTime: Number.POSITIVE_INFINITY,
+    placeholderData: keepPreviousData,
+    queryFn:
+      version === undefined
+        ? skipToken
+        : async () => {
+            const content = await readVersion(queryClient, artifactId, version);
+            const text = isText(content)
+              ? { markdown: content.markdown, tree: content.markdown_tree }
+              : undefined;
+            return { text, version };
+          },
+    queryKey: ["reading-aids", "baseline", artifactId, version],
+    // Upstream's version read retries as the app does; retrying here too would multiply it.
+    retry: false,
+    // A version never changes: no invalidation, mount or focus reads it again.
+    staleTime: "static",
+  });
+}
+
+/** The state of upstream's query under `queryKey`, which the aids watch and never read. */
+function useQueryState<T>(queryKey: readonly unknown[]): QueryState<T> | undefined {
+  const cache = useQueryClient().getQueryCache();
+  const hash = hashKey(queryKey);
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      cache.subscribe((event) => {
+        if (event.query.queryHash === hash) listener();
+      }),
+    [cache, hash]
+  );
+  return useSyncExternalStore(subscribe, () => cache.get<T>(hash)?.state);
+}
+
+/** The document `route` names, from the issue's documents or the project document read. */
 export function aidedDocument(
-  documentRef: string,
+  route: DispatchReferenceRoute | undefined,
   issue: Pick<IssueDetails, "artifacts"> | undefined,
-  projectDocument: Pick<Artifact, "id" | "slug"> | undefined
+  projectDocument: Pick<Artifact, "id" | "slug" | "versions"> | undefined
 ): AidedDocument | undefined {
-  const route = parseNodeReference(documentRef);
   if (route?.kind === "document") {
     return projectDocument === undefined || projectDocument.slug !== route.slug
       ? undefined
       : {
           artifactId: projectDocument.id,
           owner: { kind: "project", project: route.project },
+          picker: "artifact",
+          readsMark: false,
           slug: route.slug,
+          versions: versionsNewestFirst(projectDocument.versions),
         };
   }
   if (route?.kind !== "spec" && route?.kind !== "artifact") return undefined;
@@ -85,15 +150,55 @@ export function aidedDocument(
   );
   return found === undefined
     ? undefined
-    : { artifactId: found.id, owner: { key: route.key, kind: "issue" }, slug: found.slug };
+    : {
+        artifactId: found.id,
+        owner: { key: route.key, kind: "issue" },
+        picker: route.kind === "spec" ? "spec" : "artifact",
+        readsMark: found.primary,
+        slug: found.slug,
+        versions: versionsNewestFirst(found.versions),
+      };
 }
 
 /** The document an aided editor shows, once the host page's read of it has answered. */
 export function useAidedDocument(documentRef: string): AidedDocument | undefined {
-  const route = parseNodeReference(documentRef);
+  const route = useMemo(() => parseNodeReference(documentRef), [documentRef]);
   const issue = useIssueRead(
     route?.kind === "spec" || route?.kind === "artifact" ? route.key : undefined
   );
   const projectDocument = useProjectDocumentRead(route?.kind === "document" ? route : undefined);
-  return aidedDocument(documentRef, issue.data, projectDocument.data);
+  const found = useMemo(
+    () => aidedDocument(route, issue.data, projectDocument.data),
+    [route, issue.data, projectDocument.data]
+  );
+  // The document's own read, which `ProofDocument` makes, has the versions named since.
+  const fresher = useQueryState<Artifact>(["artifact", found?.artifactId])?.data?.versions;
+  return useMemo(
+    () =>
+      found === undefined || fresher == null
+        ? found
+        : { ...found, versions: versionsNewestFirst(fresher) },
+    [found, fresher]
+  );
+}
+
+/** The key of upstream's read of the reader's read mark of a document. */
+export const readMarkKey = (artifactId: string) => [READ_MARK, artifactId];
+
+/**
+ * Upstream's read-mark read failing with no answer yet, whose Retry asks upstream's read again
+ * and keeps the failure while it runs; a lasting refusal draws no Retry.
+ */
+export function useReadMarkFault(artifactId: string): ReadFault | undefined {
+  const queryClient = useQueryClient();
+  const state = useQueryState(readMarkKey(artifactId));
+  return useReadFailure({
+    data: state?.data,
+    error: state?.error ?? null,
+    errorUpdateCount: state?.errorUpdateCount ?? 0,
+    errorUpdatedAt: state?.errorUpdatedAt ?? 0,
+    isFetching: state?.fetchStatus === "fetching",
+    isPlaceholderData: false,
+    refetch: () => queryClient.refetchQueries({ exact: true, queryKey: readMarkKey(artifactId) }),
+  });
 }

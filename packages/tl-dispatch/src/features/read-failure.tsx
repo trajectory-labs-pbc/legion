@@ -20,6 +20,15 @@ export type ReadFault =
     };
 export type RetryableFault = Exclude<ReadFault, { refusal: Refusal }>;
 
+/** What a fault reads of a read: a query result, or a query's state with its Retry. */
+type FailableRead = Pick<
+  UseQueryResult<unknown>,
+  "data" | "error" | "errorUpdateCount" | "errorUpdatedAt" | "isFetching" | "isPlaceholderData"
+> & { refetch: () => unknown };
+
+/** A read with nothing of its own to show: no data, or another key's placeholder. */
+const unanswered = (read: FailableRead) => read.data === undefined || read.isPlaceholderData;
+
 /**
  * The one sort of a failed read. A 404 from a Dispatch process with no route for the read is no
  * refusal: while a release rolls out, another process can answer it.
@@ -38,12 +47,12 @@ export function readRetry(failureCount: number, error: unknown): boolean {
 
 /** `reads` that failed with nothing to show, each with its refusal, if any. */
 function faultOf(
-  reads: readonly UseQueryResult<unknown>[],
+  reads: readonly FailableRead[],
   refusals: readonly (Refusal | undefined)[]
 ): ReadFault | undefined {
   // A Retry puts a read back to pending, so the error count is what says it failed before.
   const failed = reads.flatMap((read, index) =>
-    read.data === undefined && read.errorUpdateCount > 0 ? [index] : []
+    unanswered(read) && read.errorUpdateCount > 0 ? [index] : []
   );
   if (failed.length === 0) return undefined;
   const refused = failed.map((index) => refusals[index]);
@@ -60,23 +69,27 @@ function faultOf(
   };
 }
 
-/**
- * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
- * A refetch clears the error of a read with no data until it answers, so a refused read keeps its
- * last refusal while it is asked again.
- */
-export function useReadFailure(
-  ...reads: readonly UseQueryResult<unknown>[]
-): ReadFault | undefined {
-  const [kept, setKept] = useState<readonly (Refusal | undefined)[]>([]);
-  const refusals = reads.map((read, index) => {
-    if (read.error !== null) return refusalOf(read.error);
-    return read.data === undefined && read.isFetching ? kept[index] : undefined;
+/** A read's refusal, with the time of the error it came from. */
+type Kept = { at: number; refusal: Refusal | undefined };
+
+/** Reads that failed with nothing to show; a refusal stays only while its own query is re-asked. */
+export function useReadFailure(...reads: readonly FailableRead[]): ReadFault | undefined {
+  const [kept, setKept] = useState<readonly Kept[]>([]);
+  const current = reads.map((read, index): Kept => {
+    const at = read.errorUpdatedAt;
+    if (read.error !== null) return { at, refusal: refusalOf(read.error) };
+    const last = kept[index];
+    const again = unanswered(read) && read.isFetching && last?.at === at;
+    return { at, refusal: again ? last.refusal : undefined };
   });
-  if (refusals.length !== kept.length || refusals.some((each, index) => each !== kept[index])) {
-    setKept(refusals);
-  }
-  return faultOf(reads, refusals);
+  const changed = current.some(
+    (each, index) => each.at !== kept[index]?.at || each.refusal !== kept[index]?.refusal
+  );
+  if (current.length !== kept.length || changed) setKept(current);
+  return faultOf(
+    reads,
+    current.map((each) => each.refusal)
+  );
 }
 
 /** A read whose refresh failed under what it shows, if so; the failure stays while its Retry runs. */
