@@ -17,6 +17,7 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLR-02 | Route | A Dispatch with the device grant shows the machine login page | | |
 | MLR-03 | Route | A page skeleton after 200 ms while the capabilities answer is out | | |
 | MLR-04 | Route | A failed capabilities read says so, and Retry asks again | | |
+| MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |
 | MLP-02 | Code form | A lookup failure shows under the code field | | |
 | MLP-03 | Code form | Look up, then Deny, posts the looked-up code | | |
@@ -53,3 +54,4 @@ This list holds only the items that the page's tests already named by ID, so it 
 | RVL-07 | Revoke | A list that fails to load says so, with a Retry | | |
 | RVL-08 | Revoke | A revoked row hands the focus to a listed Revoke, or above the list | | |
 | RVL-09 | Revoke | A loaded list whose refresh fails keeps its rows and says so | | |
+| RVL-10 | Revoke | A revoked row hands the focus to a listed Revoke, not to a cut name drawn before it | | |
