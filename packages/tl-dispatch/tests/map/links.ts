@@ -1,9 +1,8 @@
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import ts from "typescript";
-
+import { pages } from "@/app/routes";
 import { firstMatch, routerPath } from "@/navigation/router-path";
-import { pages } from "@/pages/index";
 import type { Page } from "@/pages/page";
 import { filesWith, importsOf, resolutionCache } from "../imports";
 import { UPSTREAM_WEB } from "../source";

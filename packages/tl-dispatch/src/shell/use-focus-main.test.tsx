@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { useRef } from "react";
-import { pageAt } from "@/pages/index";
+
 import { parseIssuePath, parseProjectPath } from "@/upstream/routes";
+import { pageAt } from "../../tests/app";
 import { render } from "../../tests/react";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 

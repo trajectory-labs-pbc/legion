@@ -1,4 +1,3 @@
-import "@/upstream/write-kinds";
 import { type ReactNode, Suspense } from "react";
 import {
   type AuthenticatedUser,

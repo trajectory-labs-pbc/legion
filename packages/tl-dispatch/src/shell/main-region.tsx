@@ -1,6 +1,6 @@
 import { cn } from "@legion/ui/lib/utils";
-import { type ReactNode, type RefObject, Suspense } from "react";
-import { PageRoutes } from "@/pages/index";
+import { Suspense } from "react";
+import { PageRoutes } from "@/navigation/route-tree";
 import { ForkView } from "@/upstream/mark";
 import {
   DOCUMENT_SCROLL_ATTRIBUTE,
@@ -9,32 +9,14 @@ import {
 } from "@/upstream/shell";
 import { MountedLiveViews } from "@/upstream/widgets/live-views";
 
+import type { ShellLayout } from "./use-shell-layout";
+
 /** Main: the page outlet, and the live views that outlive the route that opened them. */
-export function MainRegion({
-  fillsViewport,
-  hasMargin,
-  issueFrame,
-  liveView,
-  mainRef,
-  marginHidden,
-  pageFallback: Fallback,
-  pathname,
-  sidebarHidden,
-}: {
-  fillsViewport: boolean;
-  hasMargin: boolean;
-  /** The outline issue page frames itself. */
-  issueFrame: boolean;
-  /** The session whose live view is in front. */
-  liveView: string | undefined;
-  mainRef: RefObject<HTMLElement | null>;
-  marginHidden: boolean;
-  /** What shows while the page's code loads. */
-  pageFallback: () => ReactNode;
-  pathname: string;
-  sidebarHidden: boolean;
-}) {
-  const marginColumnShown = hasMargin && !marginHidden;
+export function MainRegion({ shell }: { shell: ShellLayout }) {
+  const { fillsViewport, issueFrame, liveView, mainRef, pageFallback: Fallback, pathname } = shell;
+  const { marginHidden, sidebarHidden } = shell.preferences;
+  // The page takes the width of the frame: no sidebar and no margin column beside it.
+  const fullWidth = issueFrame || (sidebarHidden && !(shell.hasMargin && !marginHidden));
   return (
     <main
       className={
@@ -45,9 +27,7 @@ export function MainRegion({
               fillsViewport ? "flex min-h-0 flex-col" : "pb-32 xl:pb-6"
             )
       }
-      data-shell-layout={
-        issueFrame || (sidebarHidden && !marginColumnShown) ? "full-width" : "standard"
-      }
+      data-shell-layout={fullWidth ? "full-width" : "standard"}
       {...(issueFrame ? { [NO_HOVER_PREVIEW_ATTRIBUTE]: "" } : {})}
       {...(!issueFrame && !fillsViewport ? { [DOCUMENT_SCROLL_ATTRIBUTE]: "" } : {})}
       data-testid="main-content"

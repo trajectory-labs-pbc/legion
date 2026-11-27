@@ -25,7 +25,7 @@ Ask these questions in order, and stop at the first yes.
 10. Is it the route tree, the providers or the start? It goes to `src/app`.
 
 Until the migration moves them, some files sit in a layer that is not their folder's; the table names each one with the step that moves it.
-Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; `src/features/read-failure.tsx`, in `data`; and `src/start.tsx`, in `app`.
+Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; and `src/features/read-failure.tsx`, in `data`.
 
 ## Every file has a layer (`every-file-has-a-layer`)
 
@@ -39,6 +39,8 @@ A feature and a part are folders: a loose file directly under `src/features` or 
 A file imports its own layer and the layers above it, and the UI package counts as above every layer.
 Thus a change to a layer touches only the layers below it, and no lower layer names a type of a higher one.
 The shell sits below the features so that it can draw their small parts, and the route files sit below the shell because they import its `PageLayout`.
+`src/app`, the composition root, is the last row: no layer imports it, and of the files in no layer only `main.tsx` does (`READERS`); a test may too.
+The app's route map reaches the shell the other way: the app gives it to `RouteProvider`, and no lower layer names a type of the app.
 
 A test file under `src/` is in the layer of the file it tests; a test directly under `src/` whose file has no layer is in `tests`.
 A file under `tests/` is in the layer `tests`, which may import each layer of the app.
@@ -64,12 +66,12 @@ A page with more than one view gets the folder, with one file for each view: an 
 `src/app` also reads the data seam files that a provider needs, and `write-kinds.ts`, which registers upstream's kinds of writes.
 `mark.tsx` is read by the seam files, and for `ForkView` by the layers that pass fork elements into a marked component.
 A seam file may read another, and a test may read each seam file.
-The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` by no file.
+The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` only by `tests/main.test.tsx`, which loads the entry once to see the order of its first two steps.
 A seam file or a root file that the table does not list has no reader, so a new one comes with its row.
 
 ## A library and its owners (`library-owners`)
 
-Only `src/navigation` imports the router (`react-router-dom`, or any `@tanstack/*router*`), so a router move changes one folder; the features move adds `src/app`.
+Only `src/navigation` and `src/app` import the router (`react-router-dom`, or any `@tanstack/*router*`), so a router move changes two folders: the app's routes and providers sit in `src/app`, and the shell reads the address through `src/navigation`.
 Only `src/data` and `src/app` import `@tanstack/react-query`: a view reads and writes through `src/data`.
 No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
 A test may import the router and the query library, which a page test needs to draw the page with its own client.
@@ -125,4 +127,3 @@ A new entry shows in the pull request's diff of the table, and the reviewer refu
 ## Rules that come with the features move
 
 The features move adds the rules of the route files to the table: only `src/app` imports a route file, a route file loads its page lazily, and a route file draws nothing.
-It also adds `src/app` to the owners of the router.

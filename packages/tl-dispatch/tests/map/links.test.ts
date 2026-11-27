@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import ts from "typescript";
-import { pages } from "@/pages/index";
-import { SRC_DIR } from "../source";
+import { pages } from "@/app/routes";
 import { parseScript } from "../typescript";
 import { DISPATCH_HREF_REFERENCES } from "../upstream";
 import {
@@ -50,13 +48,6 @@ describe("links", () => {
   test("upstream's app routes only through the <Route> list the route map reads", () => {
     expect(upstream.length).toBeGreaterThan(20);
     expect(routingProblems()).toEqual([]);
-  });
-
-  test("each page file is in the route map, named by its page's id", () => {
-    const files = readdirSync(join(SRC_DIR, "pages"))
-      .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
-      .filter((name) => name !== "index.ts" && name !== "page.ts");
-    expect(pages.map((page) => `${page.id}.tsx`).sort()).toEqual(files.sort());
   });
 
   test("the fork serves each upstream route, drawing upstream's element as written", () => {

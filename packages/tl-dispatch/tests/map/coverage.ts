@@ -1,7 +1,7 @@
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
-import { pages } from "@/pages/index";
+import { pages } from "@/app/routes";
 import type { Page } from "@/pages/page";
 import { sharedViews, shellViews, widgetViews } from "@/views";
 import { type Files, filesWith, importsOf, resolutionCache } from "../imports";

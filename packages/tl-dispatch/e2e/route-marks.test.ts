@@ -1,7 +1,7 @@
 // Under Bun, not Playwright: the route map loads upstream modules that Node cannot load.
 import { expect, test } from "bun:test";
 
-import { pages } from "@/pages/index";
+import { pages } from "@/app/routes";
 import { routeMarks, type Seeded } from "./route-marks";
 
 // The keys of routeMarks do not depend on what the run seeds.

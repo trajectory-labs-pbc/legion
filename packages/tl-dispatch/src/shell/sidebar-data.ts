@@ -14,10 +14,9 @@ import {
 import { useAddress } from "@/navigation/hooks";
 import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
-import { useCurrentPage } from "@/pages/index";
-import type { PageLayout } from "@/pages/page";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
+import { type PageLayout, useCurrentRoute } from "./page-layout";
 import type { RowCount } from "./row-count";
 
 interface SidebarDestination {
@@ -106,7 +105,7 @@ export function openOf(layout: PageLayout): {
 /** The sidebar's rows: the destinations with their counts, the pinned agents and issues, the projects. */
 export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarData {
   const { pathname } = useAddress();
-  const open = openOf(useCurrentPage()?.layout ?? {});
+  const open = openOf(useCurrentRoute()?.layout ?? {});
   const counts: Partial<Record<NavName, RowCount>> = {
     inbox: useInboxRowCount(),
     agents: useAgentsRowCount(),

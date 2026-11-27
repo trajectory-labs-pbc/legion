@@ -1,4 +1,4 @@
-// For each route of the route map (src/pages/index.ts), the address the route test opens and a
+// For each route of the route map (src/app/routes.ts), the address the route test opens and a
 // heading, a labelled region or a text that only that route's page shows. A route with no entry
 // here fails route-marks.test.ts, and so does an entry for a route the map no longer has. Every
 // route opens in both modes.

@@ -4,17 +4,17 @@ import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useAddress, usePageNavigate, usePageParams, usePageSearch } from "./hooks";
 import { type PageRoute, pageRoute } from "./page-route";
-import { createRouteTree } from "./route-tree";
+import { PageRoutes, RouteProvider, useCurrentRoute } from "./route-tree";
 
 const machine = pageRoute({ path: "/machines/:machine", element: null, search: ["tab"] });
 
 // The tree of a small app: navigation's tests name none of the app's pages.
 type TestPage = { id: string; routes: Record<string, PageRoute<string, string, unknown>> };
-const { PageRoutes, useCurrentPage } = createRouteTree<unknown, TestPage>([
+const pages: TestPage[] = [
   { id: "machines", routes: { machine } },
   { id: "issue", routes: { issue: pageRoute({ path: "/issues/:key/*", element: null }) } },
   { id: "not-found", routes: { any: pageRoute({ path: "/*", element: "nothing here" }) } },
-]);
+];
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
@@ -34,7 +34,9 @@ function probe<T>(path: string, read: () => T): { value: () => T | Error } {
   mounted.push(
     render(
       <MemoryNavigationProvider path={path}>
-        <Probe />
+        <RouteProvider pages={pages}>
+          <Probe />
+        </RouteProvider>
       </MemoryNavigationProvider>
     )
   );
@@ -70,7 +72,9 @@ describe("the page hooks", () => {
   test("PageRoutes draws the route's element", () => {
     const view = render(
       <MemoryNavigationProvider path="/nowhere">
-        <PageRoutes />
+        <RouteProvider pages={pages}>
+          <PageRoutes />
+        </RouteProvider>
       </MemoryNavigationProvider>
     );
     mounted.push(view);
@@ -95,15 +99,35 @@ describe("the page hooks", () => {
     );
   });
 
-  test("useCurrentPage names the route and its params, and follows a move", () => {
+  test("useCurrentRoute names the route and its params, and follows a move", () => {
     let go: ReturnType<typeof usePageNavigate> = () => {};
     const current = probe("/issues/AB-1/plan", () => {
       go = usePageNavigate();
-      const found = useCurrentPage();
+      const found = useCurrentRoute<unknown, TestPage>();
       return `${found?.page.id}.${found?.route.path} ${JSON.stringify(found?.params)}`;
     });
     expect(current.value()).toBe('issue./issues/:key/* {"key":"AB-1","*":"plan"}');
     settle(() => go(machine, { params: { machine: "m" } }));
     expect(current.value()).toBe('machines./machines/:machine {"machine":"m"}');
+  });
+
+  test("useCurrentRoute outside the RouteProvider throws", () => {
+    let value: unknown;
+    function Probe() {
+      try {
+        value = useCurrentRoute();
+      } catch (error) {
+        value = error;
+      }
+      return null;
+    }
+    mounted.push(
+      render(
+        <MemoryNavigationProvider path="/issues/AB-1">
+          <Probe />
+        </MemoryNavigationProvider>
+      )
+    );
+    expect(String(value)).toContain("outside the app's RouteProvider");
   });
 });

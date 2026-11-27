@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
 import { commandStore } from "@/commands/command-store";
 import { liveViewsOf, readRecents, userPreferenceStorageKey } from "@/upstream/data-hooks";
 import { userAgentStateQuery } from "@/upstream/queries";
-import { MemoryNavigationProvider, type Move } from "../../tests/navigation";
+import { renderApp } from "../../tests/app";
+import type { Move } from "../../tests/navigation";
 import { holdReads, holdShellReads, waitFor } from "../../tests/network";
-import { render, settle, sleep } from "../../tests/react";
+import { settle, sleep } from "../../tests/react";
 import { chunksArrive, shellChunksArrive } from "../../tests/shell-chunks";
 import { answerRequests, quietConsoleError } from "../../tests/upstream";
 import { setWidth } from "../../tests/viewport";
@@ -34,14 +34,11 @@ afterEach(() => {
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
 async function mount(path = "/no-such-page", client = signedInClient(), move?: Move) {
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path={path} move={move}>
-        <SignedInParts>
-          <AppShell user={reader} />
-        </SignedInParts>
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
+  const view = renderApp(
+    <SignedInParts>
+      <AppShell user={reader} />
+    </SignedInParts>,
+    { path, client, move }
   );
   mounted.push(view);
   await shellChunksArrive();
