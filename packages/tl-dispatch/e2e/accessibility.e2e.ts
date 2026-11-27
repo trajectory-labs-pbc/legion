@@ -9,7 +9,8 @@
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
 // the pages the fork draws, at 390, 768 and 1440 px, each fits the window, and no box in it scrolls
-// or clips content wider than itself (FR4).
+// (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip` content wider than itself
+// (FR4).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -77,15 +78,15 @@ interface Region {
 }
 
 /** A serious or critical axe finding. */
-/** What every check leaves out of `region`: upstream's views, and the region's own `exclude`. */
-const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
-
 interface Finding {
   rule: string;
   impact: string;
   scheme: Scheme;
   selector: string;
 }
+
+/** What every check leaves out of `region`: upstream's views, and the region's own `exclude`. */
+const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
 
 /** An open ask of the person's, so the Inbox and its counts draw a row and not an empty state. */
 async function seedAsk(page: Page): Promise<void> {
@@ -446,39 +447,32 @@ async function inEachScheme(
   expect(backgrounds.size, `${region.name}: light and dark draw different backgrounds`).toBe(2);
 }
 
-/** The serious and critical findings axe reports in `region`, in the scheme shown. */
-async function scanScheme(page: Page, region: Region, scheme: Scheme): Promise<Finding[]> {
-  const builder = new AxeBuilder({ page }).include(region.selector).withTags(AXE_TAGS);
-  for (const selector of leftOut(region)) builder.exclude(selector);
-  // Axe refuses an include that matches nothing.
-  const forkViews = forkViewsOf(region);
-  if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
-  const results = await builder.analyze();
-  await test.info().attach(`axe ${region.name} ${scheme}.json`, {
-    body: JSON.stringify(results, null, 2),
-    contentType: "application/json",
-  });
-  // A scan whose excludes left it nothing to read passes every rule it never ran.
-  expect(results.passes.length, `${region.name}: rules that read something`).toBeGreaterThan(0);
-  const findings: Finding[] = [];
-  for (const violation of results.violations) {
-    for (const node of violation.nodes) {
-      const impact = node.impact ?? violation.impact;
-      if (impact !== "serious" && impact !== "critical") continue;
-      const selector = node.target
-        .map((part) => (Array.isArray(part) ? part.join(" ") : String(part)))
-        .join(" ");
-      findings.push({ rule: violation.id, impact, scheme, selector });
-    }
-  }
-  return findings;
-}
-
-/** The serious and critical findings in `region`, in light and dark. */
+/** The serious and critical findings axe reports in `region`, in light and dark. */
 async function scan(page: Page, region: Region): Promise<Finding[]> {
   const findings: Finding[] = [];
   await inEachScheme(page, region, async (scheme) => {
-    findings.push(...(await scanScheme(page, region, scheme)));
+    const builder = new AxeBuilder({ page }).include(region.selector).withTags(AXE_TAGS);
+    for (const selector of leftOut(region)) builder.exclude(selector);
+    // Axe refuses an include that matches nothing.
+    const forkViews = forkViewsOf(region);
+    if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
+    const results = await builder.analyze();
+    await test.info().attach(`axe ${region.name} ${scheme}.json`, {
+      body: JSON.stringify(results, null, 2),
+      contentType: "application/json",
+    });
+    // A scan whose excludes left it nothing to read passes every rule it never ran.
+    expect(results.passes.length, `${region.name}: rules that read something`).toBeGreaterThan(0);
+    for (const violation of results.violations) {
+      for (const node of violation.nodes) {
+        const impact = node.impact ?? violation.impact;
+        if (impact !== "serious" && impact !== "critical") continue;
+        const selector = node.target
+          .map((part) => (Array.isArray(part) ? part.join(" ") : String(part)))
+          .join(" ");
+        findings.push({ rule: violation.id, impact, scheme, selector });
+      }
+    }
   });
   return findings;
 }
@@ -559,51 +553,46 @@ function readStop({
   };
 }
 
-/** The Tab stops in `region` that do not show FO1's outline, in the scheme shown. The walk goes
- *  round the page until Tab comes back to its first stop, and fails at any other stop Tab comes
- *  back to first. A region with `tabStops: "none"` must have no stop at all. */
-async function walkScheme(page: Page, region: Region, scheme: Scheme): Promise<Unmarked[]> {
-  const focus = await focusColour(page);
-  const unmarked: Unmarked[] = [];
-  await page.evaluate(() => {
-    for (const element of document.querySelectorAll("[data-tab-walk]")) {
-      element.removeAttribute("data-tab-walk");
-    }
-  });
-  let stops = 0;
-  for (let press = 0; ; press += 1) {
-    expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(MAX_TAB_PRESSES);
-    await page.keyboard.press("Tab");
-    await nextFrames(page);
-    const stop = await page.evaluate(readStop, {
-      first: press === 0,
-      focus,
-      left: leftOut(region),
-      region: region.selector,
-    });
-    if (stop.passed === "first") break;
-    expect(
-      stop.passed,
-      `${region.name}: Tab came back to ${stop.name} before its first stop`
-    ).toBeNull();
-    if (!stop.inRegion) continue;
-    stops += 1;
-    if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
-  }
-  if (region.tabStops === "none") {
-    expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
-  } else {
-    // A walk that stopped nowhere in the region proves nothing about it.
-    expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
-  }
-  return unmarked;
-}
-
-/** The Tab stops in `region` that do not show FO1's outline, in light and dark. */
+/** The Tab stops in `region` that do not show FO1's outline, in light and dark. In each scheme the
+ *  walk goes round the page until Tab comes back to its first stop, and fails at any other stop
+ *  Tab comes back to first. A region with `tabStops: "none"` must have no stop at all. */
 async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   const unmarked: Unmarked[] = [];
   await inEachScheme(page, region, async (scheme) => {
-    unmarked.push(...(await walkScheme(page, region, scheme)));
+    const focus = await focusColour(page);
+    await page.evaluate(() => {
+      for (const element of document.querySelectorAll("[data-tab-walk]")) {
+        element.removeAttribute("data-tab-walk");
+      }
+    });
+    let stops = 0;
+    for (let press = 0; ; press += 1) {
+      expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(
+        MAX_TAB_PRESSES
+      );
+      await page.keyboard.press("Tab");
+      await nextFrames(page);
+      const stop = await page.evaluate(readStop, {
+        first: press === 0,
+        focus,
+        left: leftOut(region),
+        region: region.selector,
+      });
+      if (stop.passed === "first") break;
+      expect(
+        stop.passed,
+        `${region.name}: Tab came back to ${stop.name} before its first stop`
+      ).toBeNull();
+      if (!stop.inRegion) continue;
+      stops += 1;
+      if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
+    }
+    if (region.tabStops === "none") {
+      expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
+    } else {
+      // A walk that stopped nowhere in the region proves nothing about it.
+      expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
+    }
   });
   return unmarked;
 }
@@ -616,8 +605,10 @@ async function hideLeftOut(page: Page, region: Region): Promise<void> {
   });
 }
 
-/** Each box that scrolls or clips content wider than itself. A table's own box may scroll (FR4):
- *  packages/ui's Table scrolls a table wider than its column inside that box. */
+/** Each box that scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
+ *  content wider than itself. A box set to `overflow: hidden`, as cut text (`truncate`) is, is
+ *  not read. A table's own box may scroll (FR4): packages/ui's Table scrolls a table wider than
+ *  its column inside that box. */
 async function wideBoxes(page: Page): Promise<string[]> {
   return page.evaluate((table) => {
     const found: string[] = [];
@@ -643,7 +634,8 @@ async function wideBoxes(page: Page): Promise<string[]> {
   }, '[data-slot="table-container"]');
 }
 
-/** Each region, opened once: in each scheme axe reads it, then Tab walks it. */
+/** Each region, opened once: axe reads it in light and dark, then Tab walks it in light and dark,
+ *  so the walk moves the focus only after both scans. */
 function checkEach(list: readonly Region[]): void {
   for (const region of list) {
     const walked = region.tabStops !== "skip";
@@ -651,30 +643,46 @@ function checkEach(list: readonly Region[]): void {
       region.tabStops === "none"
         ? " and no Tab stop"
         : walked
-          ? " and the focus outline at each Tab stop"
+          ? ", and shows the focus outline at each Tab stop"
           : "";
     test(`the ${region.name} has no serious or critical axe finding${walkName}, in light and dark`, async ({
       page,
     }) => {
       await openRegion(page, region);
-      await inEachScheme(page, region, async (scheme) => {
-        expect
-          .soft(await scanScheme(page, region, scheme), `${region.name}: axe findings in ${scheme}`)
-          .toEqual([]);
-        if (!walked) return;
-        expect
-          .soft(
-            await walkScheme(page, region, scheme),
-            `${region.name}: Tab stops without the outline in ${scheme}`
-          )
-          .toEqual([]);
-      });
+      expect.soft(await scan(page, region), `${region.name}: axe findings`).toEqual([]);
+      if (!walked) return;
+      expect
+        .soft(await walk(page, region), `${region.name}: Tab stops without the outline`)
+        .toEqual([]);
     });
   }
 }
 
+/** Resizes the page to `viewport`, and waits for the layout drawn for that width before anything
+ *  reads it. The shell draws the sidebar, or the issue frame's icon rail, only from 768 px, from
+ *  React state that follows the width, and the sidebar then fetches what it lists. A page with no
+ *  shell lays out by CSS alone. */
+async function resize(
+  page: Page,
+  region: Region,
+  viewport: { width: number; height: number }
+): Promise<void> {
+  const traffic = watchTraffic(page);
+  await page.setViewportSize(viewport);
+  await nextFrames(page);
+  if ((await page.locator(SHELL).count()) > 0) {
+    await expect(
+      page.locator(`${SIDEBAR}, [data-testid="icon-rail"]`),
+      `${region.name}: the layout for ${viewport.width} px`
+    ).toHaveCount(viewport.width >= 768 ? 1 : 0);
+  }
+  if (region.settles !== false) {
+    await waitForQuiet(traffic, `${region.name}: requests settle at ${viewport.width} px`);
+  }
+}
+
 /** Each page, opened once and resized to each width: the page fits the window, and no box in it
- *  scrolls or clips content wider than itself. */
+ *  scrolls or clips content wider than itself (`wideBoxes`). */
 function fitEach(list: readonly Region[]): void {
   for (const region of list) {
     test(`the ${region.name} fits 390, 768 and 1440 px, and no box in it is too narrow`, async ({
@@ -683,13 +691,9 @@ function fitEach(list: readonly Region[]): void {
       await openRegion(page, { ...region, viewport: PHONE });
       await hideLeftOut(page, region);
       for (const viewport of WIDTHS) {
-        await page.setViewportSize(viewport);
+        await resize(page, region, viewport);
         await assertPageFits(page);
-        // A resize settles a render or two later (assertPageFits says why), so the boxes are
-        // read until they hold.
-        await expect
-          .poll(() => wideBoxes(page), { message: `${region.name} at ${viewport.width} px` })
-          .toEqual([]);
+        expect(await wideBoxes(page), `${region.name} at ${viewport.width} px`).toEqual([]);
       }
     });
   }
@@ -732,8 +736,8 @@ test("an input without its label inside an upstream widget's wrapper is left out
 });
 
 // The run's own controls for the walk and the widths, on the machine login page: a button with no
-// outline, a thin one or one in another colour fails the walk, and content wider than a phone
-// fails the width check.
+// outline, a thin one or one in another colour fails the walk, and content wider than the window
+// fails the width check at each width.
 test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
   await openRegion(page, machineLogin);
   await page.locator(MAIN).evaluate((at) => {
@@ -813,15 +817,15 @@ test("content wider than the window fails the width check at each width", async 
   await appendWide(page, MAIN);
   await hideLeftOut(page, machineLogin);
   for (const viewport of WIDTHS) {
-    await page.setViewportSize(viewport);
+    await resize(page, machineLogin, viewport);
     if (viewport === PHONE) {
       await expect(assertPageFits(page)).rejects.toThrow("px wide in a 390px viewport");
       expect(await wideBoxes(page), "at 390 px").toEqual([]);
     } else {
       await assertPageFits(page);
-      await expect
-        .poll(() => wideBoxes(page), { message: `at ${viewport.width} px` })
-        .toEqual([expect.stringMatching(/^div ".*" clips \d+ px in \d+ px$/)]);
+      expect(await wideBoxes(page), `at ${viewport.width} px`).toEqual([
+        expect.stringMatching(/^div "flex-1 md:overflow-clip [^"]*" clips \d+ px in \d+ px$/),
+      ]);
     }
   }
 });
