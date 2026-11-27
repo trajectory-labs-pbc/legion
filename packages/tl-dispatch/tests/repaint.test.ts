@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { LabelPill, StatusPill } from "@upstream-dispatch/components/Pill";
@@ -11,28 +11,52 @@ import {
   ASK_BLOCK_PILL_MED_BG,
   askBlockTint,
   askUrgencyAccent,
+  BORDER_DEFAULT,
+  BORDER_STRONG,
   borderDefault,
   CALLOUT_DANGER_BG,
   CALLOUT_INFO_BG,
   CALLOUT_WARNING_BG,
+  CARD_HOVER_ACCENT,
   CONTRAST_CHECKS,
+  CONTROL_HOVER_ACCENT,
   type ColorPair,
   card,
+  DANGER_HOVER_BORDER,
+  DANGER_HOVER_TEXT,
+  DANGER_TEXT,
   decisionUnsureBorder,
+  iconRailActive,
   issueStatusScale,
+  LINK,
+  LINK_HOVER,
   PAGE_COLORS,
+  pageComposer,
+  pageFocusedRow,
+  pageFoldedHalo,
   pageLineBorder,
+  pageOwnWordsRule,
   primaryButtonBg,
   primaryButtonDisabled,
+  SUCCESS_HOVER_TEXT,
+  SUCCESS_TEXT,
+  SURFACE,
+  SURFACE_MUTED,
   selectedCardBg,
   selectedCardBorder,
+  TEXT_DISABLED,
+  TEXT_MUTED,
+  TEXT_PRIMARY,
+  TEXT_SECONDARY,
 } from "@upstream-dispatch/theme/classes";
 import { contrastRatio, type Oklch } from "@upstream-dispatch/theme/contrast";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import ts from "typescript";
 
 import { type CssDeclaration, parseCss } from "./css";
-import { PACKAGE_ROOT } from "./source";
+import { PACKAGE_ROOT, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 
 // `src/repaint.css` maps the palette upstream's pages paint with onto the theme's tokens. These
 // tests compile the app's stylesheet as the build does, resolve each colour as the cascade does
@@ -77,6 +101,9 @@ async function generate(repaint = repaintText): Promise<CssDeclaration[]> {
   );
   return parseCss(compiler.build([...classes, ...forced])).declarations;
 }
+
+/** `src/repaint.css` on its own, as the tests that do not change it read it. */
+const repaintCss = parseCss(repaintText).declarations;
 
 // ---- Colour arithmetic ----
 
@@ -306,13 +333,6 @@ function specificity(selector: string): number {
   return total + ids * 1e6 + marks * 1e3 + elements + take(/[a-z][\w-]*/gi);
 }
 
-/** The link `html` holds. */
-function link(html: string): Element {
-  const host = document.createElement("div");
-  host.innerHTML = html;
-  return host.querySelector("a") as Element;
-}
-
 const UNDERLINE = {
   "text-decoration-color": "currentcolor",
   "text-decoration-line": "none",
@@ -389,7 +409,6 @@ const COMMENT_LINK = `<div class="dispatch-markdown prose prose-sm prose-slate">
 
 // ---- Pills and cards ----
 
-const upstreamSrc = join(PACKAGE_ROOT, "../dispatch/web/src");
 const badgeText = readFileSync(join(PACKAGE_ROOT, "../ui/src/components/badge.tsx"), "utf8");
 
 /** What a pill takes from the Badge, whose classes are `rounded-badge text-xs font-medium`. */
@@ -417,19 +436,62 @@ function sample(html: string, selector: string): Element {
   return host.querySelector(selector) as Element;
 }
 
-/** The class list of the string or template in upstream's `file` that holds `anchor`, its `${}`
- *  taken out, so a sample follows upstream's markup. */
+/** Upstream's scripts under `dir`, tests and fixtures aside. */
+function upstreamScripts(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return /^__(tests|fixtures)__$/.test(entry.name) ? [] : upstreamScripts(path);
+    }
+    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
+  });
+}
+
+/** The words of each string and template in `source`. A template's are those outside its `${}`;
+ *  a string or a template inside a `${}` is one of its own. */
+function stringWords(source: ts.SourceFile): string[] {
+  const found: string[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) found.push(node.text);
+    else if (ts.isTemplateExpression(node)) {
+      found.push(
+        [node.head.text, ...node.templateSpans.map((span) => span.literal.text)].join(" ")
+      );
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found.map((text) => text.trim().split(/\s+/).join(" "));
+}
+
+/** Upstream's web sources, by path under its `src/`: each one's text and the words of each of
+ *  its strings and templates. No test changes a source, so one read serves them all. */
+const upstream = new Map(
+  upstreamScripts(UPSTREAM_WEB).map((path) => {
+    const text = readFileSync(path, "utf8");
+    const file = relative(UPSTREAM_WEB, path).split(sep).join("/");
+    return [file, { strings: stringWords(parseScript(path, text)), text }] as const;
+  })
+);
+
+/** The class list of the string or template in upstream's `file` that holds `anchor`, so a sample
+ *  follows upstream's markup. */
 function upstreamClasses(file: string, anchor: string): string {
-  const text = readFileSync(join(upstreamSrc, file), "utf8");
-  const body = [...text.matchAll(/(["`])([^"`]*)\1/g)]
-    .map(([, , found]) => found ?? "")
-    .find((found) => found.includes(anchor));
-  if (body === undefined) throw new Error(`${file}: no class list holds "${anchor}"`);
-  return body
-    .replace(/\$\{[^}]*\}/g, " ")
-    .trim()
-    .split(/\s+/)
-    .join(" ");
+  const found = upstream.get(file)?.strings.find((words) => words.includes(anchor));
+  if (found === undefined) throw new Error(`${file}: no class list holds "${anchor}"`);
+  return found;
+}
+
+/** Each property of `want` that `element` does not compute as `want` says, with what it does. */
+function mismatches(
+  declarations: readonly CssDeclaration[],
+  element: Element,
+  want: Readonly<Record<string, string>>
+): string[] {
+  return Object.entries(want).flatMap(([property, value]) => {
+    const got = computed(declarations, element, property);
+    return got === value ? [] : [`${property} ${got}`];
+  });
 }
 
 /** Upstream's round and pill-shaped parts, as it renders them, with the shape each must take. */
@@ -494,35 +556,27 @@ const SHAPES: Record<string, [() => Element, Record<string, string>]> = {
 
 /** Each sample whose corner or type is not what it should be. */
 function shapeProblems(declarations: readonly CssDeclaration[]): string[] {
-  return Object.entries(SHAPES).flatMap(([name, [render, want]]) => {
-    const element = render();
-    return Object.entries(want).flatMap(([property, value]) => {
-      const got = computed(declarations, element, property);
-      return got === value ? [] : [`${name}: ${property} ${got}`];
-    });
-  });
+  return Object.entries(SHAPES).flatMap(([name, [render, want]]) =>
+    mismatches(declarations, render(), want).map((problem) => `${name}: ${problem}`)
+  );
 }
 
 /** The width 761 px and up, where the plan's and the verification's rows are a table's, and under
  *  it, where they are cards. */
 const VIEWS = { narrow: "@media (width < 761px)", wide: "@media (width >= 761px)" } as const;
 
-/** Each class list upstream's sources write: the words of a string or a template, outside its
- *  `${}`, that read as classes. */
+/** Each class list upstream's sources write: the words of a string or a template that read as
+ *  classes. */
 const upstreamLists = [
   ...new Set(
-    (readdirSync(upstreamSrc, { recursive: true }) as string[])
-      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
-      .flatMap((file) =>
-        [...readFileSync(join(upstreamSrc, file), "utf8").matchAll(/(["`])([^"`]*)\1/g)].map(
-          ([, , body]) =>
-            (body ?? "")
-              .replace(/\$\{[^}]*(\}|$)/g, " ")
-              .split(/\s+/)
-              .filter((word) => /^[\w:[\]/.%()#,&>*=!-]+$/.test(word) && /[a-z]/.test(word))
-              .join(" ")
-        )
+    [...upstream.values()].flatMap(({ strings }) =>
+      strings.map((words) =>
+        words
+          .split(" ")
+          .filter((word) => /^[\w:[\]/.%()#,&>*=!-]+$/.test(word) && /[a-z]/.test(word))
+          .join(" ")
       )
+    )
   ),
 ];
 const roundedFull = upstreamLists.filter((classes) => classes.split(" ").includes("rounded-full"));
@@ -540,15 +594,12 @@ function pillProblems(declarations: readonly CssDeclaration[]): string[] {
   return roundedFull.flatMap((classes) => {
     const element = withClasses(classes);
     const { "font-size": _size, "font-weight": _weight, ...shape } = BADGE;
-    const want: Record<string, string> = !isPill(classes)
+    const want = !isPill(classes)
       ? { "border-radius": ROUND }
       : inBodyText(classes)
         ? shape
         : BADGE;
-    return Object.entries(want).flatMap(([property, value]) => {
-      const got = computed(declarations, element, property);
-      return got === value ? [] : [`${classes}: ${property} ${got}`];
-    });
+    return mismatches(declarations, element, want).map((problem) => `${classes}: ${problem}`);
   });
 }
 
@@ -651,16 +702,11 @@ function cornerRuleProblems(
   editor: readonly CssDeclaration[]
 ): string[] {
   const root = rootValues(app, "light");
-  const own = declarations.filter(({ context }) => !context.some((at) => at.startsWith("@layer")));
+  const own = ownRules(declarations);
   const keyOf = (context: readonly string[]) =>
     selectorKey(context.filter((rule) => !rule.startsWith("@")).join(" "));
   const set = (selector: string, property: string, value: string) =>
-    own.some(
-      (rule) =>
-        rule.property === property &&
-        rule.value === value &&
-        split(keyOf(rule.context), ",").some((part) => part.trim() === selector)
-    );
+    own.get(ruleKey(selector, property))?.some((rule) => rule.value === value) ?? false;
   const literal = ({ property, value }: CssDeclaration) =>
     CORNER_PROPERTY.test(property) && /\d/.test(value) && themeCorner(value, root) !== value;
   const utility = ({ context }: CssDeclaration) =>
@@ -699,6 +745,16 @@ const DIALOG = "var(--shadow-dialog)";
 const NONE = "initial";
 /** Upstream's own shadow, kept: a ring or a rule a component draws in the page's own colours. */
 const UPSTREAMS = "upstream's own";
+
+/** The margin's sheet: a column from 1280 px. */
+const marginSheet = () =>
+  withClasses(upstreamClasses("features/margin/MarginSheet.tsx", "shadow-[0_-8px_24px"), "aside");
+/** A step's row in the plan while it is focused. */
+const focusedStep = () =>
+  withClasses(
+    upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
+    "div"
+  );
 
 /** One element for each shadow class upstream writes, drawn as upstream draws it, with the
  *  shadow its role takes. */
@@ -750,8 +806,7 @@ const SHADOWS: readonly (readonly [
     "a switch's thumb",
     () =>
       sample(
-        // DeliveryPage.tsx's Swimlanes switch; its template's quotes hide it from upstreamClasses.
-        '<button role="switch"><span class="block h-4 w-4 rounded-full shadow-lg"></span></button>',
+        `<button role="switch"><span class="${upstreamClasses("features/delivery/DeliveryPage.tsx", "rounded-full shadow-lg")}"></span></button>`,
         "span"
       ),
     NONE,
@@ -775,12 +830,8 @@ const SHADOWS: readonly (readonly [
   ],
   [
     "the margin's drawer",
-    // Margin.tsx's drawer; its template's quotes hide it from upstreamClasses.
     () =>
-      withClasses(
-        "fixed inset-y-0 right-0 border-l shadow-[-12px_0_30px_rgba(28,25,23,0.14)]",
-        "aside"
-      ),
+      withClasses(upstreamClasses("features/margin/Margin.tsx", "shadow-[-12px_0_30px"), "aside"),
     DIALOG,
   ],
   [
@@ -792,17 +843,8 @@ const SHADOWS: readonly (readonly [
       ),
     DIALOG,
   ],
-  [
-    "the margin's sheet",
-    () => withClasses("border-t shadow-[0_-8px_24px_rgba(15,23,42,0.08)] xl:shadow-none", "aside"),
-    DIALOG,
-  ],
-  [
-    "the margin's column, from 1280 px",
-    () => withClasses("border-t shadow-[0_-8px_24px_rgba(15,23,42,0.08)] xl:shadow-none", "aside"),
-    NONE,
-    "@media (width >= 80rem)",
-  ],
+  ["the margin's sheet", marginSheet, DIALOG],
+  ["the margin's column, from 1280 px", marginSheet, NONE, "@media (width >= 80rem)"],
   [
     "a card at rest",
     () => withClasses(upstreamClasses("features/margin/DecisionCard.tsx", "shadow-sm"), "div"),
@@ -814,12 +856,8 @@ const SHADOWS: readonly (readonly [
     NONE,
   ],
   [
-    "the waiting ask",
-    () =>
-      withClasses(
-        "shadow-[0_0_0_1px_var(--color-page-waiting),0_2px_12px_rgba(28,25,23,0.07)]",
-        "div"
-      ),
+    "the composer while it answers a waiting ask",
+    () => withClasses(pageComposer.answering, "div"),
     "0 0 0 var(--border-width) var(--warning)",
   ],
   [
@@ -830,38 +868,12 @@ const SHADOWS: readonly (readonly [
   ],
   [
     "a focused node's card",
-    () =>
-      withClasses(
-        "bg-page-pane shadow-[0_0_0_1px_var(--color-page-hair),inset_3px_0_0_var(--color-page-muted)]",
-        "div"
-      ),
+    () => withClasses(pageFocusedRow, "div"),
     "0 0 0 var(--border-width) var(--border)",
   ],
-  [
-    "a focused step's row",
-    () =>
-      withClasses(
-        upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
-        "div"
-      ),
-    "inset 0 0 0 var(--border-width) var(--input)",
-    VIEWS.wide,
-  ],
-  [
-    "a focused step's row, as a card",
-    () =>
-      withClasses(
-        upstreamClasses("features/issue-page/plan-filter/PlanFilterBody.tsx", "shadow-[inset_3px"),
-        "div"
-      ),
-    UPSTREAMS,
-    VIEWS.narrow,
-  ],
-  [
-    "a folded node's halo",
-    () => withClasses("shadow-[0_0_0_4px_var(--color-page-hair)]", "div"),
-    UPSTREAMS,
-  ],
+  ["a focused step's row", focusedStep, "inset 0 0 0 var(--border-width) var(--input)", VIEWS.wide],
+  ["a focused step's row, as a card", focusedStep, UPSTREAMS, VIEWS.narrow],
+  ["a folded node's halo", () => withClasses(pageFoldedHalo, "div"), UPSTREAMS],
   [
     "a status chip's edge",
     () =>
@@ -871,17 +883,8 @@ const SHADOWS: readonly (readonly [
       ),
     UPSTREAMS,
   ],
-  [
-    "the rule at the reader's own words",
-    () => withClasses("shadow-[inset_2px_0_0_var(--color-page-ink)] pl-2.5", "div"),
-    UPSTREAMS,
-  ],
-  [
-    "the icon rail's current entry",
-    () =>
-      withClasses("bg-icon-rail-active shadow-[inset_3px_0_0_var(--color-icon-rail-accent)]", "a"),
-    UPSTREAMS,
-  ],
+  ["the rule at the reader's own words", () => withClasses(pageOwnWordsRule, "div"), UPSTREAMS],
+  ["the icon rail's current entry", () => withClasses(iconRailActive, "a"), UPSTREAMS],
 ];
 
 /** Every shadow class upstream's sources write. */
@@ -962,8 +965,8 @@ const SHAPE_PROPERTY =
   /^(font-size|font-weight|line-height|min-height|height|border(-(top|right|bottom|left))?-width)$/;
 const SIZE_KEYWORD =
   /\b(thin|medium|thick|bold|bolder|lighter|smaller|larger|(x{1,3}-)?(small|large))\b/;
-function shapeLiterals(repaint: string): string[] {
-  return parseCss(repaint).declarations.flatMap(({ property, value, context }) => {
+function shapeLiterals(repaint: readonly CssDeclaration[]): string[] {
+  return repaint.flatMap(({ property, value, context }) => {
     if (!SHAPE_PROPERTY.test(property)) return [];
     let rest = value;
     for (let last = ""; last !== rest; ) {
@@ -1050,40 +1053,57 @@ const RULE_PAIRS: readonly (readonly [text: string, ground: string, minRatio: nu
   ].map((name) => [`.prose { --tw-prose-${name} }`, "--card", 4.5] as const),
 ];
 
-/** The value the rule at `selector` gives `property`: the last such rule outside every layer. */
-function ruleValue(
-  declarations: readonly CssDeclaration[],
-  selector: string,
-  property: string
-): string | undefined {
-  return declarations
-    .filter((declaration) => {
-      const { selector: rule, around } = place(declaration.context);
-      return (
-        declaration.property === property &&
-        around.length === 0 &&
-        split(withoutWhere(rule), ",").some((part) => selectorKey(part) === selectorKey(selector))
-      );
-    })
-    .at(-1)?.value;
+/** A rule outside every layer: the value it gives, and whether no at-rule is around it. */
+interface OwnRule {
+  value: string;
+  plain: boolean;
+}
+
+/** `selector { property }`, the key of `ownRules`. */
+const ruleKey = (selector: string, property: string) => `${selectorKey(selector)} { ${property} }`;
+
+/** The rules of `declarations` outside every layer, by `ruleKey` for each part of their selector
+ *  (a nested rule's after its parents', a `:where()` around it taken off), in order. */
+function ownRules(declarations: readonly CssDeclaration[]): ReadonlyMap<string, OwnRule[]> {
+  const rules = new Map<string, OwnRule[]>();
+  for (const { property, value, context } of declarations) {
+    if (context.some((rule) => rule.startsWith("@layer"))) continue;
+    const plain = place(context).around.length === 0;
+    const selector = context.filter((rule) => !rule.startsWith("@")).join(" ");
+    for (const part of split(withoutWhere(selector), ",")) {
+      const key = ruleKey(part, property);
+      const found = rules.get(key) ?? [];
+      found.push({ plain, value });
+      rules.set(key, found);
+    }
+  }
+  return rules;
 }
 
 /** Each text pair that falls below its ratio: the pairs upstream registers, on the variable the
  *  page draws each from, and the pairs of `RULE_PAIRS`. A colour that does not resolve is one. */
 function contrastProblems(declarations: readonly CssDeclaration[]): string[] {
   const problems: string[] = [];
+  const own = ownRules(declarations);
+  // A token's `var()`, or the value the last rule at `selector` with no at-rule around it gives.
+  const sideValue = (side: string) => {
+    const rule = /^(.*) \{ (.*) \}$/.exec(side);
+    if (rule === null) return `var(${side})`;
+    return own
+      .get(ruleKey(rule[1] as string, rule[2] as string))
+      ?.filter(({ plain }) => plain)
+      .at(-1)?.value;
+  };
+  const rulePairs = RULE_PAIRS.map(
+    ([text, ground, minRatio]) =>
+      [`${text} on ${ground}`, sideValue(text), sideValue(ground), minRatio] as const
+  );
   for (const scheme of SCHEMES) {
     const variables = rootValues(declarations, scheme);
     const shade = (pair: ColorPair) =>
       evaluate(`var(--color-${PAGE_NAMES.get(pair) ?? pair[scheme].name})`, scheme, variables);
-    const drawn = (colour: string) => {
-      const rule = /^(.*) \{ (.*) \}$/.exec(colour);
-      const value =
-        rule === null
-          ? `var(${colour})`
-          : ruleValue(declarations, rule[1] as string, rule[2] as string);
-      return value === undefined ? undefined : evaluate(value, scheme, variables);
-    };
+    const drawn = (value: string | undefined) =>
+      value === undefined ? undefined : evaluate(value, scheme, variables);
     const pairs = [
       ...CONTRAST_CHECKS.map(
         (check) =>
@@ -1094,9 +1114,9 @@ function contrastProblems(declarations: readonly CssDeclaration[]): string[] {
             check.minRatio,
           ] as const
       ),
-      ...RULE_PAIRS.map(
-        ([text, ground, minRatio]) =>
-          [`${text} on ${ground}`, drawn(text), drawn(ground), minRatio] as const
+      ...rulePairs.map(
+        ([description, text, ground, minRatio]) =>
+          [description, drawn(text), drawn(ground), minRatio] as const
       ),
     ];
     for (const [description, text, ground, minRatio] of pairs) {
@@ -1127,33 +1147,35 @@ interface Step {
   inside?: string;
 }
 
+const shades = (pair: ColorPair): Shades => [pair.light.name, pair.dark.name];
+
 /** Upstream's hover states (`theme/classes.ts`): from the shade at rest to the one under the
  *  pointer. */
 const HOVERS: Record<string, Step> = {
-  "card border": { from: ["slate-200", "slate-800"], to: ["sky-400", "sky-300"] },
-  "close button text": { from: ["slate-700", "slate-300"], to: ["slate-900", "slate-100"] },
-  "danger text": { from: ["rose-700", "rose-400"], to: ["rose-900", "rose-300"] },
-  "disclosure chevron": { from: ["slate-400", "slate-600"], to: ["slate-700", "slate-300"] },
-  "field border": { from: ["slate-200", "slate-800"], to: ["slate-300", "slate-700"] },
+  "card border": { from: shades(BORDER_DEFAULT), to: shades(CARD_HOVER_ACCENT) },
+  "close button text": { from: shades(TEXT_SECONDARY), to: shades(TEXT_PRIMARY) },
+  "danger border": { from: shades(BORDER_STRONG), to: shades(DANGER_HOVER_BORDER) },
+  "danger text": { from: shades(DANGER_TEXT), to: shades(DANGER_HOVER_TEXT) },
+  "disclosure chevron": { from: shades(TEXT_DISABLED), to: shades(TEXT_SECONDARY) },
+  "field border": { from: shades(BORDER_DEFAULT), to: shades(BORDER_STRONG) },
   "icon rail entry": {
     from: ["icon-rail", "icon-rail"],
     to: ["icon-rail-active", "icon-rail-active"],
   },
   "issue page row": { from: ["page-paper", "page-paper"], to: ["page-mark", "page-mark"] },
-  link: { from: ["sky-700", "sky-400"], to: ["sky-900", "sky-300"] },
-  "muted surface": { from: ["white", "slate-900"], to: ["slate-100", "slate-800"] },
-  "muted text": { from: ["slate-500", "slate-400"], to: ["slate-700", "slate-300"] },
+  link: { from: shades(LINK), to: shades(LINK_HOVER) },
+  "muted surface": { from: shades(SURFACE), to: shades(SURFACE_MUTED) },
+  "muted text": { from: shades(TEXT_MUTED), to: shades(TEXT_SECONDARY) },
   "primary button": { from: ["sky-700", "sky-700"], to: ["sky-800", "sky-800"] },
   "rail entry": {
     from: ["slate-950", "slate-950"],
     inside: ".bg-slate-950",
     to: ["slate-800", "slate-800"],
   },
-  "secondary button border": { from: ["slate-300", "slate-700"], to: ["sky-500", "sky-400"] },
-  "success text": { from: ["emerald-700", "emerald-400"], to: ["emerald-900", "emerald-300"] },
+  "secondary button border": { from: shades(BORDER_STRONG), to: shades(CONTROL_HOVER_ACCENT) },
+  "success text": { from: shades(SUCCESS_TEXT), to: shades(SUCCESS_HOVER_TEXT) },
 };
 
-const shades = (pair: ColorPair): Shades => [pair.light.name, pair.dark.name];
 /** A decision card's urgency pill (`askBlockPill`): from the card's tint to the pill's ground. */
 const PILLS: Record<string, Step> = {
   "blocking pill": { from: shades(CALLOUT_DANGER_BG), to: shades(ASK_BLOCK_PILL_BLOCKING_BG) },
@@ -1208,11 +1230,17 @@ const selectorKey = (selector: string) => selector.replace(/\s+/g, " ").replace(
  *  a rule's selector, or of `selector { property }`. */
 const UNREACHED: Record<string, string> = {
   ".bg-\\[color\\:\\#123456\\]": "a class upstream's own tests write; no page draws it",
+  ".dispatch-markdown { --tw-prose-invert-links }":
+    "upstream's dark link; the plain name, which a later rule sets on the same element, wins",
   ".markdown-link-action-card": "a card of the editor's library that no code makes",
   ".mark-selection-bar":
     "the editor library's selection bar, which the document's own bar replaces",
   ".milkdown pre code .token.":
     "the editor's code theme, kept whole: its hues mark syntax, on a ground dark in both schemes",
+  ".prose { --tw-prose-invert-":
+    "the plugin's dark greys; the plain names, which a rule here sets on the same element, win",
+  ".prose-slate { --tw-prose-invert-":
+    "the plugin's dark greys; the plain names, which a rule here sets on the same element, win",
   ".proof-editor { --a4-color }": "a provenance colour; the editor Dispatch mounts draws none",
   ".proof-editor { --ai-color }": "a provenance colour; the editor Dispatch mounts draws none",
   ".shadow-\\[0_0_0_1px_\\#123456\\]": "a class upstream's own tests write; no page draws it",
@@ -1224,19 +1252,13 @@ const UNREACHED: Record<string, string> = {
  *  rule there replaces one when it has the same selector after `scope`, and the same property. */
 function literalProblems(
   declarations: readonly CssDeclaration[],
-  repaint: string,
+  repaint: readonly CssDeclaration[] = repaintCss,
   scope = ""
 ): string[] {
-  const own = new Set(
-    parseCss(repaint).declarations.flatMap(({ property, context }) =>
-      split(withoutWhere(place(context).selector), ",").map(
-        (selector) => `${selectorKey(selector)} { ${property} }`
-      )
-    )
-  );
+  const own = ownRules(repaint);
   const replaced = (selector: string, property: string) =>
-    own.has(`${selectorKey(scope + selector)} { ${property} }`) ||
-    (SHORTHANDS.has(property) && own.has(`${selectorKey(scope + selector)} { ${property}-color }`));
+    own.has(ruleKey(scope + selector, property)) ||
+    (SHORTHANDS.has(property) && own.has(ruleKey(scope + selector, `${property}-color`)));
   // Tailwind writes a `color-mix()` under `@supports`, after a fallback in the same rule.
   const fallbacks = new Set<CssDeclaration>();
   declarations.forEach(({ property, context }, index) => {
@@ -1298,10 +1320,8 @@ describe("the repaint of upstream's pages", async () => {
 
   // The browser draws a search field's clear button blue, out of reach of the checks on colours.
   test("paints the clear button of upstream's search fields in a colour of the theme", () => {
-    const fields = (readdirSync(upstreamSrc, { recursive: true }) as string[]).filter(
-      (file) =>
-        /\.tsx$/.test(file) &&
-        readFileSync(join(upstreamSrc, file), "utf8").includes('type="search"')
+    const fields = [...upstream].filter(
+      ([file, { text }]) => file.endsWith(".tsx") && text.includes('type="search"')
     );
     expect(fields.length).toBeGreaterThan(0);
     const held = rootValues(declarations, "light");
@@ -1393,7 +1413,7 @@ describe("the repaint of upstream's pages", async () => {
 
   test("underlines a link in a document and in a comment at rest", () => {
     for (const html of [DOCUMENT_LINK, COMMENT_LINK]) {
-      expect(underline(documentPage, link(html))).toEqual({
+      expect(underline(documentPage, sample(html, "a"))).toEqual({
         "text-decoration-color": "var(--muted-foreground)",
         "text-decoration-line": "underline",
         "text-decoration-thickness": "1px",
@@ -1416,27 +1436,28 @@ describe("the repaint of upstream's pages", async () => {
       declaration.property === "text-decoration-line";
     expect(documentPage.filter(own)).toHaveLength(1);
     const without = documentPage.filter((declaration) => !own(declaration));
-    expect(underline(without, link(DOCUMENT_LINK))["text-decoration-line"]).toBe("none");
+    expect(underline(without, sample(DOCUMENT_LINK, "a"))["text-decoration-line"]).toBe("none");
   });
 
   test("replaces every blue literal a rule of the compiled stylesheet holds", () => {
-    expect(literalProblems(declarations, repaintText)).toEqual([]);
+    expect(literalProblems(declarations)).toEqual([]);
   });
 
   test("replaces every blue literal a rule of the editor's stylesheet holds", () => {
-    expect(literalProblems(editorCss, repaintText, ".dispatch-doc ")).toEqual([]);
+    expect(literalProblems(editorCss, repaintCss, ".dispatch-doc ")).toEqual([]);
   });
 
   test("fails when a rule for one of the editor's literals is removed", () => {
     const rule = /\.dispatch-doc span\[data-dispatch="ask"\] \{[^}]*\}/;
     expect(repaintText).toMatch(rule);
-    expect(literalProblems(editorCss, repaintText.replace(rule, ""), ".dispatch-doc ")).toEqual([
+    const without = (removed: RegExp) => parseCss(repaintText.replace(removed, "")).declarations;
+    expect(literalProblems(editorCss, without(rule), ".dispatch-doc ")).toEqual([
       'span[data-dispatch="ask"] { background-color: rgba(168, 85, 247, 0.18) }',
       'span[data-dispatch="ask"] { border-bottom: #a855f7 }',
     ]);
     const pulse = /\.dispatch-doc \.dispatch-mark-pulse \{\s*animation-name:[^}]*\}/;
     expect(repaintText).toMatch(pulse);
-    expect(literalProblems(editorCss, repaintText.replace(pulse, ""), ".dispatch-doc ")).toEqual([
+    expect(literalProblems(editorCss, without(pulse), ".dispatch-doc ")).toEqual([
       ".dispatch-mark-pulse { animation-name: rgba(168, 85, 247, 0.45) }",
     ]);
   });
@@ -1444,7 +1465,8 @@ describe("the repaint of upstream's pages", async () => {
   test("fails when a rule for one of upstream's literals is removed", () => {
     const rule = /\.dispatch-doc \.milkdown a \{[^}]*\}/;
     expect(repaintText).toMatch(rule);
-    expect(literalProblems(declarations, repaintText.replace(rule, ""))).toEqual([
+    const without = parseCss(repaintText.replace(rule, "")).declarations;
+    expect(literalProblems(declarations, without)).toEqual([
       ".dispatch-doc .milkdown a { color: #0069a8 }",
       ".dispatch-doc .milkdown a { color: #00bcff }",
     ]);
@@ -1581,7 +1603,7 @@ describe("the repaint of upstream's pages", async () => {
   });
 
   test("sizes pills and cards with theme tokens only", () => {
-    expect(shapeLiterals(repaintText)).toEqual([]);
+    expect(shapeLiterals(repaintCss)).toEqual([]);
   });
 
   test.each([
@@ -1592,6 +1614,7 @@ describe("the repaint of upstream's pages", async () => {
     ["border-width: var(--border-width);", "border-width: thick;"],
   ])("fails when a size names a literal: %s", (token, literal) => {
     expect(repaintText).toContain(token);
-    expect(shapeLiterals(repaintText.replace(token, literal))).toHaveLength(1);
+    const changed = parseCss(repaintText.replace(token, literal)).declarations;
+    expect(shapeLiterals(changed)).toHaveLength(1);
   });
 });

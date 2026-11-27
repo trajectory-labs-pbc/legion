@@ -154,14 +154,14 @@
   --color-amber-300: var(--color-amber-200);
   --color-amber-400: color-mix(
     in oklab,
-    color-mix(in oklab, var(--warning) 50%, var(--warning-border)) var(--repaint-light),
+    var(--color-amber-500) var(--repaint-light),
     var(--warning)
   );
   --color-amber-500: color-mix(in oklab, var(--warning) 50%, var(--warning-border));
   --color-amber-600: color-mix(
     in oklab,
     var(--warning) var(--repaint-light),
-    color-mix(in oklab, var(--warning) 50%, var(--warning-border))
+    var(--color-amber-500)
   );
   --color-amber-700: color-mix(
     in oklab,
@@ -192,17 +192,9 @@
     var(--danger-border) var(--repaint-light),
     color-mix(in oklab, var(--danger) 65%, var(--foreground))
   );
-  --color-rose-400: color-mix(
-    in oklab,
-    color-mix(in oklab, var(--danger) 50%, var(--danger-border)) var(--repaint-light),
-    var(--danger)
-  );
+  --color-rose-400: color-mix(in oklab, var(--color-rose-500) var(--repaint-light), var(--danger));
   --color-rose-500: color-mix(in oklab, var(--danger) 50%, var(--danger-border));
-  --color-rose-600: color-mix(
-    in oklab,
-    var(--danger) var(--repaint-light),
-    color-mix(in oklab, var(--danger) 50%, var(--danger-border))
-  );
+  --color-rose-600: color-mix(in oklab, var(--danger) var(--repaint-light), var(--color-rose-500));
   --color-rose-700: color-mix(in oklab, var(--danger) var(--repaint-light), var(--danger-border));
   --color-rose-800: color-mix(
     in oklab,
@@ -246,14 +238,14 @@
   );
   --color-emerald-400: color-mix(
     in oklab,
-    color-mix(in oklab, var(--success) 50%, var(--success-border)) var(--repaint-light),
+    var(--color-emerald-500) var(--repaint-light),
     var(--success)
   );
   --color-emerald-500: color-mix(in oklab, var(--success) 50%, var(--success-border));
   --color-emerald-600: color-mix(
     in oklab,
     var(--success) var(--repaint-light),
-    color-mix(in oklab, var(--success) 50%, var(--success-border))
+    var(--color-emerald-500)
   );
   --color-emerald-700: color-mix(
     in oklab,
@@ -283,6 +275,19 @@
   --color-green-800: var(--color-emerald-800);
   --color-green-900: var(--color-emerald-900);
   --color-green-950: var(--color-emerald-950);
+
+  /* Two pairs some rules below share: upstream's secondary text, and a rule a step stronger than
+     the theme's border (a quote's edge, a list's bullet, a table head's line). */
+  --repaint-text-secondary: color-mix(
+    in oklab,
+    var(--color-slate-700) var(--repaint-light),
+    var(--color-slate-300)
+  );
+  --repaint-rule: color-mix(
+    in oklab,
+    var(--color-slate-300) var(--repaint-light),
+    var(--color-slate-600)
+  );
 
   /* The issue page's own palette, which upstream's stylesheet declares as literals. Its greys are
      the slate shades upstream names them by. A kind of node (question, decision, statement,
@@ -318,11 +323,7 @@
   --color-page-person: var(--foreground);
   --color-page-person-tint: var(--muted);
   --color-page-agent: var(--muted-foreground);
-  --color-page-issue: color-mix(
-    in oklab,
-    var(--color-slate-700) var(--repaint-light),
-    var(--color-slate-300)
-  );
+  --color-page-issue: var(--repaint-text-secondary);
   --color-page-question: var(--foreground);
   --color-page-question-tint: var(--muted);
   --color-page-decision: var(--color-page-muted);
@@ -377,11 +378,7 @@
   --code-bg: var(--muted);
   /* A code block: the foreground as ground in light, a raised surface in dark, so both have an edge. */
   --pre-bg: color-mix(in oklab, var(--foreground) var(--repaint-light), var(--card));
-  --blockquote-border: color-mix(
-    in oklab,
-    var(--color-slate-300) var(--repaint-light),
-    var(--color-slate-600)
-  );
+  --blockquote-border: var(--repaint-rule);
   --blockquote-color: var(--muted-foreground);
 }
 
@@ -421,6 +418,11 @@
 .dispatch-doc .milkdown a {
   color: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
   text-decoration-line: underline;
+}
+
+/* The line's look. Typography underlines a comment's link, and upstream a preview's inert one. */
+.dispatch-doc .milkdown a,
+.dispatch-markdown :is(a, [data-markdown-link]) {
   text-decoration-color: var(--muted-foreground);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
@@ -518,25 +520,14 @@
 
 .dispatch-markdown {
   --tw-prose-links: color-mix(in oklab, var(--foreground) 55%, var(--muted-foreground));
-  --tw-prose-invert-links: var(--tw-prose-links);
-}
-
-/* Typography underlines a comment's link, and upstream a preview's inert one; this sets the line's look. */
-.dispatch-markdown :is(a, [data-markdown-link]) {
-  text-decoration-color: var(--muted-foreground);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
 }
 
 /* Tailwind Typography's greys are literal slate. `:where()` keeps this rule below upstream's own
-   `.dispatch-markdown`, and being outside a layer puts it above the plugin's, `prose-invert`
-   included: each `invert` name holds the value of its plain one, which follows the scheme. */
+   `.dispatch-markdown`, and being outside a layer puts it above the plugin's. Each value follows
+   the scheme, so the plugin's `invert` names are left as they are: `prose-invert` sets a plain
+   name to its `invert` one inside a layer, and this rule outranks it on the same element. */
 :where(.prose, .prose-slate) {
-  --tw-prose-body: color-mix(
-    in oklab,
-    var(--color-slate-700) var(--repaint-light),
-    var(--color-slate-300)
-  );
+  --tw-prose-body: var(--repaint-text-secondary);
   --tw-prose-headings: var(--foreground);
   --tw-prose-lead: color-mix(
     in oklab,
@@ -546,11 +537,7 @@
   --tw-prose-links: var(--foreground);
   --tw-prose-bold: var(--foreground);
   --tw-prose-counters: var(--muted-foreground);
-  --tw-prose-bullets: color-mix(
-    in oklab,
-    var(--color-slate-300) var(--repaint-light),
-    var(--color-slate-600)
-  );
+  --tw-prose-bullets: var(--repaint-rule);
   --tw-prose-hr: var(--border);
   --tw-prose-quotes: var(--foreground);
   --tw-prose-quote-borders: var(--border);
@@ -568,30 +555,8 @@
     var(--color-slate-800) var(--repaint-light),
     var(--color-slate-950)
   );
-  --tw-prose-th-borders: color-mix(
-    in oklab,
-    var(--color-slate-300) var(--repaint-light),
-    var(--color-slate-600)
-  );
+  --tw-prose-th-borders: var(--repaint-rule);
   --tw-prose-td-borders: var(--border);
-  --tw-prose-invert-body: var(--tw-prose-body);
-  --tw-prose-invert-headings: var(--tw-prose-headings);
-  --tw-prose-invert-lead: var(--tw-prose-lead);
-  --tw-prose-invert-links: var(--tw-prose-links);
-  --tw-prose-invert-bold: var(--tw-prose-bold);
-  --tw-prose-invert-counters: var(--tw-prose-counters);
-  --tw-prose-invert-bullets: var(--tw-prose-bullets);
-  --tw-prose-invert-hr: var(--tw-prose-hr);
-  --tw-prose-invert-quotes: var(--tw-prose-quotes);
-  --tw-prose-invert-quote-borders: var(--tw-prose-quote-borders);
-  --tw-prose-invert-captions: var(--tw-prose-captions);
-  --tw-prose-invert-kbd: var(--tw-prose-kbd);
-  --tw-prose-invert-kbd-shadows: var(--tw-prose-kbd-shadows);
-  --tw-prose-invert-code: var(--tw-prose-code);
-  --tw-prose-invert-pre-code: var(--tw-prose-pre-code);
-  --tw-prose-invert-pre-bg: var(--tw-prose-pre-bg);
-  --tw-prose-invert-th-borders: var(--tw-prose-th-borders);
-  --tw-prose-invert-td-borders: var(--tw-prose-td-borders);
 }
 
 /* Upstream edges cards, dialogs, tables and buttons with slate-200 and, in dark, slate-800, which
@@ -660,11 +625,13 @@ button[class~="disabled:opacity-40"]:disabled {
   border-radius: var(--radius-sm);
 }
 
-:is(.rounded-\[6px\], .rounded-\[7px\]) {
+.rounded-\[6px\],
+.rounded-\[7px\] {
   border-radius: var(--radius-md);
 }
 
-:is(.rounded-\[8px\], .rounded-\[10px\]) {
+.rounded-\[8px\],
+.rounded-\[10px\] {
   border-radius: var(--radius-lg);
 }
 
