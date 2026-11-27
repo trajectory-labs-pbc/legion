@@ -13,6 +13,7 @@ import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdReads, holdShellReads } from "../../tests/network";
 import { render, settle, sleep } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
+import { setWidth } from "../../tests/viewport";
 import { reader, signedInClient } from "../../tests/writes";
 import { AppShell } from "./app-shell";
 import { SignedInParts } from "./signed-in-parts";
@@ -29,21 +30,10 @@ const menuButton = (root: HTMLElement) =>
 
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
-  // The shell goes first, so no media query redraws it.
   for (const view of mounted.splice(0).reverse()) view.unmount();
   // The signed-in reader's preferences (a folded sidebar) and recents.
   window.localStorage.clear();
 });
-
-const browser = (window as unknown as { happyDOM: { setViewport(size: { width: number }): void } })
-  .happyDOM;
-
-/** Draws the next mount at `width`, and restores the width after the shell is gone. */
-function viewport(width: number) {
-  const before = window.innerWidth;
-  browser.setViewport({ width });
-  mounted.push({ unmount: () => browser.setViewport({ width: before }) });
-}
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
 async function mount(path = "/no-such-page", client = signedInClient()) {
@@ -70,7 +60,7 @@ async function until(done: () => boolean) {
 
 describe("AppShell", () => {
   test("a refused sign-out still says so after the narrow screen's menu closes and opens", async () => {
-    viewport(375);
+    setWidth(375);
     await mount();
     // The menu is a sheet, drawn in a portal on the body.
     const click = (label: string) =>
@@ -107,7 +97,7 @@ describe("AppShell", () => {
   });
 
   test("a refused sign-out from the palette says so, with a Retry, while the sidebar is folded away", async () => {
-    viewport(1024);
+    setWidth(1024);
     const view = await mount();
     settle(() => commandStore.run("global.toggle-sidebar"));
     expect(view.container.querySelector('[data-testid="sidebar"]')).toBeNull();
@@ -150,7 +140,7 @@ describe("AppShell", () => {
 
   /** The shell's parts that a fold changes, on a viewport where the sidebar is a column. */
   async function foldable() {
-    viewport(768);
+    setWidth(768);
     const view = await mount();
     const part = (testId: string) =>
       view.container.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
@@ -228,7 +218,7 @@ describe("AppShell", () => {
   test.each([
     767, 768,
   ])("below 768 px the navigation is a drawer under a top bar, and from 768 px a column: %i px", async (width) => {
-    viewport(width);
+    setWidth(width);
     const view = await mount();
     const column = view.container.querySelector('[data-testid="sidebar"]');
     const menu = menuButton(view.container);
@@ -238,7 +228,7 @@ describe("AppShell", () => {
   });
 
   test("draws the inverted L: the sidebar on the window's ground, main in an inset rounded card", async () => {
-    viewport(1440);
+    setWidth(1440);
     const view = await mount();
     const sidebar = view.container.querySelector('[data-testid="sidebar"]');
     const panel = view.container.querySelector('[data-testid="content-panel"]');
@@ -325,7 +315,7 @@ describe("AppShell", () => {
   describe("in the narrow screen's menu", () => {
     const menu = () => document.body.querySelector('[data-slot="sheet-content"][data-open]');
     const openMenu = async () => {
-      viewport(375);
+      setWidth(375);
       await mount();
       settle(() => menuButton(document.body)?.click());
       // The menu takes the focus a moment after it opens.

@@ -8,6 +8,7 @@ import { railBg, railBorder, railText } from "@upstream-dispatch/theme/classes";
 import { type CssDeclaration, parseCss, specificity, split } from "../tests/css";
 import { render } from "../tests/react";
 import { PACKAGE_ROOT, UPSTREAM_WEB } from "../tests/source";
+import { setWidth } from "../tests/viewport";
 
 // frame.css answers upstream's markup, so these tests draw upstream's own Delivery settings form
 // in the panel and read what the cascade gives it.
@@ -193,13 +194,9 @@ test("the folded margin's rail sits on the canvas, not in upstream's dark naviga
   expect(draw(true)).toEqual(["rgb(250, 249, 247)", "rgb(93, 92, 89)"]);
 });
 
-const browser = (window as unknown as { happyDOM: { setViewport(size: { width: number }): void } })
-  .happyDOM;
-
-/** Loads `css` at `width`, and puts the width and the document back after the test. */
+/** Loads `css` at `width`, and puts the document back after the test. */
 function sheetAt(width: number, css: string) {
-  const before = window.innerWidth;
-  browser.setViewport({ width });
+  setWidth(width);
   const style = document.createElement("style");
   style.textContent = css;
   document.head.append(style);
@@ -207,7 +204,6 @@ function sheetAt(width: number, css: string) {
   cleanups.push(() => {
     host.remove();
     style.remove();
-    browser.setViewport({ width: before });
   });
   return (tag: string, attributes: Record<string, string>, parent: HTMLElement = host) => {
     const part = document.createElement(tag);
