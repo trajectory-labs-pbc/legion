@@ -18,6 +18,8 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLR-03 | Route | One page skeleton after 200 ms while the capabilities answer or the page's code is out, held 300 ms once shown | changed | Upstream draws nothing while the answer is out, then the outlet's fallback while the page's code loads |
 | MLR-04 | Route | A failed capabilities read says so, and Retry asks again | | |
 | MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
+| MLR-06 | Route | A revisit with the answer cached and the page's code loaded draws the page at once | | |
+| MLR-07 | Route | A page's code that fails to load shows the page's error | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |
 | MLP-02 | Code form | A lookup failure shows under the code field | | |
 | MLP-03 | Code form | Look up, then Deny, posts the looked-up code | | |

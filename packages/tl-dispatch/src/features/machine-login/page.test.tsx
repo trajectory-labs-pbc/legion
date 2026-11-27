@@ -5,13 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, Suspense } from "react";
 import { PageFallback } from "@/loading/page-skeleton";
 import { api } from "@/upstream/api";
+import * as resilience from "@/upstream/shell";
+import { ErrorBoundary } from "@/upstream/shell";
 import { appTree } from "../../../tests/app";
 import { changesOutsideAct, shows } from "../../../tests/outside-act";
 import { onFakeClock, tick } from "../../../tests/upstream";
 import { MachineLoginRoute } from "./page";
 
-function routeTree(): ReactNode {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+function routeTree(queryClient = newClient()): ReactNode {
   return appTree(<MachineLoginRoute />, { path: "/credentials/machine", client: queryClient });
 }
 
@@ -20,6 +23,19 @@ function renderRoute(): HTMLElement {
 }
 
 const loading = { name: "Loading the page" };
+
+/** What the page outlet shows: the page, its skeleton, or nothing. */
+const outletState = (host: HTMLElement) =>
+  shows(host, "h1")
+    ? "page"
+    : shows(host, '[role="status"][aria-label="Loading the page"]')
+      ? "skeleton"
+      : "blank";
+
+/** The route inside the page outlet's boundary, where a page that suspends draws its fallback. */
+const inOutlet = (queryClient?: QueryClient) => (
+  <Suspense fallback={<PageFallback />}>{routeTree(queryClient)}</Suspense>
+);
 
 test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {
   const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
@@ -144,34 +160,84 @@ test("MLR-03 a page skeleton whose answer comes 50 ms after it showed stays unti
   }
 });
 
-test("MLR-03 outside act, one page skeleton covers the answer and the page's code: no blank between, held 300 ms", async () => {
+test("MLR-03 outside act, one page skeleton covers the answer and the page's code that comes after it: no blank between, held 300 ms", async () => {
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
   const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  // The page's code comes 400 ms after the skeleton showed, well after the answer.
+  const code = Promise.withResolvers<void>();
+  const importWhenOnline = resilience.importWhenOnline;
+  const held = spyOn(resilience, "importWhenOnline").mockImplementation((load) =>
+    code.promise.then(() => importWhenOnline(load))
+  );
+  let codeAt = Number.POSITIVE_INFINITY;
   try {
-    // Inside the page outlet's boundary, where a page that suspends would draw its fallback.
-    const changes = await changesOutsideAct(
-      <Suspense fallback={<PageFallback />}>{routeTree()}</Suspense>,
-      (host) =>
-        shows(host, "h1")
-          ? "page"
-          : shows(host, '[role="status"][aria-label="Loading the page"]')
-            ? "skeleton"
-            : "blank",
-      {
-        done: (state) => state === "page",
-        onChange: (change) => {
-          if (change.state === "skeleton")
-            setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
-        },
-      }
-    );
+    const changes = await changesOutsideAct(inOutlet(), outletState, {
+      done: (state) => state === "page",
+      onChange: (change) => {
+        if (change.state !== "skeleton") return;
+        setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
+        setTimeout(() => {
+          codeAt = change.at + 400;
+          code.resolve();
+        }, 400);
+      },
+    });
     expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "page"]);
     const [, skeleton, page] = changes;
     expect(skeleton?.at).toBeGreaterThanOrEqual(200);
     expect((page?.at ?? 0) - (skeleton?.at ?? 0)).toBeGreaterThanOrEqual(300);
+    expect(page?.at).toBeGreaterThanOrEqual(codeAt);
   } finally {
     cleanup();
+    held.mockRestore();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+test("MLR-06 a revisit, with the answer cached and the page's code loaded, draws the page in its first commit", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
+    machine_code_page: true,
+  });
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const queryClient = newClient();
+  try {
+    const page = { done: (state: string) => state === "page" };
+    expect((await changesOutsideAct(inOutlet(queryClient), outletState, page)).at(-1)?.state).toBe(
+      "page"
+    );
+    const revisit = await changesOutsideAct(inOutlet(queryClient), outletState, {
+      ...page,
+      sync: true,
+    });
+    expect(revisit.map((change) => change.state)).toEqual(["page"]);
+  } finally {
+    cleanup();
+    queryClient.clear();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+test("MLR-07 a page's code that fails to load shows the page's error, with no skeleton or blank after it", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
+    machine_code_page: true,
+  });
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const failed = spyOn(resilience, "importWhenOnline").mockImplementation(() =>
+    Promise.reject(new Error("the chunk is gone"))
+  );
+  try {
+    const changes = await changesOutsideAct(
+      <ErrorBoundary region="this page">{inOutlet()}</ErrorBoundary>,
+      (host) => (shows(host, '[role="alert"]') ? "error" : outletState(host)),
+      { done: (state) => state === "error" }
+    );
+    expect(changes.map((change) => change.state)).toEqual(["blank", "error"]);
+  } finally {
+    cleanup();
+    failed.mockRestore();
     capabilities.mockRestore();
     logins.mockRestore();
   }

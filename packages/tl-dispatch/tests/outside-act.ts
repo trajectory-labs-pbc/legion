@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
+
+/** How long a timeline may run before it ends unfinished. */
+const TIMEOUT_MS = 1_500;
 
 /** One change of what a render shows: its name, and how many ms after the render it came. */
 export interface Change {
@@ -17,16 +21,17 @@ export function shows(host: HTMLElement, selector: string): boolean {
 /**
  * Renders `node` outside React's `act`, on real timers, as the browser runs it: `act` skips
  * React's 300 ms Suspense fallback throttle. Records each change `stateOf` names, timed in the
- * microtask after the DOM changed, until `done` answers true or `ms` pass.
+ * microtask after the DOM changed, until `done` answers true or 1.5 s pass. With `sync`, the
+ * render commits at once, as a click's does, so the first change is the first commit.
  */
 export async function changesOutsideAct(
   node: ReactNode,
   stateOf: (host: HTMLElement) => string,
   {
     done,
-    ms = 1_500,
     onChange,
-  }: { done: (state: string) => boolean; ms?: number; onChange?: (change: Change) => void }
+    sync = false,
+  }: { done: (state: string) => boolean; onChange?: (change: Change) => void; sync?: boolean }
 ): Promise<Change[]> {
   const actEnvironment: unknown = Reflect.get(globalThis, "IS_REACT_ACT_ENVIRONMENT");
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", false);
@@ -46,9 +51,10 @@ export async function changesOutsideAct(
   };
   const observer = new MutationObserver(record);
   observer.observe(host, { attributes: true, characterData: true, childList: true, subtree: true });
-  const timeout = setTimeout(finished.resolve, ms);
+  const timeout = setTimeout(finished.resolve, TIMEOUT_MS);
   try {
-    root.render(node);
+    if (sync) flushSync(() => root.render(node));
+    else root.render(node);
     record();
     await finished.promise;
   } finally {

@@ -572,7 +572,8 @@ test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 3
       expect(section.queryByText(/Loading/)).toBeNull();
 
       await tick(100);
-      const table = section.getByRole("table", { name: "Loading machine logins" });
+      expect(section.getByRole("status")).toHaveTextContent("Loading machine logins");
+      const table = section.getByRole("table");
       expect(table).toHaveAttribute("aria-busy", "true");
       const rows = within(table).getAllByRole("row").slice(1);
       expect(rows.map((row) => row.querySelectorAll('[data-slot="skeleton"]').length)).toEqual([
@@ -587,7 +588,7 @@ test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 3
       await tick(100);
       expect(section.getByText("devbox.example.com")).toBeDefined();
       expect(section.getByRole("table")).toHaveAttribute("aria-busy", "false");
-      expect(section.queryByRole("table", { name: "Loading machine logins" })).toBeNull();
+      expect(section.queryByRole("status")).toBeNull();
     });
   } finally {
     cleanup();

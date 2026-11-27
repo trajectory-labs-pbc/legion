@@ -1,13 +1,23 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ComponentType, type ReactNode, useEffect, useState } from "react";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect } from "react";
 import { ReadFailure, readFailureOf } from "@/data/read-failure";
 import { NotFound } from "@/features/not-found";
-import { lazyNamed, loadNamed } from "@/loading/lazy-named";
+import { loadNamed } from "@/loading/lazy-named";
 import { PageSkeleton, useSkeleton } from "@/loading/page-skeleton";
 import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 
-const loadPage = () => import("./machine-login-page");
-const LazyMachineLoginPage = lazyNamed(loadPage, "MachineLoginPage");
+/**
+ * The page's code, kept in the query cache so a revisit draws the page at once. A failed load
+ * throws into the error boundary, as a lazy page's does.
+ */
+const pageCodeQuery = queryOptions({
+  queryKey: ["tl-dispatch", "machine-login-page-code"],
+  queryFn: () => loadNamed(() => import("./machine-login-page"), "MachineLoginPage"),
+  gcTime: Number.POSITIVE_INFINITY,
+  staleTime: Number.POSITIVE_INFINITY,
+  retry: false,
+  throwOnError: true,
+});
 
 /**
  * Served only while the broker still serves the device grant. One skeleton covers both waits,
@@ -15,29 +25,16 @@ const LazyMachineLoginPage = lazyNamed(loadPage, "MachineLoginPage");
  */
 export function MachineLoginRoute(): ReactNode {
   const capabilities = useQuery(credentialCapabilitiesQuery());
+  const code = useQuery(pageCodeQuery);
   const queryClient = useQueryClient();
-  // The page's code; "failed" draws the lazy page, whose load fails again into the error boundary.
-  const [code, setCode] = useState<{ Page: ComponentType } | "failed">();
-  // The page's code and its logins list load beside the read.
+  // The logins list loads beside the read.
   useEffect(() => {
-    let mounted = true;
-    void loadNamed(loadPage, "MachineLoginPage").then(
-      (Page) => {
-        if (mounted) setCode({ Page });
-      },
-      () => {
-        if (mounted) setCode("failed");
-      }
-    );
     void queryClient.prefetchQuery(machineLoginsQuery());
-    return () => {
-      mounted = false;
-    };
   }, [queryClient]);
   const fault = readFailureOf(capabilities);
   const served = capabilities.data?.machine_code_page === true;
   const waiting =
-    fault === undefined && (capabilities.data === undefined || (served && code === undefined));
+    fault === undefined && (capabilities.data === undefined || (served && code.data === undefined));
   const skeleton = useSkeleton(waiting);
   if (skeleton) return <PageSkeleton />;
   if (fault !== undefined) {
@@ -47,7 +44,8 @@ export function MachineLoginRoute(): ReactNode {
       </div>
     );
   }
+  const Page = code.data;
   if (waiting) return null;
   if (!served) return <NotFound />;
-  return typeof code === "object" ? <code.Page /> : <LazyMachineLoginPage />;
+  return Page === undefined ? null : <Page />;
 }

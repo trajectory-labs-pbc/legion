@@ -146,10 +146,10 @@ function RevokeQuestionDialog({
 
 const LOADING_ROWS = [0, 1, 2];
 
-/** The list's rows while they load: still boxes as tall as a row's Revoke, with no hover fill. */
+/** The list's rows while they load: still boxes as tall as a row's Revoke. */
 function LoadingRows(): ReactNode {
   return LOADING_ROWS.map((row) => (
-    <TableRow className="hover:bg-transparent" key={row}>
+    <TableRow key={row}>
       <TableCell colSpan={COLUMNS}>
         <Skeleton className="h-control-sm w-full" />
       </TableCell>
@@ -314,9 +314,14 @@ export const MachineLogins = memo(function MachineLogins({
       {refreshFault !== undefined ? (
         <ReadFailure fault={refreshFault} noun="the latest machine logins" />
       ) : null}
+      {skeleton ? (
+        <p className="sr-only" role="status">
+          Loading machine logins
+        </p>
+      ) : null}
       {rows !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">
-          <Table aria-busy={skeleton} aria-label={skeleton ? "Loading machine logins" : undefined}>
+          <Table aria-busy={skeleton}>
             <TableHeader>
               <TableRow>
                 {HEADINGS.map((heading) => (

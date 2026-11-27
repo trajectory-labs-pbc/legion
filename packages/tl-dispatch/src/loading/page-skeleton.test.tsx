@@ -10,8 +10,6 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-const skeletonOf = (root: HTMLElement) => root.querySelector('[role="status"]');
-
 describe("PageFallback", () => {
   test("SHL-43 draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
     await onFakeClock(async () => {
@@ -20,7 +18,7 @@ describe("PageFallback", () => {
       await tick(150);
       expect(view.container.innerHTML).toBe("");
       await tick(100);
-      const skeleton = skeletonOf(view.container);
+      const skeleton = view.container.querySelector('[role="status"]');
       expect(skeleton?.getAttribute("aria-label")).toBe("Loading the page");
       expect(skeleton?.getAttribute("aria-busy")).toBe("true");
       const boxes = [...(skeleton?.querySelectorAll('[data-slot="skeleton"]') ?? [])];
