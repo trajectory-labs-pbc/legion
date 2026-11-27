@@ -6,7 +6,7 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 
 - Monochrome. Colour shows meaning only: a failed state, a state that waits on a person, a passed state, and a destructive action.
 - Corners are steps of one `--radius` (8 px): sm 4, md 6, lg 8 and xl 12 px; `--radius-badge` names sm. In tl-dispatch only a dot or an avatar is round (`rounded-full` with a `size-*`); see SU6.
-- Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
+- Every colour, corner, shadow, row height, stroke, layer, fade length and the disabled look is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
 - Geist for text (`font-sans`), Geist Mono for code values (`font-mono`).
 - Focus is a 2 px outline, offset 2 px, in `--focus` (`outline-focus`). Nothing else draws focus.
 - Dark follows the operating system.
@@ -35,6 +35,18 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | `border` | Dividers, the content panel's edge, an overlay's edge, the line under a table's header. |
 | `input` | The edge of a control: input, select, checkbox, outline button. It reaches 3:1 on the page, a card and `muted`. |
 | `sidebar-border` | The sidebar's dividers. |
+
+## Layers, fades and the disabled look
+
+| Token | Class | Use |
+| --- | --- | --- |
+| `--z-index-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow. |
+| `--z-index-overlay` (50) | `z-overlay` | Over the page: a popover, a menu, a tooltip, a dialog, a sheet, a toast, the skip link. |
+| `--transition-duration-popup` (150 ms) | `duration-popup` | The fade of a popover, a menu or a tooltip (`popupMotion`). |
+| `--transition-duration-modal` (200 ms) | `duration-modal` | The fade of a dialog, a sheet, a drawer or a scrim (`modalPopupMotion`). |
+| `--opacity-disabled` (50%) | `opacity-disabled` | A disabled control, under its disabled variant (`disabled:`, `data-disabled:`, ...). |
+
+Never write a number for a layer or a fade (`z-50`, `duration-150`): the design-rule tests refuse it. The fade's curve is Tailwind's default. A disabled control dims to `opacity-disabled` and keeps its colours; its variant may also set `pointer-events-none` or `cursor-not-allowed`, and nothing else.
 
 ## Text
 

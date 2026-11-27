@@ -60,10 +60,13 @@ installs from the default branch, not from the ref you asked for.
   the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`,
   which a record's property row also takes), a small control (`h-control-sm`), a list row of one
   line (`h-list-row-1`, 36 px, which a group header also takes) and of two lines (`h-list-row-2`,
-  56 px), and the icon stroke (`--icon-stroke`). The style test holds these four heights and no other.
+  56 px), the icon stroke (`--icon-stroke`), the two layers (`z-raised`, `z-overlay`), the two
+  fade lengths (`duration-popup`, `duration-modal`) and the disabled look (`opacity-disabled`).
+  The style test holds these four heights and no other.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
-  of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
+  of 150 to 200 ms only, layers and fade lengths named by their tokens, a disabled look of
+  `opacity-disabled` alone, no pointer cursor, no arbitrary properties, one set of dark values, and
   corners from the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and
   the only other radius is `rounded-full`, which a source check allows on seven parts only: the
   radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar
