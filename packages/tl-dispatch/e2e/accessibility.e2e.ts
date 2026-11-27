@@ -5,6 +5,7 @@
 // own axe run reads those. Fork elements passed into a marked component sit in a
 // `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
 // only: the deployed mode leaves this file out (modes.ts).
+// It also probes the pointer target of each small control the app draws (PT2).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -424,16 +425,18 @@ test("an input without its label inside an upstream widget's wrapper is left out
   expect(await scan(page, machineLogin)).toEqual([]);
 });
 
-// The pointer targets (PT2): each control the fork draws whose box is under 24 px takes the
-// pointer across 24 by 24 px around its centre, and no other target covers any of it. Probes hit
-// the pseudo-element that grows the target, which no bounding box reports.
+// The pointer targets (PT2). The pointer reaches each small control across the 24 px square on its
+// centre, and no other control's box meets that square. Probes hit the pseudo-element that grows
+// the target, which no bounding box reports. The four slots are PT2's controls; the app draws
+// only the truncated-text one today.
 const SMALL_CONTROLS = [
   '[data-slot="checkbox"]',
   '[data-slot="radio-group-item"]',
   '[data-slot="slider-thumb"]',
   'button[data-slot="truncated-text"]',
 ].join(", ");
-const TARGET_PX = 24;
+const INTERACTIVE =
+  "a[href], button, input, select, textarea, [role=checkbox], [role=radio], [role=slider], [tabindex]";
 
 /** A live machine login whose machine name is too long for its cell, so the row cuts it. */
 function cutLogin(credentialId: string): FakeLauncherCredential {
@@ -452,31 +455,90 @@ function cutLogin(credentialId: string): FakeLauncherCredential {
   };
 }
 
-test("each small control takes the pointer across 24 by 24 px, on no other target", async ({
-  page,
-}) => {
+/** The machine login page with two rows whose machine names are cut, and their two buttons. */
+async function cutRows(page: Page): Promise<Locator> {
   await setLauncherCredentials([cutLogin("cred-cut-1"), cutLogin("cred-cut-2")]);
   await page.goto("/credentials/machine");
   await expect(page.getByRole("region", { name: "Machine logins" })).toBeVisible();
-  // Two rows, each with its machine name cut.
   const controls = page.locator(MAIN).locator(SMALL_CONTROLS);
   await expect(controls).toHaveCount(2);
-  for (const control of await controls.all()) {
-    await control.scrollIntoViewIfNeeded();
-    const misses = await control.evaluate((element, size) => {
-      const box = element.getBoundingClientRect();
-      const left = box.left + box.width / 2 - size / 2;
-      const top = box.top + box.height / 2 - size / 2;
-      const offsets = [0.5, size / 4, size / 2, (size * 3) / 4, size - 0.5];
-      return offsets.flatMap((dy) =>
-        offsets.flatMap((dx) => {
-          const hit = document.elementFromPoint(left + dx, top + dy);
-          return hit !== null && element.contains(hit)
-            ? []
-            : [`(${dx}, ${dy}): ${hit?.outerHTML.slice(0, 80)}`];
-        })
-      );
-    }, TARGET_PX);
-    expect(misses, `points of the target that miss ${await control.textContent()}`).toEqual([]);
+  return controls;
+}
+
+/** What breaks PT2 at `control`: each probe of its 24 px square that the pointer does not reach
+ *  it at, and each other control whose box meets the square. A control holding it (a row link)
+ *  or held by it is not another control. */
+async function targetFaults(control: Locator): Promise<string[]> {
+  await control.scrollIntoViewIfNeeded();
+  return control.evaluate((element, interactive) => {
+    const size = 24;
+    const box = element.getBoundingClientRect();
+    const left = box.left + box.width / 2 - size / 2;
+    const top = box.top + box.height / 2 - size / 2;
+    const offsets = [0.5, size / 4, size / 2, (size * 3) / 4, size - 0.5];
+    const misses = offsets.flatMap((dy) =>
+      offsets.flatMap((dx) => {
+        const hit = document.elementFromPoint(left + dx, top + dy);
+        return hit !== null && element.contains(hit)
+          ? []
+          : [`misses (${dx}, ${dy}): ${hit?.outerHTML.slice(0, 80)}`];
+      })
+    );
+    const meets = [...document.querySelectorAll(interactive)].flatMap((other) => {
+      if (element.contains(other) || other.contains(element)) return [];
+      const at = other.getBoundingClientRect();
+      const meet =
+        at.width > 0 &&
+        at.height > 0 &&
+        at.left < left + size &&
+        at.right > left &&
+        at.top < top + size &&
+        at.bottom > top;
+      return meet ? [`meets ${other.outerHTML.slice(0, 80)}`] : [];
+    });
+    return [...misses, ...meets];
+  }, INTERACTIVE);
+}
+
+test("each small control takes the pointer across its 24 px square, which meets no other control", async ({
+  page,
+}) => {
+  for (const control of await (await cutRows(page)).all()) {
+    expect(await targetFaults(control), (await control.textContent()) ?? "").toEqual([]);
   }
+});
+
+// The check's own failures: a cut text button with no band is one line of text tall, and a control
+// whose box sits in the square meets it even where the pointer passes through it.
+test("a small control with no band misses the pointer at its square's edges", async ({ page }) => {
+  const control = (await cutRows(page)).first();
+  await page.addStyleTag({ content: '[data-slot="truncated-text"]::after { display: none; }' });
+  const faults = await targetFaults(control);
+  expect(faults.filter((fault) => fault.startsWith("misses ")).length).toBeGreaterThan(0);
+  expect(faults.filter((fault) => fault.startsWith("meets "))).toEqual([]);
+});
+
+test("a control whose box sits in a small control's square meets it", async ({ page }) => {
+  const control = (await cutRows(page)).first();
+  await control.scrollIntoViewIfNeeded();
+  await control.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const other = document.createElement("button");
+    other.type = "button";
+    other.textContent = "x";
+    Object.assign(other.style, {
+      height: "2px",
+      left: `${box.left + box.width / 2}px`,
+      overflow: "hidden",
+      padding: "0",
+      pointerEvents: "none",
+      position: "fixed",
+      top: `${box.top + box.height / 2 - 11}px`,
+      width: "2px",
+    });
+    document.body.append(other);
+  });
+  const faults = await targetFaults(control);
+  expect(faults.filter((fault) => fault.startsWith("meets ")).length).toBe(1);
+  expect(faults.filter((fault) => fault.startsWith("misses "))).toEqual([]);
 });

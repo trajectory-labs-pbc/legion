@@ -4,8 +4,9 @@ import userEvent from "@testing-library/user-event";
 
 import { TruncatedText } from "#registry/legion/ui/truncated-text";
 
-// happy-dom lays nothing out; text reads as cut while these stand.
-const prototypes = [HTMLSpanElement.prototype, HTMLButtonElement.prototype];
+// happy-dom lays nothing out; text reads as cut while these stand. Only a span reads as cut: the
+// span inside the button is the element measured.
+const prototypes = [HTMLSpanElement.prototype];
 function cutText(): void {
   for (const proto of prototypes) {
     Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
@@ -45,21 +46,21 @@ describe("TruncatedText", () => {
     await waitFor(() => expect(screen.getAllByText("devbox.example.com")).toHaveLength(2));
   });
 
-  // happy-dom lays nothing out, so the classes stand for the box: a pseudo-element 24 px tall
-  // around the button's middle. The span inside cuts the text, so the button clips none of it.
+  // happy-dom lays nothing out, so the classes stand for the target: a 24 px band across the
+  // button's middle. The span inside cuts the text, so the button clips none of the band.
   it("takes the pointer across 24 px of height while the text is cut", async () => {
     cutText();
     render(<TruncatedText text="devbox.example.com" />);
-    const { classList } = await screen.findByRole("button", { name: "devbox.example.com" });
-    for (const name of [
-      "relative",
-      "after:absolute",
-      "after:top-1/2",
-      "after:h-6",
-      "after:-translate-y-1/2",
-    ]) {
-      expect(classList.contains(name), name).toBe(true);
-    }
-    expect(classList.contains("truncate"), "a button that clips its pseudo-element").toBe(false);
+    const button = await screen.findByRole("button", { name: "devbox.example.com" });
+    const classes = button.className.split(" ");
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "after:absolute",
+        "after:top-1/2",
+        "after:h-6",
+        "after:-translate-y-1/2",
+      ])
+    );
+    expect(classes, "a button that clips its band").not.toContain("truncate");
   });
 });

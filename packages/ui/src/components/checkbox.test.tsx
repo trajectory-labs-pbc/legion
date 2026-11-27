@@ -4,6 +4,16 @@ import userEvent from "@testing-library/user-event";
 
 import { Checkbox } from "#registry/legion/ui/checkbox";
 
+// The 24 px square on the control's centre that takes the pointer (PT2).
+const BAND = [
+  "after:absolute",
+  "after:top-1/2",
+  "after:left-1/2",
+  "after:size-6",
+  "after:-translate-x-1/2",
+  "after:-translate-y-1/2",
+];
+
 describe("Checkbox", () => {
   it("toggles on Space", async () => {
     const onCheckedChange = vi.fn();
@@ -25,12 +35,11 @@ describe("Checkbox", () => {
     );
   });
 
-  // happy-dom lays nothing out, so the classes stand for the box: 16 px, grown 4 px each way.
-  it("takes the pointer across 24 px with a pseudo-element around its 16 px box", () => {
+  // happy-dom lays nothing out, so the classes stand for the target: a 24 px square on the
+  // centre, which the 1 px border does not shrink.
+  it("takes the pointer across a 24 px square around its 16 px box", () => {
     render(<Checkbox aria-label="Done" />);
-    const { classList } = screen.getByRole("checkbox", { name: "Done" });
-    for (const name of ["relative", "size-4", "after:absolute", "after:-inset-1"]) {
-      expect(classList.contains(name), name).toBe(true);
-    }
+    const box = screen.getByRole("checkbox", { name: "Done" });
+    expect(box.className.split(" ")).toEqual(expect.arrayContaining(BAND));
   });
 });

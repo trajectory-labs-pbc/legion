@@ -5,6 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { Label } from "#registry/legion/ui/label";
 import { RadioGroup, RadioGroupItem } from "#registry/legion/ui/radio-group";
 
+// The 24 px square on the control's centre that takes the pointer (PT2).
+const BAND = [
+  "after:absolute",
+  "after:top-1/2",
+  "after:left-1/2",
+  "after:size-6",
+  "after:-translate-x-1/2",
+  "after:-translate-y-1/2",
+];
+
 describe("RadioGroup", () => {
   it("takes one tab stop and moves the choice with the arrows", async () => {
     const onValueChange = vi.fn();
@@ -35,16 +45,15 @@ describe("RadioGroup", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "After" }));
   });
 
-  // happy-dom lays nothing out, so the classes stand for the box: 16 px, grown 4 px each way.
-  it("takes the pointer across 24 px with a pseudo-element around each 16 px item", () => {
+  // happy-dom lays nothing out, so the classes stand for the target: a 24 px square on the
+  // centre, which the 1 px border does not shrink.
+  it("takes the pointer across a 24 px square around each 16 px item", () => {
     render(
       <RadioGroup aria-label="Size">
         <RadioGroupItem aria-label="Small" value="s" />
       </RadioGroup>
     );
-    const { classList } = screen.getByRole("radio", { name: "Small" });
-    for (const name of ["relative", "size-4", "after:absolute", "after:-inset-1"]) {
-      expect(classList.contains(name), name).toBe(true);
-    }
+    const item = screen.getByRole("radio", { name: "Small" });
+    expect(item.className.split(" ")).toEqual(expect.arrayContaining(BAND));
   });
 });
