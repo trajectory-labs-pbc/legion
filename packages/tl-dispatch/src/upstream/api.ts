@@ -4,6 +4,7 @@ export type { WriteBounds } from "@upstream-dispatch/api/client";
 export {
   ApiError,
   api,
+  apiErrorCodeIn,
   apiErrorMessage,
   isNoIdentity,
   isUnauthorized,

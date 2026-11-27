@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "@/upstream/api";
+import { api, apiErrorCodeIn } from "@/upstream/api";
 import type { DecisionResponse, RecordResponse, StateResponse } from "@/upstream/contract";
 import { credentialPendingQuery, machineLoginsQuery } from "@/upstream/queries";
 import {
@@ -27,12 +27,18 @@ interface MachineLogin {
   /** Looks the field's code up, forgetting any decision made on the login shown before. */
   lookUp(): void;
   lookup: KeyedWrite<RecordResponse, string>;
+  /** How the field's code failed its lookup: the server refused that code, or the lookup failed
+   *  for a reason that says nothing of it. Null when the field holds another code. */
+  codeFailure: "refused" | "failed" | null;
   approve: KeyedWrite<DecisionResponse>;
   deny: KeyedWrite<StateResponse>;
   submitGuard: SubmitGuard;
   /** The login the last lookup found, with a decision made here in place of the record's own. */
   view: MachineLoginView | undefined;
 }
+
+/** The lookup's refusal that says the typed code is wrong. A blank code is never sent. */
+const CODE_REFUSALS = new Set(["NO_SUCH_CODE"]);
 
 /** The machine login page's state: the typed code, its lookup, and the two decisions. */
 export function useMachineLogin(): MachineLogin {
@@ -95,6 +101,12 @@ export function useMachineLogin(): MachineLogin {
         lookup.mutate(code);
       }),
     lookup,
+    codeFailure:
+      lookup.isError && lookedUpCode === code
+        ? apiErrorCodeIn(lookup.error, CODE_REFUSALS)
+          ? "refused"
+          : "failed"
+        : null,
     approve,
     deny,
     submitGuard,

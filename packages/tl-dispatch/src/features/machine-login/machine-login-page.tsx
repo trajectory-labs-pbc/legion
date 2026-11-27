@@ -6,7 +6,7 @@ import { Label } from "@legion/ui/components/label";
 import { textVariants } from "@legion/ui/lib/typography";
 import { type ReactNode, useEffect, useRef } from "react";
 import { WriteFailure } from "@/data/write-failure";
-import { ApiError, apiErrorMessage } from "@/upstream/api";
+import { apiErrorMessage } from "@/upstream/api";
 import { machineName } from "@/upstream/logic/machine-login";
 import { useDocumentTitle } from "@/upstream/shell";
 import { DecisionButtons } from "./decision-buttons";
@@ -52,12 +52,10 @@ function Decision({
 /** The code form's failure line, which the code field names as its description. */
 const CODE_ERROR = "machine-code-error";
 
-/** The lookup's refusals that say the typed code is wrong; any other failure leaves it valid. */
-const CODE_REFUSALS = new Set(["NO_SUCH_CODE", "CODE_REQUIRED"]);
-
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
-  const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
+  const { code, typeCode, lookUp, lookup, codeFailure, approve, deny, submitGuard, view } =
+    useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
   const codeField = useRef<HTMLInputElement>(null);
   const card = useRef<HTMLDivElement>(null);
@@ -78,10 +76,6 @@ export function MachineLoginPage(): ReactNode {
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
   const lookUpLeads = !approvable && (view === undefined || code !== "");
-  // The failure is the field's only while it still holds the code looked up.
-  const codeFailed = lookup.isError && lookup.variables === code;
-  const codeRefused =
-    codeFailed && lookup.error instanceof ApiError && CODE_REFUSALS.has(lookup.error.code ?? "");
 
   return (
     <section className="max-w-180 space-y-8">
@@ -98,8 +92,8 @@ export function MachineLoginPage(): ReactNode {
         <div className="flex flex-col gap-1">
           <Label htmlFor="machine-code">Code shown on the machine</Label>
           <Input
-            aria-describedby={codeFailed ? CODE_ERROR : undefined}
-            aria-invalid={codeRefused || undefined}
+            aria-describedby={codeFailure === null ? undefined : CODE_ERROR}
+            aria-invalid={codeFailure === "refused" || undefined}
             autoComplete="off"
             className="font-mono"
             id="machine-code"
