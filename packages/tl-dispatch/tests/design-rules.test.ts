@@ -92,13 +92,12 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="[line-height:2]">', "raw size, weight"],
   ["tsx", '<p className="[letter-spacing:.1em]">', "raw size, weight"],
   ["tsx", '<p className="[text-transform:uppercase]">', "raw size, weight"],
-  ["tsx", '<h2 className="text-balance">', "any wrap style or smoothing"],
-  ["tsx", '<p className="md:text-pretty">', "any wrap style or smoothing"],
-  ["tsx", '<p className="wrap-pretty">', "any wrap style or smoothing"],
-  ["tsx", '<p className="[text-wrap-style:stable]">', "any wrap style or smoothing"],
-  ["tsx", '<p className="md:text-wrap">', "any wrap style or smoothing"],
-  ["tsx", '<p className="hover:text-nowrap">', "any wrap style or smoothing"],
-  ["tsx", '<p className="subpixel-antialiased">', "any wrap style or smoothing"],
+  ["tsx", '<h2 className="text-balance">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<p className="wrap-pretty">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<p className="[text-wrap-style:stable]">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<p className="text-nowrap">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<p className="subpixel-antialiased">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<p className="[font-smooth:auto]">', "no wrap style, wrap mode or smoothing"],
   ["jsx", '<p className="text-sky-700">', "raw colour"],
   ["css", ".x { color: #123456; }", "raw colour"],
   ["css", ".x { color: rebeccapurple; }", "raw colour"],
@@ -106,6 +105,8 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
   ["css", ".x { animation: spin 1s; }", "motion"],
   ["css", ".x { @apply bg-sky-700; }", "@apply"],
+  ["css", ".x { text-wrap: balance; }", "no wrap style, wrap mode or smoothing"],
+  ["css", ".x { -webkit-font-smoothing: auto; }", "no wrap style, wrap mode or smoothing"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -122,7 +123,7 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<input type="checkbox" className="size-4" />'],
   [
     "tsx",
-    '<p className="text-danger text-right text-nowrap text-wrap font-mono tabular-nums capitalize">',
+    '<p className="text-danger text-right whitespace-nowrap font-mono tabular-nums capitalize">',
   ],
   [
     "tsx",
