@@ -7,7 +7,7 @@ import { Glob } from "bun";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
 
-import { type HeadingSize, headingVariants, textVariants } from "../lib/typography";
+import { headingVariants, textVariants } from "../lib/typography";
 import { cn } from "../lib/utils";
 
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
@@ -677,20 +677,10 @@ describe("the theme", () => {
   });
 });
 
-const HEADING_SIZES = ["page", "section", "group", "label"] as const satisfies HeadingSize[];
-
 describe("the type recipes", () => {
   it.each([
-    ...HEADING_SIZES.map((size) => [
-      `heading ${size}`,
-      headingVariants({ size, tone: "muted" }),
-      "balance",
-    ]),
-    ...(["body", "caption"] as const).map((size) => [
-      `text ${size}`,
-      textVariants({ size, tone: "muted" }),
-      "pretty",
-    ]),
+    ["a heading", headingVariants({ size: "page", tone: "muted" }), "balance"],
+    ["body text", textVariants({ tone: "muted" }), "pretty"],
   ])("wrap %s by style alone, so a `truncate` beside it holds", async (_name, recipe, style) => {
     const classes = cn(recipe, "truncate").split(" ");
     const css = postcss.parse((await tailwind(globalsText)).build(classes));

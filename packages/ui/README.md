@@ -63,9 +63,9 @@ installs from the default branch, not from the ref you asked for.
   56 px), and the icon stroke (`--icon-stroke`). The style test holds these four heights and no other.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
-  of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
-  corners from the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and
-  the only other radius is `rounded-full`, which a source check allows on seven parts only: the
+  of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, text
+  smoothed once on the root, type recipes that set only a wrap style, and corners from the theme.
+  `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and the only other radius is `rounded-full`, which a source check allows on seven parts only: the
   radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar
   group's count. A list row draws its focus outline inside itself, as a scroll container does, so
   its list does not clip it; every other part draws it 2 px outside. It also checks the contrast of

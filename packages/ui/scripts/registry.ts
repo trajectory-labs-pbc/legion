@@ -176,7 +176,7 @@ function themeItem(tokens: Root, css: Root): RegistryItem {
     type: "registry:theme",
     title: "Theme",
     description:
-      "Light and dark colours, a focus colour, corners from one radius, two shadows, and a dark variant that follows the OS setting unless the root has .light, or a .dark class.",
+      "Light and dark colours, a focus colour, corners from one radius, two shadows, text smoothed on the root, the wrap-balance and wrap-pretty utilities, and a dark variant that follows the OS setting unless the root has .light, or a .dark class.",
     cssVars: { theme, light: variables(light), dark: variables(dark) },
     css: toJson([
       atRule(css, "custom-variant", "dark"),

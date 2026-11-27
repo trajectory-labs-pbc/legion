@@ -27,20 +27,18 @@ describe("registry.json", () => {
     expect(committed, "run `bun run registry` in packages/ui").toEqual(buildRegistry());
   });
 
-  it("installs the theme's base rules beside the stylesheet's, so an icon draws at the theme's stroke", () => {
+  it("installs the theme's base rules beside the stylesheet's, and its utilities", () => {
     const theme = buildRegistry().items.find((item) => item.name === "theme");
-    const base = (theme as { css?: Record<string, Record<string, unknown>> } | undefined)?.css?.[
-      "@layer base"
-    ];
+    const css = (theme as { css?: Record<string, Record<string, unknown>> } | undefined)?.css;
+    const base = css?.["@layer base"];
     expect(base?.['svg.lucide[stroke-width="2"]']).toEqual({
       "stroke-width": "var(--icon-stroke)",
     });
     expect(base?.body).toEqual({ "@apply bg-background text-foreground": {} });
-  });
-
-  it("installs the theme's utilities, so the type recipes' wrap classes draw", () => {
-    const theme = buildRegistry().items.find((item) => item.name === "theme");
-    const css = (theme as { css?: Record<string, unknown> } | undefined)?.css;
+    expect(base?.html).toEqual({
+      "-webkit-font-smoothing": "antialiased",
+      "-moz-osx-font-smoothing": "grayscale",
+    });
     expect(css?.["@utility wrap-balance"]).toEqual({ "text-wrap-style": "balance" });
     expect(css?.["@utility wrap-pretty"]).toEqual({ "text-wrap-style": "pretty" });
   });
