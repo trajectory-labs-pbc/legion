@@ -15,6 +15,7 @@ export const RULES = [
   "no-cycles",
   "imports-are-readable",
   "upstream-app-never-loads",
+  "views-are-marked",
 ] as const;
 
 export type Rule = (typeof RULES)[number];
@@ -57,10 +58,18 @@ export const ONE_ROW: Partial<Record<Layer, readonly string[]>> = {
 /** Files directly under src/ that are in no layer: the entry, the view map and the stylesheets. */
 export const ROOT_FILES: readonly string[] = ["src/main.tsx", "src/views.ts", "src/*.css"];
 
+/** The readers of a page's view, a file or a folder. */
+const PAGE_VIEW_READERS: readonly Reader[] = [
+  "src/features/<page>/route.tsx",
+  "src/features/<page>/page.tsx",
+  // Until the features move.
+  "src/pages/<page>.tsx",
+];
+
 /**
  * The readers of each seam file and each root file. A `<page>` in a reader stands for the
- * `<page>` of the file read. A test may read each seam file; a seam file or a root file that this
- * table does not list has no other reader.
+ * `<page>` of the file read. A seam file may read another, and a test may read each one; a seam
+ * file or a root file that this table does not list has no other reader.
  */
 export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/contract.ts": ["data", "app"],
@@ -68,19 +77,18 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/queries.ts": ["data", "app"],
   "src/upstream/live.ts": ["data", "app"],
   "src/upstream/writes.ts": ["data", "app"],
+  // Registers upstream's kinds of writes once, where the app starts.
+  "src/upstream/write-kinds.ts": ["data", "app"],
   "src/upstream/data-hooks.ts": ["data", "app"],
   "src/upstream/logic/*.ts": ["data"],
   "src/upstream/routes.ts": ["navigation"],
   "src/upstream/keys.ts": ["commands"],
   "src/upstream/shell.tsx": ["shell", "parts", "features", "loading", "app", "src/main.tsx"],
+  // `upstreamView` for the seam files, and `ForkView` for fork code inside a marked component.
+  "src/upstream/mark.tsx": ["shell", "loading", "app", "parts", "features"],
   "src/upstream/widgets/*.tsx": ["parts", "features", "shell"],
-  "src/upstream/views/<page>.tsx": [
-    "src/features/<page>/route.tsx",
-    "src/features/<page>/page.tsx",
-    // Until the features move.
-    "src/pages/<page>.tsx",
-  ],
-  "src/upstream/views/<page>": ["src/features/<page>/route.tsx", "src/features/<page>/page.tsx"],
+  "src/upstream/views/<page>.tsx": PAGE_VIEW_READERS,
+  "src/upstream/views/<page>": PAGE_VIEW_READERS,
   "src/views.ts": ["tests/map"],
   "src/*.css": ["src/main.tsx", "src/styles.css"],
 };
@@ -89,6 +97,11 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
 export const UPSTREAM_DOORS: Readonly<Record<string, string>> = {
   "tests/upstream.ts": "the one door for the tests: upstream's test helpers and test-only modules",
   "src/styles.css": "a stylesheet re-exports nothing; it compiles upstream's classes into the app",
+};
+
+/** The names a `views/` or `widgets/` file gives unmarked, each with its reason (tests/layers.md). */
+export const UNMARKED: Readonly<Record<string, string>> = {
+  LiveViewRoute: "renders null; the live view draws in MountedLiveViews",
 };
 
 /** The libraries that only their owners import. A test may import one that `tests` marks. */
