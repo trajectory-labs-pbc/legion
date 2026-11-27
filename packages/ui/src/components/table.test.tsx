@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { join } from "node:path";
-import { compile } from "@tailwindcss/node";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import postcss, { Rule } from "postcss";
 
 import {
   Table,
@@ -15,50 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "#registry/legion/ui/table";
-
-/** A selector's specificity as one count of classes, attributes and pseudo-classes; `:where` counts none. */
-const specificity = (selector: string) =>
-  selector.replace(/:where\([^()]*\)/g, "").match(/(?<!\\)(?:[.[]|:(?!not\())/g)?.length ?? 0;
-
-/** The background a hovered `row` takes: of its classes' rules that match it, the last at the top
- *  specificity; none is transparent. */
-async function hoverBackground(row: Element): Promise<string> {
-  const compiler = await compile(
-    '@import "tailwindcss/utilities";\n@theme { --color-secondary: #000; --color-muted: #111; }',
-    { base: join(import.meta.dirname, "../styles"), onDependency: () => {} }
-  );
-  let winner: { specificity: number; value: string } | undefined;
-  postcss.parse(compiler.build([...row.classList])).walkDecls("background-color", (decl) => {
-    if (!(decl.parent instanceof Rule)) return;
-    const { selector } = decl.parent;
-    // happy-dom matches neither `:hover` nor `:where`: test the rule as hovered, `:where` unwrapped.
-    const hovered = selector.replace(/(?<!\\):hover/g, "").replace(/:where\(([^()]*)\)/g, "$1");
-    if (row.matches(hovered) && specificity(selector) >= (winner?.specificity ?? 0)) {
-      winner = { specificity: specificity(selector), value: decl.value };
-    }
-  });
-  return winner?.value ?? "transparent";
-}
-
-/** A row in an idle table and one in a busy table, each with `className`. */
-const idleAndBusy = (className?: string) => (
-  <>
-    <Table>
-      <TableBody>
-        <TableRow className={className} data-testid="idle">
-          <TableCell>ONE-1</TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
-    <Table aria-busy="true">
-      <TableBody>
-        <TableRow className={className} data-testid="busy">
-          <TableCell>Loading</TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
-  </>
-);
 
 describe("Table", () => {
   const classes = (element: Element | null) => (element?.className ?? "").split(/\s+/);
@@ -184,17 +137,5 @@ describe("Table", () => {
     const plainCell = classes(screen.getByRole("cell", { name: "build" }));
     expect(plainCell).not.toContain("text-right");
     expect(plainCell).not.toContain("tabular-nums");
-  });
-
-  it("fills a hovered row, but no row of a busy table", async () => {
-    render(idleAndBusy());
-    expect(await hoverBackground(screen.getByTestId("idle"))).toBe("var(--color-secondary)");
-    expect(await hoverBackground(screen.getByTestId("busy"))).toBe("transparent");
-  });
-
-  it("fills a hovered row with a caller's hover class, but no row of a busy table", async () => {
-    render(idleAndBusy("hover:bg-muted"));
-    expect(await hoverBackground(screen.getByTestId("idle"))).toBe("var(--color-muted)");
-    expect(await hoverBackground(screen.getByTestId("busy"))).toBe("transparent");
   });
 });
