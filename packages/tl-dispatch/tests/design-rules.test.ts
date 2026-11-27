@@ -64,6 +64,8 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p style={{ "--background": "#fff" }} />', "a custom property"],
   ["tsx", "<p style={{ transition: 'all 1s' }} />", "motion set in a style"],
   ["tsx", "<p style={{ minHeight: 30 }} />", "a height set in a style"],
+  ["tsx", "<p style={{ textWrap: 'balance' }} />", "a wrap or font smoothing set"],
+  ["tsx", "<p style={{ WebkitFontSmoothing: 'auto' }} />", "a wrap or font smoothing set"],
   ["tsx", "<p style={styles} />", "object literal"],
   ["tsx", "const panelStyle = { backgroundColor: 'red' };", "a colour set in a style"],
   ["tsx", "element.style.borderRadius = '4px';", "a radius set in a style"],
@@ -92,12 +94,12 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="[line-height:2]">', "raw size, weight"],
   ["tsx", '<p className="[letter-spacing:.1em]">', "raw size, weight"],
   ["tsx", '<p className="[text-transform:uppercase]">', "raw size, weight"],
-  ["tsx", '<h2 className="text-balance">', "font smoothing"],
-  ["tsx", '<p className="wrap-pretty">', "font smoothing"],
-  ["tsx", '<p className="[text-wrap-style:stable]">', "font smoothing"],
-  ["tsx", '<p className="text-nowrap">', "font smoothing"],
-  ["tsx", '<p className="subpixel-antialiased">', "font smoothing"],
-  ["tsx", '<p className="[font-smooth:auto]">', "font smoothing"],
+  ["tsx", '<h2 className="text-balance">', "`text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="wrap-pretty">', "`text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="[text-wrap-style:stable]">', "`text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="text-nowrap">', "`text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="subpixel-antialiased">', "`text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="[font-smooth:auto]">', "`text-wrap*` property or font smoothing"],
   ["jsx", '<p className="text-sky-700">', "raw colour"],
   ["css", ".x { color: #123456; }", "raw colour"],
   ["css", ".x { color: rebeccapurple; }", "raw colour"],
@@ -105,8 +107,8 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
   ["css", ".x { animation: spin 1s; }", "motion"],
   ["css", ".x { @apply bg-sky-700; }", "@apply"],
-  ["css", ".x { text-wrap: balance; }", "font smoothing"],
-  ["css", ".x { -webkit-font-smoothing: auto; }", "font smoothing"],
+  ["css", ".x { text-wrap: balance; }", "`text-wrap*` property or font smoothing"],
+  ["css", ".x { -webkit-font-smoothing: auto; }", "`text-wrap*` property or font smoothing"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -121,10 +123,7 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<button className="h-8 px-3">'],
   ["tsx", '<button className="min-h-11">'],
   ["tsx", '<input type="checkbox" className="size-4" />'],
-  [
-    "tsx",
-    '<p className="text-danger text-right whitespace-nowrap font-mono tabular-nums capitalize">',
-  ],
+  ["tsx", '<p className="text-danger text-right truncate font-mono tabular-nums capitalize">'],
   [
     "tsx",
     '<a className="outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">',
@@ -140,8 +139,7 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
-  // A stylesheet answers upstream's markup, so it may set size, weight, leading, tracking,
-  // uppercase and lowercase; a class may not. Neither sets the wrap nor the smoothing.
+  // A stylesheet answers upstream's markup, so it may set type; a class may not.
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
 ];
 

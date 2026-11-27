@@ -389,6 +389,7 @@ function styleKeyKind(key: string): string | undefined {
   if (/^(animation|transition)/i.test(camel)) return "motion";
   if (camel === "scale") return "a scale";
   if (camel === "cursor") return "a cursor";
+  if (/^textWrap|fontSmooth/i.test(camel)) return "a wrap or font smoothing";
   return undefined;
 }
 
