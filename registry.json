@@ -1340,6 +1340,28 @@
       ]
     },
     {
+      "name": "selection-bar",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/selection-bar.tsx",
+          "type": "registry:component",
+          "target": "@components/selection-bar.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
       "name": "shortcuts-sheet",
       "type": "registry:block",
       "dependencies": [
