@@ -567,17 +567,18 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
 }
 
 /** What scrolls sideways once upstream's views and what `region` leaves out are hidden: the page
- *  itself, and each box that scrolls. */
+ *  itself, and each box that scrolls. A table's own box may scroll (FR4): packages/ui's Table
+ *  scrolls a table wider than its column inside that box. */
 async function sidewaysScrolls(page: Page, region: Region): Promise<string[]> {
   const hidden = [UPSTREAM_VIEW, ...(region.exclude ?? [])].join(", ");
   await page.addStyleTag({ content: `${hidden} { display: none !important; }` });
-  return page.evaluate(() => {
+  return page.evaluate((table) => {
     const scrolls: string[] = [];
     const root = document.scrollingElement ?? document.documentElement;
     if (root.scrollWidth > root.clientWidth) {
       scrolls.push(`the page: ${root.scrollWidth} px in ${root.clientWidth} px`);
     }
-    for (const box of document.body.querySelectorAll("*")) {
+    for (const box of document.body.querySelectorAll(`:not(${table})`)) {
       const { overflowX } = getComputedStyle(box);
       if (overflowX !== "auto" && overflowX !== "scroll") continue;
       if (box.scrollWidth <= box.clientWidth) continue;
@@ -591,7 +592,7 @@ async function sidewaysScrolls(page: Page, region: Region): Promise<string[]> {
       );
     }
     return scrolls;
-  });
+  }, '[data-slot="table-container"]');
 }
 
 function scanEach(list: readonly Region[]): void {
