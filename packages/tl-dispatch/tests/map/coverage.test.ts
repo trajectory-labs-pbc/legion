@@ -142,12 +142,13 @@ describe("the view map", () => {
     const at = (name: string) => join(forkSrc, "probe", name);
     const text = [
       'import type { A } from "./a";',
+      'import { type B } from "./b";',
       'import { type C, D } from "./c";',
       'export type { E } from "./e";',
       'export { F } from "./f";',
       'const G = lazy(() => import("./g"));',
     ].join("\n");
-    const modules = ["a", "c", "e", "f", "g"].map((name) => [at(`${name}.ts`), ""] as const);
+    const modules = ["a", "b", "c", "e", "f", "g"].map((name) => [at(`${name}.ts`), ""] as const);
     const files = filesWith(new Map([[at("x.tsx"), text], ...modules]));
     expect(loadedFiles(at("x.tsx"), files)).toEqual([at("c.ts"), at("f.ts"), at("g.ts")]);
   });
