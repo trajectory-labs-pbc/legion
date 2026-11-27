@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { headerBarClass, headerEndClass } from "#registry/legion/lib/header-styles";
 import { isDrawn } from "#registry/legion/lib/utils";
 import { Count } from "#registry/legion/ui/count";
 import { SurfaceTitle } from "#registry/legion/ui/heading";
@@ -22,10 +23,7 @@ function ViewHeader({
   end?: ReactNode;
 }) {
   return (
-    <header
-      className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3"
-      data-slot="view-header"
-    >
+    <header className={headerBarClass} data-slot="view-header">
       {start}
       <SurfaceTitle className="truncate" size="group">
         {title}
@@ -34,7 +32,7 @@ function ViewHeader({
       {isDrawn(tabs) ? (
         <div className="flex min-w-0 items-center gap-1 overflow-hidden">{tabs}</div>
       ) : null}
-      {isDrawn(end) ? <div className="ml-auto flex shrink-0 items-center gap-1">{end}</div> : null}
+      {isDrawn(end) ? <div className={headerEndClass}>{end}</div> : null}
     </header>
   );
 }

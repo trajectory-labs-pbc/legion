@@ -1435,6 +1435,38 @@
       ]
     },
     {
+      "name": "properties-panel",
+      "type": "registry:block",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/properties-panel.tsx",
+          "type": "registry:component",
+          "target": "@components/properties-panel.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tooltip.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/truncated-text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/truncated-text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
       "name": "read-boundary",
       "type": "registry:block",
       "dependencies": [],
@@ -1443,6 +1475,55 @@
           "path": "packages/ui/src/blocks/read-boundary.tsx",
           "type": "registry:component",
           "target": "@components/read-boundary.tsx"
+        }
+      ]
+    },
+    {
+      "name": "record-header",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/record-header.tsx",
+          "type": "registry:component",
+          "target": "@components/record-header.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/header-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/header-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
+      "name": "record-view",
+      "type": "registry:block",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/record-view.tsx",
+          "type": "registry:component",
+          "target": "@components/record-view.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
         }
       ]
     },
@@ -1603,6 +1684,11 @@
           "path": "packages/ui/src/components/heading.tsx",
           "type": "registry:ui",
           "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/header-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/header-styles.ts"
         },
         {
           "path": "packages/ui/src/lib/typography.ts",

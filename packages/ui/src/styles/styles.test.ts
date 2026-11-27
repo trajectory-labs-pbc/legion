@@ -530,8 +530,9 @@ const CONTRASTS: readonly (readonly [string, string, number])[] = [
   ["accent", "popover", 1.3],
 ];
 
-// The theme's heights, in steps of --spacing (4 px): a table row, a small control, and a list row of
-// one line (a group header too) and of two lines. A list row takes one of the two, never a third.
+// The theme's heights, in steps of --spacing (4 px): a table row (a property row too), a small
+// control, and a list row of one line (a group header too) and of two lines. A list row takes one of
+// the two, never a third.
 const HEIGHTS = { row: 8, "control-sm": 7, "list-row-1": 9, "list-row-2": 14 };
 
 /** Each `--spacing-*` token of the stylesheet's theme, as its steps of --spacing. */
