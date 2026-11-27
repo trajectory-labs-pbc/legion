@@ -41,4 +41,13 @@ describe("Checkbox", () => {
     const box = screen.getByRole("checkbox", { name: "Done" });
     expect(box.className.split(" ")).toEqual(expect.arrayContaining(BAND));
   });
+
+  // Base UI renders a span with no display of its own: inline, it would draw 2 px wide.
+  it("draws a 16 px box with its mark centred", () => {
+    render(<Checkbox aria-label="Done" />);
+    const box = screen.getByRole("checkbox", { name: "Done" });
+    expect(box.className.split(" ")).toEqual(
+      expect.arrayContaining(["inline-flex", "size-4", "items-center", "justify-center"])
+    );
+  });
 });
