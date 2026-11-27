@@ -58,7 +58,7 @@ describe("ShortcutsSheet", () => {
     );
   });
 
-  it("puts its list in the tab order as a named region, with the focus ring", async () => {
+  it("puts its list in the tab order as a named region, with the focus outline", async () => {
     sheet();
     const dialog = await screen.findByRole("dialog");
     const list = within(dialog).getByRole("region", { name: "Shortcuts" });
