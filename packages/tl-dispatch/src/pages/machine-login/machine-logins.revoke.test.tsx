@@ -29,7 +29,23 @@ const other = {
   name: "Revoke the machine login for laptop.example.com, credential cred-laptop",
 };
 
-function stub(revokeCall: (id: string) => Promise<void>) {
+/** A third row, listed after the other two. */
+const tablet = {
+  approved_by: "ada@example.com",
+  credential_id: "cred-tablet",
+  expired: false,
+  expires_at: "2026-10-08T08:00:00Z",
+  host: "tablet.example.com",
+  issued_at: "2026-10-01T08:00:00Z",
+  person: null,
+  service: null,
+  subject: null,
+};
+const tabletRevoke = {
+  name: "Revoke the machine login for tablet.example.com, credential cred-tablet",
+};
+
+function stub(revokeCall: (id: string) => Promise<void>, more: (typeof tablet)[] = []) {
   let credentials = [
     {
       approved_by: "ada@example.com",
@@ -53,6 +69,7 @@ function stub(revokeCall: (id: string) => Promise<void>) {
       service: null,
       subject: null,
     },
+    ...more,
   ];
   const list = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials });
   const spy = spyOn(api, "revokeMachineLogin").mockImplementation(revokeCall);
@@ -263,6 +280,38 @@ test("RVL-10 a revoked row hands the focus to a listed Revoke, not to a cut name
     }
   }
 });
+
+/** Revokes the `revoked` row of three and expects the focus on `next` once the row goes. */
+async function revokeOneOfThree(revoked: { name: string }, next: { name: string }) {
+  const user = userEvent.setup();
+  const out = Promise.withResolvers<void>();
+  const stubs = stub(
+    async (id) => {
+      stubs.dropRow(id);
+      await out.promise;
+    },
+    [tablet]
+  );
+  try {
+    await renderSection();
+    const button = screen.getByRole("button", revoked);
+    await user.click(button);
+    await confirmRevoke(user);
+    await waitFor(() => expect(button).toHaveFocus());
+    out.resolve();
+    await waitFor(() => expect(button).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", next)).toHaveFocus());
+  } finally {
+    cleanup();
+    stubs.restore();
+  }
+}
+
+test("RVL-11 a revoked row hands the focus to the next row's Revoke", () =>
+  revokeOneOfThree(other, tabletRevoke));
+
+test("RVL-12 the last row, once revoked, hands the focus to the row before it", () =>
+  revokeOneOfThree(tabletRevoke, other));
 
 test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with a Retry", async () => {
   const user = userEvent.setup();

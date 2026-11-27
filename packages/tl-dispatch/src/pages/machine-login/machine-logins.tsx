@@ -81,10 +81,13 @@ function RevokeButton({
   login,
   question,
   revoke,
+  row,
 }: {
   login: LauncherCredentialResp;
   question: RevokeQuestion;
   revoke: Revoke;
+  /** The row's place in the list, which the focus reads once the row goes. */
+  row: number;
 }): ReactNode {
   const pending = revoke.pending?.credential_id === login.credential_id;
   return (
@@ -94,7 +97,7 @@ function RevokeButton({
       render={
         <Button
           aria-label={`Revoke ${loginName(login)}`}
-          data-row-revoke
+          data-row-revoke={row}
           disabled={revoke.pending !== undefined && !pending}
           loading={pending}
           size="sm"
@@ -163,7 +166,7 @@ function LoginRows({
     );
   }
   const { refused } = revoke;
-  return logins.map((login) => (
+  return logins.map((login, row) => (
     <Fragment key={login.credential_id}>
       <TableRow>
         <TableCell className={textVariants({ className: CUT_CELL, weight: "medium" })}>
@@ -200,7 +203,7 @@ function LoginRows({
           <Timestamp at={login.expires_at} className="whitespace-nowrap tabular-nums" />
         </TableCell>
         <TableCell className="text-right">
-          <RevokeButton login={login} question={question} revoke={revoke} />
+          <RevokeButton login={login} question={question} revoke={revoke} row={row} />
         </TableCell>
       </TableRow>
       {refused?.credential_id === login.credential_id ? (
@@ -219,9 +222,15 @@ function LoginRows({
   ));
 }
 
-/** Where the focus goes once a revoked row takes its Revoke away: a listed Revoke, else `above`. */
-const afterRevoke = (root: HTMLElement | null, above: HTMLElement | null) =>
-  firstUsable(...(root?.querySelectorAll<HTMLElement>("[data-row-revoke]") ?? []), above);
+const rowOf = (revoke: HTMLElement | null | undefined) => Number(revoke?.dataset.rowRevoke ?? 0);
+
+/** Where the focus goes once a revoked row takes its Revoke away: the Revoke now drawn in row `at`
+ *  (the next row's), else the nearest one before it, else `above`. */
+function afterRevoke(root: HTMLElement | null, above: HTMLElement | null, at = 0) {
+  const revokes = [...(root?.querySelectorAll<HTMLElement>("[data-row-revoke]") ?? [])];
+  const before = revokes.filter((revoke) => rowOf(revoke) < at).reverse();
+  return firstUsable(...revokes.filter((revoke) => rowOf(revoke) >= at), ...before, above);
+}
 
 /** The machine logins the viewer may revoke that can still reach a secret; `newCredential` is the
  *  one this page just approved, marked New. Memoized, so a keystroke in the page's code field
@@ -238,9 +247,16 @@ export const MachineLogins = memo(function MachineLogins({
   const [howOpen, setHowOpen] = useState(false);
   const section = useRef<HTMLElement>(null);
   const howTrigger = useRef<HTMLButtonElement>(null);
-  const fallbacks: readonly FocusFallback[] = [({ root }) => afterRevoke(root, howTrigger.current)];
+  const fallbacks: readonly FocusFallback[] = [
+    // The gone row keeps its Revoke, which names the row it stood in.
+    ({ lost, root }) => {
+      const gone = lost.closest("tr")?.querySelector<HTMLElement>("[data-row-revoke]");
+      return afterRevoke(root, howTrigger.current, rowOf(gone));
+    },
+  ];
   useFocusKeeper(section, fallbacks);
-  // Back to its row's Revoke, or, once a revoke took the row, where the keeper would put it.
+  // Back to its row's Revoke, else, once a revoke took the row, the first listed Revoke: the
+  // question knows its login, not the row the login stood in.
   const finalFocus = (login: LauncherCredentialResp) =>
     isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
   const fault = readFailureOf(logins);
