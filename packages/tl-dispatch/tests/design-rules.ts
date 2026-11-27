@@ -378,7 +378,7 @@ function styleRule(property: string): string | undefined {
     return `a custom property, which can override a theme token ${RULES.style}`;
   }
   if (WRAP_OR_SMOOTHING.test(property)) return RULES.wrap;
-  const what = styleKind(property.replace(/^-?(webkit|moz|ms)-/, ""));
+  const what = styleKind(property.replace(/^-(webkit|moz|ms)-/, ""));
   return what === undefined ? undefined : `${what} ${RULES.style}`;
 }
 
@@ -475,12 +475,16 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // React and the DOM read a camelCase key, or a dashed one as written; `setProperty` lower-cases
-  // any name but a custom property's.
+  // React and the DOM read a camelCase key, where a leading `webkit` or `ms` is a vendor prefix,
+  // or a dashed one as written; `setProperty` lower-cases any name but a custom property's.
   const styleKey = (
     node: ts.Node,
     key: string,
-    property = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    property = key.includes("-")
+      ? key
+      : key
+          .replace(/^(webkit|ms)(?=[A-Z])/, "-$1")
+          .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
   ) => {
     const rule = styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
