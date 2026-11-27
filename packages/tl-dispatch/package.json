@@ -20,7 +20,8 @@
   },
   "devDependencies": {
     "@tailwindcss/node": "4.3.3",
-    "@tailwindcss/oxide": "4.3.3"
+    "@tailwindcss/oxide": "4.3.3",
+    "postcss": "8.5.32"
   },
   "rootPackages": [
     "@biomejs/biome",

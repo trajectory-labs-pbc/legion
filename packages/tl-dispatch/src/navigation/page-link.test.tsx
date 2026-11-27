@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
+import { fireEvent, render } from "@testing-library/react";
 import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
+import { renderWithQueries } from "@upstream-dispatch/__tests__/query-provider";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { MemoryNavigationProvider } from "../../tests/navigation";
-import { render, settle } from "../../tests/react";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
 import { pageRoute, prefetchOf } from "./page-route";
 
@@ -23,28 +24,19 @@ function slowRead() {
   return { log, options, answer: () => answer() };
 }
 
-const mounted: { unmount(): void }[] = [];
-afterEach(() => {
-  for (const view of mounted.splice(0)) view.unmount();
-});
-
+/** Draws `children` at `/` over the test's own client, which the test reads. */
 function mount(client: QueryClient, children: ReactNode) {
   const view = render(
     <QueryClientProvider client={client}>
       <MemoryNavigationProvider path="/">{children}</MemoryNavigationProvider>
     </QueryClientProvider>
   );
-  mounted.push(view);
   const link = view.container.querySelector("a");
   if (link === null) throw new Error("no link");
-  return link;
+  return { link, unmount: view.unmount };
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const fire = (link: HTMLElement, type: string) =>
-  settle(() => {
-    link.dispatchEvent(new Event(type, { bubbles: true }));
-  });
 
 function setup() {
   const read = slowRead();
@@ -59,7 +51,7 @@ function setup() {
 describe("PageLink", () => {
   test("links to the typed address", () => {
     const { page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
@@ -70,13 +62,13 @@ describe("PageLink", () => {
 
   test("starts the page's read once the pointer rests on it", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
+    fireEvent.pointerOver(link);
     await wait(PREFETCH_INTENT_MS + 50);
     expect(read.log).toEqual(["start"]);
     read.answer();
@@ -86,31 +78,31 @@ describe("PageLink", () => {
 
   test("control: a pointer that passes through starts nothing", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
-    fire(link, "pointerout");
+    fireEvent.pointerOver(link);
+    fireEvent.pointerOut(link);
     await wait(PREFETCH_INTENT_MS + 50);
     expect(read.log).toEqual([]);
   });
 
   test("focus starts the read at once, and losing focus keeps it", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "focusin");
+    fireEvent.focusIn(link);
     await wait(0);
     expect(read.log).toEqual(["start"]);
     // The shell moves focus to the page after a click, before a lazy page reads.
-    fire(link, "focusout");
+    fireEvent.focusOut(link);
     await wait(0);
     expect(read.log).toEqual(["start"]);
     read.answer();
@@ -120,15 +112,15 @@ describe("PageLink", () => {
 
   test("the pointer leaving keeps a read that started, so its answer is cached", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
+    fireEvent.pointerOver(link);
     await wait(PREFETCH_INTENT_MS + 50);
-    fire(link, "pointerout");
+    fireEvent.pointerOut(link);
     await wait(0);
     expect(read.log).toEqual(["start"]);
     read.answer();
@@ -138,27 +130,27 @@ describe("PageLink", () => {
 
   test("a click during the wait keeps the read the wait then starts", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
-    fire(link, "click");
+    fireEvent.pointerOver(link);
+    fireEvent.click(link);
     await wait(PREFETCH_INTENT_MS + 50);
     expect(read.log).toEqual(["start"]);
   });
 
   test("the pointer must rest the whole wait: half of it starts nothing", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
+    fireEvent.pointerOver(link);
     await wait(PREFETCH_INTENT_MS / 2);
     expect(read.log).toEqual([]);
     await wait(PREFETCH_INTENT_MS);
@@ -167,14 +159,14 @@ describe("PageLink", () => {
 
   test("a link unmounted during the wait starts nothing", async () => {
     const { read, page, client } = setup();
-    const link = mount(
+    const { link, unmount } = mount(
       client,
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
     );
-    fire(link, "pointerover");
-    for (const view of mounted.splice(0)) view.unmount();
+    fireEvent.pointerOver(link);
+    unmount();
     await wait(PREFETCH_INTENT_MS + 50);
     expect(read.log).toEqual([]);
   });
@@ -182,7 +174,7 @@ describe("PageLink", () => {
   test("takes no params for a page whose path binds none, and requires them where it does", () => {
     const { page, client } = setup();
     const home = pageRoute({ path: "/", element: null });
-    const link = mount(client, <PageLink page={home}>Home</PageLink>);
+    const { link } = mount(client, <PageLink page={home}>Home</PageLink>);
     expect(link.getAttribute("href")).toBe("/");
     // React logs the render error it rethrows.
     quietConsoleError();
@@ -201,16 +193,12 @@ function Place() {
 }
 
 function place(path: string, children: ReactNode) {
-  const view = render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryNavigationProvider path={path}>
-        {children}
-        <Place />
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
-  );
-  mounted.push(view);
-  return view.container;
+  return renderWithQueries(
+    <MemoryNavigationProvider path={path}>
+      {children}
+      <Place />
+    </MemoryNavigationProvider>
+  ).container;
 }
 
 describe("replace", () => {
@@ -226,7 +214,9 @@ describe("replace", () => {
         Box
       </PageLink>
     );
-    settle(() => container.querySelector("a")?.click());
+    const link = container.querySelector("a");
+    if (link === null) throw new Error("no link");
+    fireEvent.click(link);
     expect(container.querySelector("output")?.textContent).toBe(moved);
   });
 

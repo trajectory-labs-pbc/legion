@@ -1,7 +1,5 @@
 /** Control heights, in Tailwind spacing steps (1 step = 4 px): 24, 28, 32 and 36 px. */
-export const CONTROL_HEIGHTS = { xs: 6, sm: 7, md: 8, lg: 9 } as const;
-
-export type ControlSize = keyof typeof CONTROL_HEIGHTS;
+export const CONTROL_HEIGHTS = [6, 7, 8, 9] as const;
 
 /** The least height of a control on a coarse pointer: 44 px. */
 export const TOUCH_MIN_HEIGHT = 11;

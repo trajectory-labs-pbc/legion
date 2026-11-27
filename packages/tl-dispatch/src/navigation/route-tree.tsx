@@ -4,9 +4,8 @@ import { matchRoutes, type RouteObject, useLocation, useRoutes } from "react-rou
 import { layoutAt, type PageRoute } from "./page-route";
 import { routerPath } from "./router-path";
 
-/** What the route tree reads of a page: its id and its named routes. */
+/** What the route tree reads of a page: its named routes. */
 interface RoutedPage<Layout> {
-  readonly id: string;
   readonly routes: Readonly<Record<string, PageRoute<string, string, Layout>>>;
 }
 
@@ -31,25 +30,19 @@ interface RouteTree<Page, Layout> {
 export function createRouteTree<Layout, Page extends RoutedPage<Layout>>(
   pages: readonly Page[]
 ): RouteTree<Page, Layout> {
-  const routes = pages.flatMap((page) =>
-    Object.entries(page.routes).map(([name, route]) => ({ id: `${page.id}.${name}`, page, route }))
+  type Routed = Pick<CurrentPage<Page, Layout>, "page" | "route">;
+  const routeObjects: RouteObject[] = pages.flatMap((page) =>
+    Object.values(page.routes).map((route) => ({
+      path: routerPath(route.path),
+      element: route.element,
+      handle: { page, route } satisfies Routed,
+    }))
   );
-  const routeObjects: RouteObject[] = routes.map(({ id, route }) => ({
-    id,
-    path: routerPath(route.path),
-    element: route.element,
-  }));
   const pageAt = (pathname: string, search = ""): CurrentPage<Page, Layout> | undefined => {
     const match = matchRoutes(routeObjects, pathname)?.at(-1);
-    const found = routes.find(({ id }) => id === match?.route.id);
-    return match === undefined || found === undefined
-      ? undefined
-      : {
-          page: found.page,
-          route: found.route,
-          params: match.params,
-          layout: layoutAt(found.route, { pathname, search }),
-        };
+    if (match === undefined) return undefined;
+    const { page, route } = match.route.handle as Routed;
+    return { page, route, params: match.params, layout: layoutAt(route, { pathname, search }) };
   };
   return {
     PageRoutes: () => useRoutes(routeObjects),

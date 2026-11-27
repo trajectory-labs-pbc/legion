@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { act, render } from "@testing-library/react";
 import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
-import { act } from "react";
 
-import { render } from "../../tests/react";
 import { lazyOverlay, lazyRegion } from "./lazy-region";
 
 const cleanups: (() => void)[] = [];
@@ -46,7 +45,6 @@ describe("lazyRegion", () => {
         <Lazy word="piece" />
       </>
     );
-    cleanups.push(() => view.unmount());
     await flush();
     expect(view.container.querySelector("[data-shell]")?.textContent).toBe("shell");
     const alert = view.container.querySelector('[role="alert"]');
@@ -66,7 +64,6 @@ describe("lazyRegion", () => {
       "Piece"
     );
     const view = render(<Lazy word="piece" />);
-    cleanups.push(() => view.unmount());
     await flush();
     expect(view.container.querySelector("[data-piece]")).toBeNull();
     expect(view.container.querySelector('[role="alert"]')).toBeNull();
@@ -93,7 +90,6 @@ describe("lazyOverlay", () => {
       "Sheet"
     );
     const view = render(<Lazy open={false} word="keys" />);
-    cleanups.push(() => view.unmount());
     await flush();
     expect(loads).toBe(0);
     expect(view.container.querySelector("[data-sheet]")).toBeNull();

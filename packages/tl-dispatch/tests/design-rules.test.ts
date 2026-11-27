@@ -108,12 +108,21 @@ let found: DesignViolation[] = [];
 const rulesOf = (path: string) =>
   found.filter((violation) => violation.file === path).map((violation) => violation.rule);
 
+const MAPS_UPSTREAM = {
+  path: "src/pages/x.tsx",
+  text: 'export const page = { server: "upstream" };\n<p className="text-sky-700" />;',
+};
+const LINES = {
+  path: "src/pages/lines.tsx",
+  text: '"é ü — ✓";\n\n<p className="text-sky-700" />;',
+};
+
 beforeAll(async () => {
   const controls = [...REFUSED, ...ALLOWED].map(([extension, text], index) => ({
     path: controlPath(index, extension),
     text,
   }));
-  found = await designViolations(controls);
+  found = await designViolations([...controls, MAPS_UPSTREAM, LINES]);
 });
 
 describe("design rules", () => {
@@ -122,15 +131,11 @@ describe("design rules", () => {
   });
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {
-    const files = sourceFiles();
-    const clean: string[] = [];
-    for (const path of Object.keys(EXEMPT)) {
-      const file = files.find((candidate) => candidate.path === path);
-      if (file === undefined || (await designViolations([file], { exempt: {} })).length === 0) {
-        clean.push(path);
-      }
-    }
-    expect(clean).toEqual([]);
+    const exempt = sourceFiles().filter((file) => EXEMPT[file.path] !== undefined);
+    const breaking = new Set(
+      (await designViolations(exempt, { exempt: {} })).map((violation) => violation.file)
+    );
+    expect(Object.keys(EXEMPT).filter((path) => !breaking.has(path))).toEqual([]);
   });
 
   test("takes corners from the theme alone: a corner token the app declares is none", () => {
@@ -143,10 +148,15 @@ describe("design rules", () => {
     expect(tokens.colours.has("--brand")).toBe(true);
   });
 
-  test("a file is exempt only by the list: a file that says it maps upstream is checked", async () => {
-    const text = 'export const page = { server: "upstream" };\n<p className="text-sky-700" />;';
-    const violations = await designViolations([{ path: "src/pages/x.tsx", text }]);
-    expect(violations.map((violation) => violation.rule).join()).toContain("raw colour");
+  test("a file is exempt only by the list: a file that says it maps upstream is checked", () => {
+    expect(rulesOf(MAPS_UPSTREAM.path).join()).toContain("raw colour");
+  });
+
+  test("a class's violation names the line it is on, past multi-byte text", () => {
+    const line = found.find(
+      (violation) => violation.file === LINES.path && violation.text === "text-sky-700"
+    )?.line;
+    expect(line).toBe(3);
   });
 
   test.each(

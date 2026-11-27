@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
-import { importedPath, lineAt, parseCss } from "./css";
+import { importedPath, parseCss } from "./css";
 import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
 import { parseScript } from "./typescript";
 
@@ -62,22 +62,16 @@ function ancestors(path: string): string[] {
   return found;
 }
 
-function exists(path: string): boolean {
+/** A path's stat, or undefined where none can be read: missing, or under a file (ENOTDIR). */
+function stat(path: string) {
   try {
-    statSync(path);
-    return true;
+    return statSync(path);
   } catch {
-    return false;
+    return undefined;
   }
 }
-
-function isFile(path: string): boolean {
-  try {
-    return statSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
+const exists = (path: string) => stat(path) !== undefined;
+const isFile = (path: string) => stat(path)?.isFile() ?? false;
 
 function packageName(specifier: string): string | undefined {
   if (/^(\.|\/|[a-z]:)/i.test(specifier)) return undefined;
@@ -137,6 +131,10 @@ function literal(node: ts.Node | undefined): string | undefined {
 /** The imports a script file writes: static, re-exports, `import()`, `require`, and type-only. */
 type Written = Omit<Import, "file" | "pkg" | "resolved">;
 
+/** `{ type A, type B }`: the build drops an import or re-export that names only types. */
+const allTypes = (elements: ts.NodeArray<ts.ImportSpecifier | ts.ExportSpecifier>) =>
+  elements.length > 0 && elements.every((element) => element.isTypeOnly);
+
 function scriptImports(path: string, text: string): Written[] {
   const source = parseScript(path, text);
   const found: Written[] = [];
@@ -155,9 +153,21 @@ function scriptImports(path: string, text: string): Written[] {
     });
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node)) {
-      add(node, literal(node.moduleSpecifier), node.importClause?.isTypeOnly ? "type" : "static");
+      const clause = node.importClause;
+      const typeOnly =
+        clause?.isTypeOnly === true ||
+        (clause?.name === undefined &&
+          clause?.namedBindings !== undefined &&
+          ts.isNamedImports(clause.namedBindings) &&
+          allTypes(clause.namedBindings.elements));
+      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static");
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) {
-      add(node, literal(node.moduleSpecifier), node.isTypeOnly ? "type" : "static");
+      const typeOnly =
+        node.isTypeOnly ||
+        (node.exportClause !== undefined &&
+          ts.isNamedExports(node.exportClause) &&
+          allTypes(node.exportClause.elements));
+      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static");
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference)
@@ -196,7 +206,7 @@ function cssImports(path: string, text: string): Written[] {
       from: path,
       specifier: importedPath(statement.prelude),
       kind: "css" as const,
-      line: lineAt(text, statement.offset),
+      line: statement.line,
     }));
 }
 

@@ -21,6 +21,11 @@ describe("layers", () => {
     ],
     ["src/shell/x.tsx", 'import "@upstream-dispatch/main";', "reaches upstream's main.tsx"],
     [
+      "src/shell/x.tsx",
+      'import { App, type Props } from "@upstream-dispatch/app";',
+      "reaches upstream's app.tsx",
+    ],
+    [
       "src/pages/x.tsx",
       'import { fixture } from "@upstream-dispatch/app-sign-out-fixture";',
       "app-sign-out-fixture.tsx > ../dispatch/web/src/app.tsx",
@@ -83,6 +88,9 @@ describe("layers", () => {
       undefined,
     ],
     ["src/shell/x.tsx", '// import { App } from "@upstream-dispatch/app";', undefined],
+    // The build drops an import or re-export that names only types, so it loads nothing.
+    ["src/shell/x.tsx", 'import { type App } from "@upstream-dispatch/app";', undefined],
+    ["src/shell/x.tsx", 'export { type App } from "@upstream-dispatch/app";', undefined],
     [
       "src/shell/x.tsx",
       "const text = \"import { App } from '@upstream-dispatch/app'\";",

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 
-import { type PageRoute, type PageSearch, pageHref } from "./page-route";
+import { type PageAddress, type PageRoute, type PageSearch, pageHref } from "./page-route";
 import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from "./path";
 import { routerPath } from "./router-path";
 
@@ -60,7 +60,7 @@ export function usePageSearch<Search extends string>(
 }
 
 /** The address as text, for upstream's helpers that read it. */
-export function useAddress(): { pathname: string; search: string } {
+export function useAddress(): PageAddress {
   const { pathname, search } = useLocation();
   return useMemo(() => ({ pathname, search }), [pathname, search]);
 }

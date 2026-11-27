@@ -3,7 +3,11 @@
   "extends": "//",
   "linter": {
     "rules": {
+      "suspicious": {
+        "noTsIgnore": "error"
+      },
       "style": {
+        "noNonNullAssertion": "error",
         "noRestrictedImports": {
           "level": "error",
           "options": {

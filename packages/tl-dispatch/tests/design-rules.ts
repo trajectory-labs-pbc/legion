@@ -5,7 +5,7 @@ import { Scanner } from "@tailwindcss/oxide";
 import ts from "typescript";
 
 import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale";
-import { type CssDeclaration, importedPath, lineAt, parseCss } from "./css";
+import { type CssDeclaration, importedPath, parseCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
 import { PACKAGE_ROOT, type SourceFile, UI_STYLESHEET, UPSTREAM_WEB } from "./source";
@@ -57,18 +57,26 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
-  for (const css of [theme, ...own]) {
-    for (const { property, value, context } of parseCss(css).declarations) {
-      if (/^--radius(-|$)/.test(property)) {
-        if (css !== theme) continue;
-        radii.add(property);
-        radiusValues.add(property === "--radius" ? "var(--radius)" : value);
-      } else if (
-        property.startsWith("--") &&
-        (context.at(-1)?.startsWith(":root") || property.startsWith("--shadow-"))
-      )
-        // A shadow token lives in `@theme` and holds its colour, so a shadow may name it.
-        colours.add(property);
+  const isRadius = (property: string) => /^--radius(-|$)/.test(property);
+  // A shadow token lives in `@theme` and holds its colour, so a shadow may name it.
+  const addColour = ({ property, context }: CssDeclaration) => {
+    if (
+      property.startsWith("--") &&
+      (context.at(-1)?.startsWith(":root") || property.startsWith("--shadow-"))
+    )
+      colours.add(property);
+  };
+  for (const declaration of parseCss(theme).declarations) {
+    const { property, value } = declaration;
+    if (!isRadius(property)) addColour(declaration);
+    else {
+      radii.add(property);
+      radiusValues.add(property === "--radius" ? "var(--radius)" : value);
+    }
+  }
+  for (const css of own) {
+    for (const declaration of parseCss(css).declarations) {
+      if (!isRadius(declaration.property)) addColour(declaration);
     }
   }
   return { colours, radii, radiusValues };
@@ -228,6 +236,23 @@ function sourceClass(
 
 type Where = { file: string; line: number };
 
+/** The line of a byte offset into `text`'s UTF-8, read from an index of where each line starts. */
+export function byteLines(text: string): (position: number) => number {
+  const bytes = Buffer.from(text);
+  const starts = [0];
+  for (let at = bytes.indexOf(10); at !== -1; at = bytes.indexOf(10, at + 1)) starts.push(at + 1);
+  return (position) => {
+    let low = 0;
+    let high = starts.length - 1;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if ((starts[middle] as number) <= position) low = middle;
+      else high = middle - 1;
+    }
+    return low + 1;
+  };
+}
+
 /** Compiles every class the files hold, with Tailwind and the app's theme, and checks the CSS. */
 async function classViolations(
   files: readonly SourceFile[],
@@ -236,14 +261,15 @@ async function classViolations(
   const scanner = new Scanner({ sources: [] });
   const classes = new Map<string, Where[]>();
   for (const file of files) {
-    const bytes = Buffer.from(file.text);
+    const lineOf = byteLines(file.text);
     const scanned = scanner.getCandidatesWithPositions({
       content: file.text,
       extension: extname(file.path).slice(1),
     });
     for (const { candidate, position } of scanned) {
-      const line = bytes.subarray(0, position).toString().split("\n").length;
-      classes.set(candidate, [...(classes.get(candidate) ?? []), { file: file.path, line }]);
+      const where = classes.get(candidate) ?? [];
+      if (where.length === 0) classes.set(candidate, where);
+      where.push({ file: file.path, line: lineOf(position) });
     }
   }
   const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
@@ -276,7 +302,7 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
     for (const rule of declarationProblems(declaration, tokens)) {
       violations.push({
         file: file.path,
-        line: lineAt(file.text, declaration.offset),
+        line: declaration.line,
         text: `${declaration.property}: ${declaration.value}`,
         rule,
       });
@@ -285,7 +311,7 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
   for (const statement of parsed.statements.filter((entry) => entry.name === "apply")) {
     violations.push({
       file: file.path,
-      line: lineAt(file.text, statement.offset),
+      line: statement.line,
       text: `@apply ${statement.prelude}`,
       rule: RULES.apply,
     });
@@ -390,7 +416,7 @@ function utilityOf(word: string): string {
 }
 
 const HEIGHT = /^(min-h|h|size)-(.+)$/;
-const SCALE: readonly number[] = Object.values(CONTROL_HEIGHTS);
+const SCALE: readonly number[] = CONTROL_HEIGHTS;
 const inScale = (kind: string, value: string) =>
   (kind !== "min-h" && SCALE.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
@@ -416,16 +442,6 @@ function scriptViolations(
   const styleKey = (node: ts.Node, key: string) => {
     const what = styleKeyKind(key);
     if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
-  };
-  const heights = (
-    words: readonly { word: string; at: ts.Node }[],
-    allowed: (k: string, v: string) => boolean
-  ) => {
-    for (const { word, at } of words) {
-      const match = HEIGHT.exec(utilityOf(word));
-      if (match !== null && !allowed(match[1] as string, match[2] as string))
-        refuse(at, word, RULES.height);
-    }
   };
 
   const visit = (node: ts.Node) => {
@@ -507,13 +523,18 @@ function scriptViolations(
           type?.initializer !== undefined &&
           ts.isStringLiteral(type.initializer) &&
           /^(checkbox|radio)$/.test(type.initializer.text);
-        heights(words, (heightKind, value) =>
-          UI_CONTROL.has(tag)
-            ? false
-            : check
-              ? heightKind === "size" && (CHECK_SIZES as readonly number[]).includes(Number(value))
-              : inScale(heightKind, value)
-        );
+        for (const { word, at } of words) {
+          const match = HEIGHT.exec(utilityOf(word));
+          if (match === null) continue;
+          const [, kind = "", value = ""] = match;
+          // A UI component's height is its `size` prop's, never a class.
+          const ok =
+            !UI_CONTROL.has(tag) &&
+            (check
+              ? kind === "size" && (CHECK_SIZES as readonly number[]).includes(Number(value))
+              : inScale(kind, value));
+          if (!ok) refuse(at, word, RULES.height);
+        }
       }
     }
     ts.forEachChild(node, visit);
@@ -530,31 +551,33 @@ export interface DesignOptions {
   exempt?: Readonly<Record<string, string>>;
 }
 
+/** The theme's tokens, read once per run. */
+let themeOnDisk: ThemeTokens | undefined;
+
 /** Every design rule the files break: classes compiled, stylesheets read, scripts parsed. */
 export async function designViolations(
   files: readonly SourceFile[],
   { exempt = EXEMPT }: DesignOptions = {}
 ): Promise<DesignViolation[]> {
-  const tokens = themeTokens(
+  themeOnDisk ??= themeTokens(
     readFileSync(UI_STYLESHEET, "utf8"),
     readFileSync(join(PACKAGE_ROOT, "src/tokens.css"), "utf8")
   );
+  const tokens = themeOnDisk;
   const checked = files.filter((file) => exempt[file.path] === undefined);
   const stylesheets = checked.filter((file) => file.path.endsWith(".css"));
-  const scripts = checked.filter((file) => /\.(tsx?|[cm]?jsx?|html)$/.test(file.path));
+  const scripts = checked.filter((file) => /\.[cm]?[jt]sx?$/.test(file.path));
   const disk = filesWith(ownFiles(files));
   const cache = resolutionCache();
   const violations = [
     ...(await classViolations(scripts, tokens)),
     ...stylesheets.flatMap((file) => stylesheetViolations(file, tokens)),
-    ...scripts
-      .filter((file) => !file.path.endsWith(".html"))
-      .flatMap((file) => {
-        const lines = importsOf(join(PACKAGE_ROOT, file.path), disk, cache)
-          .filter((entry) => entry.file?.startsWith(UPSTREAM_THEME) === true)
-          .map((entry) => entry.line);
-        return scriptViolations(file, lines);
-      }),
+    ...scripts.flatMap((file) => {
+      const lines = importsOf(join(PACKAGE_ROOT, file.path), disk, cache)
+        .filter((entry) => entry.file?.startsWith(UPSTREAM_THEME) === true)
+        .map((entry) => entry.line);
+      return scriptViolations(file, lines);
+    }),
   ];
   const seen = new Set<string>();
   return violations.filter((violation) => {
