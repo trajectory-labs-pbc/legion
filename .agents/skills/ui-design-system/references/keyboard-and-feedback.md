@@ -46,15 +46,15 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 ## Error states (ER)
 
-A failed read draws through `ReadFailure` (`packages/tl-dispatch/src/features/read-failure.tsx`); `readFailureOf` and `refreshFailureOf` sort each failure. Write no second sort.
+A failed read draws through `ReadFailure`, and a failed count beside a row through `CountRetry` (`packages/tl-dispatch/src/features/read-failure.tsx`, `packages/tl-dispatch/src/shell/row-count.tsx`). `refusalOf` is the one sort of a failure: `useReadFailure`, `refreshFailureOf` and the retry policy `readRetry` all use it. Write no second sort.
 
-**ER1** A failed read shows its error inside the part it fills: the panel, a section or the line under a bar. The sidebar, the header and the rest of the page stay. Linear: a failed view keeps the app's frame. Pages: all. Check: the machine login route tests (MLR-04); the sidebar and compact header tests.
+**ER1** A failed read shows its error inside the part it fills: the panel, a section or the line under a bar. The sidebar, the header and the rest of the page stay. Linear: a failed view keeps the app's frame. Pages: all. Check: the sidebar section tests; reviewer for a page's panel.
 
 **ER2** The error says what failed ("Could not load machine logins.") and what to do: Retry, or nothing where nothing can help. Check: `read-failure.test.tsx`.
 
-**ER3** Retry shows only where a second try can work: a 5xx, a network failure or a time-out. A failed refresh keeps the rows it shows. Check: `read-failure.test.tsx`; RVL-09 and RVL-13.
+**ER3** Every failure but a 403 or a 404 keeps Retry: a 5xx, a dropped connection, a time-out, and a 404 from a process with no route for the read while a release rolls out. A failed refresh keeps the rows it shows. The retry policy never asks a refused read again by itself, and a refused read keeps its refusal while it is asked again. Check: `read-failure.test.tsx`; RVL-09.
 
-**ER4** A 403 gets no Retry and says the reader cannot see it. A 404 gets no Retry, and a 404 of the page's own record shows not-found. A refused count beside a sidebar row draws nothing. A 409 on a write gets no Retry, as a second try sends the same stale write: the refresh at the write's end shows the current value. Linear: a missing issue opens its not-found page. Check: MLR-06, MLR-07, MLS-11, MLS-12 and the sidebar and compact header tests; (new) a 409 test with the shared write helper.
+**ER4** A 403 gets no Retry and says the reader cannot see it. A 404 gets no Retry and says it was not found; a 404 of the page's own read shows the not-found page. When both are refused, the 403 wins. A refused count beside a row draws nothing, so Peek keeps its box. A Retry answered by a refusal gives its focus to the alert. Linear: a missing issue opens its not-found page. Check: `read-failure.test.tsx`; MLR-06, MLR-07, MLS-11, MLS-12, RVL-13; the sidebar and compact header tests.
 
 **ER5** When a read that can work again failed beside a refused one, Retry stays: it asks every read again. Check: `read-failure.test.tsx`.
 
