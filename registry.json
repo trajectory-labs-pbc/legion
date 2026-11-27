@@ -1193,6 +1193,33 @@
       ]
     },
     {
+      "name": "group-header",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6", "lucide-react@1.70.0"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/group-header.tsx",
+          "type": "registry:component",
+          "target": "@components/group-header.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/count.tsx",
+          "type": "registry:ui",
+          "target": "@ui/count.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
       "name": "list-row",
       "type": "registry:block",
       "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
