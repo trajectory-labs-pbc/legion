@@ -1,22 +1,17 @@
 import { Button } from "@legion/ui/components/button";
 import { SurfaceTitle } from "@legion/ui/components/heading";
-import { inboxQuery } from "@upstream-dispatch/api/queries";
-import { Inbox } from "@upstream-dispatch/features/inbox/Inbox";
-import { ANSWERS_PATH } from "@upstream-dispatch/features/refs/routes";
-import { READING_PANE_QUERY, useMediaQuery } from "@upstream-dispatch/features/shell/useDialog";
-import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 import type { ReactNode } from "react";
-
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink, Redirect } from "@/navigation/page-link";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { inboxQuery } from "@/upstream/queries";
+import { ANSWERS_PATH } from "@/upstream/routes";
+import { READING_PANE_QUERY, useDocumentTitle, useMediaQuery } from "@/upstream/shell";
+import { Inbox } from "@/upstream/views/inbox/inbox";
 
 import type { Page, PageLayout } from "./page";
 
-const AnswersPage = lazyNamed(
-  () => import("@upstream-dispatch/features/answers/AnswersPage"),
-  "AnswersPage"
-);
+const AnswersPage = lazyNamed(() => import("@/upstream/views/inbox/answers"), "AnswersPage");
 
 export function InboxPage(): ReactNode {
   useDocumentTitle("Inbox · Dispatch");
@@ -29,9 +24,7 @@ export function InboxPage(): ReactNode {
           Answered by you
         </Button>
       </div>
-      <div className="contents" data-upstream-view>
-        <Inbox />
-      </div>
+      <Inbox />
     </section>
   );
 }

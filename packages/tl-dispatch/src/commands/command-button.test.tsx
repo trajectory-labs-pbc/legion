@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
+import { appKeymap, DIALOG_SCOPE } from "@/upstream/keys";
 
 import { press as pressOn } from "../../tests/keymap";
 import { mount } from "../../tests/mount";

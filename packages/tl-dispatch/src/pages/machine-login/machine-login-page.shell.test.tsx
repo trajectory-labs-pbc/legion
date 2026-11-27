@@ -2,13 +2,12 @@ import { afterEach, expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
-
 import { AppShell } from "@/shell/app-shell";
+import { api } from "@/upstream/api";
+import { KeymapProvider } from "@/upstream/shell";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { holdShellReads } from "../../../tests/network";
 import { shellChunksArrive } from "../../../tests/shell-chunks";
-import { api } from "./upstream";
 
 const restores: (() => void)[] = [];
 afterEach(() => {

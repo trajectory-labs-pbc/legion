@@ -1,10 +1,13 @@
 import { cn } from "@legion/ui/lib/utils";
-import { MountedLiveViews } from "@upstream-dispatch/features/agent-view/MountedLiveViews";
-import { NO_HOVER_PREVIEW_ATTRIBUTE } from "@upstream-dispatch/features/refs/ref-preview-card";
-import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
-import { DOCUMENT_SCROLL_ATTRIBUTE } from "@upstream-dispatch/hooks/useFootInset";
 import { type ReactNode, type RefObject, Suspense } from "react";
 import { PageRoutes } from "@/pages/index";
+import { ForkView } from "@/upstream/mark";
+import {
+  DOCUMENT_SCROLL_ATTRIBUTE,
+  ErrorBoundary,
+  NO_HOVER_PREVIEW_ATTRIBUTE,
+} from "@/upstream/shell";
+import { MountedLiveViews } from "@/upstream/widgets/live-views";
 
 /** Main: the page outlet, and the live views that outlive the route that opened them. */
 export function MainRegion({
@@ -53,13 +56,13 @@ export function MainRegion({
       tabIndex={-1}
     >
       <ErrorBoundary region="this page" resetKey={pathname}>
-        <Suspense fallback={<Fallback />}>
-          <PageRoutes />
-        </Suspense>
+        <ForkView>
+          <Suspense fallback={<Fallback />}>
+            <PageRoutes />
+          </Suspense>
+        </ForkView>
       </ErrorBoundary>
-      <div className="contents" data-upstream-view>
-        <MountedLiveViews front={liveView ?? null} />
-      </div>
+      <MountedLiveViews front={liveView ?? null} />
     </main>
   );
 }

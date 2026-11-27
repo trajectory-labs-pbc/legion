@@ -1,15 +1,13 @@
+import type { ReactNode } from "react";
 import {
   type MarginDrawer,
+  MarginProvider,
   MarginSlotProvider,
-} from "@upstream-dispatch/features/issue-page/margin-slot";
-import {
+  ReferenceNamesProvider,
   type ShellNavigation,
   ShellNavigationContext,
-} from "@upstream-dispatch/features/issue-page/shell-navigation";
-import { ShortcutHelpOpener } from "@upstream-dispatch/features/issue-page/shortcut-help-opener";
-import { MarginProvider } from "@upstream-dispatch/features/margin/margin-context";
-import { ReferenceNamesProvider } from "@upstream-dispatch/features/refs/reference-names";
-import type { ReactNode } from "react";
+  ShortcutHelpOpener,
+} from "@/upstream/shell";
 
 /** The contexts upstream's pages read from the shell. */
 export function ShellProviders({

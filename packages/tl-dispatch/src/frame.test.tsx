@@ -2,12 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DeliverySettingsForm } from "@upstream-dispatch/features/delivery/DeliverySettingsForm";
-import { railBg, railBorder, railText } from "@upstream-dispatch/theme/classes";
-
 import { type CssDeclaration, parseCss, specificity, split } from "../tests/css";
 import { render } from "../tests/react";
 import { PACKAGE_ROOT, UPSTREAM_WEB } from "../tests/source";
+import { DeliverySettingsForm, railBg, railBorder, railText } from "../tests/upstream";
 import { setWidth } from "../tests/viewport";
 
 // frame.css answers upstream's markup, so these tests draw upstream's own Delivery settings form

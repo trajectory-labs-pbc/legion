@@ -1,5 +1,5 @@
-import { DEFAULT_MARGIN_WIDTH } from "@upstream-dispatch/features/margin/margin-width";
-import { useUserPreference } from "@upstream-dispatch/features/shell/userPreference";
+import { useUserPreference } from "@/upstream/data-hooks";
+import { DEFAULT_MARGIN_WIDTH } from "@/upstream/shell";
 
 const hiddenOrShown = [
   (stored: string | null) => stored === "hidden",

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
 import { filesWith } from "../imports";
-import { SRC_DIR } from "../source";
+import { SRC_DIR, UPSTREAM_WEB } from "../source";
 import {
   coverage,
   effectiveOwners,
@@ -38,6 +38,51 @@ describe("the view map", () => {
     const tidy = notes(map);
     if (tidy.length > 0) console.info(`view map notes, nothing to port:\n${tidy.join("\n")}`);
     expect(messages(map)).toEqual([]);
+  });
+
+  test("a new upstream view that a page this app serves reaches through the seam is named", () => {
+    const added = "features/zz-probe/Notice.tsx";
+    const overlay = new Map([
+      [join(UPSTREAM_WEB, added), "export function Notice() { return null; }"],
+      [
+        join(SRC_DIR, "upstream/widgets/zz-probe.tsx"),
+        'export { Notice } from "@upstream-dispatch/features/zz-probe/Notice";',
+      ],
+      [
+        join(SRC_DIR, "pages/machine-login/zz-probe.tsx"),
+        'export { Notice } from "@/upstream/widgets/zz-probe";',
+      ],
+    ]);
+    expect(messages(coverage([...files, added], all, importGraph(overlay)))).toEqual([
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+    ]);
+  });
+
+  test("a seam file many pages read leads only the readers of a name to its module", () => {
+    // Pages and the shell read src/upstream/queries.ts; only machine login takes machineLogins.ts's names.
+    const added = "features/zz-new/NewMachineLoginNotice.tsx";
+    const loaded = new Map([...graph, [added, ["features/credentials/machineLogins.ts"]]]);
+    expect(messages(coverage([...files, added], all, loaded))).toEqual([
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+    ]);
+  });
+
+  test("a name a seam file gives through export * leads to the whole file", () => {
+    const added = "features/zz-probe/Notice.tsx";
+    const overlay = new Map([
+      [join(UPSTREAM_WEB, added), "export function Notice() { return null; }"],
+      [
+        join(SRC_DIR, "upstream/zz-probe.ts"),
+        'export * from "@upstream-dispatch/features/zz-probe/Notice";',
+      ],
+      [
+        join(SRC_DIR, "pages/machine-login/zz-probe.tsx"),
+        'export { Notice } from "@/upstream/zz-probe";',
+      ],
+    ]);
+    expect(messages(coverage([...files, added], all, importGraph(overlay)))).toEqual([
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+    ]);
   });
 
   test("a fixture is no view", () => {

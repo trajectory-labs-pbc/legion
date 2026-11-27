@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
-
 import { appCatalog } from "@/commands/app-catalog";
 import { UNDER_OVERLAY } from "@/commands/bindings";
+import { appKeymap } from "@/upstream/keys";
 import { render, settle } from "../../tests/react";
 import { type GlobalActions, useGlobalCommands } from "./global-commands";
 

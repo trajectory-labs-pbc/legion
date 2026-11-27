@@ -1,4 +1,4 @@
-import type { KeyBindingDescription, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import type { KeyBindingDescription, KeymapScope } from "@/upstream/keys";
 
 import { commandIdOf } from "./bindings";
 import { DEFAULT_GROUP } from "./groups";

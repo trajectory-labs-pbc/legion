@@ -1,9 +1,9 @@
 import { Button } from "@legion/ui/components/button";
 import { SurfaceTitle } from "@legion/ui/components/heading";
 import { textVariants } from "@legion/ui/lib/typography";
-import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 import type { ReactNode } from "react";
 import { PageLink } from "@/navigation/page-link";
+import { useDocumentTitle } from "@/upstream/shell";
 import { inbox } from "../inbox";
 
 /** Shown at an address that opens no page, and at a page this Dispatch does not serve. */

@@ -1,4 +1,4 @@
-import type { KeyBinding, KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import type { KeyBinding, KeymapScope } from "@/upstream/keys";
 
 import type { EngineStack } from "./engine-stack";
 import {

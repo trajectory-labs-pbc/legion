@@ -12,13 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@legion/ui/components/select";
-import {
-  appKeymap,
-  DIALOG_SCOPE,
-  type Keymap,
-  useKeymap,
-  useKeymapScope,
-} from "@upstream-dispatch/features/shell/keymap";
+import { appKeymap, DIALOG_SCOPE, type Keymap, useKeymap, useKeymapScope } from "@/upstream/keys";
 
 import { press, registerContext } from "../../tests/keymap";
 import { openAppLayer } from "../../tests/layers";

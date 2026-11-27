@@ -3,9 +3,6 @@ import { Count } from "@legion/ui/components/count";
 import { NavRow } from "@legion/ui/components/nav";
 import { textVariants } from "@legion/ui/lib/typography";
 import { cn } from "@legion/ui/lib/utils";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import { unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { AgentName } from "@upstream-dispatch/features/refs/AgentName";
 import { PinIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { HotkeyTooltip, LabelTooltip } from "@/commands/hotkey-tooltip";
@@ -16,6 +13,9 @@ import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
+import type { AuthenticatedUser } from "@/upstream/contract";
+import { unreadRepliesLabel } from "@/upstream/data-hooks";
+import { AgentName } from "@/upstream/widgets/agent-name";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
 import { CountRetry, RowCountMark } from "./row-count";
@@ -54,14 +54,12 @@ function PinnedAgentRow({
           />
         }
       >
-        <span className="contents" data-upstream-view>
-          <AgentName
-            className="min-w-0 flex-1 truncate"
-            kind="static"
-            sessionId={agent.sessionId}
-            storedTitle={undefined}
-          />
-        </span>
+        <AgentName
+          className="min-w-0 flex-1 truncate"
+          kind="static"
+          sessionId={agent.sessionId}
+          storedTitle={undefined}
+        />
         <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
         <span className={textVariants({ className: "shrink-0", size: "caption", tone: "muted" })}>
           {viewState}

@@ -1,9 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
-import { settle as letWritesRun } from "@upstream-dispatch/__tests__/fake-clock";
-import type { WriteBounds } from "@upstream-dispatch/api/client";
-import { whoAmIQuery } from "@upstream-dispatch/api/queries";
-import { plainWrite, writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { act } from "react";
+import type { WriteBounds } from "@/upstream/api";
+import { whoAmIQuery } from "@/upstream/queries";
+import { plainWrite, writesOf } from "@/upstream/writes";
+import { settle as letWritesRun } from "./upstream";
 
 /** The person a test signs in. */
 export const reader = { event_head: "0", kind: "user", login: "reader" } as const;

@@ -1,7 +1,7 @@
 import { NavSurface } from "@legion/ui/components/nav";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import { IconRail } from "@upstream-dispatch/features/issue-page/IconRail";
 import type { ComponentProps, ReactNode, RefObject } from "react";
+import type { AuthenticatedUser } from "@/upstream/contract";
+import { IconRail } from "@/upstream/widgets/icon-rail";
 import { useInboxRowCount } from "./inbox-count";
 
 /** Upstream's icon rail with the Inbox's number; only this branch reads it. */
@@ -36,14 +36,12 @@ export function SidebarRegion({
 }) {
   if (issueRail) {
     return (
-      <div className="contents" data-upstream-view>
-        <IssueRail
-          navigationOpen={navigationOpen}
-          onOpenNavigation={onOpenNavigation}
-          project={project}
-          user={user}
-        />
-      </div>
+      <IssueRail
+        navigationOpen={navigationOpen}
+        onOpenNavigation={onOpenNavigation}
+        project={project}
+        user={user}
+      />
     );
   }
   if (inDrawer || folded) return null;

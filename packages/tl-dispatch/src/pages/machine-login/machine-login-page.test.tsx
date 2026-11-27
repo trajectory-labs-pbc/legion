@@ -3,15 +3,17 @@ import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { realClock } from "@upstream-dispatch/__tests__/fake-clock";
-import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
-import { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
-import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
-import { ApiError, NetworkError } from "@upstream-dispatch/api/client";
-
+import { ApiError, api, NetworkError } from "@/upstream/api";
+import type { RecordResponse } from "@/upstream/contract";
+import { stoppedWriteNote } from "@/upstream/writes";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
+import {
+  keyedAttempt,
+  realClock,
+  stopTheLateWrite,
+  userOnFakeClock,
+} from "../../../tests/upstream";
 import { MachineLoginPage } from "./machine-login-page";
-import { api, type RecordResponse, stoppedWriteNote } from "./upstream";
 
 function machineRecord(overrides: Partial<RecordResponse> = {}): RecordResponse {
   return {

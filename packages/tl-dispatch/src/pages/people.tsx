@@ -1,14 +1,10 @@
-import { PERSON_PATH } from "@upstream-dispatch/features/refs/routes";
-
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
+import { PERSON_PATH } from "@/upstream/routes";
 
 import type { Page } from "./page";
 
-const PersonPage = lazyNamed(
-  () => import("@upstream-dispatch/features/people/PersonPage"),
-  "PersonPage"
-);
+const PersonPage = lazyNamed(() => import("@/upstream/views/people"), "PersonPage");
 
 export const people = {
   id: "people",

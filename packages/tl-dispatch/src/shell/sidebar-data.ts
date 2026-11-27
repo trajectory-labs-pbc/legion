@@ -1,16 +1,4 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { api } from "@upstream-dispatch/api/client";
-import {
-  prioritySummaryQuery,
-  projectsQuery,
-  userAgentStateQuery,
-} from "@upstream-dispatch/api/queries";
-import type { AuthenticatedUser, UserAgentStates } from "@upstream-dispatch/api/types";
-import { useLiveViewState } from "@upstream-dispatch/features/agent-view/live-views";
-import { pinnedAgentSessions, useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
-import { totalUnreadReplies, unreadRepliesLabel } from "@upstream-dispatch/features/agents/unread";
-import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
-
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
 import { type ReadFault, readFailureOf } from "@/features/read-failure";
@@ -19,6 +7,17 @@ import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
 import { useCurrentPage } from "@/pages/index";
 import type { PageLayout } from "@/pages/page";
+import { api } from "@/upstream/api";
+import type { AuthenticatedUser, UserAgentStates } from "@/upstream/contract";
+import {
+  pinnedAgentSessions,
+  totalUnreadReplies,
+  unreadRepliesLabel,
+  useAgentPinWrite,
+  useAgentText,
+  useLiveViewState,
+} from "@/upstream/data-hooks";
+import { prioritySummaryQuery, projectsQuery, userAgentStateQuery } from "@/upstream/queries";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
 import type { RowCount } from "./row-count";

@@ -1,6 +1,5 @@
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import { useAgentPinWrite } from "@upstream-dispatch/features/agents/pins";
-import { useRecordRecents } from "@upstream-dispatch/features/search/recents";
+import type { AuthenticatedUser } from "@/upstream/contract";
+import { useAgentPinWrite, useRecordRecents } from "@/upstream/data-hooks";
 
 import { CompactHeader } from "./compact-header";
 import { ContentPanel } from "./content-panel";

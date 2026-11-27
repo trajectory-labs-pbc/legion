@@ -1,16 +1,13 @@
-import { isUnauthorized } from "@upstream-dispatch/api/client";
-import { useEventFeed } from "@upstream-dispatch/api/event-feed";
-import { whoAmIQuery } from "@upstream-dispatch/api/queries";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-import {
-  draftStoresSignedIn,
-  draftStoresSignedOut,
-} from "@upstream-dispatch/features/conversation/unsent-drafts";
-import "@upstream-dispatch/features/writes/kinds";
+import { isUnauthorized } from "@/upstream/api";
+import type { AuthenticatedUser } from "@/upstream/contract";
+import { draftStoresSignedIn, draftStoresSignedOut } from "@/upstream/data-hooks";
+import { useEventFeed } from "@/upstream/live";
+import { whoAmIQuery } from "@/upstream/queries";
+import "@/upstream/write-kinds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { type ReactNode, Suspense, useEffect, useState } from "react";
 import { lazyNamed } from "@/loading/lazy-named";
+import { writesOf } from "@/upstream/writes";
 
 import { AppShell } from "./app-shell";
 import { ConnectionErrorPage } from "./connection-error-page";

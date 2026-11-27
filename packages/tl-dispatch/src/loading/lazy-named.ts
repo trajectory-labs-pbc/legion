@@ -1,5 +1,5 @@
-import { importWhenOnline } from "@upstream-dispatch/features/shell/DeploymentResilience";
 import { type ComponentType, type LazyExoticComponent, lazy } from "react";
+import { importWhenOnline } from "@/upstream/shell";
 
 /** The props of a component; `never` for an export that is not one, which no JSX can then draw. */
 export type PropsOf<Export> = Export extends ComponentType<infer Props> ? Props : never;

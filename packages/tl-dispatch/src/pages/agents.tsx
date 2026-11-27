@@ -1,26 +1,19 @@
-import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
-import { LiveViewRoute } from "@upstream-dispatch/features/agent-view/MountedLiveViews";
-import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH } from "@upstream-dispatch/features/refs/routes";
-
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { userAgentStateQuery } from "@/upstream/queries";
+import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH } from "@/upstream/routes";
+import { LiveViewRoute } from "@/upstream/widgets/live-views";
 
 import type { Page } from "./page";
 
-const AgentsPage = lazyNamed(
-  () => import("@upstream-dispatch/features/agents/AgentsPage"),
-  "AgentsPage"
-);
+const AgentsPage = lazyNamed(() => import("@/upstream/views/agents/agents"), "AgentsPage");
 const BroadcastsPage = lazyNamed(
-  () => import("@upstream-dispatch/features/agents/BroadcastsPage"),
+  () => import("@/upstream/views/agents/broadcasts"),
   "BroadcastsPage"
 );
-const BroadcastPage = lazyNamed(
-  () => import("@upstream-dispatch/features/agents/BroadcastPage"),
-  "BroadcastPage"
-);
+const BroadcastPage = lazyNamed(() => import("@/upstream/views/agents/broadcast"), "BroadcastPage");
 const AgentArtifactPage = lazyNamed(
-  () => import("@upstream-dispatch/features/artifacts/AgentArtifactPage"),
+  () => import("@/upstream/views/agents/artifact"),
   "AgentArtifactPage"
 );
 

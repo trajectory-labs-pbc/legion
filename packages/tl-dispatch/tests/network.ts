@@ -1,6 +1,6 @@
 import { waitFor as waitForExpectation } from "@testing-library/react";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { http } from "msw";
+import { answerRequests } from "./upstream";
 
 /**
  * Keeps each of these reads pending for the rest of the test. A request to any other route is

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { appKeymap, createKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
+import { appKeymap, createKeymap, DIALOG_SCOPE } from "@/upstream/keys";
 
 import { press, testKeymap } from "../../tests/keymap";
 import { appStack, type EngineStack, keysReach, passing, trackEngineStack } from "./engine-stack";

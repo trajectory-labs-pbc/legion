@@ -1,3 +1,4 @@
+import type { PageAddress, PageRoute } from "@/navigation/page-route";
 import {
   liveViewSessionOf,
   parseIssuePath,
@@ -5,9 +6,7 @@ import {
   routeHasMargin,
   routeIsInbox,
   routeProjectOf,
-} from "@upstream-dispatch/features/refs/routes";
-
-import type { PageAddress, PageRoute } from "@/navigation/page-route";
+} from "@/upstream/routes";
 
 /** How the shell frames a page. Every field is off when left out. */
 export interface PageLayout {

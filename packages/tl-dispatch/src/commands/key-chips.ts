@@ -1,5 +1,5 @@
 import type { KeySteps } from "@legion/ui/components/kbd";
-import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
+import { MOD_KEY_LABEL } from "@/upstream/keys";
 
 import { keySteps, splitStep } from "./keys";
 

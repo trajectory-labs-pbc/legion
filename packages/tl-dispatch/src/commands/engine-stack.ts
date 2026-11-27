@@ -1,9 +1,4 @@
-import {
-  appKeymap,
-  DIALOG_SCOPE,
-  type Keymap,
-  type KeymapScope,
-} from "@upstream-dispatch/features/shell/keymap";
+import { appKeymap, DIALOG_SCOPE, type Keymap, type KeymapScope } from "@/upstream/keys";
 
 import { focusedOverlays, type LayerSource, type OverlayLayer } from "./focused-overlay";
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";

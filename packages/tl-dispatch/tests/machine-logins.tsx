@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import type { LauncherCredentialResp, RecordResponse } from "@upstream-dispatch/api/types";
-
 import { MachineLoginPage } from "@/pages/machine-login/machine-login-page";
+import type { LauncherCredentialResp, RecordResponse } from "@/upstream/contract";
 import { MemoryNavigationProvider } from "./navigation";
 
 /** Answers the open revoke question with its Revoke. */

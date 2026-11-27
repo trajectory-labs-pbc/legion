@@ -1,11 +1,10 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Badge } from "@legion/ui/components/badge";
 import { Button } from "@legion/ui/components/button";
-import { useLiveSocketPill } from "@upstream-dispatch/api/live-socket";
-import { DraftsNotKept } from "@upstream-dispatch/features/inbox/DraftsNotKept";
-import { PendingWritesIndicator } from "@upstream-dispatch/features/writes/PendingWritesIndicator";
-import { useFootInset } from "@upstream-dispatch/hooks/useFootInset";
 import { useRef } from "react";
+import { useLiveSocketPill } from "@/upstream/live";
+import { useFootInset } from "@/upstream/shell";
+import { DraftsNotKept, PendingWritesIndicator } from "@/upstream/widgets/status";
 import type { SignOut } from "./use-sign-out";
 
 /**
@@ -27,10 +26,8 @@ export function StatusCorner({
       className="pointer-events-none fixed right-4 bottom-[max(var(--foot-floor),calc(var(--foot-banner-inset,0px)_+_1rem))] z-50 flex w-[min(28rem,calc(100vw-2rem))] flex-col items-end gap-2 [--foot-floor:5rem] xl:[--foot-floor:0px] *:pointer-events-auto"
       ref={corner}
     >
-      <div className="contents" data-upstream-view>
-        <PendingWritesIndicator />
-        <DraftsNotKept />
-      </div>
+      <PendingWritesIndicator />
+      <DraftsNotKept />
       {signOut?.error === undefined ? null : (
         <Alert size="compact" variant="danger">
           <AlertTitle>{signOut.error}</AlertTitle>

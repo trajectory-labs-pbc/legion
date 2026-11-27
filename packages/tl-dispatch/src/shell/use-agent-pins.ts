@@ -1,7 +1,10 @@
-import { useLiveViews } from "@upstream-dispatch/features/agent-view/live-views";
-import { legacyPinnedIds, usePinnedAgents } from "@upstream-dispatch/features/agents/pins";
-import { legacyPinnedAgentsKey } from "@upstream-dispatch/features/shell/userPreference";
 import { useEffect, useRef } from "react";
+import {
+  legacyPinnedAgentsKey,
+  legacyPinnedIds,
+  useLiveViews,
+  usePinnedAgents,
+} from "@/upstream/data-hooks";
 
 export type PinWrite = (sessionId: string, pinned: boolean) => Promise<boolean>;
 

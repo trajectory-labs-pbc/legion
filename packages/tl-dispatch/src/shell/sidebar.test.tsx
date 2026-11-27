@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
-
 import { NAV_DESTINATIONS } from "@/commands/nav";
+import type { AuthenticatedUser } from "@/upstream/contract";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";

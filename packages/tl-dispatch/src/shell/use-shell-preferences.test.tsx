@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { whoAmIQuery } from "@upstream-dispatch/api/queries";
-import { DEFAULT_MARGIN_WIDTH } from "@upstream-dispatch/features/margin/margin-width";
+import { whoAmIQuery } from "@/upstream/queries";
+import { DEFAULT_MARGIN_WIDTH } from "@/upstream/shell";
 
 import { render, settle } from "../../tests/react";
 import { type ShellPreferences, useShellPreferences } from "./use-shell-preferences";
