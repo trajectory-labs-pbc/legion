@@ -18,7 +18,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 ## Lists (LR)
 
-**LR1** A list row is one line, 36 px high. Nothing wraps: the title truncates with `truncate` and `min-w-0` on its flex parent, and shows a tooltip only when it is cut. No border, card or gap between rows. Linear: the issue list (about 37 to 42 px in its screenshots). Pages: Inbox, agents, project issues, priorities, machines, broadcasts, answers. Check: (new) a browser test measures the rows; reviewer.
+**LR1** A list row is one line, 36 px high (`h-list-row-1`). The Inbox and Answered by you rows are two lines, 56 px high (`h-list-row-2`), and no list has a third height. Nothing wraps: the title truncates with `truncate` and `min-w-0` on its flex parent, and shows a tooltip only when it is cut. No border, card or gap between rows. Linear: the issue list (about 37 to 42 px in its screenshots). Pages: Inbox, agents, project issues, priorities, machines, broadcasts, answers. Check: (new) a browser test measures the rows; reviewer.
 
 **LR2** An issue row shows, left to right: the selection box, the priority glyph, the key (`muted-foreground`, tabular figures), the status glyph, the title (`foreground`), then at the right labels, the project, the claim or assignee avatar, and the update time (`muted-foreground`). Other records keep this order: their state glyph, their id, their title, then their metadata at the right. Linear: the issue row. Pages: every list. Check: reviewer against the row's screenshot.
 
@@ -30,7 +30,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 **LR6** The selection box shows when the pointer is near the row's left edge and on every row while a selection exists. A row has no other hover buttons: its actions are in its context menu, the command menu and their keys. Linear: the hover checkbox. Check: reviewer.
 
-**LR7** A list groups by one field at a time. A group header row is 36 px, `bg-muted`, sticky under the view header, and shows the group's glyph, its name, its count, and at the right a `+` that creates a record in that group. A click on its fold icon, or `t` on its rows, folds the group. Empty groups are hidden unless Display shows them. The rows in a group hide the field the list groups by. Linear: grouping. Pages: project issues, Inbox, agents, priorities. Check: (new) tests for fold and sticky; reviewer.
+**LR7** A list groups by one field at a time. A group header row is 36 px (`h-list-row-1`), `bg-muted`, sticky under the view header, and shows the group's glyph, its name, its count, and at the right a `+` that creates a record in that group. A click on its fold icon, or `t` on its rows, folds the group. Empty groups are hidden unless Display shows them. The rows in a group hide the field the list groups by. Linear: grouping. Pages: project issues, Inbox, agents, priorities. Check: (new) tests for fold and sticky; reviewer.
 
 **LR8** One Display button, or `Shift+V`, opens a popover with the view's choices: group by, order by, show empty groups, the properties a row shows (as toggle chips), and list or board. Each page keeps the person's choices in browser storage. Filters live in the URL; display choices do not. Linear: display options. Pages: every list page. Check: (new) tests; reviewer.
 

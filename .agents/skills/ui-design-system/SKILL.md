@@ -19,7 +19,7 @@ tl-dispatch follows Linear's layout and interaction as closely as the theme allo
 ## The rules that matter most
 
 1. **FR2** The frame is an inverted L: the sidebar and the window behind the content share `bg-background`; the content panel is `bg-card` with the `lg` corner and a 1 px `border-border` edge. No shadow.
-2. **LR1** A list row is one line, 36 px high, with no border between rows. The title truncates; nothing wraps.
+2. **LR1** A list row is one line, 36 px high (`h-list-row-1`), with no border between rows. The Inbox and Answered by you rows are two lines, 56 px high (`h-list-row-2`). The title truncates; nothing wraps.
 3. **LR3** The pointer and the keyboard share one highlight per list. `j`/`k` and the arrows move it; the pointer moves it on hover.
 4. **LR5** `x` selects the highlighted row; Shift+click and Shift+arrow extend; `$mod+a` selects all. A selected row shows a checked box. A bar at the bottom names the count and the actions; Escape clears.
 5. **IV3** Space opens the highlighted record in a peek at the right. The list stays usable; `j`/`k` move the peek; Enter opens the page; Escape or Space closes it.

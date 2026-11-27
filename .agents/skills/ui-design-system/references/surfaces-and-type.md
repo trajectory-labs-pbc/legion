@@ -18,7 +18,7 @@ Each rule names the Linear surface it comes from, the pages it applies to, and i
 
 ## Density (TY1 to TY3)
 
-**TY1** Heights: a list row 36 px, a sidebar row 28 px, a property row 32 px, the view header 44 px, a header control 28 px (`size="sm"`), a form control 32 px (the default). On a coarse pointer every control reaches 44 px. Linear: list and sidebar density. Check: the control-height test; reviewer for rows.
+**TY1** Heights: a list row 36 px (`h-list-row-1`), and 56 px with two lines on the Inbox and Answered by you (`h-list-row-2`), a sidebar row 28 px, a property row 32 px, the view header 44 px, a header control 28 px (`size="sm"`), a form control 32 px (the default). On a coarse pointer every control reaches 44 px. Linear: list and sidebar density. Check: the control-height test; reviewer for rows.
 
 **TY2** Spacing inside a row is 8 px between parts and 12 px at each end. A page's padding is 0 for a list (rows reach the panel's edges) and 24 px for a record's main column. Linear: the issue list. Check: reviewer.
 
