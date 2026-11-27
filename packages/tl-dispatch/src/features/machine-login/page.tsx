@@ -7,16 +7,15 @@ import { PageSkeleton, useSkeleton } from "@/loading/page-skeleton";
 import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 
 /**
- * The page's code, kept in the query cache so a revisit draws the page at once. A failed load
- * throws into the error boundary, as a lazy page's does.
+ * The page's code, kept in the query cache so a revisit draws the page at once; no refresh or
+ * invalidation asks for it again. A failed load is kept until the route mounts again.
  */
 const pageCodeQuery = queryOptions({
   queryKey: ["tl-dispatch", "machine-login-page-code"],
   queryFn: () => loadNamed(() => import("./machine-login-page"), "MachineLoginPage"),
   gcTime: Number.POSITIVE_INFINITY,
-  staleTime: Number.POSITIVE_INFINITY,
+  staleTime: "static",
   retry: false,
-  throwOnError: true,
 });
 
 /**
@@ -34,8 +33,10 @@ export function MachineLoginRoute(): ReactNode {
   const fault = readFailureOf(capabilities);
   const served = capabilities.data?.machine_code_page === true;
   const waiting =
-    fault === undefined && (capabilities.data === undefined || (served && code.data === undefined));
+    fault === undefined && (capabilities.data === undefined || (served && code.isPending));
   const skeleton = useSkeleton(waiting);
+  // A failed code load is the page's error only where the page is served, and it shows at once.
+  if (served && code.isError) throw code.error;
   if (skeleton) return <PageSkeleton />;
   if (fault !== undefined) {
     return (
@@ -44,8 +45,7 @@ export function MachineLoginRoute(): ReactNode {
       </div>
     );
   }
+  if (!served) return waiting ? null : <NotFound />;
   const Page = code.data;
-  if (waiting) return null;
-  if (!served) return <NotFound />;
   return Page === undefined ? null : <Page />;
 }

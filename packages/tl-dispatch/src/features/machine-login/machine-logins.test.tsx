@@ -567,18 +567,32 @@ test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 3
         </QueryClientProvider>
       );
       const section = within(screen.getByRole("region", { name: "Machine logins" }));
+      // The live region is there before its text, so a screen reader reads the text when it comes.
+      const status = section.getByRole("status");
+      expect(status.textContent).toBe("");
       await tick(150);
       expect(section.queryByRole("table")).toBeNull();
-      expect(section.queryByText(/Loading/)).toBeNull();
+      expect(status.textContent).toBe("");
 
       await tick(100);
-      expect(section.getByRole("status")).toHaveTextContent("Loading machine logins");
+      expect(status).toHaveTextContent("Loading machine logins");
       const table = section.getByRole("table");
       expect(table).toHaveAttribute("aria-busy", "true");
+      // A skeleton row has a loaded row's cells: a bar under each heading, and a Revoke no one
+      // sees or reaches, so it is as tall as a loaded row at every width.
       const rows = within(table).getAllByRole("row").slice(1);
-      expect(rows.map((row) => row.querySelectorAll('[data-slot="skeleton"]').length)).toEqual([
-        1, 1, 1,
-      ]);
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        const cells = [...row.querySelectorAll("td")];
+        expect(cells.map((cell) => cell.querySelectorAll('[data-slot="skeleton"]').length)).toEqual(
+          [1, 1, 1, 1, 1, 0]
+        );
+        const hidden = cells.at(-1)?.querySelector("button");
+        expect(hidden).toHaveTextContent("Revoke");
+        expect(hidden).toHaveAttribute("aria-hidden", "true");
+        expect(hidden).toHaveAttribute("tabindex", "-1");
+        expect(hidden).toHaveClass("invisible");
+      }
 
       answer.resolve({ credentials: [devbox] });
       await tick(200);
@@ -588,7 +602,8 @@ test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 3
       await tick(100);
       expect(section.getByText("devbox.example.com")).toBeDefined();
       expect(section.getByRole("table")).toHaveAttribute("aria-busy", "false");
-      expect(section.queryByRole("status")).toBeNull();
+      expect(status.textContent).toBe("");
+      expect(section.getByRole("status")).toBe(status);
     });
   } finally {
     cleanup();

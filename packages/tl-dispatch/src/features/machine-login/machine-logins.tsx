@@ -146,12 +146,30 @@ function RevokeQuestionDialog({
 
 const LOADING_ROWS = [0, 1, 2];
 
-/** The list's rows while they load: still boxes as tall as a row's Revoke. */
+/** The list's rows while they load: a loaded row's cells, a still bar under each heading and a
+ *  Revoke no one sees or reaches, so the rows are as tall and the columns as wide at any width. */
 function LoadingRows(): ReactNode {
   return LOADING_ROWS.map((row) => (
     <TableRow key={row}>
-      <TableCell colSpan={COLUMNS}>
-        <Skeleton className="h-control-sm w-full" />
+      <TableCell className={CUT_CELL}>
+        <Skeleton className="h-4 w-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-20" />
+      </TableCell>
+      <TableCell className={CUT_CELL}>
+        <Skeleton className="h-4 w-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-24" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Button aria-hidden className="invisible" size="sm" tabIndex={-1} variant="outline">
+          Revoke
+        </Button>
       </TableCell>
     </TableRow>
   ));
@@ -314,11 +332,10 @@ export const MachineLogins = memo(function MachineLogins({
       {refreshFault !== undefined ? (
         <ReadFailure fault={refreshFault} noun="the latest machine logins" />
       ) : null}
-      {skeleton ? (
-        <p className="sr-only" role="status">
-          Loading machine logins
-        </p>
-      ) : null}
+      {/* Mounted before its text, so a screen reader reads the text when it comes. */}
+      <p className="sr-only" role="status">
+        {skeleton ? "Loading machine logins" : ""}
+      </p>
       {rows !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">
           <Table aria-busy={skeleton}>

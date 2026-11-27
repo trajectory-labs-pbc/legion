@@ -20,6 +20,8 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
 | MLR-06 | Route | A revisit with the answer cached and the page's code loaded draws the page at once | | |
 | MLR-07 | Route | A page's code that fails to load shows the page's error | | |
+| MLR-08 | Route | A Dispatch without the device grant, or a failed capabilities read, shows its own answer though the page's code failed to load | | |
+| MLR-09 | Route | A visit after the page's code failed to load loads the code again | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |
 | MLP-02 | Code form | A lookup failure shows under the code field | | |
 | MLP-03 | Code form | Look up, then Deny, posts the looked-up code | | |
