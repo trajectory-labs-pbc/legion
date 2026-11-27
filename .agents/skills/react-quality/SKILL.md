@@ -124,12 +124,13 @@ A component starts no timer and adds no listener or observer in a bare effect: i
 
 ```tsx
 // Bad
-function PageSkeleton() {
+function PageFallback() {
   const [after, setAfter] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setAfter(true), 200);
     return () => clearTimeout(timer);
   }, []);
+  return after ? <PageSkeleton label="Loading the page" /> : null;
 }
 
 // Good
@@ -142,8 +143,8 @@ function useAfter(ms: number): boolean {
   return after;
 }
 
-function PageSkeleton() {
-  const after = useAfter(200);
+function PageFallback() {
+  return useAfter(200) ? <PageSkeleton label="Loading the page" /> : null;
 }
 ```
 
