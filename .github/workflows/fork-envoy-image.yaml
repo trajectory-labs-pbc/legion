@@ -1,0 +1,135 @@
+name: Fork envoy image
+
+# This repository is a fork, and this file, which upstream does not have, publishes the envoy image
+# its deployments run: upstream's envoy image, which release-envoy-listener.yaml builds unchanged,
+# with the fork's web app beside upstream's (packages/tl-dispatch/docker/Dockerfile). It pushes
+# `envoy:<sha>-tl` to the same package and attests it. Only a run on main carries an attestation
+# that names `refs/heads/main`; a consumer verifies with `--source-ref refs/heads/main`.
+#
+# Which upstream image each commit builds on, and when there is none, is
+# .github/scripts/fork-envoy-base.sh's to say: its header holds the rules. A commit with no upstream
+# image of its own gets no `-tl` image; the job pushes nothing, ends green and says so in a notice
+# and in the run's summary; a later commit's image usually holds the change. To give such a commit an
+# image anyway, re-run its own listener run, then its own run of this workflow. A dispatch follows
+# the push rules for the tip of the ref it names, so it builds only a commit on main.
+#
+# A pull request builds only the smoke stage, on an older upstream image (see that script).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to a pull request cancels its older run; a push or dispatch run is never cancelled.
+concurrency:
+  group: fork-envoy-image-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    # Up to 30 minutes of it waiting for release-envoy-listener.yaml's run.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      attestations: read
+    outputs:
+      image: ${{ steps.names.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    env:
+      COMMIT: ${{ github.sha }}
+      # gh-read.sh waits out a rate limit only within the job's limit.
+      JOB_TIMEOUT_MINUTES: 60
+      BUILDX_METADATA_PROVENANCE: disabled
+      DOCKER_BUILD_SUMMARY: "false"
+    steps:
+      # The history without its files: a pull request's walk back to main's last upstream image
+      # crosses every commit of the branches it is stacked on.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: names
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          image=$(.github/scripts/repo-paths.sh envoy_image)
+          status=0
+          base=$(.github/scripts/fork-envoy-base.sh "$EVENT" "$COMMIT" "$image") || status=$?
+          # 3: this commit has no upstream image. The script said why; no `base`, so no build.
+          if [ "$status" = 3 ]; then exit 0; fi
+          if [ "$status" != 0 ]; then exit "$status"; fi
+          bun=$(awk '$1 == "FROM" && $3 == "AS" && $4 == "web" { print $2; exit }' packages/envoy/docker/Dockerfile)
+          if [ -z "$bun" ]; then
+            echo "::error::packages/envoy/docker/Dockerfile has no 'FROM <image> AS web' line"
+            exit 1
+          fi
+          {
+            echo "image=$image"
+            echo "base=$base"
+            echo "bun=$bun"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.names.outputs.base != ''
+        with:
+          driver-opts: |
+            provenance-add-gha=false
+            image=ghcr.io/cybermonklabs/legion/ci@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+      # The smoke stage builds on the runner's platform and is never pushed (its checks are in the
+      # Dockerfile).
+      - name: Smoke check
+        if: steps.names.outputs.base != ''
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/tl-dispatch/docker/Dockerfile
+          target: smoke
+          platforms: linux/amd64
+          provenance: false
+          push: false
+          build-args: |
+            ENVOY_IMAGE=${{ steps.names.outputs.base }}
+            BUN_IMAGE=${{ steps.names.outputs.bun }}
+            LEGION_COMMIT=${{ env.COMMIT }}
+      - id: build
+        if: github.event_name != 'pull_request' && steps.names.outputs.base != ''
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/tl-dispatch/docker/Dockerfile
+          target: image
+          # The base is an index of both; every stage that runs a command runs on the build platform.
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=min
+          tags: ${{ steps.names.outputs.image }}:${{ env.COMMIT }}-tl
+          push: true
+          build-args: |
+            ENVOY_IMAGE=${{ steps.names.outputs.base }}
+            BUN_IMAGE=${{ steps.names.outputs.bun }}
+            LEGION_COMMIT=${{ env.COMMIT }}
+
+  attest:
+    needs: build
+    if: needs.build.outputs.digest != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      attestations: write
+    cache-mode: none
+    steps:
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ needs.build.outputs.image }}
+          subject-digest: ${{ needs.build.outputs.digest }}

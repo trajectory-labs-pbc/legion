@@ -1,0 +1,54 @@
+# Every file this fork changes against upstream's main. .github/scripts/check-fork-allowlist.sh
+# fails on a changed file not listed here, and on a line the fork no longer changes. A line ending
+# in / is a directory the fork owns, where upstream has no file. Add a file here in the same change
+# that first edits it. When the daily sync pull request fails on a line the fork no longer changes,
+# because upstream took the change, remove the line with a commit on the sync branch.
+
+# The fork's own web app, beside upstream's, outside the root workspaces, and the envoy image
+# that adds it to upstream's.
+packages/tl-dispatch/
+.github/workflows/fork-envoy-image.yaml
+.github/scripts/fork-envoy-base.sh
+.github/scripts/fork-envoy-base.test.sh
+.github/scripts/check-image-trigger-paths.test.sh
+
+# The fork's UI package, outside the root workspaces, and the shadcn registry that serves it.
+packages/ui/
+registry.json
+
+# The skills any coding agent reads for the fork's web app; packages/tl-dispatch/AGENTS.md names them.
+.agents/skills/commands/
+.agents/skills/navigation/
+.agents/skills/porting-upstream/
+.agents/skills/react-quality/
+.agents/skills/ui-design-system/
+
+# The fork's checks.
+.github/fork-allowlist.txt
+.github/scripts/check-fork-allowlist.sh
+.github/scripts/check-fork-allowlist.test.sh
+.github/workflows/fork-checks.yaml
+
+# The daily sync from upstream.
+.github/scripts/fork-sync.sh
+.github/scripts/fork-sync.test.sh
+.github/workflows/fork-sync.yaml
+.github/workflows/fork-sync-test.yaml
+.github/scripts/check-image-trigger-paths.sh
+
+# The fork's own image line: no upstream release numbers.
+.github/workflows/fork-worker-image.yaml
+.github/workflows/release-envoy-listener.yaml
+
+# The leak scan masks links to the pull request's own repository, which on a fork is not upstream's.
+.github/scripts/check-pr-text.sh
+.github/scripts/check-private-names-test-lib.sh
+.github/scripts/check-private-names.test.sh
+
+# A fix not yet upstream.
+packages/daemon/internal/ghbranch/ghbranch.go
+packages/daemon/internal/ghbranch/ghbranch_test.go
+
+# The docs build names the repository the fork was forked from.
+.github/scripts/ci_filter_coverage.py
+.github/workflows/docs-site.yaml

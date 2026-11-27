@@ -1,0 +1,327 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  createAlertDialogHandle,
+} from "@legion/ui/components/alert-dialog";
+import { Badge } from "@legion/ui/components/badge";
+import { Button } from "@legion/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@legion/ui/components/collapsible";
+import { Heading } from "@legion/ui/components/heading";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@legion/ui/components/table";
+import { TruncatedText } from "@legion/ui/components/truncated-text";
+import { textVariants } from "@legion/ui/lib/typography";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
+import { Fragment, memo, type ReactNode, useRef, useState } from "react";
+import { ReadFailure, readFailureOf, refreshFailureOf } from "@/features/read-failure";
+import { WriteFailure } from "@/writes/write-failure";
+import {
+  type FocusFallback,
+  firstUsable,
+  type LauncherCredentialResp,
+  machineLoginsQuery,
+  machineName,
+  refusedNote,
+  Timestamp,
+  useFocusKeeper,
+} from "./upstream";
+import { isListed, type Revoke, useRevoke } from "./use-revoke";
+
+type RevokeQuestion = ReturnType<typeof createAlertDialogHandle<LauncherCredentialResp>>;
+
+const HEADINGS = ["Machine", "Credential", "Approved by", "Issued", "Expires"] as const;
+const MUTED = textVariants({ tone: "muted" });
+const CUT_CELL = "w-1/4 max-w-0";
+
+// A pod login (`person` set) and a service's token login have no approver.
+function approvedBy(login: LauncherCredentialResp): string {
+  if (login.subject == null) return login.approved_by;
+  if (login.person != null) return `No one: BROKER_POD_OPERATORS maps ${login.subject} to you`;
+  return `No one: ${login.subject}`;
+}
+
+// The credential id tells apart two logins of one service on one host.
+const loginName = (login: LauncherCredentialResp) =>
+  `the machine login for ${machineName(login)}, credential ${login.credential_id}`;
+
+/** What revoking a login ends, and what logs in again after it. */
+function revokeOutcome(login: LauncherCredentialResp): string {
+  if (login.person != null) {
+    return "Every session it started ends at once. The pod logs in again with its token, under a new login, while the broker's BROKER_SERVICE_LOGINS names its Kubernetes account, and that login is yours while BROKER_POD_OPERATORS maps the account to you.";
+  }
+  if (!login.service) {
+    return "Every agent session it started loses its secrets at once, and the machine needs a new login.";
+  }
+  if (login.subject == null) {
+    return "Every session it started, its worker pods included, ends at once.";
+  }
+  return `Every session it started, its worker pods included, ends at once, and a running pod stays without secrets until it is replaced; ${login.service} logs in again with its Kubernetes token, for the pods it launches next, unless ${login.subject} is removed from the broker's BROKER_SERVICE_LOGINS.`;
+}
+
+/** A row's Revoke, which asks first; it waits while another row's revoke is out. */
+function RevokeButton({
+  login,
+  question,
+  revoke,
+  row,
+}: {
+  login: LauncherCredentialResp;
+  question: RevokeQuestion;
+  revoke: Revoke;
+  /** The row's place in the list, which the focus reads once the row goes. */
+  row: number;
+}): ReactNode {
+  const pending = revoke.pending?.credential_id === login.credential_id;
+  return (
+    <AlertDialogTrigger
+      handle={question}
+      payload={login}
+      render={
+        <Button
+          aria-label={`Revoke ${loginName(login)}`}
+          data-row-revoke={row}
+          disabled={revoke.pending !== undefined && !pending}
+          loading={pending}
+          size="sm"
+          variant="outline"
+        />
+      }
+    >
+      Revoke
+    </AlertDialogTrigger>
+  );
+}
+
+/** The one question every row's Revoke asks, about the login that row passed it. */
+function RevokeQuestionDialog({
+  finalFocus,
+  question,
+  revoke,
+}: {
+  finalFocus: (login: LauncherCredentialResp) => HTMLElement | true | undefined;
+  question: RevokeQuestion;
+  revoke: Revoke;
+}): ReactNode {
+  return (
+    <AlertDialog handle={question}>
+      {({ payload: login }) =>
+        login === undefined ? null : (
+          <AlertDialogContent finalFocus={() => finalFocus(login)}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Revoke {machineName(login)}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Credential {login.credential_id}. {revokeOutcome(login)}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => revoke.send(login)} variant="destructive">
+                Revoke
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )
+      }
+    </AlertDialog>
+  );
+}
+
+function LoginRows({
+  logins,
+  newCredential,
+  question,
+  revoke,
+}: {
+  logins: readonly LauncherCredentialResp[];
+  newCredential: string | undefined;
+  question: RevokeQuestion;
+  revoke: Revoke;
+}): ReactNode {
+  const span = HEADINGS.length + 1;
+  if (logins.length === 0) {
+    return (
+      <TableRow>
+        <TableCell className={MUTED} colSpan={span}>
+          No live machine logins.
+        </TableCell>
+      </TableRow>
+    );
+  }
+  const { refused } = revoke;
+  return logins.map((login, row) => (
+    <Fragment key={login.credential_id}>
+      <TableRow>
+        <TableCell className={textVariants({ className: CUT_CELL, weight: "medium" })}>
+          <TruncatedText text={machineName(login)} />
+          {login.expired ? (
+            <span
+              className={textVariants({
+                className: "block truncate",
+                size: "caption",
+                tone: "muted",
+              })}
+            >
+              expired, sessions still running
+            </span>
+          ) : null}
+        </TableCell>
+        <TableCell className={MUTED}>
+          <span className={textVariants({ className: "font-mono", size: "caption" })}>
+            {login.credential_id}
+          </span>
+          {login.credential_id === newCredential ? (
+            <Badge className="ml-2" variant="success">
+              New
+            </Badge>
+          ) : null}
+        </TableCell>
+        <TableCell className={textVariants({ className: CUT_CELL, tone: "muted" })}>
+          <TruncatedText text={approvedBy(login)} />
+        </TableCell>
+        <TableCell className={MUTED}>
+          <Timestamp at={login.issued_at} className="whitespace-nowrap tabular-nums" />
+        </TableCell>
+        <TableCell className={MUTED}>
+          <Timestamp at={login.expires_at} className="whitespace-nowrap tabular-nums" />
+        </TableCell>
+        <TableCell className="text-right">
+          <RevokeButton login={login} question={question} revoke={revoke} row={row} />
+        </TableCell>
+      </TableRow>
+      {refused?.credential_id === login.credential_id ? (
+        <TableRow>
+          <TableCell className="whitespace-normal" colSpan={span}>
+            <WriteFailure
+              anew="Pressing Revoke again sends a new revoke."
+              error={revoke.error}
+              refused={(error) => refusedNote(`revoke ${loginName(refused)}`, error)}
+              what={`the revoke of ${loginName(refused)}`}
+            />
+          </TableCell>
+        </TableRow>
+      ) : null}
+    </Fragment>
+  ));
+}
+
+const rowOf = (revoke: HTMLElement | null | undefined) => Number(revoke?.dataset.rowRevoke ?? 0);
+
+/** Where the focus goes once a revoked row takes its Revoke away: the Revoke now drawn in row `at`
+ *  (the next row's), else the nearest one before it, else `above`. */
+function afterRevoke(root: HTMLElement | null, above: HTMLElement | null, at = 0) {
+  const revokes = [...(root?.querySelectorAll<HTMLElement>("[data-row-revoke]") ?? [])];
+  const before = revokes.filter((revoke) => rowOf(revoke) < at).reverse();
+  return firstUsable(...revokes.filter((revoke) => rowOf(revoke) >= at), ...before, above);
+}
+
+/** The machine logins the viewer may revoke that can still reach a secret; `newCredential` is the
+ *  one this page just approved, marked New. Memoized, so a keystroke in the page's code field
+ *  does not draw every row again. */
+export const MachineLogins = memo(function MachineLogins({
+  newCredential,
+}: {
+  newCredential?: string;
+}): ReactNode {
+  const logins = useQuery({ ...machineLoginsQuery(), select: (data) => data.credentials ?? [] });
+  // The refusal follows the rows shown, which come from the same query.
+  const revoke = useRevoke(logins.data);
+  const [question] = useState(createAlertDialogHandle<LauncherCredentialResp>);
+  const [howOpen, setHowOpen] = useState(false);
+  const section = useRef<HTMLElement>(null);
+  const howTrigger = useRef<HTMLButtonElement>(null);
+  const fallbacks: readonly FocusFallback[] = [
+    // The gone row keeps its Revoke, which names the row it stood in.
+    ({ lost, root }) => {
+      const gone = lost.closest("tr")?.querySelector<HTMLElement>("[data-row-revoke]");
+      return afterRevoke(root, howTrigger.current, rowOf(gone));
+    },
+  ];
+  useFocusKeeper(section, fallbacks);
+  // Back to its row's Revoke, else, once a revoke took the row, the first listed Revoke: the
+  // question knows its login, not the row the login stood in.
+  const finalFocus = (login: LauncherCredentialResp) =>
+    isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
+  const fault = readFailureOf(logins);
+  const refreshFault = refreshFailureOf(logins);
+  return (
+    <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>
+      <div className="space-y-1">
+        <Heading id="machine-logins-heading" size="section">
+          Machine logins
+        </Heading>
+        <Collapsible onOpenChange={setHowOpen} open={howOpen}>
+          <CollapsibleTrigger ref={howTrigger} render={<Button size="sm" variant="link" />}>
+            How machine logins work
+            {howOpen ? (
+              <ChevronDownIcon aria-hidden data-icon="inline-end" />
+            ) : (
+              <ChevronRightIcon aria-hidden data-icon="inline-end" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className={textVariants({ className: "text-pretty", tone: "muted" })}>
+              Every machine and every pod logged in as you, and every service's login. A pod logs in
+              as you when the broker's BROKER_POD_OPERATORS maps the pod's Kubernetes account to
+              you. The list shows a login while it is unexpired or a session it started still runs:
+              a session outlives its login's expiry. Only you may revoke the logins of your machines
+              and your pods. Anyone signed in may revoke a service's login. Revoking a login ends it
+              now: it starts no more sessions, and every session it started loses its secrets.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+      {refreshFault !== undefined ? (
+        <ReadFailure fault={refreshFault} noun="the latest machine logins" />
+      ) : null}
+      {logins.data !== undefined ? (
+        <div className="overflow-clip rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {HEADINGS.map((heading) => (
+                  <TableHead key={heading} scope="col">
+                    {heading}
+                  </TableHead>
+                ))}
+                <TableHead scope="col">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <LoginRows
+                logins={logins.data}
+                newCredential={newCredential}
+                question={question}
+                revoke={revoke}
+              />
+            </TableBody>
+          </Table>
+        </div>
+      ) : fault !== undefined ? (
+        <ReadFailure fault={fault} noun="machine logins" />
+      ) : (
+        <p className={MUTED}>Loading machine logins…</p>
+      )}
+      <RevokeQuestionDialog finalFocus={finalFocus} question={question} revoke={revoke} />
+    </section>
+  );
+});

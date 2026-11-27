@@ -1,0 +1,12 @@
+[install]
+# React and the other shared libraries come from the root install (scripts/link-root-packages.ts).
+peer = false
+
+# Bun reads this file only when `bun test` starts in this directory (`bun run test` does).
+# Upstream's own preloads: a DOM before any module that reads one is evaluated (the key engine
+# reads `navigator` at load), then its matchers, its resets, and its checks, which fail a test
+# that updates React outside `act` or sends a request nothing answers. This app's unmount after
+# each test goes between the two, so it runs before upstream's checks. Then this app's own setup.
+[test]
+preload = ["../dispatch/web/src/__tests__/register-dom.ts", "./tests/unmount.ts", "../dispatch/web/src/__tests__/setup.ts", "./tests/setup.ts"]
+randomize = true

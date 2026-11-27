@@ -1,0 +1,28 @@
+{
+  "root": false,
+  "extends": "//",
+  "overrides": [
+    {
+      "includes": ["tests/map/copies.json"],
+      "formatter": { "enabled": false }
+    }
+  ],
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noTsIgnore": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@upstream-dispatch/app": "Upstream's app.tsx opens a second sign-in channel when it loads; copy what the shell needs."
+            }
+          }
+        }
+      }
+    }
+  }
+}

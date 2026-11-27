@@ -1,0 +1,22 @@
+import { appCatalog } from "@/commands/app-catalog";
+import { useRegisterCommands } from "@/commands/use-register-commands";
+import { specsFor } from "./specs";
+
+/** Mounts every global command, each recording its id when it runs; those in `shut` are off. */
+export function GlobalCommands({
+  fired = [],
+  shut = [],
+}: {
+  fired?: string[];
+  shut?: readonly string[];
+}) {
+  useRegisterCommands(
+    appCatalog,
+    "global",
+    specsFor(appCatalog, "global", (command) => ({
+      enabled: !shut.includes(command.id),
+      run: () => fired.push(command.id),
+    }))
+  );
+  return null;
+}
