@@ -24,4 +24,13 @@ describe("Checkbox", () => {
       "mixed"
     );
   });
+
+  // happy-dom lays nothing out, so the classes stand for the box: 16 px, grown 4 px each way.
+  it("takes the pointer across 24 px with a pseudo-element around its 16 px box", () => {
+    render(<Checkbox aria-label="Done" />);
+    const { classList } = screen.getByRole("checkbox", { name: "Done" });
+    for (const name of ["relative", "size-4", "after:absolute", "after:-inset-1"]) {
+      expect(classList.contains(name), name).toBe(true);
+    }
+  });
 });

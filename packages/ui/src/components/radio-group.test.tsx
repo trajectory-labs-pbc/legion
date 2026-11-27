@@ -34,4 +34,17 @@ describe("RadioGroup", () => {
     await userEvent.tab();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "After" }));
   });
+
+  // happy-dom lays nothing out, so the classes stand for the box: 16 px, grown 4 px each way.
+  it("takes the pointer across 24 px with a pseudo-element around each 16 px item", () => {
+    render(
+      <RadioGroup aria-label="Size">
+        <RadioGroupItem aria-label="Small" value="s" />
+      </RadioGroup>
+    );
+    const { classList } = screen.getByRole("radio", { name: "Small" });
+    for (const name of ["relative", "size-4", "after:absolute", "after:-inset-1"]) {
+      expect(classList.contains(name), name).toBe(true);
+    }
+  });
 });

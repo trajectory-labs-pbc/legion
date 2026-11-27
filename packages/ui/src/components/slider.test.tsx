@@ -59,4 +59,17 @@ describe("Slider", () => {
     expect(thumb.getAttribute("aria-valuenow")).toBe("5");
     expect(thumb.getAttribute("aria-label")).toBe("Speed");
   });
+
+  // happy-dom lays nothing out, so the classes stand for the box: 16 px, grown 4 px each way.
+  // Base UI places the thumb with `position: absolute`, which the pseudo-element is set against.
+  it("takes the pointer across 24 px with a pseudo-element around each 16 px thumb", () => {
+    const { container } = render(<Slider defaultValue={[20, 80]} />);
+    const thumbs = [...container.querySelectorAll('[data-slot="slider-thumb"]')];
+    expect(thumbs).toHaveLength(2);
+    for (const { classList } of thumbs) {
+      for (const name of ["size-4", "after:absolute", "after:-inset-1"]) {
+        expect(classList.contains(name), name).toBe(true);
+      }
+    }
+  });
 });

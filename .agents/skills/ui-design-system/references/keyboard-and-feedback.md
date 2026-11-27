@@ -34,6 +34,8 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **PT1** Controls and links to pages of the app keep the default cursor: no `cursor-pointer` on a button, a row, a menu item, a tab or an in-app link. Only a link that leaves the app shows the pointer, which the browser gives it: no class sets it. No preference turns pointers on. Linear: no pointer cursors except on links to other sites (Linear offers a preference; this app does not). Check: the design-rule tests refuse a pointer cursor in tl-dispatch; `packages/ui`'s style test refuses it in the components.
 
+**PT2** A control under 24 by 24 px grows its pointer target with a pseudo-element, never by a bigger glyph or box, so it looks the same: `after:absolute after:-inset-1` on a 16 px box, or a 24 px `after:` band across the middle of a line of text. The control is positioned, and its own box clips nothing (no `truncate` or `overflow-hidden` on it). No two targets overlap. A control inside a row that is a link is not an overlap: the control takes the click (LR4, LR6). Only a range's two thumbs may meet, as the thumbs themselves do. Check: a test beside each such component in `packages/ui` for its target's classes; the browser test in `packages/tl-dispatch/e2e/accessibility.e2e.ts` probes the 24 px square around each such control the app draws.
+
 ## Empty and loading states (ES)
 
 **ES1** An empty view shows, centred in the panel: a 32 px muted icon, a one-line title, one sentence that says why it is empty, and at most one action with its key. No illustration. Linear: empty views offer the create action (Linear draws an illustration; this theme uses an icon). Pages: every list. Check: (new) a test renders each list with no rows.

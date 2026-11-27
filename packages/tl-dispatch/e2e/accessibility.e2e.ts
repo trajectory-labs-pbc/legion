@@ -9,7 +9,8 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
 import { createAsk } from "../../dispatch/e2e/api";
-import { setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
+import type { FakeLauncherCredential } from "../../dispatch/e2e/fake-broker";
+import { setLauncherCredentials, setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
 import { withIssuePage } from "../../dispatch/e2e/issue-page-option";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
 import type { RecordResponse } from "../../dispatch/web/src/api/types";
@@ -421,4 +422,61 @@ test("an input without its label inside an upstream widget's wrapper is left out
   await appendInput(page.locator(`${MAIN} > ${UPSTREAM_VIEW}`).last());
   await expect(page.locator(`${MAIN} ${UPSTREAM_VIEW} > input`)).toHaveCount(1);
   expect(await scan(page, machineLogin)).toEqual([]);
+});
+
+// The pointer targets (PT2): each control the fork draws whose box is under 24 px takes the
+// pointer across 24 by 24 px around its centre, and no other target covers any of it. Probes hit
+// the pseudo-element that grows the target, which no bounding box reports.
+const SMALL_CONTROLS = [
+  '[data-slot="checkbox"]',
+  '[data-slot="radio-group-item"]',
+  '[data-slot="slider-thumb"]',
+  'button[data-slot="truncated-text"]',
+].join(", ");
+const TARGET_PX = 24;
+
+/** A live machine login whose machine name is too long for its cell, so the row cuts it. */
+function cutLogin(credentialId: string): FakeLauncherCredential {
+  const hour = 60 * 60_000;
+  return {
+    approved_by: "alice",
+    credential_id: credentialId,
+    expired: false,
+    expires_at: new Date(Date.now() + hour).toISOString(),
+    host: `${credentialId}.${"build-runners.".repeat(12)}example.com`,
+    issued_at: new Date(Date.now() - hour).toISOString(),
+    listedFor: "alice",
+    person: null,
+    service: null,
+    subject: null,
+  };
+}
+
+test("each small control takes the pointer across 24 by 24 px, on no other target", async ({
+  page,
+}) => {
+  await setLauncherCredentials([cutLogin("cred-cut-1"), cutLogin("cred-cut-2")]);
+  await page.goto("/credentials/machine");
+  await expect(page.getByRole("region", { name: "Machine logins" })).toBeVisible();
+  // Two rows, each with its machine name cut.
+  const controls = page.locator(MAIN).locator(SMALL_CONTROLS);
+  await expect(controls).toHaveCount(2);
+  for (const control of await controls.all()) {
+    await control.scrollIntoViewIfNeeded();
+    const misses = await control.evaluate((element, size) => {
+      const box = element.getBoundingClientRect();
+      const left = box.left + box.width / 2 - size / 2;
+      const top = box.top + box.height / 2 - size / 2;
+      const offsets = [0.5, size / 4, size / 2, (size * 3) / 4, size - 0.5];
+      return offsets.flatMap((dy) =>
+        offsets.flatMap((dx) => {
+          const hit = document.elementFromPoint(left + dx, top + dy);
+          return hit !== null && element.contains(hit)
+            ? []
+            : [`(${dx}, ${dy}): ${hit?.outerHTML.slice(0, 80)}`];
+        })
+      );
+    }, TARGET_PX);
+    expect(misses, `points of the target that miss ${await control.textContent()}`).toEqual([]);
+  }
 });
