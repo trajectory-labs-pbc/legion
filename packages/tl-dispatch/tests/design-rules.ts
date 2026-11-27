@@ -43,7 +43,7 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
-  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking or uppercase class, and no `text-wrap*` property or font smoothing in a class or a stylesheet: set the wrap mode with `whitespace-*` or `truncate`",
+  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking, uppercase or lowercase class, and no `text-wrap*` property or font smoothing in a class or a stylesheet; set the wrap mode with `whitespace-*` or `truncate`",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -226,7 +226,7 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  // The recipes own the wrap and the root the smoothing; no class or stylesheet sets them.
+  // The recipes own the wrap, the root the smoothing: no page's class or app stylesheet sets them.
   if ((fromClass && typeSet(property, value)) || /^text-wrap|font-smooth/.test(property)) {
     problems.push(RULES.type);
   }

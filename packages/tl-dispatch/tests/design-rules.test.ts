@@ -140,8 +140,8 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
-  // A stylesheet answers upstream's markup, so it may set size, weight, leading and tracking; a
-  // class may not. Neither sets the wrap or the smoothing.
+  // A stylesheet answers upstream's markup, so it may set size, weight, leading, tracking and case;
+  // a class may not. Neither sets the wrap nor the smoothing.
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
 ];
 
