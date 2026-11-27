@@ -216,7 +216,7 @@ describe("DropdownMenu's drawn rows", () => {
     expect(drawn).toEqual(["pair-2", "before-group"]);
   });
 
-  it("gives every other row and each label the room when a row marks its icon inline-start", async () => {
+  it("gives every other row and each label the room when a row marks its icon inline-start, and none in its open submenu", async () => {
     const rows = (
       <>
         <DropdownMenuItem>
