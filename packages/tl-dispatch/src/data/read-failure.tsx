@@ -9,24 +9,43 @@ import { useFocusHandOff } from "@/upstream/data-hooks";
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
 
+/** A failure this component saw, with the time of the read's error it came from. */
+type Seen = { readonly failure: Failure; readonly at: number };
+
+/** What a failure reads of a read: a query result, or a query's state with its Retry. */
+type FailableRead = Pick<
+  UseQueryResult<unknown>,
+  "data" | "error" | "errorUpdatedAt" | "fetchStatus" | "isPlaceholderData"
+> & { refetch: () => unknown };
+
 /**
  * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
  * A refetch clears the error of a read with no data until it answers, so a read keeps the failure
  * this component saw while it is out again, however often it failed meanwhile. A read this
  * component never saw fail is loading while it is out, so a failure from before it mounted shows
- * only once the read answers again. Every render passes the same reads in the same places, each
- * place always the same query, `undefined` for a read left out: what was seen is kept by place.
+ * only once the read answers again. Every render passes the same reads in the same places,
+ * `undefined` for a read left out: what was seen is kept by place, and only while the read's last
+ * error is not older than the one it was seen with, so another query at the same place starts
+ * afresh. Another key's placeholder is nothing of the read's own to show.
  */
 export function useReadFailure(
-  ...reads: readonly (UseQueryResult<unknown> | undefined)[]
+  ...reads: readonly (FailableRead | undefined)[]
 ): ReadFault | undefined {
-  const [seen, setSeen] = useState<readonly (Failure | undefined)[]>([]);
-  const failures = reads.map((read, index): Failure | undefined => {
-    if (read === undefined || read.data !== undefined) return undefined;
-    if (read.error !== null) return refusalOf(read.error) ?? "retryable";
-    return read.fetchStatus === "idle" ? undefined : seen[index];
+  const [seen, setSeen] = useState<readonly (Seen | undefined)[]>([]);
+  const current = reads.map((read, index): Seen | undefined => {
+    if (read === undefined || (read.data !== undefined && !read.isPlaceholderData)) {
+      return undefined;
+    }
+    const at = read.errorUpdatedAt;
+    if (read.error !== null) return { at, failure: refusalOf(read.error) ?? "retryable" };
+    const last = seen[index];
+    return read.fetchStatus === "idle" || last === undefined || at < last.at ? undefined : last;
   });
-  if (failures.some((failure, index) => failure !== seen[index])) setSeen(failures);
+  const changed = current.some(
+    (each, index) => each?.failure !== seen[index]?.failure || each?.at !== seen[index]?.at
+  );
+  if (changed) setSeen(current);
+  const failures = current.map((each) => each?.failure);
   if (failures.every((failure) => failure === undefined)) return undefined;
   const retrying = reads.some(
     (read, index) => failures[index] !== undefined && read?.fetchStatus !== "idle"

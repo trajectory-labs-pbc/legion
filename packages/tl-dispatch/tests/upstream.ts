@@ -4,6 +4,7 @@ export { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 export { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 export { holdNotifications } from "@upstream-dispatch/__tests__/commits";
 export { onFakeClock, realClock, settle, tick } from "@upstream-dispatch/__tests__/fake-clock";
+export { details } from "@upstream-dispatch/__tests__/issue-picks";
 export { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 export { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
 export { answerRequests } from "@upstream-dispatch/__tests__/network";

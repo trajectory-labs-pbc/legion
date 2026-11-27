@@ -2,6 +2,7 @@
 export type {
   ApproverGrantResp,
   Artifact,
+  Ask,
   AskAnswerWithTrees,
   AuthenticatedUser,
   CredentialPendingRow,
@@ -17,4 +18,5 @@ export type {
   RecordResponse,
   StateResponse,
   UserAgentStates,
+  Version,
 } from "@upstream-dispatch/api/types";

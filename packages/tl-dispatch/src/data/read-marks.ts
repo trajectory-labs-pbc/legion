@@ -9,6 +9,12 @@ import { onAnotherPerson } from "./session";
 
 export type { DocumentRead } from "@/upstream/contract";
 
+/** The name of upstream's read of the reader's read mark of a document. */
+const READ_MARK = "document-read";
+
+/** The key of upstream's read of the reader's read mark of a document. */
+export const readMarkKey = (artifactId: string) => [READ_MARK, artifactId];
+
 /** What a reader of the read marks does with them. */
 export interface ReadMarkListener {
   /** A settled answer of upstream's read of the reader's read mark of the document `artifactId`. */
@@ -22,7 +28,7 @@ const isDocumentRead = (answer: unknown): answer is DocumentRead =>
 
 function recordReadMark(query: Query, listener: ReadMarkListener): void {
   const [name, artifactId] = query.queryKey;
-  if (name !== "document-read" || typeof artifactId !== "string") return;
+  if (name !== READ_MARK || typeof artifactId !== "string") return;
   const answer: unknown = query.state.data;
   if (query.state.status !== "success" || !isDocumentRead(answer)) return;
   listener.answer(artifactId, answer);
@@ -53,7 +59,9 @@ export function watchReadMarks(queryClient: QueryClient, listener: ReadMarkListe
   leaveWhenThePersonGoes(queryClient, listener.leave);
   const cache = queryClient.getQueryCache();
   for (const query of cache.getAll()) recordReadMark(query, listener);
-  return cache.subscribe((event) => recordReadMark(event.query, listener));
+  return cache.subscribe((event) => {
+    if (event.type === "updated") recordReadMark(event.query, listener);
+  });
 }
 
 /** Gives `listener` each read-mark answer of the app's cache while the caller is mounted. */
