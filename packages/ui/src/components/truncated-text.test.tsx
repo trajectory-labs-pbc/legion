@@ -6,20 +6,21 @@ import { TruncatedText } from "#registry/legion/ui/truncated-text";
 
 // happy-dom lays nothing out; text reads as cut while these stand. Only a span reads as cut: the
 // span inside the button is the element measured.
-const prototypes = [HTMLSpanElement.prototype];
 function cutText(): void {
-  for (const proto of prototypes) {
-    Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
-    Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => 100 });
-  }
+  Object.defineProperty(HTMLSpanElement.prototype, "scrollWidth", {
+    configurable: true,
+    get: () => 200,
+  });
+  Object.defineProperty(HTMLSpanElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 100,
+  });
 }
 
 describe("TruncatedText", () => {
   afterEach(() => {
-    for (const proto of prototypes) {
-      Reflect.deleteProperty(proto, "scrollWidth");
-      Reflect.deleteProperty(proto, "clientWidth");
-    }
+    Reflect.deleteProperty(HTMLSpanElement.prototype, "scrollWidth");
+    Reflect.deleteProperty(HTMLSpanElement.prototype, "clientWidth");
   });
 
   it("is plain text while the text fits", () => {
@@ -55,7 +56,10 @@ describe("TruncatedText", () => {
     const classes = button.className.split(" ");
     expect(classes).toEqual(
       expect.arrayContaining([
+        "relative",
+        "min-w-0",
         "after:absolute",
+        "after:inset-x-0",
         "after:top-1/2",
         "after:h-6",
         "after:-translate-y-1/2",

@@ -35,7 +35,7 @@ function TruncatedText({ text }: { text: string }) {
         data-slot="truncated-text"
         render={
           <button
-            className="relative block w-full rounded-sm after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="relative block w-full min-w-0 rounded-sm after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             type="button"
           />
         }

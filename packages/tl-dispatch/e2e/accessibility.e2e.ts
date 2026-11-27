@@ -426,17 +426,19 @@ test("an input without its label inside an upstream widget's wrapper is left out
 });
 
 // The pointer targets (PT2). The pointer reaches each small control across the 24 px square on its
-// centre, and no other control's box meets that square. Probes hit the pseudo-element that grows
-// the target, which no bounding box reports. The four slots are PT2's controls; the app draws
-// only the truncated-text one today.
+// centre, and its target meets no other control's: another small control's target, or the box of
+// any other control. Probes hit the pseudo-element that grows the target, which no bounding box
+// reports. The four slots are PT2's controls; the app draws only the truncated-text one today.
 const SMALL_CONTROLS = [
   '[data-slot="checkbox"]',
   '[data-slot="radio-group-item"]',
   '[data-slot="slider-thumb"]',
   'button[data-slot="truncated-text"]',
 ].join(", ");
+/** The controls a pointer can use. A `tabindex="-1"` element (the main region) is a focus target,
+ *  not a control. */
 const INTERACTIVE =
-  "a[href], button, input, select, textarea, [role=checkbox], [role=radio], [role=slider], [tabindex]";
+  'a[href], button, input, select, textarea, [role=checkbox], [role=radio], [role=slider], [tabindex]:not([tabindex="-1"])';
 
 /** A live machine login whose machine name is too long for its cell, so the row cuts it. */
 function cutLogin(credentialId: string): FakeLauncherCredential {
@@ -465,80 +467,100 @@ async function cutRows(page: Page): Promise<Locator> {
   return controls;
 }
 
-/** What breaks PT2 at `control`: each probe of its 24 px square that the pointer does not reach
- *  it at, and each other control whose box meets the square. A control holding it (a row link)
- *  or held by it is not another control. */
-async function targetFaults(control: Locator): Promise<string[]> {
+/** What breaks PT2 at `control`. `misses`: each probe of its centre square that the pointer does
+ *  not reach it at. `meets`: each other control whose target meets its target. Left out: what the
+ *  control holds, what is hidden from assistive tech (Base UI's hidden input beside a checkbox),
+ *  a link that holds the control (a row link), and the other thumbs of the same slider. */
+async function targetFaults(control: Locator): Promise<{ misses: string[]; meets: string[] }> {
   await control.scrollIntoViewIfNeeded();
-  return control.evaluate((element, interactive) => {
-    const size = 24;
-    const box = element.getBoundingClientRect();
-    const left = box.left + box.width / 2 - size / 2;
-    const top = box.top + box.height / 2 - size / 2;
-    const offsets = [0.5, size / 4, size / 2, (size * 3) / 4, size - 0.5];
-    const misses = offsets.flatMap((dy) =>
-      offsets.flatMap((dx) => {
-        const hit = document.elementFromPoint(left + dx, top + dy);
-        return hit !== null && element.contains(hit)
-          ? []
-          : [`misses (${dx}, ${dy}): ${hit?.outerHTML.slice(0, 80)}`];
-      })
-    );
-    const meets = [...document.querySelectorAll(interactive)].flatMap((other) => {
-      if (element.contains(other) || other.contains(element)) return [];
-      const at = other.getBoundingClientRect();
-      const meet =
-        at.width > 0 &&
-        at.height > 0 &&
-        at.left < left + size &&
-        at.right > left &&
-        at.top < top + size &&
-        at.bottom > top;
-      return meet ? [`meets ${other.outerHTML.slice(0, 80)}`] : [];
-    });
-    return [...misses, ...meets];
-  }, INTERACTIVE);
+  return control.evaluate(
+    (element, { interactive, small }) => {
+      // A small control's target is its 24 px square, or for cut text a 24 px band as wide as the
+      // text; any other control's target is its box.
+      const targetOf = (at: Element) => {
+        const box = at.getBoundingClientRect();
+        if (!at.matches(small)) return box;
+        const band = at.matches('[data-slot="truncated-text"]');
+        const width = band ? box.width : Math.max(box.width, 24);
+        const height = Math.max(box.height, 24);
+        const x = box.left + box.width / 2;
+        const y = box.top + box.height / 2;
+        return {
+          left: x - width / 2,
+          right: x + width / 2,
+          top: y - height / 2,
+          bottom: y + height / 2,
+        };
+      };
+      const target = targetOf(element);
+      const box = element.getBoundingClientRect();
+      const side = Math.min(24, target.right - target.left);
+      const left = box.left + box.width / 2 - side / 2;
+      const top = box.top + box.height / 2 - 12;
+      const steps = [0, 0.25, 0.5, 0.75, 1];
+      const misses = steps.flatMap((sy) =>
+        steps.flatMap((sx) => {
+          const x = left + 0.5 + sx * (side - 1);
+          const y = top + 0.5 + sy * 23;
+          const hit = document.elementFromPoint(x, y);
+          return hit !== null && element.contains(hit)
+            ? []
+            : [`(${x - left}, ${y - top}): ${hit?.outerHTML.slice(0, 80)}`];
+        })
+      );
+      const slider = element.closest('[data-slot="slider"]');
+      const others = new Set(document.querySelectorAll(`${interactive}, ${small}`));
+      const meets = [...others].flatMap((other) => {
+        if (other === element || element.contains(other)) return [];
+        if (other.closest('[aria-hidden="true"]') !== null) return [];
+        if (other.matches("a[href]") && other.contains(element)) return [];
+        const thumb = other.closest('[data-slot="slider-thumb"]');
+        if (slider !== null && thumb !== null && slider.contains(thumb)) return [];
+        const at = targetOf(other);
+        const meet =
+          at.right - at.left > 0 &&
+          at.bottom - at.top > 0 &&
+          at.left < target.right &&
+          at.right > target.left &&
+          at.top < target.bottom &&
+          at.bottom > target.top;
+        return meet ? [other.outerHTML.slice(0, 80)] : [];
+      });
+      return { misses, meets };
+    },
+    { interactive: INTERACTIVE, small: SMALL_CONTROLS }
+  );
 }
 
-test("each small control takes the pointer across its 24 px square, which meets no other control", async ({
+test("each small control takes the pointer across its 24 px square, and its target meets no other", async ({
   page,
 }) => {
   for (const control of await (await cutRows(page)).all()) {
-    expect(await targetFaults(control), (await control.textContent()) ?? "").toEqual([]);
+    expect(await targetFaults(control), (await control.textContent()) ?? "").toEqual({
+      misses: [],
+      meets: [],
+    });
   }
 });
 
 // The check's own failures: a cut text button with no band is one line of text tall, and a control
-// whose box sits in the square meets it even where the pointer passes through it.
+// whose box sits in the target meets it even where the pointer passes through it.
 test("a small control with no band misses the pointer at its square's edges", async ({ page }) => {
   const control = (await cutRows(page)).first();
   await page.addStyleTag({ content: '[data-slot="truncated-text"]::after { display: none; }' });
-  const faults = await targetFaults(control);
-  expect(faults.filter((fault) => fault.startsWith("misses ")).length).toBeGreaterThan(0);
-  expect(faults.filter((fault) => fault.startsWith("meets "))).toEqual([]);
+  expect((await targetFaults(control)).misses.length).toBeGreaterThan(0);
 });
 
-test("a control whose box sits in a small control's square meets it", async ({ page }) => {
+test("a control whose box sits in a small control's target meets it", async ({ page }) => {
   const control = (await cutRows(page)).first();
   await control.scrollIntoViewIfNeeded();
   await control.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const other = document.createElement("button");
-    other.type = "button";
-    other.textContent = "x";
-    Object.assign(other.style, {
-      height: "2px",
-      left: `${box.left + box.width / 2}px`,
-      overflow: "hidden",
-      padding: "0",
-      pointerEvents: "none",
-      position: "fixed",
-      top: `${box.top + box.height / 2 - 11}px`,
-      width: "2px",
-    });
+    other.style.cssText = `position: fixed; left: ${box.left + box.width / 2}px; top: ${box.top + box.height / 2 - 11}px; width: 2px; height: 2px; padding: 0; pointer-events: none`;
     document.body.append(other);
   });
   const faults = await targetFaults(control);
-  expect(faults.filter((fault) => fault.startsWith("meets ")).length).toBe(1);
-  expect(faults.filter((fault) => fault.startsWith("misses "))).toEqual([]);
+  expect(faults.meets).toHaveLength(1);
+  expect(faults.misses).toEqual([]);
 });

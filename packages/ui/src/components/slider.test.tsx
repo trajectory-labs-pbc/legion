@@ -11,8 +11,7 @@ const BAND = [
   "after:top-1/2",
   "after:left-1/2",
   "after:size-6",
-  "after:-translate-x-1/2",
-  "after:-translate-y-1/2",
+  "after:-translate-1/2",
 ];
 
 describe("Slider", () => {

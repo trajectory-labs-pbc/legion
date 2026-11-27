@@ -55,7 +55,7 @@ function TableHead({ className, numeric, ...props }: ComponentProps<"th"> & Nume
     <th
       data-slot="table-head"
       className={cn(
-        "h-row px-2.5 text-left align-middle font-medium whitespace-nowrap text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        "h-row px-2.5 text-left align-middle font-medium whitespace-nowrap text-muted-foreground",
         numeric && NUMERIC,
         className
       )}
@@ -69,7 +69,7 @@ function TableCell({ className, numeric, ...props }: ComponentProps<"td"> & Nume
     <td
       data-slot="table-cell"
       className={cn(
-        "h-row px-2.5 py-1.5 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "h-row px-2.5 py-1.5 align-middle whitespace-nowrap",
         numeric && NUMERIC,
         className
       )}

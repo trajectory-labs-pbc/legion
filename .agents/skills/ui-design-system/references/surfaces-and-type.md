@@ -18,7 +18,7 @@ The tokens are in `tokens.md`.
 
 ## Density (TY1 to TY3)
 
-**TY1** Heights: a list row 36 px (`h-list-row-1`), and 56 px with two lines on the Inbox and Answered by you (`h-list-row-2`), a sidebar row 28 px, a property row 32 px, the view header 44 px, a header control 28 px (`size="sm"`), a form control 32 px (the default). On a coarse pointer every control reaches 44 px. Every control's pointer target is at least 24 by 24 px (PT2). Linear: list and sidebar density. Check: the control-height test; the PT2 checks; reviewer for rows.
+**TY1** Heights: a list row 36 px (`h-list-row-1`), and 56 px with two lines on the Inbox and Answered by you (`h-list-row-2`), a sidebar row 28 px, a property row 32 px, the view header 44 px, a header control 28 px (`size="sm"`), a form control 32 px (the default). On a coarse pointer every control reaches 44 px. Every control's pointer target is at least 24 by 24 px (PT2). Two exceptions: a cut-text band is only as wide as its text, and the search field's 16 px clear button stays 16 px until its own fix. Linear: list and sidebar density. Check: the control-height test; the PT2 checks; reviewer for rows.
 
 **TY2** Spacing inside a row is 8 px between parts and 12 px at each end. A page's padding is 0 for a list (rows reach the panel's edges) and 24 px for a record's main column. Linear: the issue list. Check: reviewer.
 
