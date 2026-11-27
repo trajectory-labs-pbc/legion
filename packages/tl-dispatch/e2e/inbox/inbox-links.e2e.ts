@@ -6,12 +6,14 @@ import { inboxSearchBox } from "../../../dispatch/e2e/inbox-filter";
 import { ROOT } from "../../../dispatch/e2e/threads-order";
 import { expectLoadSettled, watchApiRequests } from "../../../dispatch/e2e/traffic";
 import {
+  backToSettings,
   chooseView,
   closeView,
   expectOpen,
   focusPage,
   inboxHeading,
   main,
+  openSettings,
   openView,
   row,
   search,
@@ -24,17 +26,17 @@ test("INB-1 / opens the Inbox page, with its heading and each kind of row", asyn
   inbox,
   page,
 }) => {
-  const rows = [
-    await inbox.ask("withOptions", "Ship the ledger today?"),
-    await inbox.ask("oneChoice", "Where does the canary run?"),
-    await inbox.ask("severalChoices", "Which platforms get the build?"),
-    await inbox.ask("noOptions", "What should the release note say?"),
-    await inbox.approval(),
-    await inbox.decisionInDocument(),
-    await inbox.unreadThread(ROOT, ["One hour."]),
-  ];
-  const credential = await inbox.credentialRequest(CREDENTIAL);
-  await page.goto(await inbox.address());
+  const [credential, ...rows] = await Promise.all([
+    inbox.credentialRequest(CREDENTIAL),
+    inbox.ask("withOptions", "Ship the ledger today?"),
+    inbox.ask("oneChoice", "Where does the canary run?"),
+    inbox.ask("severalChoices", "Which platforms get the build?"),
+    inbox.ask("noOptions", "What should the release note say?"),
+    inbox.approval(),
+    inbox.decisionInDocument(),
+    inbox.unreadThread(ROOT, ["One hour."]),
+  ]);
+  await inbox.open();
   await expect(inboxHeading(page)).toBeVisible();
   for (const seeded of rows) await expect(row(main(page), seeded)).toBeVisible();
   if (credential) {
@@ -61,19 +63,19 @@ test("INB-3 /replies lands on the Inbox's reply rows, with no history entry of i
   inbox,
   page,
 }) => {
-  const ask = await inbox.ask("withOptions", "Hold the mirror?");
-  const thread = await inbox.unreadThread("Does the mirror replay on a cold start?", ["Yes."]);
+  const [ask, thread] = await Promise.all([
+    inbox.ask("withOptions", "Hold the mirror?"),
+    inbox.unreadThread("Does the mirror replay on a cold start?", ["Yes."]),
+  ]);
   const traffic = watchApiRequests(page);
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await openSettings(page);
   await page.goto("/replies");
   await expect(row(main(page), thread)).toBeVisible();
   await expect(page).toHaveURL((url) => url.pathname === "/");
   expect(search(page).get("type")).toBe("reply");
   await expectLoadSettled(traffic);
   await expect(row(main(page), ask)).toHaveCount(0);
-  await page.goBack();
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await backToSettings(page);
 });
 
 test("INB-4 /answers opens Answered by you, with the reader's answers", async ({ inbox, page }) => {
@@ -87,9 +89,8 @@ test("INB-5 ?item= selects the ask it names and shows it in the reading pane", a
   inbox,
   page,
 }) => {
-  const [first, second] = await inbox.asks(2, "Which lease moves");
-  if (first === undefined || second === undefined) throw new Error("two asks were seeded");
-  await page.goto(await inbox.address({ item: first.id }));
+  const [first] = await inbox.asks(2, "Which lease moves");
+  await inbox.open({ item: first.id });
   await expectOpen(page, first);
   await expect(
     page.getByRole("region", { name: "Selected question" }).getByText(first.text).first()
@@ -101,9 +102,8 @@ test("INB-6 an ?item= the list does not hold selects the first row and writes it
   inbox,
   page,
 }) => {
-  const [older, newer] = await inbox.asks(2, "Which mirror replays");
-  if (older === undefined || newer === undefined) throw new Error("two asks were seeded");
-  await page.goto(await inbox.address({ item: randomUUID() }));
+  const [, newer] = await inbox.asks(2, "Which mirror replays");
+  await inbox.open({ item: randomUUID() });
   await expectOpen(page, newer);
   await expect.poll(() => search(page).get("item")).toBe(newer.id);
 });
@@ -112,10 +112,16 @@ test("INB-7 an ?item= in the folded Later band opens the band and selects the ro
   inbox,
   page,
 }) => {
-  await inbox.ask("withOptions", "Keep the retry budget?");
-  const later = await inbox.ask("withOptions", "Move the clock later?");
-  await inbox.snooze(later.id);
-  await page.goto(await inbox.address({ item: later.id }));
+  const snoozed = async () => {
+    const later = await inbox.ask("withOptions", "Move the clock later?");
+    await inbox.snooze(later.id);
+    return later;
+  };
+  const [, later] = await Promise.all([
+    inbox.ask("withOptions", "Keep the retry budget?"),
+    snoozed(),
+  ]);
+  await inbox.open({ item: later.id });
   await expect(main(page).getByRole("button", { name: /^Later/ })).toHaveAttribute(
     "aria-expanded",
     "true"
@@ -130,7 +136,7 @@ test("INB-8 ?item= stays unread while the list is empty or its read failed", asy
   const missing = randomUUID();
   const traffic = watchApiRequests(page);
   // An empty list: this test's project holds no row yet.
-  await page.goto(await inbox.address({ item: missing }));
+  await inbox.open({ item: missing });
   await expect(inboxHeading(page)).toBeVisible();
   await expectLoadSettled(traffic);
   expect(search(page).get("item")).toBe(missing);
@@ -140,7 +146,7 @@ test("INB-8 ?item= stays unread while the list is empty or its read failed", asy
     (url) => url.pathname === "/api/v1/inbox",
     (route) => route.fulfill({ status: 500 })
   );
-  await page.goto(await inbox.address({ item: missing }));
+  await inbox.open({ item: missing });
   await expect(page.getByText("Could not load your inbox.")).toBeVisible();
   expect(search(page).get("item")).toBe(missing);
 });
@@ -149,13 +155,9 @@ test("INB-9 a selection replaces the history entry, so Back leaves the Inbox in 
   inbox,
   page,
 }) => {
-  const asks = await inbox.asks(4, "Which window replays");
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-  await page.goto(await inbox.address());
-  const [first, second, third, fourth] = asks;
-  if (first === undefined || second === undefined || third === undefined || fourth === undefined)
-    throw new Error("four asks were seeded");
+  const [first, second, third, fourth] = await inbox.asks(4, "Which window replays");
+  await openSettings(page);
+  await inbox.open();
   await expectOpen(page, fourth);
   await focusPage(page);
   for (const next of [third, second, first]) {
@@ -163,26 +165,27 @@ test("INB-9 a selection replaces the history entry, so Back leaves the Inbox in 
     await expectOpen(page, next);
     await expect.poll(() => search(page).get("item")).toBe(next.id);
   }
-  await page.goBack();
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await backToSettings(page);
 });
 
 test("INB-10 ?agent= lists that agent's asks alone, with no thread row", async ({
   inbox,
   page,
 }) => {
-  const [agent, other] = [randomUUID(), randomUUID()];
-  const own = await inbox.ask("withOptions", "Ship from this session?", agent);
-  const others = await inbox.ask("withOptions", "Ship from the other session?", other);
-  const thread = await inbox.unreadThread("Who owns the mirror?", ["The ledger team."]);
+  const agent = randomUUID();
+  const [own, others, thread] = await Promise.all([
+    inbox.ask("withOptions", "Ship from this session?", agent),
+    inbox.ask("withOptions", "Ship from the other session?", randomUUID()),
+    inbox.unreadThread("Who owns the mirror?", ["The ledger team."]),
+  ]);
   const traffic = watchApiRequests(page);
-  await page.goto(await inbox.address({ agent }));
+  await inbox.open({ agent });
   await expect(row(main(page), own)).toBeVisible();
   await expectLoadSettled(traffic);
   await expect(row(main(page), others)).toHaveCount(0);
   await expect(row(main(page), thread)).toHaveCount(0);
   // The same project without `agent` lists both.
-  await page.goto(await inbox.address());
+  await inbox.open();
   await expect(row(main(page), others)).toBeVisible();
   await expect(row(main(page), thread)).toBeVisible();
 });
@@ -191,12 +194,18 @@ test("INB-11 ?section=needs-you keeps the asks waiting on the reader, not snooze
   inbox,
   page,
 }) => {
-  const waiting = await inbox.ask("withOptions", "Approve the lease change?");
-  const snoozed = await inbox.ask("withOptions", "Approve the clock change?");
-  await inbox.snooze(snoozed.id);
-  const thread = await inbox.unreadThread("When does the mirror catch up?", ["By noon."]);
+  const snoozedAsk = async () => {
+    const ask = await inbox.ask("withOptions", "Approve the clock change?");
+    await inbox.snooze(ask.id);
+    return ask;
+  };
+  const [waiting, snoozed, thread] = await Promise.all([
+    inbox.ask("withOptions", "Approve the lease change?"),
+    snoozedAsk(),
+    inbox.unreadThread("When does the mirror catch up?", ["By noon."]),
+  ]);
   const traffic = watchApiRequests(page);
-  await page.goto(await inbox.address({ section: "needs-you" }));
+  await inbox.open({ section: "needs-you" });
   await expect(row(main(page), waiting)).toBeVisible();
   await expectLoadSettled(traffic);
   // The Later band starts folded, so its row is never drawn: the snoozed ask has no band at all.
@@ -209,15 +218,16 @@ test("INB-12 ?q= fills the search box and filters by its first 1000 characters",
   inbox,
   page,
 }) => {
-  const long = await inbox.ask("withOptions", `Keep ${"the ledger window ".repeat(60)}open?`);
-  const other = await inbox.ask("withOptions", "Close the mirror window?");
+  const [long, other] = await Promise.all([
+    inbox.ask("withOptions", `Keep ${"the ledger window ".repeat(60)}open?`),
+    inbox.ask("withOptions", "Close the mirror window?"),
+  ]);
   // Past the first 1000 characters the text matches nothing, and the list ignores it.
   const query = `${long.text.slice(0, 1000)}${"z".repeat(200)}`;
-  const traffic = watchApiRequests(page);
-  await page.goto(await inbox.address({ q: query }));
+  await inbox.open({ q: query });
   await expect(inboxSearchBox(page)).toHaveValue(query);
+  // Both rows come from one read, which the shown row proves has landed.
   await expect(row(main(page), long)).toBeVisible();
-  await expectLoadSettled(traffic);
   await expect(row(main(page), other)).toHaveCount(0);
 });
 
@@ -233,7 +243,8 @@ test("INB-13 ?assignee= lists the reader's own, a person's, everyone's or nobody
     for (const value of assignee) query.append("assignee", value);
     await page.goto(`/?${query}`);
     await expect(inboxHeading(page)).toBeVisible();
-    await expectLoadSettled(traffic);
+    // A row that shows is waited for; one that does not needs the page to have settled.
+    if (!shows) await expectLoadSettled(traffic);
     await expect(row(main(page), mine)).toHaveCount(shows ? 1 : 0);
   };
   await listed([], true);
@@ -253,7 +264,7 @@ test("INB-14 View › Show › Dismissed writes ?show=dismissed, and Inbox takes
   page,
 }) => {
   const ask = await inbox.ask("withOptions", "Dismissed view?");
-  await page.goto(await inbox.address());
+  await inbox.open();
   await expect(row(main(page), ask)).toBeVisible();
   await chooseView(page, "Show", "Dismissed");
   await expect.poll(() => search(page).get("show")).toBe("dismissed");
@@ -276,7 +287,7 @@ test("INB-15 ?sort= takes each sort, and Newest first, the default, leaves the a
     urgency: "Urgency",
   };
   for (const [value, label] of Object.entries(sorts)) {
-    await page.goto(await inbox.address({ sort: value }));
+    await inbox.open({ sort: value });
     const menu = await openView(page);
     await expect(
       menu.getByRole("group", { name: "Sort by" }).getByRole("radio", { name: label })
@@ -310,9 +321,8 @@ test("INB-18 a search, sort, group or show change replaces the history entry", a
   page,
 }) => {
   await inbox.ask("withOptions", "Group the queue?");
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-  await page.goto(await inbox.address());
+  await openSettings(page);
+  await inbox.open();
   await expect(inboxHeading(page)).toBeVisible();
   await inboxSearchBox(page).fill("queue");
   await expect.poll(() => search(page).get("q")).toBe("queue");
@@ -323,8 +333,7 @@ test("INB-18 a search, sort, group or show change replaces the history entry", a
   await chooseView(page, "Show", "Dismissed");
   await expect.poll(() => search(page).get("show")).toBe("dismissed");
   await closeView(page);
-  await page.goBack();
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await backToSettings(page);
 });
 
 test("INB-19 a plain / leaves every field at its default out of the address", async ({

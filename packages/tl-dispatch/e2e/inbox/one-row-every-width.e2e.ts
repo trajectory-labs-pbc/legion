@@ -18,27 +18,26 @@ test("INB-23 from 1280 px the list scrolls under a header that stays; below, the
   page,
 }) => {
   const asks = await inbox.asks(24, "Which shard replays");
-  const [last, first] = [asks[0], asks.at(-1)];
-  if (last === undefined || first === undefined) throw new Error("the asks were seeded");
-  await page.goto(await inbox.address());
-  await row(main(page), first).hover();
+  // Newest first: the last ask made is the top row, the first the bottom one.
+  const [bottom, top] = [asks[0], asks[asks.length - 1]];
+  await inbox.open();
+  await row(main(page), top).hover();
   await page.mouse.wheel(0, 4000);
-  await expect(row(main(page), last)).toBeInViewport();
+  await expect(row(main(page), bottom)).toBeInViewport();
   await expect(inboxHeading(page)).toBeInViewport();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
   await page.setViewportSize({ height: 720, width: 1024 });
-  await page.goto(await inbox.address());
-  await row(main(page), first).hover();
+  await inbox.open();
+  await row(main(page), top).hover();
   await page.mouse.wheel(0, 1000);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
 test("INB-130 j past the fold keeps the selected row in view", async ({ inbox, page }) => {
   const asks = await inbox.asks(24, "Which lease expires");
-  const [newest, walked] = [asks.at(-1), asks.at(-21)];
-  if (newest === undefined || walked === undefined) throw new Error("the asks were seeded");
-  await page.goto(await inbox.address());
+  const [newest, walked] = [asks[asks.length - 1], asks[asks.length - 21]];
+  await inbox.open();
   await expectOpen(page, newest);
   await focusPage(page);
   for (let step = 0; step < 20; step += 1) await page.keyboard.press("j");
@@ -52,7 +51,7 @@ test("INB-139 the pane's Question body is a focus stop that Page Down scrolls", 
 }) => {
   const lines = Array.from({ length: 60 }, (_, index) => `Window ${index + 1} replays the ledger.`);
   const ask = await inbox.ask("noOptions", `Which window comes first?\n\n${lines.join("\n\n")}`);
-  await page.goto(await inbox.address({ item: ask.id }));
+  await inbox.open({ item: ask.id });
   await expectOpen(page, ask);
   const body = questionBody(page);
   await expect(body).toHaveAttribute("tabindex", "0");
@@ -73,12 +72,12 @@ test("INB-185 under Oldest first, the pane opens a long thread at its first unre
   ].join("\n\n");
   const replies = ["One hour.", "Then a day.", "Unread: the whole ledger, window by window."];
   const thread = await inbox.unreadThread(root, replies);
-  await page.goto(await inbox.address());
+  await inbox.open();
   await chooseView(page, "Thread order", "Oldest first");
   await closeView(page);
   await row(main(page), thread).getByRole("time").first().click();
   await expectOpen(page, thread);
-  const unread = questionBody(page).getByText(replies[2] ?? "");
+  const unread = questionBody(page).getByText(replies[2]);
   await expect(unread).toBeInViewport();
   // The root's own lines are above it, out of the scroller's view.
   await expect(

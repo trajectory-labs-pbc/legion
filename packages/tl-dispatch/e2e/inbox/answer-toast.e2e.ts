@@ -3,7 +3,7 @@
 import type { Locator } from "@playwright/test";
 
 import { drawer } from "../../../dispatch/e2e/inbox-drawer";
-import { centre, main, row, topOf } from "./page";
+import { centre, main, openSettings, row, topOf } from "./page";
 import { expect, type InboxSeed, type Seeded, test } from "./seed";
 
 /** Puts the pointer on the 12th of the 20 `seeded` rows as the list draws them, newest first,
@@ -15,7 +15,6 @@ async function holdWhileAboveLeaves(
 ): Promise<void> {
   const order = [...seeded].reverse();
   const [above, held] = [order[4], order[11]];
-  if (above === undefined || held === undefined) throw new Error("twenty rows were seeded");
   const heldRow = row(scope, held);
   await centre(heldRow);
   await heldRow.hover();
@@ -31,7 +30,7 @@ test("INB-252 the row under the hand stays where it was when a row above it leav
   page,
 }) => {
   const asks = await inbox.asks(20, "Which ledger shard");
-  await page.goto(await inbox.address());
+  await inbox.open();
   await holdWhileAboveLeaves(main(page), asks, inbox);
 });
 
@@ -40,8 +39,7 @@ test("INB-285 in the drawer, the row under the hand stays and the window does no
   page,
 }) => {
   const asks = await inbox.asks(20, "Which mirror shard");
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await openSettings(page);
   await page.keyboard.press("i");
   await expect(drawer(page)).toBeVisible();
   const scrolled = () => page.evaluate(() => window.scrollY);

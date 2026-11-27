@@ -55,7 +55,7 @@ const ASK_SHAPES = {
   noOptions: {},
 } satisfies Record<string, { multiple?: boolean; options?: AskOption[] }>;
 
-export type AskKind = keyof typeof ASK_SHAPES;
+type AskKind = keyof typeof ASK_SHAPES;
 
 export interface Seeded {
   id: string;
@@ -105,6 +105,11 @@ export class InboxSeed {
   /** The Inbox's address narrowed to this test's project, with `search` beside it. */
   async address(search: Record<string, string> = {}): Promise<string> {
     return `/?${new URLSearchParams({ project: await this.project(), ...search })}`;
+  }
+
+  /** Opens that address in the test's page. */
+  async open(search: Record<string, string> = {}): Promise<void> {
+    await this.page.goto(await this.address(search));
   }
 
   /** An issue of this test's project, titled by the first line of `text`. `force` files it
@@ -186,7 +191,10 @@ export class InboxSeed {
     let row: InboxRow | undefined;
     await expect
       .poll(async () => {
-        const rows = await this.person<InboxRow[]>("GET", "/api/v1/inbox");
+        const rows = await this.person<InboxRow[]>(
+          "GET",
+          `/api/v1/inbox?project=${await this.project()}`
+        );
         row = rows.find((ask) => ask.issue_key === issue.key);
         return row !== undefined;
       })
@@ -237,8 +245,7 @@ export class InboxSeed {
 
   /** An ask the reader answered. */
   async answered(question: string): Promise<Seeded> {
-    const issue = await this.issue(question, { force: true });
-    const seeded = await this.askOn(issue.key, "withOptions", question);
+    const seeded = await this.ask("withOptions", question);
     await this.person("POST", `/api/v1/asks/${seeded.id}/answer`, {
       expected_edited_at: null,
       selected: ["Ship"],

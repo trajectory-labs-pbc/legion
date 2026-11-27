@@ -2,28 +2,40 @@
 // text, never by an upstream class or test ID, so one test reads upstream's view and the fork's.
 import type { Locator } from "@playwright/test";
 
+import { expandedState } from "../../../dispatch/e2e/settled";
+import { controlName } from "../../../dispatch/web/src/features/inbox/ask-name";
 import { expect, type Page } from "../test";
 import type { Seeded } from "./seed";
 
 export const inboxHeading = (page: Page): Locator =>
   page.getByRole("heading", { level: 1, name: "Inbox" });
 
-/** How much of a question an ask's mark checkbox names before it cuts the rest with "…"
- *  (upstream's `controlName`, after the owner: `<issue key>[, ask N of M]: `). */
-const ASK_NAME_CHARS = 48;
+const settingsHeading = (page: Page): Locator =>
+  page.getByRole("heading", { level: 1, name: "Settings" });
+
+/** Opens the Settings page, a page that is not the Inbox. */
+export async function openSettings(page: Page): Promise<void> {
+  await page.goto("/settings");
+  await expect(settingsHeading(page)).toBeVisible();
+}
+
+/** Goes back one history entry, which must be the Settings page. */
+export async function backToSettings(page: Page): Promise<void> {
+  await page.goBack();
+  await expect(settingsHeading(page)).toBeVisible();
+}
 
 const literal = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** What the mark checkbox of `seeded`'s row is called. An ask's names its issue and the start of
- *  its question; a thread's names its whole line, which a test matches by its first line. */
+/** What the mark checkbox of `seeded`'s row is called. An ask's is upstream's control name, with
+ *  "ask N of M" after the key when its issue has more than one; a thread's names its whole line,
+ *  which a test matches by its first line. */
 function markName(seeded: Seeded): RegExp | string {
-  if (seeded.kind === "thread") return seeded.text.split("\n", 1)[0] ?? "";
-  const words = seeded.text.replace(/\s+/g, " ").trim();
-  const question =
-    words.length > ASK_NAME_CHARS
-      ? `${literal(words.slice(0, ASK_NAME_CHARS).trimEnd())}…`
-      : literal(words);
-  return new RegExp(`^Select ${literal(seeded.issue)}(, ask \\d+ of \\d+)?: ${question}$`);
+  if (seeded.kind === "thread") return seeded.text.split("\n", 1)[0];
+  const ask = { id: seeded.id, issue_key: seeded.issue, question: seeded.text };
+  const key = literal(seeded.issue);
+  const name = literal(controlName(ask, undefined, seeded.text));
+  return new RegExp(`^Select ${name.replace(key, `${key}(, ask \\d+ of \\d+)?`)}$`);
 }
 
 /** The row of `seeded`, in `scope`: the page's main region or the drawer. */
@@ -44,7 +56,6 @@ export function expectOpen(page: Page, seeded: Seeded): Promise<void> {
 export const questionBody = (page: Page): Locator =>
   page.getByRole("region", { name: "Question body" });
 
-/** The address's search parameters. */
 export const search = (page: Page): URLSearchParams => new URL(page.url()).searchParams;
 
 /** Takes the focus off whatever holds it, so the Inbox's keys act. */
@@ -54,10 +65,13 @@ export async function focusPage(page: Page): Promise<void> {
 
 const viewButton = (page: Page): Locator => page.getByRole("button", { exact: true, name: "View" });
 
-/** Opens the View menu, unless it is open already, and answers it. */
+/** Opens the View menu, unless its button says it is open already, and answers it. */
 export async function openView(page: Page): Promise<Locator> {
   const menu = page.getByRole("menu", { name: "View" });
-  if ((await menu.count()) === 0) await viewButton(page).click();
+  if ((await expandedState("the View menu", viewButton(page))) === "shut") {
+    await viewButton(page).click();
+  }
+  await expect(menu).toHaveCount(1);
   return menu;
 }
 
@@ -67,7 +81,6 @@ export async function chooseView(page: Page, section: string, choice: string): P
   await menu.getByRole("group", { name: section }).getByRole("radio", { name: choice }).check();
 }
 
-/** Closes the View menu with its own button. */
 export async function closeView(page: Page): Promise<void> {
   await viewButton(page).click();
   await expect(page.getByRole("menu", { name: "View" })).toHaveCount(0);

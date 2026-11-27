@@ -305,6 +305,6 @@ The Inbox tests (`e2e/inbox/`) write some records as the signed-in person, becau
 person can write them: an answer, a thread's root comment, a read mark, a snooze and a
 dismissal. Each test makes its own project, because three of them need a project that holds no
 row. When a test ends, it closes its issues, which withdraws their open asks, and it dismisses
-its threads. A deployed run keeps no row in the person's Inbox, but it leaves 27 projects (one
-for each test), their closed issues, and in the person's name the answers, the thread roots and
-the dismissed threads.
+its threads. A deployed run keeps no row in the person's Inbox, but it leaves one project for
+each test, their closed issues, and in the person's name the answers, the thread roots and the
+dismissed threads.
