@@ -46,14 +46,10 @@ A record is an issue, a document, an agent, a priority, a machine or a broadcast
 
 ## Forms (FM)
 
-**FM1** A dialog holds at most three fields. A longer form is a sheet. Pages: create issue, new priority, settings sections. Check: reviewer; (new) a test per multi-field form that counts its fields.
+**FM1** Every field has a label that names it (`Label` with `htmlFor`). A placeholder only shows the value's shape, such as `XXXX-XXXX`; it is never the label. Pages: machine login, every form. Check: the machine login tests find the code field by its label; the axe run in `packages/tl-dispatch/e2e/accessibility.e2e.ts`.
 
-**FM2** Every field has a label that names it (`Label` with `htmlFor`). A placeholder only shows the value's shape, such as `XXXX-XXXX`; it is never the label. Pages: machine login, every form. Check: the machine login tests find the code field by its label; the axe run in `packages/tl-dispatch/e2e/accessibility.e2e.ts`.
+**FM2** A server's field error shows under its field, and the field names it: `aria-describedby` points at the error, and `aria-invalid` is set while the field holds the value the server refused. A failure that says nothing of the value, such as a 401, a 403, a 429, a 5xx or a stopped send, leaves `aria-invalid` off. Pages: machine login, every form. Check: MLP-02, MLP-05 and MLP-11.
 
-**FM3** A server's field error shows under its field, and the field names it: `aria-describedby` points at the error, and `aria-invalid` is set when the server refused the value. A failure that says nothing of the value, such as a 5xx or a stopped send, leaves `aria-invalid` off. When the server refuses several fields, the first of them gets the focus. Pages: machine login, every form. Check: MLP-02 and MLP-05; (new) a 422 test per multi-field form that finds the focus on the first refused field.
+**FM3** During a submit the fields stay enabled. The pressed button shows that it is busy and keeps the focus. Another button that would write the same record waits until the write ends. Pages: machine login, every form. Check: MLP-08, MLP-09 and MLP-10.
 
-**FM4** During a submit the fields stay enabled. The pressed button shows that it is busy and keeps the focus. Another button that would write the same record waits until the write ends. Pages: machine login, every form. Check: MLP-08, MLP-09 and MLP-10.
-
-**FM5** A field's text is 14 px, and 16 px on a coarse pointer (`pointer-coarse:text-base`), so a phone does not zoom in on it. The pointer sets the size, never the width. Check: the `Input`, `Textarea` and `Combobox` tests in `packages/ui`.
-
-**FM6** A form's keys are IE4's: `$mod+Enter` submits, and Escape on a form with changes asks first. Check: IE4's.
+**FM4** A field's text is 14 px, and 16 px on a coarse pointer (`pointer-coarse:text-base`), so a phone does not zoom in on it. The pointer sets the size, never the width. Check: the `Input`, `Textarea` and `Combobox` tests in `packages/ui`.
