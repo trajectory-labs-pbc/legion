@@ -1187,6 +1187,18 @@
       ]
     },
     {
+      "name": "read-boundary",
+      "type": "registry:block",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/read-boundary.tsx",
+          "type": "registry:component",
+          "target": "@components/read-boundary.tsx"
+        }
+      ]
+    },
+    {
       "name": "shortcuts-sheet",
       "type": "registry:block",
       "dependencies": [
