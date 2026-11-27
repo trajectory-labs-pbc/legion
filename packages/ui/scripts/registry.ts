@@ -47,13 +47,18 @@ export function peerVersionProblems(
   );
 }
 
-function toJson(nodes: ChildNode[]): CssJson {
+export function toJson(nodes: ChildNode[]): CssJson {
   const out: CssJson = {};
   for (const node of nodes) {
     if (node.type === "decl") out[node.prop] = node.value;
-    else if (node.type === "rule") out[node.selector] = toJson(node.nodes);
-    else if (node.type === "atrule") {
-      out[`@${node.name}${node.params ? ` ${node.params}` : ""}`] = toJson(node.nodes ?? []);
+    else if (node.type === "rule" || node.type === "atrule") {
+      const key =
+        node.type === "rule"
+          ? node.selector
+          : `@${node.name}${node.params ? ` ${node.params}` : ""}`;
+      // A second rule under one key would replace the first in the JSON.
+      if (Object.hasOwn(out, key)) throw new Error(`two rules share ${key}`);
+      out[key] = toJson(node.nodes ?? []);
     }
   }
   return out;

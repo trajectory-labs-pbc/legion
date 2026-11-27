@@ -214,9 +214,10 @@ const SOURCES = [
     .map((file) => `lib/${file}`),
 ].map((path) => ({ path, text: readFileSync(join(src, path), "utf8") }));
 
+// Class strings: double-quoted, or template literals without their `${...}` parts.
 const classTokens = (text: string): string[] =>
-  [...text.matchAll(/"([^"\n]*)"/g)]
-    .flatMap((match) => (match[1] ?? "").split(/\s+/))
+  [...text.matchAll(/"([^"\n]*)"|`([^`]*)`/g)]
+    .flatMap((match) => (match[1] ?? match[2] ?? "").replace(/\$\{[^}]*\}/g, " ").split(/\s+/))
     .filter(Boolean);
 const everyToken = SOURCES.flatMap(({ path, text }) =>
   classTokens(text).map((token) => ({ path, token }))
@@ -352,6 +353,13 @@ const MARKED: readonly (readonly [string, string])[] = [
   ["components/toggle.tsx", "data-pressed:"],
 ];
 
+// The list parts that take the highlight from the shared class strings.
+const HIGHLIGHTED = [
+  "components/combobox.tsx",
+  "components/dropdown-menu.tsx",
+  "components/select.tsx",
+];
+
 describe("the components", () => {
   it("draw focus as one solid outline in the focus colour, offset from the element", () => {
     expect(everyToken.filter(({ token }) => /ring-ring|outline-ring/.test(token))).toEqual([]);
@@ -384,6 +392,10 @@ describe("the components", () => {
     for (const [path, state] of MARKED) {
       expect(tokensOf(path), path).toContain(`${state}inset-ring`);
       expect(tokensOf(path), path).toContain(`${state}inset-ring-muted-foreground`);
+    }
+    for (const path of HIGHLIGHTED) {
+      const text = SOURCES.find((source) => source.path === path)?.text ?? "";
+      expect(text.replace(/^import .*$/gm, ""), path).toMatch(/\b(highlightClass|listItemClass)\b/);
     }
   });
 });

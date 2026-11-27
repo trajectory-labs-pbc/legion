@@ -17,11 +17,10 @@ import { Sheet, SheetContent, SheetTitle } from "#registry/legion/ui/sheet";
 // Base UI stacks the overlays: these check what the package's parts rely on.
 
 type Modal = { modal?: boolean };
-const modalProp = ({ modal }: Modal) => (modal === undefined ? {} : { modal });
 
 function Menu(props: Modal) {
   return (
-    <DropdownMenu {...modalProp(props)}>
+    <DropdownMenu {...props}>
       <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
       <DropdownMenuContent aria-label="Popup">
         <DropdownMenuItem>One</DropdownMenuItem>
@@ -32,7 +31,7 @@ function Menu(props: Modal) {
 
 function Pop(props: Modal) {
   return (
-    <Popover {...modalProp(props)}>
+    <Popover {...props}>
       <PopoverTrigger>Filter</PopoverTrigger>
       <PopoverContent>
         <PopoverTitle>Popup</PopoverTitle>

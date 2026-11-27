@@ -3,7 +3,14 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { temporaryDirectories } from "@legion/test-fixtures/temporary-directories";
 import { spawnSync } from "bun";
-import { buildRegistry, componentItem, peerVersionProblems, registryPath } from "./registry";
+import postcss from "postcss";
+import {
+  buildRegistry,
+  componentItem,
+  peerVersionProblems,
+  registryPath,
+  toJson,
+} from "./registry";
 
 const validate = (dir: string) => {
   const run = spawnSync(["bunx", "--bun", "shadcn", "registry", "validate", "--cwd", dir], {
@@ -22,13 +29,19 @@ describe("registry.json", () => {
 
   it("installs the theme's base rules beside the stylesheet's, so an icon draws at the theme's stroke", () => {
     const theme = buildRegistry().items.find((item) => item.name === "theme");
-    const base = (theme?.css as Record<string, Record<string, unknown>> | undefined)?.[
+    const base = (theme as { css?: Record<string, Record<string, unknown>> } | undefined)?.css?.[
       "@layer base"
     ];
     expect(base?.['svg.lucide[stroke-width="2"]']).toEqual({
       "stroke-width": "var(--icon-stroke)",
     });
     expect(base?.body).toEqual({ "@apply bg-background text-foreground": {} });
+  });
+
+  it("refuses two rules with one selector, of which the JSON would keep only the last", () => {
+    expect(() => toJson(postcss.parse("body { color: red } body { margin: 0 }").nodes)).toThrow(
+      "body"
+    );
   });
 
   it("lists a package a component imports for its side effect or loads on demand", () => {
