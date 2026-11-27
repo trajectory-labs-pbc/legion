@@ -105,9 +105,11 @@ test("MLP-02 a NO_SUCH_CODE lookup failure renders inline under the input", asyn
   }
 });
 
-// A 403 says nothing of the code. A 429 never reaches the field: the lookup asks again under its key.
+// A 404 FEATURE_OFF or a 403 says nothing of the code. A 429 never reaches the field as a
+// refusal: the lookup asks again under its key.
 test.each([
   [404, "NO_SUCH_CODE", "true"],
+  [404, "FEATURE_OFF", null],
   [403, "FORBIDDEN", null],
 ] as const)("MLP-11 the code field names a %i %s lookup failure", async (status, code, invalid) => {
   const user = userEvent.setup();
@@ -123,12 +125,12 @@ test.each([
     await user.paste("zzzz999");
     await user.click(screen.getByRole("button", { name: "Look up" }));
 
-    const failure = await screen.findByRole("alert");
-    expect(field).toHaveAttribute("aria-describedby", failure.id);
+    await screen.findByRole("alert");
     expect(field).toHaveAccessibleDescription("The lookup was refused.");
     expect(field.getAttribute("aria-invalid")).toBe(invalid);
-    // A new code is not the one refused.
+    // The failure is of the code looked up, not of a new one.
     await user.type(field, "9");
+    expect(field).not.toHaveAttribute("aria-describedby");
     expect(field).not.toHaveAttribute("aria-invalid");
   } finally {
     cleanup();
@@ -251,7 +253,23 @@ test("MLP-05 a lookup the reader stopped says it may have been made", async () =
         })
       )
     ).toBeDefined();
-    // The note says nothing of the code, so the field names it but is not invalid.
+  } finally {
+    realClock();
+    cleanup();
+    queryClient.clear();
+    lookup.mockRestore();
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLP-11 the code field names a stopped lookup's note and stays valid", async () => {
+  jest.useFakeTimers();
+  const lookup = spyOn(api, "lookupMachineCredential").mockRejectedValue(dropped());
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    await stoppedPage(queryClient);
+    await stopTheLateWrite(queryClient);
     const field = screen.getByLabelText("Code shown on the machine");
     expect(field).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
     expect(field).not.toHaveAttribute("aria-invalid");

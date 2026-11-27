@@ -53,7 +53,7 @@ function Decision({
 const CODE_ERROR = "machine-code-error";
 
 /** The lookup's refusals that say the typed code is wrong; any other failure leaves it valid. */
-const CODE_REFUSALS = new Set(["NO_SUCH_CODE", "CODE_REQUIRED", "INVALID_LOOKUP"]);
+const CODE_REFUSALS = new Set(["NO_SUCH_CODE", "CODE_REQUIRED"]);
 
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
@@ -78,11 +78,10 @@ export function MachineLoginPage(): ReactNode {
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
   const lookUpLeads = !approvable && (view === undefined || code !== "");
-  // Only these refuse the code itself, and only while the field still holds that code.
+  // The failure is the field's only while it still holds the code looked up.
+  const codeFailed = lookup.isError && lookup.variables === code;
   const codeRefused =
-    lookup.error instanceof ApiError &&
-    CODE_REFUSALS.has(lookup.error.code ?? "") &&
-    lookup.variables === code;
+    codeFailed && lookup.error instanceof ApiError && CODE_REFUSALS.has(lookup.error.code ?? "");
 
   return (
     <section className="max-w-180 space-y-8">
@@ -99,7 +98,7 @@ export function MachineLoginPage(): ReactNode {
         <div className="flex flex-col gap-1">
           <Label htmlFor="machine-code">Code shown on the machine</Label>
           <Input
-            aria-describedby={lookup.isError ? CODE_ERROR : undefined}
+            aria-describedby={codeFailed ? CODE_ERROR : undefined}
             aria-invalid={codeRefused || undefined}
             autoComplete="off"
             className="font-mono"
