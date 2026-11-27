@@ -13,6 +13,8 @@ Before you change it, read the skill for your task.
 
 - `.agents/skills/react-quality/SKILL.md`: the code bar, with a bad and a good example for each rule.
 
+- `.agents/skills/rebuilding-a-page/SKILL.md`: the sequence each page rebuild follows, the files of a page, the view map and copies duties, the review pass, and what the last pull request of a page shows.
+
 ## Paths
 
 This file and the skills write a path one way: `src/...` and `tests/...` are from `packages/tl-dispatch`, `references/...` is from the skill's own folder, and every other path is from the repository root.
