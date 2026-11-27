@@ -5,11 +5,16 @@
 // own axe run reads those. Fork elements passed into a marked component sit in a
 // `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
 // only: the deployed mode leaves this file out (modes.ts).
+//
+// Beside it, with the same scope: a Tab walk over each region, in light and in dark, that finds
+// FO1's outline at every stop; and each page the fork draws, at 390, 768 and 1440 px, with nothing
+// that scrolls sideways (FR4).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
 import { createAsk } from "../../dispatch/e2e/api";
-import { setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
+import type { FakeLauncherCredential } from "../../dispatch/e2e/fake-broker";
+import { setLauncherCredentials, setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
 import { withIssuePage } from "../../dispatch/e2e/issue-page-option";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
 import type { RecordResponse } from "../../dispatch/web/src/api/types";
@@ -20,6 +25,10 @@ import { expect, type Page, runName, test } from "./test";
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 const SCHEMES = ["light", "dark"] as const;
 const PHONE = { width: 390, height: 844 };
+/** The widths a page must fit with nothing scrolling sideways: a phone, a tablet and a desktop. */
+const WIDTHS = [PHONE, { width: 768, height: 1024 }, { width: 1440, height: 900 }] as const;
+/** More Tab presses than any region's walk takes to come back to its first stop. */
+const MAX_TAB_PRESSES = 200;
 const ASK = `${runName} ask?`;
 const MACHINE_CODE = "WXYZ-4321";
 /** Upstream's `LIVE_SOCKET_STUCK_MS`: how long a live socket reconnects before the page says live
@@ -33,6 +42,7 @@ const SIDEBAR = '[data-testid="sidebar"]';
 const STATUS_CORNER = 'div:has(> [data-testid="connection-status"])';
 const UPSTREAM_VIEW = "[data-upstream-view]";
 const FORK_VIEW = "[data-fork-view]";
+const TOOLTIP = '[data-slot="tooltip-content"]';
 
 interface Region {
   name: string;
@@ -54,6 +64,17 @@ interface Region {
   open?: (page: Page) => Promise<void>;
   /** What the region must draw in each scheme, checked before that scheme's scan. */
   drawn?: (page: Page) => Promise<void>;
+  /** False where Tab stops at nothing in the region: it holds no control, or it is a menu, which
+   *  the arrow keys move in and Tab leaves. */
+  tabStops?: false;
+}
+
+/** A Tab stop in a region that does not show FO1's outline. */
+interface Unmarked {
+  scheme: (typeof SCHEMES)[number];
+  stop: string;
+  /** The stop's outline: its style, width and colour. */
+  outline: string;
 }
 
 /** A serious or critical axe finding. */
@@ -92,6 +113,23 @@ async function seedMachineLogin(): Promise<void> {
   await setMachineLogins([{ code: MACHINE_CODE, record }]);
 }
 
+/** A live machine login of alice's, so the page lists it with its Revoke. */
+async function seedListedLogin(): Promise<void> {
+  const login: FakeLauncherCredential = {
+    approved_by: "alice",
+    credential_id: "cred-worker-7",
+    expired: false,
+    expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+    host: "worker-7.example.com",
+    issued_at: new Date().toISOString(),
+    listedFor: "alice",
+    person: null,
+    service: null,
+    subject: null,
+  };
+  await setLauncherCredentials([login]);
+}
+
 /** Holds every request to `url` unanswered. */
 const hold = (url: string | RegExp) => async (page: Page) => {
   await page.route(url, () => undefined);
@@ -126,6 +164,39 @@ const machineLogin: Region = {
   selector: MAIN,
   ready: (page) => [heading(page, "Enter machine login code")],
 };
+const revokeButton = (page: Page) =>
+  page.getByRole("button", { name: /^Revoke the machine login for worker-7\.example\.com/ });
+const machineLoginListed: Region = {
+  ...machineLogin,
+  name: "machine login page with a login listed",
+  prepare: seedListedLogin,
+  ready: (page) => [heading(page, "Enter machine login code"), revokeButton(page)],
+};
+const notFoundPage: Region = {
+  name: "not-found page",
+  href: `/${runName.toLowerCase()}-no-such-page`,
+  selector: MAIN,
+  ready: (page) => [heading(page, "Page not found")],
+};
+// The issue frame draws upstream's icon rail and page in the fork's frame.
+const issueFrame: Region = {
+  name: "issue frame",
+  href: issueHref("frame issue"),
+  selector: SHELL,
+  exclude: [`${MAIN} > *`],
+  prepare: issueFrameOn,
+  ready: (page) => [page.getByRole("heading", { name: `${runName} frame issue` })],
+  drawn: issueFrameDrawn,
+};
+const connectionErrorPage: Region = {
+  name: "connection error page",
+  href: "/",
+  selector: ROOT,
+  prepare: async (page) => {
+    await page.route("**/auth/whoami", (route) => route.fulfill({ status: 500 }));
+  },
+  ready: (page) => [page.getByRole("alert").filter({ hasText: "Could not reach Dispatch." })],
+};
 
 const regions: readonly Region[] = [
   // The skip link, the status corner and the content panel's frame.
@@ -135,6 +206,7 @@ const regions: readonly Region[] = [
     ...onInbox,
     name: "account menu",
     selector: '[role="menu"]',
+    tabStops: false,
     open: async (page) => {
       await page.getByRole("button", { name: /^Signed in as / }).click();
       await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
@@ -161,6 +233,17 @@ const regions: readonly Region[] = [
       await page.locator(MAIN).focus();
       await page.keyboard.press("?");
       await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    },
+  },
+  // The tooltip that names a control's command and its keys.
+  {
+    ...onInbox,
+    name: "key tooltip",
+    selector: TOOLTIP,
+    tabStops: false,
+    open: async (page) => {
+      await page.locator(SIDEBAR).getByRole("button", { name: "Hide sidebar" }).hover();
+      await expect(page.locator(TOOLTIP)).toContainText("Hide sidebar");
     },
   },
   // The question opens only over an unsent change. Nothing here answers it.
@@ -215,12 +298,7 @@ const regions: readonly Region[] = [
       await expect(page.getByText("Live updates are not reaching this page")).toBeVisible();
     },
   },
-  {
-    name: "not-found page",
-    href: `/${runName.toLowerCase()}-no-such-page`,
-    selector: MAIN,
-    ready: (page) => [heading(page, "Page not found")],
-  },
+  notFoundPage,
   machineLogin,
   {
     ...machineLogin,
@@ -230,6 +308,18 @@ const regions: readonly Region[] = [
       await page.getByLabel("Code shown on the machine").fill(MACHINE_CODE);
       await page.getByRole("button", { name: "Look up" }).click();
       await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+    },
+  },
+  // Nothing here answers it.
+  {
+    ...machineLoginListed,
+    name: "revoke question",
+    selector: '[role="alertdialog"]',
+    open: async (page) => {
+      await revokeButton(page).click();
+      await expect(
+        page.getByRole("alertdialog", { name: "Revoke worker-7.example.com?" })
+      ).toBeVisible();
     },
   },
   {
@@ -249,6 +339,7 @@ const regions: readonly Region[] = [
     prepare: hold(viewChunk("machines")),
     ready: (page) => [page.getByRole("status", { name: "Loading the page" })],
     settles: false,
+    tabStops: false,
   },
   {
     name: "issue page fallback",
@@ -257,17 +348,9 @@ const regions: readonly Region[] = [
     prepare: hold(ISSUE_CHUNK),
     ready: (page) => [page.locator(`${MAIN} [aria-busy="true"]`)],
     settles: false,
+    tabStops: false,
   },
-  // The issue frame draws upstream's icon rail and page in the fork's frame.
-  {
-    name: "issue frame",
-    href: issueHref("frame issue"),
-    selector: SHELL,
-    exclude: [`${MAIN} > *`],
-    prepare: issueFrameOn,
-    ready: (page) => [page.getByRole("heading", { name: `${runName} frame issue` })],
-    drawn: issueFrameDrawn,
-  },
+  issueFrame,
   {
     name: "issue frame fallback",
     href: issueHref("frame fallback issue"),
@@ -279,6 +362,7 @@ const regions: readonly Region[] = [
     ready: (page) => [page.locator(`${MAIN} [aria-busy="true"]`)],
     settles: false,
     drawn: issueFrameDrawn,
+    tabStops: false,
   },
   {
     name: "loading page",
@@ -288,26 +372,27 @@ const regions: readonly Region[] = [
     prepare: hold("**/auth/whoami"),
     ready: (page) => [page.getByRole("status", { name: "Loading Dispatch" })],
     settles: false,
+    tabStops: false,
   },
-  {
-    name: "connection error page",
-    href: "/",
-    selector: ROOT,
-    prepare: async (page) => {
-      await page.route("**/auth/whoami", (route) => route.fulfill({ status: 500 }));
-    },
-    ready: (page) => [page.getByRole("alert").filter({ hasText: "Could not reach Dispatch." })],
-  },
+  connectionErrorPage,
 ];
 
 /** Regions only a reader nobody signed in sees. */
-const signedOutRegions: readonly Region[] = [
-  {
-    name: "sign-in page",
-    href: "/",
-    selector: ROOT,
-    ready: (page) => [heading(page, "Make the next decision clear.")],
-  },
+const signInPage: Region = {
+  name: "sign-in page",
+  href: "/",
+  selector: ROOT,
+  ready: (page) => [heading(page, "Make the next decision clear.")],
+};
+const signedOutRegions: readonly Region[] = [signInPage];
+
+/** The pages the fork draws, each read at every width with upstream's views hidden. */
+const forkPages: readonly Region[] = [
+  { ...onInbox, name: "Inbox's frame", selector: SHELL },
+  machineLoginListed,
+  notFoundPage,
+  issueFrame,
+  connectionErrorPage,
 ];
 
 async function openRegion(page: Page, region: Region): Promise<void> {
@@ -335,10 +420,14 @@ const forkViewsOf = (region: Region) =>
     .map((selector) => `:not(${selector}, ${selector} *)`)
     .join("")}`;
 
+/** As upstream's run: no colour is read part-way through a transition after the scheme changes. */
+async function stopTransitions(page: Page): Promise<void> {
+  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+}
+
 /** The serious and critical findings in `region`, in light and dark. */
 async function scan(page: Page, region: Region): Promise<Finding[]> {
-  // As upstream's run: no colour is read part-way through a transition after the scheme changes.
-  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+  await stopTransitions(page);
   const findings: Finding[] = [];
   const backgrounds = new Set<string>();
   for (const scheme of SCHEMES) {
@@ -378,6 +467,133 @@ async function scan(page: Page, region: Region): Promise<Finding[]> {
   return findings;
 }
 
+/** Where the focus rests after a Tab press. */
+interface Stop {
+  /** The same for one element on every press; empty while nothing in the page has the focus. */
+  id: string;
+  /** The element's tag and name. */
+  name: string;
+  /** In the region, and not in what it leaves out. */
+  inRegion: boolean;
+  /** Its outline: style, width and colour. */
+  outline: string;
+  /** FO1's outline shows on it: 2 px, in the `--focus` colour, on a box that is drawn. */
+  outlined: boolean;
+}
+
+/** The `--focus` colour in the scheme shown, as the browser computes it. */
+async function focusColour(page: Page): Promise<string> {
+  const colour = await page.evaluate(() => {
+    if (getComputedStyle(document.documentElement).getPropertyValue("--focus") === "") return null;
+    const probe = document.createElement("span");
+    probe.style.color = "var(--focus)";
+    document.body.append(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return computed;
+  });
+  expect(colour, "the theme sets --focus").not.toBeNull();
+  return colour ?? "";
+}
+
+/** The element that has the focus, read in the page. */
+function readStop({
+  focus,
+  left,
+  region,
+}: {
+  focus: string;
+  left: readonly string[];
+  region: string;
+}): Stop {
+  const element = document.activeElement;
+  if (element === null || element === document.body) {
+    return { id: "", inRegion: false, name: "nothing", outline: "", outlined: false };
+  }
+  const root = document.documentElement;
+  if (!element.hasAttribute("data-tab-walk")) {
+    const next = Number(root.dataset.tabWalkNext ?? "0");
+    root.dataset.tabWalkNext = String(next + 1);
+    element.setAttribute("data-tab-walk", String(next));
+  }
+  const label = element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40);
+  const style = getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  return {
+    id: element.getAttribute("data-tab-walk") ?? "",
+    inRegion:
+      element.closest(region) !== null &&
+      !left.some((selector) => element.closest(selector) !== null),
+    name: `${element.tagName.toLowerCase()} "${label ?? ""}"`,
+    outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`,
+    outlined:
+      style.outlineStyle !== "none" &&
+      style.outlineWidth === "2px" &&
+      style.outlineColor === focus &&
+      box.width > 0 &&
+      box.height > 0 &&
+      element.checkVisibility(),
+  };
+}
+
+/** The Tab stops in `region` that do not show FO1's outline, in light and dark. Each walk goes
+ *  round the page until Tab comes back to its first stop. */
+async function walk(page: Page, region: Region): Promise<Unmarked[]> {
+  await stopTransitions(page);
+  const left = [UPSTREAM_VIEW, ...(region.exclude ?? [])];
+  const unmarked: Unmarked[] = [];
+  for (const scheme of SCHEMES) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await region.drawn?.(page);
+    const focus = await focusColour(page);
+    let first: string | undefined;
+    let stops = 0;
+    for (let press = 0; ; press += 1) {
+      expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(
+        MAX_TAB_PRESSES
+      );
+      await page.keyboard.press("Tab");
+      const stop = await page.evaluate(readStop, { focus, left, region: region.selector });
+      if (stop.id === first) break;
+      first ??= stop.id;
+      if (!stop.inRegion) continue;
+      stops += 1;
+      if (!stop.outlined) unmarked.push({ scheme, stop: stop.name, outline: stop.outline });
+    }
+    // A walk that stopped nowhere in the region proves nothing about it.
+    expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
+  }
+  return unmarked;
+}
+
+/** What scrolls sideways once upstream's views and what `region` leaves out are hidden: the page
+ *  itself, and each box that scrolls. */
+async function sidewaysScrolls(page: Page, region: Region): Promise<string[]> {
+  const hidden = [UPSTREAM_VIEW, ...(region.exclude ?? [])].join(", ");
+  await page.addStyleTag({ content: `${hidden} { display: none !important; }` });
+  return page.evaluate(() => {
+    const scrolls: string[] = [];
+    const root = document.scrollingElement ?? document.documentElement;
+    if (root.scrollWidth > root.clientWidth) {
+      scrolls.push(`the page: ${root.scrollWidth} px in ${root.clientWidth} px`);
+    }
+    for (const box of document.body.querySelectorAll("*")) {
+      const { overflowX } = getComputedStyle(box);
+      if (overflowX !== "auto" && overflowX !== "scroll") continue;
+      if (box.scrollWidth <= box.clientWidth) continue;
+      const name =
+        box.getAttribute("data-testid") ??
+        box.getAttribute("data-slot") ??
+        box.getAttribute("aria-label") ??
+        box.getAttribute("class")?.slice(0, 60);
+      scrolls.push(
+        `${box.tagName.toLowerCase()} "${name ?? ""}": ${box.scrollWidth} px in ${box.clientWidth} px`
+      );
+    }
+    return scrolls;
+  });
+}
+
 function scanEach(list: readonly Region[]): void {
   for (const region of list) {
     test(`the ${region.name} has no serious or critical axe finding in light or dark`, async ({
@@ -389,11 +605,43 @@ function scanEach(list: readonly Region[]): void {
   }
 }
 
+function walkEach(list: readonly Region[]): void {
+  for (const region of list) {
+    if (region.tabStops === false) continue;
+    test(`the ${region.name} shows the focus outline at each Tab stop in light and dark`, async ({
+      page,
+    }) => {
+      await openRegion(page, region);
+      expect(await walk(page, region), `${region.name}: Tab stops without the outline`).toEqual([]);
+    });
+  }
+}
+
+function fitEach(list: readonly Region[]): void {
+  for (const region of list) {
+    for (const viewport of WIDTHS) {
+      test(`the ${region.name} scrolls nothing sideways at ${viewport.width} px`, async ({
+        page,
+      }) => {
+        await openRegion(page, { ...region, viewport });
+        expect(
+          await sidewaysScrolls(page, region),
+          `${region.name} at ${viewport.width} px`
+        ).toEqual([]);
+      });
+    }
+  }
+}
+
 scanEach(regions);
+walkEach(regions);
+fitEach(forkPages);
 
 test.describe("signed out", () => {
   test.use({ signedIn: false });
   scanEach(signedOutRegions);
+  walkEach(signedOutRegions);
+  fitEach([signInPage]);
 });
 
 // The run's own controls, on the machine login page: an input with no label fails the scan in the
@@ -421,4 +669,31 @@ test("an input without its label inside an upstream widget's wrapper is left out
   await appendInput(page.locator(`${MAIN} > ${UPSTREAM_VIEW}`).last());
   await expect(page.locator(`${MAIN} ${UPSTREAM_VIEW} > input`)).toHaveCount(1);
   expect(await scan(page, machineLogin)).toEqual([]);
+});
+
+// The run's own controls for the walk and the widths, on the machine login page: a button with no
+// outline fails the walk, and a box wider than a phone fails the width check.
+test("a control without the focus outline fails the Tab walk", async ({ page }) => {
+  await openRegion(page, machineLogin);
+  await page.locator(MAIN).evaluate((at) => {
+    const button = document.createElement("button");
+    button.textContent = "No outline";
+    button.style.outline = "none";
+    at.append(button);
+  });
+  const unmarked = await walk(page, machineLogin);
+  expect(unmarked.map(({ scheme, stop }) => ({ scheme, stop }))).toEqual([
+    { scheme: "light", stop: 'button "No outline"' },
+    { scheme: "dark", stop: 'button "No outline"' },
+  ]);
+});
+
+test("a box wider than a phone fails the width check", async ({ page }) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  await page.locator(MAIN).evaluate((at) => {
+    const box = document.createElement("div");
+    box.style.width = "1000px";
+    at.append(box);
+  });
+  expect(await sidewaysScrolls(page, machineLogin)).not.toEqual([]);
 });
