@@ -1,0 +1,107 @@
+/* Outside any layer, as upstream's stylesheet is; each rule matches the one it answers, later. */
+
+/* Below 1280 px upstream makes buttons and links inline 44 px boxes; the navigation keeps its own. */
+@media (max-width: 1279px) {
+  [data-slot="nav-surface"] :is(button, a:not(.prose a)) {
+    display: revert-layer;
+  }
+}
+
+/* Under a mouse the navigation and the panel's top row keep their own size too. */
+@media (max-width: 1279px) and (pointer: fine) {
+  :is([data-slot="nav-surface"], [data-testid="panel-header"]) :is(button, a:not(.prose a)) {
+    min-width: revert-layer;
+    min-height: revert-layer;
+  }
+}
+
+/* A menu's entries share one height below 1280 px, where upstream floors a link at 44 px and
+   leaves every other entry as it is: under a mouse the link keeps the entry's own height, and
+   under a finger every entry takes the floor. */
+@media (max-width: 1279px) and (pointer: fine) {
+  [data-slot="dropdown-menu-content"] a[role="menuitem"]:not(.prose a) {
+    min-width: revert-layer;
+    min-height: revert-layer;
+  }
+}
+
+@media (max-width: 1279px) and (pointer: coarse) {
+  [data-slot="dropdown-menu-content"] [role="menuitem"] {
+    min-height: calc(var(--spacing) * 11);
+  }
+}
+
+/* The sidebar's width, which the margin sheet beside it starts at. */
+:root {
+  --sidebar-width: calc(var(--spacing) * 60);
+}
+
+/* Beside the sidebar, upstream's folded margin sheet starts at the sidebar's edge, so its bar
+   leaves the account at the sidebar's foot in view. Open, it is a dialog over the whole page. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  :root:has([data-testid="sidebar"]) [data-testid="margin-sheet"][data-expanded="false"] {
+    left: var(--sidebar-width);
+  }
+}
+
+/* Upstream's sticky margin sheet stays under the panel's top border, or its stuck top row. */
+@media (min-width: 80rem) {
+  [data-testid="content-panel"] [data-testid="margin-sheet"] {
+    --sheet-above: max(var(--panel-row, 0px), var(--border-width));
+    top: calc(var(--panel-inset) + var(--sheet-above));
+    height: calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width));
+    max-height: calc(100dvh - 2 * var(--panel-inset) - var(--sheet-above) - var(--border-width));
+  }
+}
+
+/* Upstream scrolls the issue's details line sideways, which on a desktop cuts its last item
+   (Subscribers) at the card's edge. Wider than a phone, the line wraps instead; it still scrolls
+   an item wider than itself, and with nothing to scroll upstream's trailing fade goes. */
+[data-testid="issue-metadata-rail"] {
+  @variant md {
+    flex-wrap: wrap;
+  }
+}
+
+/* A field the focus moves to scrolls clear of the folded sidebar's stuck row: the inset and 44 px. */
+html:has([data-testid="panel-header"]) {
+  scroll-padding-top: calc(var(--spacing) * 13);
+}
+
+/* Fields that name a border colour but draw no border need one on the panel's card. */
+[data-testid="content-panel"]
+  :is(input, textarea, select)[class~="border-slate-300"]:not([class~="border"]) {
+  border-width: var(--border-width);
+}
+
+/* Upstream's form grids: each field keeps its height, so a hint does not move the input beside it. */
+[data-testid="content-panel"] fieldset[class~="grid"] {
+  align-items: start;
+}
+
+/* A field takes its value's weight, not its label's. */
+[data-testid="content-panel"] label :is(input, textarea) {
+  font-weight: normal;
+}
+
+/* A placeholder that is a sentence, not a sample value, is body text; a cut one ends in "…". */
+[data-testid="content-panel"] input[placeholder*=" "] {
+  text-overflow: ellipsis;
+}
+
+[data-testid="content-panel"] :is(input, textarea)[placeholder*=" "]::placeholder {
+  font-family: var(--font-sans);
+}
+
+/* Upstream's folded margin is a rail the colour of its own dark navigation; here it sits on the
+   canvas beside the panel, as the sidebar does, with the ghost button's hover. */
+[data-testid="margin-rail"] {
+  border-color: transparent;
+  background-color: var(--background);
+  color: var(--muted-foreground);
+}
+
+[data-testid="margin-rail"] button:hover {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}

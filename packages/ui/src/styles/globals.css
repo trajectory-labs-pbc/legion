@@ -1,0 +1,35 @@
+/* The package's Tailwind entry: Tailwind, the theme, the dark variant and the base rules the
+   components rely on. An app imports it once, before its own @source lines. An app with its
+   own Tailwind entry imports theme.css instead. */
+@import "tailwindcss";
+@import "./theme.css";
+
+/* Dark follows the OS setting unless the root has .light; a .dark class on an ancestor turns it on. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light), :root:not(.light) *) {
+      @slot;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-focus;
+  }
+  html {
+    @apply font-sans;
+  }
+  code,
+  kbd,
+  samp,
+  pre {
+    @apply font-mono;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

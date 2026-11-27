@@ -1,0 +1,187 @@
+name: Fork checks
+
+# The fork's own checks; the rules are in .github/fork-allowlist.txt.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-checks-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  allowlist:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github
+          persist-credentials: false
+
+      # The parent is read from the API, so no file of this fork names it.
+      - name: Fetch upstream's main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          upstream=$(gh api "repos/$REPOSITORY" --jq '.parent.full_name // empty')
+          if [ -z "$upstream" ]; then
+            echo "::error::this repository has no parent to compare with"
+            exit 1
+          fi
+          git fetch --no-tags --filter=blob:none "https://github.com/$upstream.git" main
+
+      - name: Test the allowlist script
+        run: .github/scripts/check-fork-allowlist.test.sh
+
+      - name: Check the fork's diff against the allowlist
+        run: .github/scripts/check-fork-allowlist.sh FETCH_HEAD
+
+      # Reads only .github/scripts: the script, gh-read.sh and test-lib.sh.
+      - name: Test how the envoy image finds its base
+        run: bash .github/scripts/fork-envoy-base.test.sh
+
+  tl-dispatch:
+    runs-on: ubuntu-24.04
+    # The step budgets plus setup, until a measured run sets it to that run's time plus half.
+    timeout-minutes: 47
+    defaults:
+      run:
+        working-directory: packages/tl-dispatch
+    steps:
+      # The history, so a copied upstream part that changed prints upstream's diff since the copy.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      # The root install first: the app links React and the other shared libraries from it. Then
+      # the UI package's, whose sources the app imports.
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun install --frozen-lockfile
+        working-directory: packages/ui
+      - run: bun install --frozen-lockfile
+      - name: Type-check
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      # A pin hashed again, renamed or removed since the pull request's base names its outcome and
+      # reason, so a sync that changed a copied part or a replaced view says it ported or closed it.
+      - name: Check the pins changed since the base
+        if: github.event_name == 'pull_request'
+        # A stacked pull request's event names the trunk as its base; the API names its own.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL: ${{ github.event.pull_request.number }}
+        run: |
+          base=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL" --jq .base.ref)
+          bun tests/map/copies.ts --check-base "origin/$base"
+      # Each row of a rebuilt region of tests/parity has a test that names its ID, and each test
+      # that names an ID has a row.
+      - name: Check the parity lists against the tests
+        run: bun run check:parity
+      - name: Test (layers, design rules, route map, view map, copied upstream code)
+        run: bun run test
+      - name: Build
+        run: bun run build
+      - name: Check the entry chunk's size
+        run: bun run check:entry-budget
+      # The browser tests' local mode (e2e/playwright.config.ts): upstream's harness starts a Go
+      # server on this app's build, with a Postgres from upstream's image and its fakes.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: packages/envoy/go.mod
+          go-download-base-url: https://go.dev/dl
+          token: ''
+          cache-dependency-path: packages/envoy/go.sum
+      - name: Build the Dispatch server
+        run: go build -o ./dispatch-e2e ./cmd/dispatch
+        working-directory: packages/envoy
+        env:
+          GOPROXY: https://proxy.golang.org|direct
+      # The harness otherwise compiles this inside each browser step's budget (e2e/harness-postgres.ts,
+      # DISPATCH_E2E_PG_CONNECTIONS), as upstream's browser jobs read it in a step of their own.
+      - name: Read the connections each stack's Postgres must allow
+        timeout-minutes: 4
+        run: |
+          connections=$(go run ./internal/dispatch/store/cmd/connections)
+          [[ "$connections" =~ ^[1-9][0-9]*$ ]] || { echo "::error::go run ./internal/dispatch/store/cmd/connections printed '$connections', not a positive whole number"; exit 1; }
+          echo "DISPATCH_E2E_PG_CONNECTIONS=$connections" >> "$GITHUB_ENV"
+        working-directory: packages/envoy
+        env:
+          GOPROXY: https://proxy.golang.org|direct
+      # Upstream's pgvector row in .github/ci-images.yaml, so the job follows upstream's pin. The
+      # harness's own `docker run` fetches it: check-ci-images.sh cannot read an image this step
+      # would pull by variable.
+      - name: Name the Postgres image upstream's browser jobs run
+        working-directory: .
+        run: |
+          registry=$(sed -n 's/^registry: //p' .github/ci-images.yaml)
+          digest=$(awk '/^ *tag: pgvector-/ { row = 1; next } row && /^ *digest:/ { print $2; exit }' .github/ci-images.yaml)
+          if [ -z "$registry" ] || [ -z "$digest" ]; then
+            echo "::error file=.github/ci-images.yaml::no registry or pgvector digest" >&2
+            exit 1
+          fi
+          echo "DISPATCH_E2E_PG_IMAGE=$registry@$digest" >> "$GITHUB_ENV"
+      - name: Install Chromium
+        timeout-minutes: 4
+        run: bunx playwright install chromium
+      # Builds the contracts upstream's helpers import under Node, and this app, first. The
+      # harness pulls the Postgres image here, and a failed pull reads as its port error ("got
+      # none of N ports"), with docker's own message inside it.
+      - name: Browser tests (local mode)
+        timeout-minutes: 12
+        run: bun run test:browser
+      # The deployed mode once, against a local stack that e2e/local-stack.ts starts through
+      # upstream's harness, as the local mode does (no docker command here): a dev sign-in's
+      # storage state and an agent token with no scope.
+      - name: Browser tests (deployed mode, against a local server)
+        timeout-minutes: 8
+        run: bun run test:browser:deployed-local
+      # The switch test serves upstream's build beside this app's, so it builds it first.
+      - name: Build upstream's web app
+        timeout-minutes: 5
+        run: bun run build:web
+        working-directory: packages/dispatch
+      # Upstream's two-process mode: this app (on the build the local mode made) and upstream's
+      # build under one origin.
+      - name: Browser tests (switch between the two apps)
+        timeout-minutes: 8
+        run: bun run test:browser:switch
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: tl-dispatch-browser-results-${{ github.run_attempt }}
+          path: packages/tl-dispatch/e2e/test-results
+
+  ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/ui
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      # The root install first: the package links React and the test tools from it.
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun install --frozen-lockfile
+      - name: Type-check
+        run: bun run typecheck
+      - name: Lint
+        run: bun run lint
+      - name: Test (components, theme, registry.json drift and validity)
+        run: bun run test

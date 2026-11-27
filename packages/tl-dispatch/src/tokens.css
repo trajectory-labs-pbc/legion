@@ -1,0 +1,20 @@
+/* tl-dispatch's own rules beside the UI package's theme (packages/ui), which holds every token.
+   The app imports the theme alone: upstream's stylesheet is its Tailwind entry and its base. */
+
+/* The theme's typeface. Upstream's stylesheet sets Inter on :root outside any layer, which beats
+   every layered font rule; this rule is unlayered too and loads after it. The issue page's own
+   `html:has([data-issue-page])` rule outranks both and keeps its Dispatch Inter. */
+:root {
+  font-family: var(--font-sans);
+}
+
+/* The UI package's parts take their edge and focus colours from its base rules, which this app
+   does not import: they would recolour upstream's pages. Each part carries `data-slot`, so the
+   same two colours go to the parts and what they hold, below every utility class. */
+@layer base {
+  [data-slot],
+  [data-slot] * {
+    border-color: var(--border);
+    outline-color: var(--focus);
+  }
+}

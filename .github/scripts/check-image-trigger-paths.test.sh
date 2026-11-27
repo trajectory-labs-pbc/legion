@@ -1378,6 +1378,69 @@ check "an entry naming a file this tree has not got fails" "$(is "$status" 1)"
 check "  and says which path" \
   "$(contains "$out" 'COMPUTED_BUILD_INPUTS names scripts/gone.py, which this tree has not got')"
 
+echo "case: a build on another workflow's image owes that workflow's push trigger every input"
+# The live shape: fork-envoy-image.yaml builds only on the image release-envoy-listener.yaml built
+# for the same commit, so the listener's push paths decide which commits get an image. The entry
+# is data in BASE_IMAGE_TRIGGERS, keyed to the workflow and the job that builds.
+#
+# base_trigger <root> <workflow file> <job id> <deciding workflow file>: replaces the symlinked
+# checker with a copy whose BASE_IMAGE_TRIGGERS holds one entry.
+base_trigger() {
+  local root=$1
+  rm -f "$root/.github/scripts/check-image-trigger-paths.sh"
+  python3 - "$check_script" "$root/.github/scripts/check-image-trigger-paths.sh" "$2" "$3" "$4" <<'PYEOF'
+import sys
+source, destination, workflow, job, deciding = sys.argv[1:6]
+text = open(source).read()
+anchor = "BASE_IMAGE_TRIGGERS: list[tuple[str, str, str, str]] = [\n"
+entry = f"    ({workflow!r}, {job!r}, {deciding!r}, 'the argument a reviewer read'),\n"
+assert anchor in text
+open(destination, "w").write(text.replace(anchor, anchor + entry, 1))
+PYEOF
+  chmod +x "$root/.github/scripts/check-image-trigger-paths.sh"
+}
+# base_workflow <root> <path>...: a workflow whose push trigger names these paths and builds nothing.
+base_workflow() {
+  local root=$1 path
+  shift
+  {
+    printf 'name: Base\non:\n  push:\n    branches: [main]\n    paths:\n'
+    for path in "$@"; do printf '      - "%s"\n' "$path"; done
+    printf 'jobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo base\n'
+  } > "$root/.github/workflows/base.yaml"
+}
+
+root=$(fixture base-trigger-covered)
+base_workflow "$root" "package.json" "packages/app/**" "docker/**" ".dockerignore" ".github/workflows/image.yaml"
+base_trigger "$root" ".github/workflows/image.yaml" "docker" ".github/workflows/base.yaml"
+run_check "$root"
+check "a deciding trigger that covers every input passes" "$(is "$status" 0)"
+check "  and says it checked that trigger" \
+  "$(contains "$out" 'docker/Dockerfile: checked 5 inputs against .github/workflows/base.yaml on.push.paths (BASE_IMAGE_TRIGGERS)')"
+
+root=$(fixture base-trigger-short)
+base_workflow "$root" "package.json" "docker/**" ".dockerignore" ".github/workflows/image.yaml"
+base_trigger "$root" ".github/workflows/image.yaml" "docker" ".github/workflows/base.yaml"
+run_check "$root"
+check "a deciding trigger that leaves out an input fails" "$(is "$status" 1)"
+check "  naming the trigger and the input" \
+  "$(contains "$out" ".github/workflows/base.yaml on.push.paths does not cover packages/app (docker/Dockerfile${colon}3): packages/app/[a-z/.]* and 2 more are built into .github/workflows/image.yaml's image")"
+
+root=$(fixture base-trigger-other-job)
+base_workflow "$root" "**"
+base_trigger "$root" ".github/workflows/image.yaml" "changes" ".github/workflows/base.yaml"
+run_check "$root"
+check "an entry naming a job that builds nothing fails" "$(is "$status" 1)"
+check "  and says which entry" \
+  "$(contains "$out" 'BASE_IMAGE_TRIGGERS names .github/workflows/image.yaml job changes, which builds no image there')"
+
+root=$(fixture base-trigger-gone)
+base_trigger "$root" ".github/workflows/image.yaml" "docker" ".github/workflows/base.yaml"
+run_check "$root"
+check "an entry naming a workflow with no push trigger fails" "$(is "$status" 1)"
+check "  and names it" \
+  "$(contains "$out" 'BASE_IMAGE_TRIGGERS names .github/workflows/base.yaml as the workflow whose push trigger decides')"
+
 # V5: an action that builds an image and is not the one this check reads.
 root=$(fixture tripwire-bake-action)
 python3 - "$root/.github/workflows/image.yaml" <<'PYEOF'
