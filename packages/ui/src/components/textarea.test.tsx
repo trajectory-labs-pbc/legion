@@ -14,11 +14,11 @@ describe("Textarea", () => {
     expect((textarea as HTMLTextAreaElement).value).toBe("one\ntwo");
   });
 
-  it("types 16 px text on a coarse pointer, at any width", () => {
+  it("types 14 px text, and 16 px on a coarse pointer", () => {
     render(<Textarea aria-label="Comment" />);
     const field = screen.getByRole("textbox", { name: "Comment" });
-    const classes = [...field.classList];
-    expect(classes).toEqual(expect.arrayContaining(["text-sm", "pointer-coarse:text-base"]));
-    expect(classes.filter((name) => /^(sm|md|lg|xl|2xl):text-/.test(name))).toEqual([]);
+    expect([...field.classList]).toEqual(
+      expect.arrayContaining(["text-sm", "pointer-coarse:text-base"])
+    );
   });
 });

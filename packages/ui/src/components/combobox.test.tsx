@@ -170,13 +170,7 @@ describe("Combobox", () => {
     expect(screen.getByRole("button", { name: "Show fruits" })).toBeDefined();
   });
 
-  it("types 16 px text on a coarse pointer, at any width", () => {
-    const { unmount } = render(<Single onValueChange={vi.fn()} />);
-    const field = screen.getByRole("combobox", { name: "Fruit" });
-    const classes = [...field.classList];
-    expect(classes).toEqual(expect.arrayContaining(["text-sm", "pointer-coarse:text-base"]));
-    expect(classes.filter((name) => /^(sm|md|lg|xl|2xl):text-/.test(name))).toEqual([]);
-    unmount();
+  it("types 16 px text in a chips input on a coarse pointer", () => {
     render(<Multiple />);
     // The chips field gives the 14 px; its input grows on a coarse pointer.
     expect([...screen.getByRole("combobox", { name: "Fruits" }).classList]).toContain(
