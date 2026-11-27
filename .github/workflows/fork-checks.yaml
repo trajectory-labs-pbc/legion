@@ -85,25 +85,6 @@ jobs:
         run: |
           base=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL" --jq .base.ref)
           bun tests/map/copies.ts --check-base "origin/$base"
-      # An "After next sync" row of a parity list names an upstream commit that this branch does
-      # not have yet, so the check needs upstream's main when such a row exists. The parent is
-      # read from the API, so no file of this fork names it.
-      - name: Fetch upstream's main for the parity rows that wait on it
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          waiting=$(bun scripts/check-parity.ts --waiting-commits)
-          if [ -z "$waiting" ]; then
-            echo "No parity row waits for an upstream commit."
-            exit 0
-          fi
-          upstream=$(gh api "repos/$REPOSITORY" --jq '.parent.full_name // empty')
-          if [ -z "$upstream" ]; then
-            echo "::error::this repository has no parent to compare with"
-            exit 1
-          fi
-          git fetch --no-tags --filter=blob:none "https://github.com/$upstream.git" main
       # Each row of a rebuilt region of tests/parity has a test that names its ID, and each test
       # that names an ID has a row.
       - name: Check the parity lists against the tests

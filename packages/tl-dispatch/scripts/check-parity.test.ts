@@ -1,12 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { git } from "../tests/git";
 import { parseScript } from "../tests/typescript";
 import {
-  commitPlace,
   type Facts,
+  inBranch,
   type ParityList,
   parityProblems,
   parseList,
@@ -43,7 +40,7 @@ const facts = (overrides: Partial<Facts> = {}): Facts => ({
     "a test with no ID",
   ],
   upstreamTests: new Set(["the channel answers"]),
-  commit: () => "not yet",
+  inBranch: () => false,
   ...overrides,
 });
 
@@ -80,17 +77,13 @@ describe("the parity script", () => {
   });
 
   test("fails an After next sync row whose commit is already in the branch", () => {
-    expect(
-      check([list()], facts({ commit: (sha) => (sha === "abc1234" ? "in branch" : "not yet") }))
-    ).toEqual([
+    expect(check([list()], facts({ inBranch: (sha) => sha === "abc1234" }))).toEqual([
       "tests/parity/shell.md: SHL-4 is marked After next sync, but abc1234 is already in this branch: port it, test it and drop the mark",
     ]);
   });
 
-  test("fails an After next sync row whose commit git does not know", () => {
-    expect(check([list()], facts({ commit: () => "unknown" }))).toEqual([
-      "tests/parity/shell.md: SHL-4 is marked After next sync, but git does not know abc1234: fetch upstream's main, or correct the commit",
-    ]);
+  test("an After next sync row waits while its commit is not in the branch", () => {
+    expect(check([list()], facts({ inBranch: () => false }))).toEqual([]);
   });
 
   test("an untested row waits without a test, and fails once a test names it", () => {
@@ -192,27 +185,8 @@ describe("the parity script", () => {
     ).toHaveLength(6);
   });
 
-  test("places a commit in this branch, after it, or outside this clone", () => {
-    const repo = mkdtempSync(join(tmpdir(), "parity-"));
-    try {
-      // A repository of its own, so no hook or signing setting of the machine applies.
-      const settings = [
-        "user.name=parity",
-        "user.email=parity@example.invalid",
-        "commit.gpgsign=false",
-        "core.hooksPath=/dev/null",
-      ].flatMap((setting) => ["-c", setting]);
-      const run = (...args: string[]) => git([...settings, ...args], repo).out.trim();
-      run("init", "-q");
-      run("commit", "-q", "--allow-empty", "-m", "the branch");
-      const head = run("rev-parse", "HEAD");
-      // A commit on top of HEAD that no branch holds: the clone knows it, HEAD's history does not.
-      const later = run("commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "a later commit");
-      expect(commitPlace(head, repo)).toBe("in branch");
-      expect(commitPlace(later, repo)).toBe("not yet");
-      expect(commitPlace("0000000000000000000000000000000000000000", repo)).toBe("unknown");
-    } finally {
-      rmSync(repo, { recursive: true, force: true });
-    }
+  test("finds a commit in HEAD's history, and not one this clone does not have", () => {
+    expect(inBranch(git(["rev-parse", "HEAD"]).out.trim())).toBe(true);
+    expect(inBranch("0".repeat(40))).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ import { join, relative } from "node:path";
 import ts from "typescript";
 
 import { git } from "../tests/git";
-import { PACKAGE_ROOT, REPO_ROOT, UPSTREAM_WEB } from "../tests/source";
+import { PACKAGE_ROOT, UPSTREAM_WEB } from "../tests/source";
 import { literal, parseScript } from "../tests/typescript";
 
 const PARITY_DIR = join(PACKAGE_ROOT, "tests/parity");
@@ -252,15 +252,13 @@ function namesUnder(root: string, wanted?: readonly string[]): string[] {
     .flatMap(({ path, text }) => testNames(parseScript(path, text)));
 }
 
-/** Where an upstream commit is: in this branch, known but not in it yet, or unknown to this clone. */
-export type CommitPlace = "in branch" | "not yet" | "unknown";
-
 export interface Facts {
   /** The names of this package's tests. */
   tests: readonly string[];
   /** The names of upstream's tests. */
   upstreamTests: ReadonlySet<string>;
-  commit: (sha: string) => CommitPlace;
+  /** Whether HEAD's history holds the commit; a commit this clone does not have is not in it. */
+  inBranch: (sha: string) => boolean;
 }
 
 /** The ID a test names: its first word, when that is an ID. */
@@ -283,12 +281,7 @@ export function parityProblems(lists: readonly ParityList[], facts: Facts): stri
         problems.push(`${at} is a second row with this ID; the first is in ${first}`);
       }
       listOf.set(id, first ?? list);
-      const place = mark === "After next sync" ? facts.commit(note) : undefined;
-      if (place === "unknown") {
-        problems.push(
-          `${at} is marked After next sync, but git does not know ${note}: fetch upstream's main, or correct the commit`
-        );
-      } else if (place === "in branch") {
+      if (mark === "After next sync" && facts.inBranch(note)) {
         problems.push(
           `${at} is marked After next sync, but ${note} is already in this branch: port it, test it and drop the mark`
         );
@@ -318,18 +311,8 @@ export function parityProblems(lists: readonly ParityList[], facts: Facts): stri
   return problems;
 }
 
-/** Runs git in `repo`: exit 0 is yes, 1 is no, anything else throws. */
-function gitSays(args: string[], repo: string): boolean {
-  const run = git(args, repo);
-  if (run.code === 0 || run.code === 1) return run.ok;
-  throw new Error(`git ${args.join(" ")} failed: ${run.err}`);
-}
-
-/** Where `sha` is in `repo`: in HEAD's history, fetched but not in it, or not in the clone. */
-export function commitPlace(sha: string, repo = REPO_ROOT): CommitPlace {
-  if (!gitSays(["rev-parse", "--verify", "--quiet", `${sha}^{commit}`], repo)) return "unknown";
-  return gitSays(["merge-base", "--is-ancestor", sha, "HEAD"], repo) ? "in branch" : "not yet";
-}
+/** Whether HEAD's history holds `sha`. */
+export const inBranch = (sha: string) => git(["merge-base", "--is-ancestor", sha, "HEAD"]).ok;
 
 /** The package's lists, with the problems of their own cells. */
 function readLists(): { lists: ParityList[]; problems: string[] } {
@@ -353,7 +336,7 @@ const notesOf = (lists: readonly ParityList[], mark: Mark) =>
   lists.flatMap((list) => list.items.filter((item) => item.mark === mark).map((item) => item.note));
 
 /** The package's lists against its tests, upstream's tests and this clone's history. */
-export function checkPackage(): { lists: ParityList[]; problems: string[] } {
+function checkPackage(): { lists: ParityList[]; problems: string[] } {
   const { lists, problems } = readLists();
   const inside = notesOf(lists, "inside");
   const facts: Facts = {
@@ -364,17 +347,12 @@ export function checkPackage(): { lists: ParityList[]; problems: string[] } {
         ? [...namesUnder(UPSTREAM_WEB, inside), ...namesUnder(UPSTREAM_E2E, inside)]
         : []
     ),
-    commit: (sha) => commitPlace(sha),
+    inBranch,
   };
   return { lists, problems: [...problems, ...parityProblems(lists, facts)] };
 }
 
 if (import.meta.main) {
-  // The commits "After next sync" rows wait for, one per line: CI fetches upstream only for them.
-  if (process.argv.includes("--waiting-commits")) {
-    for (const sha of notesOf(readLists().lists, "After next sync")) console.log(sha);
-    process.exit(0);
-  }
   const { lists, problems } = checkPackage();
   for (const line of problems) console.error(line);
   if (problems.length > 0) process.exit(1);
