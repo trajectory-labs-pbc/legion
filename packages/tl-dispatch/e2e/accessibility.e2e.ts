@@ -458,9 +458,9 @@ const CONTROLS = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 /** What may hold a small control without meeting it: a link with no other role or a `role="link"`
- *  row, a tree row, a focusable element that is no control (no control tag and no `role`
- *  attribute), or one with the role region, group or tab panel. Any other control that holds one
- *  meets it. */
+ *  row, a tree row, a focusable element that is no control (no `button`, `input`, `select`,
+ *  `textarea` or `summary` tag and no `role` attribute), or one with the role region, group or tab
+ *  panel. Any other control that holds one meets it. */
 const HOLDERS = [
   "a[href]:not([role])",
   "[role=link]",
@@ -575,6 +575,9 @@ test("each small control takes the pointer across its 24 px square, and its targ
   }
 });
 
+/** A 2 px box, for an element drawn in a small control's target. */
+const TINY = "display: block; width: 2px; height: 2px; padding: 0; border: 0";
+
 /** Draws `html` fixed at `dy` px below the middle of `control`, at its centre line. */
 async function drawBelow(control: Locator, dy: number, html: string): Promise<void> {
   await control.scrollIntoViewIfNeeded();
@@ -600,21 +603,20 @@ test("a control whose box sits in a small control's target meets it, unless it i
   page,
 }) => {
   const control = (await cutRows(page)).first();
-  const tiny = "display: block; width: 2px; height: 2px; padding: 0";
   await drawBelow(
     control,
     -11,
-    `<button aria-hidden="true" tabindex="-1" style="${tiny}"></button>`
+    `<button aria-hidden="true" tabindex="-1" style="${TINY}"></button>`
   );
-  await drawBelow(control, -7, `<button style="${tiny}; visibility: hidden"></button>`);
+  await drawBelow(control, -7, `<button style="${TINY}; visibility: hidden"></button>`);
   // 1 px, as Base UI draws its focus guards.
   await drawBelow(
     control,
     -3,
     '<button style="display: block; width: 1px; height: 1px; padding: 0; border: 0"></button>'
   );
-  await drawBelow(control, 3, `<input tabindex="-1" style="${tiny}; border: 0">`);
-  await drawBelow(control, 7, `<input aria-hidden="true" style="${tiny}; border: 0">`);
+  await drawBelow(control, 3, `<input tabindex="-1" style="${TINY}">`);
+  await drawBelow(control, 7, `<input aria-hidden="true" style="${TINY}">`);
   expect(await targetFaults(control)).toEqual({
     misses: [],
     meets: [
@@ -640,12 +642,11 @@ test("Base UI's hidden input meets no target, even at upstream's 44 px floor", a
 
 test("an element Tab skips meets a small control's target only by its role", async ({ page }) => {
   const control = (await cutRows(page)).first();
-  const tiny = "display: block; width: 2px; height: 2px";
-  await drawBelow(control, -9, `<div tabindex="-1" style="${tiny}"></div>`);
+  await drawBelow(control, -9, `<div tabindex="-1" style="${TINY}"></div>`);
   await drawBelow(
     control,
     -5,
-    `<span role="switch" aria-checked="false" tabindex="-1" style="${tiny}"></span>`
+    `<span role="switch" aria-checked="false" tabindex="-1" style="${TINY}"></span>`
   );
   expect(await targetFaults(control)).toEqual({
     misses: [],
@@ -677,7 +678,7 @@ test("a region, a tab panel, a link or a tree row holds a small control, and a c
     <div role="treeitem" aria-selected="false" tabindex="0">${checkbox}</div>
     <a href="#row" style="display: block">${checkbox}</a>
     <div role="link" tabindex="0" style="display: block">${checkbox}</div>
-    <button type="button" style="display: block; padding: 0">${checkbox}</button>
+    <button type="button" tabindex="0" style="display: block; padding: 0">${checkbox}</button>
     <div role="button" tabindex="0">${checkbox}</div>
     <a href="#menu" role="menuitem" style="display: block">${checkbox}</a>
   `);
