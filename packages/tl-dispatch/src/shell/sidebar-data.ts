@@ -13,7 +13,7 @@ import { useAgentText } from "@upstream-dispatch/features/refs/AgentName";
 
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
-import { type ReadFault, readFailureOf } from "@/features/read-failure";
+import { type ReadFault, useReadFailure } from "@/features/read-failure";
 import { useAddress } from "@/navigation/hooks";
 import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
@@ -38,8 +38,11 @@ export interface SectionRead<T> {
   fault: ReadFault | undefined;
 }
 
-function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
-  return { rows: query.data?.map(row), fault: readFailureOf(query) };
+function useSection<T, R>(
+  query: UseQueryResult<readonly T[]>,
+  row: (item: T) => R
+): SectionRead<R> {
+  return { rows: query.data?.map(row), fault: useReadFailure(query) };
 }
 
 /** Work under no priority or parked under one; none until the summary names a priority. */
@@ -60,13 +63,13 @@ export function priorityFaults(
 export function useAgentsRowCount(): RowCount {
   const agents = useQuery(userAgentStateQuery());
   const unread = totalUnreadReplies(agents.data);
-  return { count: unread, label: unreadRepliesLabel(unread), fault: readFailureOf(agents) };
+  return { count: unread, label: unreadRepliesLabel(unread), fault: useReadFailure(agents) };
 }
 
 /** The Priorities row's count: the work off a priority. */
 function usePrioritiesRowCount(): RowCount {
   const summary = useQuery(prioritySummaryQuery());
-  return { count: priorityFaults(summary.data), fault: readFailureOf(summary) };
+  return { count: priorityFaults(summary.data), fault: useReadFailure(summary) };
 }
 
 /** The pinned agents, oldest pin first, with their unread replies. */
@@ -129,7 +132,19 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
     queryKey: ["issues", "pinned"],
     queryFn: () => api.listIssues({ pinned: true }),
   });
+  const pinnedIssueRows = useSection(pinnedIssues, (pinned) => ({
+    key: pinned.key,
+    text: pinned.title,
+    openAsks: pinned.open_asks,
+    current: pinned.key === open.issue,
+  }));
   const projects = useQuery(projectsQuery());
+  const projectRows = useSection(projects, (shown) => ({
+    key: shown.key,
+    text: shown.name,
+    openAsks: shown.open_asks,
+    current: shown.key === open.project,
+  }));
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"
@@ -153,18 +168,8 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       fault: undefined,
     },
     inLiveView: open.liveView !== undefined,
-    pinnedIssues: sectionOf(pinnedIssues, (pinned) => ({
-      key: pinned.key,
-      text: pinned.title,
-      openAsks: pinned.open_asks,
-      current: pinned.key === open.issue,
-    })),
-    projects: sectionOf(projects, (shown) => ({
-      key: shown.key,
-      text: shown.name,
-      openAsks: shown.open_asks,
-      current: shown.key === open.project,
-    })),
+    pinnedIssues: pinnedIssueRows,
+    projects: projectRows,
   };
 }
 

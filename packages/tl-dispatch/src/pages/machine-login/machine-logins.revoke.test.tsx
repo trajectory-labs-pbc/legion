@@ -320,7 +320,7 @@ test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with 
     await user.click(await renderSection());
     await confirmRevoke(user);
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Could not load the latest machine logins.");
+    expect(alert).toHaveTextContent("Could not refresh machine logins.");
     expect(screen.getByRole("button", revoke)).toBeDefined();
 
     stubs.clearList();
@@ -335,8 +335,8 @@ test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with 
 
 test("RVL-13 a loaded list whose refresh is refused keeps its rows and says so, with no Retry", async () => {
   for (const [status, line] of [
-    [403, "You cannot see the latest machine logins."],
-    [404, "Could not find the latest machine logins."],
+    [403, "Could not refresh machine logins: access refused."],
+    [404, "Could not refresh machine logins: not found."],
   ] as const) {
     const user = userEvent.setup();
     const stubs = stub(async () => stubs.failList(status));

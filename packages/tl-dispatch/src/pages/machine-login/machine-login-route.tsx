@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
-import { ReadFailure, readFailureOf } from "@/features/read-failure";
+import { ReadFailure, useReadFailure } from "@/features/read-failure";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageFallback } from "@/loading/page-skeleton";
 import { NotFound } from "../not-found/not-found";
@@ -19,7 +19,9 @@ export function MachineLoginRoute(): ReactNode {
     void loadPage().catch(() => undefined);
     void queryClient.prefetchQuery(machineLoginsQuery());
   }, [queryClient]);
-  const fault = readFailureOf(capabilities);
+  const fault = useReadFailure(capabilities);
+  // A 404 of the page's own read: the server has no machine login page.
+  if (fault?.refusal === "not-found") return <NotFound />;
   if (fault !== undefined) {
     return (
       <div className="max-w-180">

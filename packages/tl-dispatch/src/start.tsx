@@ -1,13 +1,10 @@
-import {
-  DispatchQueryClient,
-  queryRetry,
-  queryRetryDelay,
-} from "@upstream-dispatch/api/query-client";
+import { DispatchQueryClient, queryRetryDelay } from "@upstream-dispatch/api/query-client";
 import { installChunkFailureRecovery } from "@upstream-dispatch/features/shell/DeploymentResilience";
 import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { readRetry } from "./features/read-failure";
 import { AuthGate } from "./shell/auth-gate";
 import { AppProviders } from "./shell/providers";
 
@@ -16,7 +13,7 @@ export function start(root: HTMLElement): { stop(): void } {
   const queryClient = new DispatchQueryClient({
     defaultOptions: {
       queries: {
-        retry: queryRetry,
+        retry: readRetry,
         retryDelay: queryRetryDelay,
         // The live feed keeps reads fresh; this only skips a refetch on mount.
         refetchOnWindowFocus: true,

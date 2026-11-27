@@ -3,7 +3,7 @@ import { Count } from "@legion/ui/components/count";
 import { CircleAlertIcon } from "lucide-react";
 import { LabelTooltip } from "@/commands/hotkey-tooltip";
 import { NeedsYouMark } from "@/features/needs-you";
-import type { ReadFault } from "@/features/read-failure";
+import type { ReadFault, RetryableFault } from "@/features/read-failure";
 
 /** A count beside a row; none at zero. */
 export interface RowCount {
@@ -15,6 +15,13 @@ export interface RowCount {
   label?: string;
   /** A read it needs failed with nothing to show. */
   fault?: ReadFault;
+}
+
+/** The fault of a count worth a Retry; a refused count draws no Retry, as asking again cannot change it. */
+export function retryableFaultOf(count: RowCount | undefined): RetryableFault | undefined {
+  const fault = count?.fault;
+  if (fault === undefined || fault.refusal !== undefined) return undefined;
+  return fault;
 }
 
 /** A row's count: what waits on the reader in the mark, else a muted number; none if it failed. */
@@ -34,20 +41,16 @@ export function RowCountMark({
   );
 }
 
-/**
- * A failed count in its own box: a danger icon whose tooltip says so, and whose click retries.
- * A refused count draws nothing, as asking again cannot change it; the row's page says why.
- */
+/** A failed count in its own box: a danger icon whose tooltip says so, and whose click retries. */
 export function CountRetry({
   className,
   fault,
   noun,
 }: {
   className?: string;
-  fault: ReadFault;
+  fault: RetryableFault;
   noun: string;
 }) {
-  if (fault.refusal !== undefined) return null;
   const label = `Could not load ${noun}. Retry`;
   return (
     <LabelTooltip label={label} side="right">

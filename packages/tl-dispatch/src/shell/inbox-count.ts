@@ -3,7 +3,7 @@ import { inboxQuery, myRepliesCountQuery, whoAmIQuery } from "@upstream-dispatch
 import { credentialPendingQuery } from "@upstream-dispatch/features/credentials/pending";
 import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { needsYouLabel } from "@/features/needs-you";
-import { readFailureOf } from "@/features/read-failure";
+import { useReadFailure } from "@/features/read-failure";
 import type { RowCount } from "./row-count";
 
 /**
@@ -20,11 +20,12 @@ export function useInboxRowCount(): RowCount {
   const replies = useQuery({ ...myRepliesCountQuery(), enabled: human });
   const waiting = useNeedsYouCount();
   const reads = human ? [inbox, viewer, credentials, replies] : [inbox, viewer, credentials];
+  // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
+  const fault = useReadFailure(
+    ...(credentials.data === null ? reads.filter((read) => read !== credentials) : reads)
+  );
   if (reads.some((read) => read.data === undefined)) {
-    // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
-    const retried =
-      credentials.data === null ? reads.filter((read) => read !== credentials) : reads;
-    return { count: undefined, needsYou: true, fault: readFailureOf(...retried) };
+    return { count: undefined, needsYou: true, fault };
   }
   const unread = replies.data ?? 0;
   if (waiting > 0 || unread === 0) {
