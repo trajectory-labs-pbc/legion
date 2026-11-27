@@ -20,6 +20,7 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
 | MLR-06 | Route | A refused capabilities read says so, with no Retry | changed | Upstream's route shows its not-found page; a 403 here says the reader cannot see the page |
 | MLR-07 | Route | A capabilities read the server cannot find shows the not-found page | | |
+| MLR-08 | Route | A logins list refused before the route mounts again loads, with no failure, until the server answers again | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |
 | MLP-02 | Code form | A lookup failure shows under the code field | | |
 | MLP-03 | Code form | Look up, then Deny, posts the looked-up code | | |

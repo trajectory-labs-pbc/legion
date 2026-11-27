@@ -31,8 +31,10 @@ function Failure({ answers }: { answers: readonly (() => Promise<unknown>)[] }) 
   );
 }
 
-function mount(answers: readonly (() => Promise<unknown>)[]): QueryClient {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function mount(
+  answers: readonly (() => Promise<unknown>)[],
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+): QueryClient {
   render(
     <QueryClientProvider client={client}>
       <Failure answers={answers} />
@@ -98,15 +100,32 @@ test("read-failure: a refused read keeps its refusal, with no Retry, while it is
   expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.");
 });
 
+test("read-failure: a read refused before it mounts is loading until it answers again", async () => {
+  let answer = () => Promise.reject(answered(403));
+  const client = mount([() => answer()]);
+  expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
+  cleanup();
+
+  const again = Promise.withResolvers<never>();
+  answer = () => again.promise;
+  mount([() => answer()], client);
+  await waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe("fetching"));
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+
+  await act(async () => again.reject(answered(403)));
+  expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
+});
+
 test("read-failure: Retry on a 500 beside a 403 asks both reads again", async () => {
-  const asked = [0, 0];
+  const asked: [number, number] = [0, 0];
   mount([
     () => {
-      asked[0] = (asked[0] ?? 0) + 1;
+      asked[0]++;
       return Promise.reject(answered(500));
     },
     () => {
-      asked[1] = (asked[1] ?? 0) + 1;
+      asked[1]++;
       return Promise.reject(answered(403));
     },
   ]);

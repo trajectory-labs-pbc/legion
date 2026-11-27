@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { ApiError } from "@/upstream/api";
 import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { answerShellReads, json, readFailed, waitFor } from "../../tests/network";
+import { answerShellReads, json, readFailed, refusalLanded, waitFor } from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
@@ -21,7 +20,7 @@ let answered: string[] = [];
 
 function mount(
   children: ReactNode,
-  answer: (url: string) => Response | undefined = () => undefined,
+  answer: Parameters<typeof answerShellReads>[0] = () => undefined,
   client = new QueryClient()
 ) {
   answered = answerShellReads(answer).asked;
@@ -123,14 +122,7 @@ describe("CompactHeader", () => {
         client
       );
       // The refusal landed, and the header drew what it makes of it.
-      await waitFor(() =>
-        client
-          .getQueryCache()
-          .getAll()
-          .some(
-            (query) => query.state.error instanceof ApiError && query.state.error.status === status
-          )
-      );
+      await waitFor(() => refusalLanded(client, status));
       await sleep(100);
       expect(header.textContent).not.toContain("Inbox count");
       expect(header.querySelector("button[aria-busy], [role='alert']")).toBeNull();

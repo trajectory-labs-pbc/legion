@@ -2,12 +2,18 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/destinations";
-import { ApiError } from "@/upstream/api";
 import type { AuthenticatedUser, InboxRow } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, type ReadAnswer, unasked } from "../../tests/inbox";
-import { answerShellReads, holdShellReads, json, readFailed, waitFor } from "../../tests/network";
+import {
+  answerShellReads,
+  holdShellReads,
+  json,
+  readFailed,
+  refusalLanded,
+  waitFor,
+} from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { Sidebar, SidebarView } from "./sidebar";
@@ -66,7 +72,7 @@ function mount(
     onPeek,
     peek = false,
   }: {
-    answer?: (url: string) => Response | undefined;
+    answer?: Parameters<typeof answerShellReads>[0];
     client?: QueryClient;
     commands?: boolean;
     onPeek?: () => void;
@@ -474,14 +480,7 @@ describe("the sidebar", () => {
         peek: true,
       });
       // The refusal landed, and the row drew what it makes of it.
-      await waitFor(() =>
-        client
-          .getQueryCache()
-          .getAll()
-          .some(
-            (query) => query.state.error instanceof ApiError && query.state.error.status === status
-          )
-      );
+      await waitFor(() => refusalLanded(client, status));
       await sleep(100);
       const row = container.querySelector('nav a[href="/"]')?.closest("li");
       expect(numberOf(row?.querySelector("a") ?? null)).toBeNull();
@@ -491,8 +490,31 @@ describe("the sidebar", () => {
     }
   });
 
+  test("an inbox read refused before the sidebar mounts again draws no Retry while it is asked again", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const refused = () => json({ error: { code: "FORBIDDEN" } }, 403);
+    let inbox: () => Response | Promise<Response> = refused;
+    const answer = inboxReads({ inbox: () => inbox(), unread: 3 });
+    mount("/agents", { answer, client });
+    await waitFor(() => refusalLanded(client, 403));
+    for (const view of mounted.splice(0)) view.unmount();
+
+    const again = Promise.withResolvers<Response>();
+    inbox = () => again.promise;
+    const container = mount("/agents", { answer, client });
+    const retry = () => container.querySelector(`[aria-label="${INBOX_RETRY}"]`);
+    await waitFor(() => answered.some((url) => url.endsWith("/api/v1/inbox")));
+    await sleep(100);
+    expect(retry()).toBeNull();
+
+    again.resolve(refused());
+    await waitFor(() => refusalLanded(client, 403));
+    await sleep(100);
+    expect(retry()).toBeNull();
+  });
+
   /** Mounts the sidebar on reads `answer` gives, once the Inbox count has failed. */
-  async function mountFailedInbox(answer: (url: string) => Response | undefined) {
+  async function mountFailedInbox(answer: Parameters<typeof answerShellReads>[0]) {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       answer,

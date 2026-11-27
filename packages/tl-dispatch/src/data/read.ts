@@ -50,9 +50,9 @@ export interface ReadOptions<TQueryFnData, T> {
 }
 
 /**
- * The one sort of a failed read. A 404 from a Dispatch process with no route for the read is no
- * refusal: while a release rolls out, another process can answer it. A read's 409 keeps its Retry:
- * the conflict rule is for writes.
+ * Whether a failed read is refused, which decides whether it offers Retry. A 404 from a Dispatch
+ * process with no route for the read is no refusal: while a release rolls out, another process
+ * can answer it. A read's 409 keeps its Retry: the conflict rule is for writes.
  */
 export function refusalOf(error: unknown): Refusal | undefined {
   if (!(error instanceof ApiError) || isNoRoute(error)) return undefined;

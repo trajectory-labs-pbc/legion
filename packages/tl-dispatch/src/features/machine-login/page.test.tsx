@@ -6,8 +6,9 @@ import { ApiError, api } from "@/upstream/api";
 import { renderApp } from "../../../tests/app";
 import { MachineLoginRoute } from "./page";
 
-function renderRoute(): HTMLElement {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderRoute(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+): HTMLElement {
   return renderApp(<MachineLoginRoute />, { path: "/credentials/machine", client: queryClient })
     .container;
 }
@@ -133,3 +134,37 @@ for (const [id, status, shown] of [
     }
   });
 }
+
+test("MLR-08 a logins list refused before the route mounts again is loading until it answers", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
+    machine_code_page: true,
+  });
+  const refused = () => new ApiError(403, { code: "FORBIDDEN", error: "no" });
+  const logins = spyOn(api, "getMachineLogins").mockRejectedValue(refused());
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const section = async () => within(await screen.findByRole("region", { name: "Machine logins" }));
+  try {
+    renderRoute(queryClient);
+    expect((await (await section()).findByRole("alert")).textContent).toBe(
+      "You cannot see machine logins."
+    );
+    cleanup();
+
+    // The route asks the list again beside the page, so it is out when the list mounts.
+    const again = Promise.withResolvers<never>();
+    logins.mockReturnValue(again.promise);
+    const asked = logins.mock.calls.length;
+    renderRoute(queryClient);
+    const shown = await section();
+    expect(logins.mock.calls.length).toBeGreaterThan(asked);
+    expect(shown.queryByRole("alert")).toBeNull();
+    expect(shown.queryByRole("button", { name: "Retry" })).toBeNull();
+
+    again.reject(refused());
+    expect((await shown.findByRole("alert")).textContent).toBe("You cannot see machine logins.");
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});

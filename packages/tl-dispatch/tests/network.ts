@@ -1,5 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { waitFor as waitForExpectation } from "@testing-library/react";
 import { http } from "msw";
+import { ApiError } from "@/upstream/api";
 import { answerRequests } from "./upstream";
 
 /**
@@ -30,12 +32,12 @@ export function holdShellReads(): void {
 
 /**
  * Answers the reads at `paths` by address for the rest of the test: `answer` gives a read its
- * response, and a read it leaves out stays pending. `asked` lists each read as it arrives. A
- * request to any other route is still upstream's to answer, or fails the test.
+ * response, now or later, and a read it leaves out stays pending. `asked` lists each read as it
+ * arrives. A request to any other route is still upstream's to answer, or fails the test.
  */
 export function answerReads(
   paths: readonly string[],
-  answer: (url: string) => Response | undefined
+  answer: (url: string) => Response | Promise<Response> | undefined
 ): { asked: string[] } {
   const asked: string[] = [];
   answerRequests(
@@ -50,8 +52,9 @@ export function answerReads(
 }
 
 /** `answerReads` for the reads of the shell's header and sidebar. */
-export const answerShellReads = (answer: (url: string) => Response | undefined) =>
-  answerReads(SHELL_READS, answer);
+export const answerShellReads = (
+  answer: (url: string) => Response | Promise<Response> | undefined
+) => answerReads(SHELL_READS, answer);
 
 export const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -67,3 +70,10 @@ export const waitFor = (done: () => boolean) =>
   waitForExpectation(() => {
     if (!done()) throw new Error("the awaited state never came");
   });
+
+/** Whether a read `client` holds was last answered with `status`. */
+export const refusalLanded = (client: QueryClient, status: number) =>
+  client
+    .getQueryCache()
+    .getAll()
+    .some((query) => query.state.error instanceof ApiError && query.state.error.status === status);

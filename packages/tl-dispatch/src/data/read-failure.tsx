@@ -6,53 +6,49 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { type ReadFault, type Refusal, refusalOf } from "@/data/read";
 import { queryRetry } from "@/upstream/api";
 
-/** Every read's retry policy: upstream's, which never asks a refused read again by itself. */
+/** Every read's retry policy: upstream's, except that it never asks a refused read again by itself. */
 export function readRetry(failureCount: number, error: unknown): boolean {
   return refusalOf(error) === undefined && queryRetry(failureCount, error);
 }
 
-/** `reads` that failed with nothing to show, each with its refusal, if any. */
-function faultOf(
-  reads: readonly UseQueryResult<unknown>[],
-  refusals: readonly (Refusal | undefined)[]
+/** How a read with nothing to show last failed, as the component reading it saw. */
+type Failure = Refusal | "retryable";
+
+/**
+ * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
+ * A refetch clears the error of a read with no data until it answers, so a read keeps the failure
+ * this component saw while it is asked again. A read this component never saw fail is loading
+ * while it is out, so a failure from before it mounted shows only once the read answers again.
+ * Every render passes the same reads in the same places, `undefined` for a read left out: what
+ * was seen is kept by place.
+ */
+export function useReadFailure(
+  ...reads: readonly (UseQueryResult<unknown> | undefined)[]
 ): ReadFault | undefined {
-  // A Retry puts a read back to pending, so the error count is what says it failed before.
-  const failed = reads.flatMap((read, index) =>
-    read.data === undefined && read.errorUpdateCount > 0 ? [index] : []
+  const [seen, setSeen] = useState<readonly (Failure | undefined)[]>([]);
+  const failures = reads.map((read, index): Failure | undefined => {
+    if (read === undefined || read.data !== undefined) return undefined;
+    if (read.error !== null) return refusalOf(read.error) ?? "retryable";
+    return read.fetchStatus === "idle" ? undefined : seen[index];
+  });
+  if (failures.length !== seen.length || failures.some((each, index) => each !== seen[index])) {
+    setSeen(failures);
+  }
+  if (failures.every((failure) => failure === undefined)) return undefined;
+  const retrying = reads.some(
+    (read, index) => failures[index] !== undefined && read?.isFetching === true
   );
-  if (failed.length === 0) return undefined;
-  const retrying = failed.some((index) => reads[index]?.isFetching === true);
-  const refused = failed.map((index) => refusals[index]);
-  if (!refused.includes(undefined)) {
-    return { refusal: refused.includes("forbidden") ? "forbidden" : "not-found", retrying };
+  if (!failures.includes("retryable")) {
+    return { refusal: failures.includes("forbidden") ? "forbidden" : "not-found", retrying };
   }
   // A failure that trying again can clear wins, so its Retry shows.
   return {
     retrying,
     // Every read is asked again, so what they make together comes from one round.
     retry: () => {
-      for (const read of reads) void read.refetch();
+      for (const read of reads) void read?.refetch();
     },
   };
-}
-
-/**
- * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
- * A refetch clears the error of a read with no data until it answers, so a refused read keeps its
- * last refusal while it is asked again.
- */
-export function useReadFailure(
-  ...reads: readonly UseQueryResult<unknown>[]
-): ReadFault | undefined {
-  const [kept, setKept] = useState<readonly (Refusal | undefined)[]>([]);
-  const refusals = reads.map((read, index) => {
-    if (read.error !== null) return refusalOf(read.error);
-    return read.data === undefined && read.isFetching ? kept[index] : undefined;
-  });
-  if (refusals.length !== kept.length || refusals.some((each, index) => each !== kept[index])) {
-    setKept(refusals);
-  }
-  return faultOf(reads, refusals);
 }
 
 /** A read whose refresh failed under what it shows, if so; the failure stays while its Retry runs. */

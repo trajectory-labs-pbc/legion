@@ -27,7 +27,9 @@ export function useInboxCount(): ShellRead<InboxCount> {
   const reads = human ? [inbox, credentials, replies] : [inbox, credentials];
   // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
   const fault = useReadFailure(
-    ...(credentials.data === null ? reads.filter((read) => read !== credentials) : reads)
+    inbox,
+    credentials.data === null ? undefined : credentials,
+    human ? replies : undefined
   );
   if (session.state !== "ready" || reads.some((read) => read.data === undefined)) {
     if (fault?.retry === undefined) return { data: undefined, fault };
