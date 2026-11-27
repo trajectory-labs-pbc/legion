@@ -5,9 +5,9 @@ import { pageRoute, prefetchOf } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const IssuePage = lazyNamed(
-  () => import("@upstream-dispatch/features/issue-page/IssuePage"),
-  "IssuePage"
+const AidedIssuePage = lazyNamed(
+  () => import("@/features/reading-aids/issue-host"),
+  "AidedIssuePage"
 );
 
 export const issue = {
@@ -16,7 +16,7 @@ export const issue = {
   routes: {
     issue: pageRoute({
       path: "/issues/:key/*",
-      element: <IssuePage />,
+      element: <AidedIssuePage />,
       prefetch: ({ key }) => [prefetchOf(issueQuery(key))],
     }),
   },

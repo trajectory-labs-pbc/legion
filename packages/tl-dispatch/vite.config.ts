@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { mergeConfig, type UserConfig } from "vite";
 import upstream from "../dispatch/web/vite.config";
+import { aidsChunks } from "./scripts/aids-chunks";
 import { oneCopyEach } from "./scripts/one-copy-each";
 
 const at = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -19,7 +20,10 @@ const { rootPackages, uiPackages } = JSON.parse(readFileSync(at("package.json"),
 export default mergeConfig(upstream, {
   root: at("."),
   publicDir: at("../dispatch/web/public"),
-  plugins: [oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`)],
+  plugins: [
+    aidsChunks(at("./src/features/reading-aids/")),
+    oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`),
+  ],
   resolve: {
     dedupe: [...rootPackages, ...uiPackages],
     alias: [
