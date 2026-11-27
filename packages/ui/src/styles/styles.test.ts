@@ -620,4 +620,44 @@ describe("the theme", () => {
       ).toBeGreaterThanOrEqual(1.8);
     }
   });
+
+  it.each(
+    Object.entries(THEMES)
+  )("keeps a bar's faint second value apart from its bar, and visible on each row fill, %s", (_name, tokens) => {
+    for (const state of ["success", "danger"]) {
+      const faint = `${state}-faint`;
+      expect(generated.toString()).toMatch(
+        new RegExp(`\\.fill-${faint}\\s*\\{\\s*fill: var\\(--${faint}\\)`)
+      );
+      expect(
+        contrast(colour(tokens, state), colour(tokens, faint)),
+        `${state} on ${faint}`
+      ).toBeGreaterThanOrEqual(1.8);
+      for (const ground of ["background", "card", "popover", "secondary", "muted", "accent"]) {
+        expect(
+          contrast(colour(tokens, faint), colour(tokens, ground)),
+          `${faint} on ${ground}`
+        ).toBeGreaterThanOrEqual(1.8);
+      }
+    }
+  });
+
+  it.each(
+    Object.entries(THEMES)
+  )("keeps a neutral bar apart from its faint track, at 3:1 on the card, and quieter than the status colours, %s", (_name, tokens) => {
+    expect(generated.toString()).toMatch(
+      /\.fill-faint-foreground\s*\{\s*fill: var\(--faint-foreground\)/
+    );
+    const onCard = (name: string) => contrast(colour(tokens, name), colour(tokens, "card"));
+    expect(
+      contrast(colour(tokens, "faint-foreground"), colour(tokens, "track")),
+      "faint-foreground on track"
+    ).toBeGreaterThanOrEqual(1.8);
+    expect(onCard("faint-foreground"), "faint-foreground on card").toBeGreaterThanOrEqual(3);
+    for (const state of ["success", "danger"]) {
+      expect(onCard("faint-foreground"), `faint-foreground quieter than ${state}`).toBeLessThan(
+        onCard(state)
+      );
+    }
+  });
 });

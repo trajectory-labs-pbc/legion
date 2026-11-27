@@ -472,6 +472,15 @@
     "sha256": "e98c84ce3987cb21a5abcd2408b81ff0e979d5961914a4d17c2ff774b4e4c0e9"
   },
   {
+    "file": "packages/dispatch/web/src/features/delivery/lib/barScale.ts",
+    "part": "barScale",
+    "copy": "../ui/src/components/bar-series.tsx",
+    "commit": "971ae88c95cf4f7f7e1808f848988bf0f48a97c9",
+    "sha256": "7356c0d2c8c6a1b0255c4c89bc41f0fc40bfa1865b1fad372e628a556adb9e50",
+    "outcome": "ported",
+    "reason": "BarSeries in packages/ui copies the scale its two charts share, with empty points left out rather than passed as null and a top of 0 drawn on the floor"
+  },
+  {
     "file": "packages/dispatch/web/src/features/inbox/BlockedOnYou.tsx",
     "part": "useNeedsYouCount",
     "copy": "src/shell/inbox-count.ts",

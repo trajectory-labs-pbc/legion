@@ -42,7 +42,7 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | --- | --- |
 | `foreground` | Titles, body text, values. |
 | `muted-foreground` | Metadata: ids, dates, counts, descriptions, placeholder text, a property's label. |
-| `track` | Never text: a glyph's unfilled part, a priority's unfilled bars. It stays 4.5:1 or more from `foreground` and 1.8:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
+| `track` | Never text: a glyph's unfilled part, a priority's unfilled bars, a neutral bar's faint second value. It stays 4.5:1 or more from `foreground` and 1.8:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
 | `primary-foreground`, `destructive-foreground` | Text on a primary or destructive fill. |
 
 Never lower a text token's opacity: the contrast tests read the token, not the mix.
@@ -53,12 +53,12 @@ Never lower a text token's opacity: the contrast tests read the token, not the m
 | --- | --- |
 | `primary` | The one primary action of a view: near black in light, near white in dark. |
 | `destructive`, `destructive-foreground` | The button that does a destructive action: a confirm's Delete or Revoke. The row button that opens the confirm is an outline button. |
-| `danger`, `danger-tint`, `danger-border` | A failed state: a failed check, a refused write, an error. |
+| `danger`, `danger-tint`, `danger-border`, `danger-faint` | A failed state: a failed check, a refused write, an error. |
 | `warning`, `warning-tint`, `warning-border` | A state that waits on a person: an open ask, a blocked item. |
-| `success`, `success-tint`, `success-border` | A passed state: a passed check, a merged or deployed change. |
-| `chart-1` to `chart-5` | Chart series, in this order. |
+| `success`, `success-tint`, `success-border`, `success-faint` | A passed state: a passed check, a merged or deployed change. |
+| `chart-1` to `chart-5` | Chart series, in this order. A chart of one series with no verdict draws its bars in `faint-foreground` instead: `chart-1` is the foreground, louder than the status colours in both themes, and `chart-2` is louder than them in light. |
 
-Use the `*-tint` fill and the `*-border` line together for a whole block of a state, such as an error banner. Use the plain token for an icon or a short label. A state never shows by colour alone: an icon or a word goes with it.
+Use the `*-tint` fill and the `*-border` line together for a whole block of a state, such as an error banner. Use the plain token for an icon or a short label. A state never shows by colour alone: an icon or a word goes with it. A chart's second value behind its bar takes `*-faint`, which reaches 1.8:1 on each row fill and from the plain token; a neutral second value takes `track`.
 
 ## Size scales
 
@@ -76,3 +76,4 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 | Heading `label` | A property's label, a menu section label. |
 | `textVariants` `body` | Rows, body text, controls. |
 | `textVariants` `caption` | Metadata in a row, a hint under a field. |
+| `textVariants` `figure` | A metric's large number: 16 px, weight 600, tabular figures. |
