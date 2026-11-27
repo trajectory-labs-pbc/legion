@@ -3,8 +3,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 import { importedPath, parseCss } from "./css";
-import { forkSrc } from "./map/source";
-import { PACKAGE_ROOT, type SourceFile, UPSTREAM_WEB } from "./source";
+import { PACKAGE_ROOT, type SourceFile, SRC_DIR, UPSTREAM_WEB } from "./source";
 import { literal, parseScript } from "./typescript";
 
 export type ImportKind = "static" | "type" | "dynamic" | "require" | "css";
@@ -227,7 +226,7 @@ export function resolutionCache(): ts.ModuleResolutionCache {
 
 /** Whether `path` is a file of this app's `src/` or of upstream's web app: the code a walk follows. */
 export const ownOrUpstream = (path: string) =>
-  path.startsWith(forkSrc + sep) || path.startsWith(UPSTREAM_WEB + sep);
+  path.startsWith(SRC_DIR + sep) || path.startsWith(UPSTREAM_WEB + sep);
 
 /** Upstream's files are read from disk alone, so one view and one cache serve every walk. */
 const upstream = {

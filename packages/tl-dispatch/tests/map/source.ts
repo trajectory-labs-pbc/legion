@@ -3,14 +3,13 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
-import { PACKAGE_ROOT, UPSTREAM_WEB } from "../source";
+import { SRC_DIR, UPSTREAM_WEB } from "../source";
 import { parseScript } from "../typescript";
 
 export const upstreamAppFile = join(UPSTREAM_WEB, "app.tsx");
-export const forkSrc = join(PACKAGE_ROOT, "src");
 
 /** The file of a page in the route map: `src/pages/<id>.tsx`. */
-export const pageFile = (id: string) => join(forkSrc, "pages", `${id}.tsx`);
+export const pageFile = (id: string) => join(SRC_DIR, "pages", `${id}.tsx`);
 
 /** Upstream's scripts under `dir`, tests and fixtures (`__fixtures__/`, `*-fixture(s).ts`) aside. */
 export function upstreamScripts(dir: string): string[] {

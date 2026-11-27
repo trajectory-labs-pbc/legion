@@ -5,20 +5,23 @@ replaces them one page at a time.
 
 ## Folders
 
-| Folder | Holds | May import |
-| --- | --- | --- |
-| `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it | no router and no `src/shell` or `src/pages`: commands take callbacks |
-| `src/navigation` | The router: typed links, hooks and the route tree | the only folder that imports `react-router-dom`; no page and no shell |
-| `src/loading` | The chunk loaders, and the skeleton a page shows while it loads | upstream's offline retry and error boundary, and the UI package |
-| `src/writes` | What a surface says of a failed write, and the alert that says it | upstream's write modules, and the UI package |
-| `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
-| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
-| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry | the same as `src/shell`; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
+| Folder | Holds |
+| --- | --- |
+| `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it |
+| `src/navigation` | The router: typed links, hooks and the route tree |
+| `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
+| `src/writes` | What a surface says of a failed write, and the alert that says it |
+| `src/shell` | The frame every page renders in |
+| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name |
+| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
-`tests/layering.test.ts` holds the router rules of `src/navigation` and the rules of
-`src/commands`; what `src/loading` imports is a convention. The test resolves every import as the build does (the tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and
-refuses an import it cannot resolve or a non-literal `import()`. Upstream's code keeps its own
-router imports. No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
+`tests/layers.table.ts` holds the layers and their rules as data, with the list of the imports
+that break a rule today, and `tests/layers.md` gives the reason for each rule and the questions
+that place a new file, so they say what each folder may import. `tests/layering.test.ts`
+checks each import of the app and of its tests against the table. It resolves every import as the build does (the tsconfig paths and the
+`@upstream-dispatch` alias), follows them through upstream's code, and refuses an
+import it cannot resolve or a non-literal `import()`. Upstream's code keeps its own router
+imports. No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
 
 ## Components and theme
 

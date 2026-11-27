@@ -21,13 +21,14 @@ export const APP_STYLESHEET = join(SRC_DIR, "styles.css");
 
 const SOURCE = /\.(tsx?|[cm]?jsx?|css)$/;
 
-/** Every script and stylesheet under `src/`, tests left out. */
-export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
+/** A test file, by its name or path. */
+export const TEST = /\.test\.[cm]?[jt]sx?$/;
+
+/** Every script and stylesheet under `dir` of `root`, by path from `root`. */
+export function filesUnder(root: string, dir: string): SourceFile[] {
   const files: SourceFile[] = [];
-  for (const entry of readdirSync(join(root, "src"), { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile() || !SOURCE.test(entry.name) || /\.test\.[cm]?[jt]sx?$/.test(entry.name)) {
-      continue;
-    }
+  for (const entry of readdirSync(join(root, dir), { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() || !SOURCE.test(entry.name)) continue;
     const absolute = join(entry.parentPath, entry.name);
     files.push({
       path: relative(root, absolute).split(sep).join("/"),
@@ -35,4 +36,14 @@ export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
     });
   }
   return files.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** Every script and stylesheet under `src/`, tests left out. */
+export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
+  return filesUnder(root, "src").filter((file) => !TEST.test(file.path));
+}
+
+/** What the layering test reads: every script and stylesheet under `src/` and `tests/`. */
+export function layeringFiles(root = PACKAGE_ROOT): SourceFile[] {
+  return [...filesUnder(root, "src"), ...filesUnder(root, "tests")];
 }
