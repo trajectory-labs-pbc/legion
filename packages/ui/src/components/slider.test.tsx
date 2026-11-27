@@ -70,6 +70,8 @@ describe("Slider", () => {
     const { container } = render(<Slider defaultValue={[20, 80]} />);
     const thumbs = [...container.querySelectorAll('[data-slot="slider-thumb"]')];
     expect(thumbs).toHaveLength(2);
-    for (const thumb of thumbs) expect(thumb.className).toContain(SQUARE);
+    for (const thumb of thumbs) {
+      expect(thumb.className.split(" ")).toEqual(expect.arrayContaining(SQUARE.split(" ")));
+    }
   });
 });

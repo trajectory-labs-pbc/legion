@@ -34,9 +34,14 @@ describe("Checkbox", () => {
   it("takes the pointer across a 24 px square around its 16 px box", () => {
     render(<Checkbox aria-label="Done" />);
     const box = screen.getByRole("checkbox", { name: "Done" });
-    expect(box.className).toContain(SQUARE);
     expect(box.className.split(" ")).toEqual(
-      expect.arrayContaining(["inline-flex", "size-4", "items-center", "justify-center"])
+      expect.arrayContaining([
+        ...SQUARE.split(" "),
+        "inline-flex",
+        "size-4",
+        "items-center",
+        "justify-center",
+      ])
     );
   });
 });

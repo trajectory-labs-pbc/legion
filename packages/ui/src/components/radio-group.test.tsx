@@ -47,6 +47,6 @@ describe("RadioGroup", () => {
       </RadioGroup>
     );
     const item = screen.getByRole("radio", { name: "Small" });
-    expect(item.className).toContain(SQUARE);
+    expect(item.className.split(" ")).toEqual(expect.arrayContaining(SQUARE.split(" ")));
   });
 });
