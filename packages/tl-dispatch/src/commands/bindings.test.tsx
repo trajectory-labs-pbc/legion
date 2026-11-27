@@ -14,21 +14,20 @@ import {
 } from "@legion/ui/components/select";
 import {
   appKeymap,
-  createKeymap,
   DIALOG_SCOPE,
   type Keymap,
   useKeymap,
   useKeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
-import { act } from "react";
 
-import { createLayerSource, openAppLayer } from "../../tests/layers";
+import { press, registerContext } from "../../tests/keymap";
+import { openAppLayer } from "../../tests/layers";
 import { render, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
+import { until } from "../../tests/wait";
 import { appCatalog } from "./app-catalog";
 import { contextBindings, toBindings, UNDER_OVERLAY } from "./bindings";
 import { commandStore } from "./command-store";
-import { type EngineStack, trackEngineStack } from "./engine-stack";
 import { type CommandSpecs, createCatalog } from "./schema";
 import { useRegisterCommands } from "./use-register-commands";
 
@@ -56,30 +55,10 @@ function recorder(context: string, fired: string[], enabled = true): CommandSpec
   return specsFor(catalog, context, (command) => ({ run: () => fired.push(command.id), enabled }));
 }
 
-interface Setup {
-  keymap: Keymap;
-  layers: ReturnType<typeof createLayerSource>;
-  dialogs: EngineStack;
-  fired: string[];
-}
-
-/** A key engine with the global context registered as the shell will, and the sheet's helpers. */
-function setup(enabled = true): Setup {
-  const keymap = createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {} });
-  const layers = createLayerSource();
-  const dialogs = trackEngineStack(keymap, layers);
+/** A key engine with the global context registered as the shell will, and what it ran. */
+function setup(enabled = true) {
   const fired: string[] = [];
-  const global = contextBindings(catalog, "global", recorder("global", fired, enabled), dialogs);
-  keymap.register(global.scope, global.own);
-  keymap.register(
-    DIALOG_SCOPE,
-    global.underOverlays.map(({ binding }) => binding)
-  );
-  return { keymap, layers, dialogs, fired };
-}
-
-function press(keymap: Keymap, key: string, init: KeyboardEventInit = {}): void {
-  keymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+  return { ...registerContext(catalog, "global", recorder("global", fired, enabled)), fired };
 }
 
 /** What upstream's palette does when it opens: push a dialog, then bind `$mod+k` to close. */
@@ -101,15 +80,26 @@ function openUpstreamPalette(keymap: Keymap, fired: string[]): () => void {
 }
 
 describe("bindings", () => {
-  test("carry the catalog's typing and palette fields, and read the gate on every press", () => {
-    const fired: string[] = [];
-    let open = true;
-    const [search, create] = toBindings(recorder("global", fired), () => open);
+  test("carry the catalog's typing and palette fields", () => {
+    const [search, create] = toBindings(recorder("global", []));
     expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
     expect([search?.palette, create?.palette]).toEqual([false, true]);
     expect(create?.when?.()).toBe(true);
-    open = false;
-    expect(create?.when?.()).toBe(false);
+  });
+
+  test("a copy under overlays reads the overlays open on every press", () => {
+    const { layers, stack } = setup();
+    const copy = contextBindings(
+      catalog,
+      "global",
+      recorder("global", []),
+      stack
+    ).underOverlays.find(({ binding }) => binding.id === `global.create${UNDER_OVERLAY}`);
+    expect(copy?.binding.when?.()).toBe(false);
+    const sheet = layers.open("passthrough");
+    expect(copy?.binding.when?.()).toBe(true);
+    sheet.close();
+    expect(copy?.binding.when?.()).toBe(false);
   });
 
   test("a shut command neither fires nor shadows", () => {
@@ -220,8 +210,7 @@ describe("useRegisterCommands on the app's engine", () => {
   test("registers the shell's keys, passes them under a drawer, and yields to the palette", () => {
     const fired: string[] = [];
     const shell = render(<Shell fired={fired} />);
-    const tap = (key: string, init: KeyboardEventInit = {}) =>
-      appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
+    const tap = (key: string, init: KeyboardEventInit = {}) => press(appKeymap, key, init);
     tap("c");
     let sheet: ReturnType<typeof openAppLayer> | undefined;
     settle(() => {
@@ -254,17 +243,12 @@ describe("useRegisterCommands on the app's engine", () => {
     try {
       const save = () =>
         document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
-      for (let tries = 0; tries < 20 && save() === null; tries += 1) {
-        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-      }
+      await until(() => save() !== null);
       settle(() => save()?.focus());
       expect(
         save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)
       ).toBe(true);
-      const tap = (key: string, init: KeyboardEventInit = {}) =>
-        settle(() => {
-          appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
-        });
+      const tap = (key: string, init: KeyboardEventInit = {}) => press(appKeymap, key, init);
       tap("c");
       tap("g");
       tap("i");
@@ -272,9 +256,7 @@ describe("useRegisterCommands on the app's engine", () => {
       expect(fired).toEqual(["global.help"]);
       // Control: once the dialog has closed, the same key runs.
       view.rerender(page(false));
-      for (let tries = 0; tries < 40 && save() !== null; tries += 1) {
-        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-      }
+      await until(() => save() === null);
       tap("c");
       expect(fired).toEqual(["global.help", "global.create"]);
     } finally {
@@ -314,18 +296,13 @@ describe("useRegisterCommands on the app's engine", () => {
       const popup = (slot: string) =>
         document.body.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
       const option = () => popup("select-content")?.querySelector<HTMLElement>('[role="option"]');
-      for (let tries = 0; tries < 40 && option() === undefined; tries += 1) {
-        await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-      }
+      // A popup with no option yet answers null, not undefined.
+      await until(() => option() != null);
       settle(() => option()?.focus());
       // The select's popup is in a portal: the focus is in it, and outside the alert dialog's.
       expect(popup("select-content")?.contains(document.activeElement)).toBe(true);
       expect(popup("alert-dialog-content")?.contains(document.activeElement)).toBe(false);
-      settle(() => {
-        appKeymap.handleKeyDown(
-          new KeyboardEvent("keydown", { key: "?", shiftKey: true, cancelable: true })
-        );
-      });
+      press(appKeymap, "?", { shiftKey: true });
       expect(fired).toEqual([]);
     } finally {
       view.unmount();

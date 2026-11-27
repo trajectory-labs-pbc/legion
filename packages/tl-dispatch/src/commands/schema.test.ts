@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
 
+import { type KeyRegistration, keyRegistrations } from "../../tests/key-registrations";
+import { UPSTREAM_WEB } from "../../tests/source";
 import { appCatalog } from "./app-catalog";
 import { NAV_DESTINATIONS, navCommandName } from "./nav";
 import { CatalogError, type CommandContext, type CommandDefinition, createCatalog } from "./schema";
@@ -23,45 +26,67 @@ const go = (name: string, keys: string[]): CommandDefinition => ({ name, label: 
 const clash = (a: string, aKeys: string, b: string, bKeys: string) =>
   `"${a}" (${aKeys}) and "${b}" (${bKeys}) are live together and one press sequence matches both, or one starts the other`;
 
-/** The keys upstream's shell binds today, as the engine sees them. */
-const LIVE_KEYS: readonly CommandDefinition[] = [
-  {
-    name: "search",
-    keys: ["$mod+k"],
-    label: "Search and actions",
-    inEditable: true,
-    hideFrom: ["palette"],
-  },
-  { name: "search-only", keys: ["/"], label: "Search", hideFrom: ["palette"] },
-  { name: "help", keys: ["?"], label: "Keyboard shortcuts" },
-  { name: "create", keys: ["c"], label: "Create issue" },
-  { name: "go-inbox", keys: ["g i"], label: "Go to Inbox" },
-  { name: "go-agents", keys: ["g a"], label: "Go to Agents" },
-  { name: "go-settings", keys: ["g s"], label: "Go to Settings" },
-  { name: "go-documents", keys: ["g d"], label: "Go to Documents" },
-  { name: "go-project", keys: ["g p"], label: "Go to project…", hideFrom: ["palette"] },
-  { name: "inbox-drawer", keys: ["i"], label: "Open the inbox" },
-  { name: "toggle-sidebar", keys: ["Shift+S"], label: "Toggle sidebar" },
-  { name: "toggle-margin", keys: ["Shift+M"], label: "Toggle margin" },
-];
+/**
+ * Upstream's Shift+M binding takes its id and label from the frame it is in, so the scan reads
+ * neither; the catalog's command is the plain shell's.
+ */
+const FRAMED = { keys: "Shift+M", name: "toggle-margin", label: "Toggle margin" } as const;
+
+interface ShellBinding {
+  id: string;
+  keys: string[];
+  label: string | undefined;
+  inEditable: boolean;
+  palette: boolean;
+}
+
+/** Each global binding upstream's shell registers, read from its source, as the engine runs it. */
+function shellBindings(): ShellBinding[] {
+  const byLine = new Map<number, KeyRegistration[]>();
+  for (const registration of keyRegistrations(join(UPSTREAM_WEB, "app.tsx"))) {
+    if (registration.scope !== "global") continue;
+    byLine.set(registration.line, [...(byLine.get(registration.line) ?? []), registration]);
+  }
+  return [...byLine.values()].map((registrations) => {
+    const [first] = registrations;
+    if (first === undefined) throw new Error("a binding with no key");
+    const framed =
+      first.id === undefined &&
+      first.keys === FRAMED.keys &&
+      first.label?.includes(`"${FRAMED.label}"`) === true;
+    if (first.id === undefined && !framed) {
+      throw new Error(`app.tsx:${first.line} binds ${first.keys} under an id no scan reads`);
+    }
+    const inEditable = first.inEditable === true;
+    return {
+      id: `global.${framed ? FRAMED.name : first.id}`,
+      keys: registrations.map((registration) => registration.keys),
+      label: framed ? FRAMED.label : first.label,
+      inEditable,
+      // The engine's own default, which the palette reads.
+      palette: first.palette ?? (registrations.length <= 1 && !inEditable),
+    };
+  });
+}
 
 describe("the app's catalog", () => {
-  test("holds every key the shell binds today, with the same keys, typing and palette rows", () => {
-    for (const live of LIVE_KEYS) {
-      const command = appCatalog.find(`global.${live.name}`);
-      const catalogued: Partial<CommandDefinition> = {
-        name: command?.name,
+  test("holds every key the shell binds today, with the same label, typing and palette row", () => {
+    const shell = shellBindings();
+    expect(shell.length).toBeGreaterThan(5);
+    for (const binding of shell) {
+      const command = appCatalog.find(binding.id);
+      expect({
+        id: command?.id,
         keys: command?.keys,
         label: command?.label,
-        inEditable: command?.inEditable,
-        hideFrom: command?.hideFrom,
-      };
-      expect(catalogued).toEqual(live);
+        inEditable: command?.inEditable === true,
+        palette: command?.hideFrom?.includes("palette") !== true,
+      }).toEqual(binding);
     }
   });
 
   test("adds only the pages with no letter, as palette commands", () => {
-    const live = new Set(LIVE_KEYS.map((key) => `global.${key.name}`));
+    const live = new Set(shellBindings().map((binding) => binding.id));
     const added = appCatalog.commandsOf("global").filter((command) => !live.has(command.id));
     expect(added.map((command) => `${command.id} ${command.keys?.join() ?? ""}`)).toEqual([
       "global.go-priorities ",

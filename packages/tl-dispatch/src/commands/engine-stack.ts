@@ -8,7 +8,8 @@ import {
 import { focusedOverlays, type LayerSource, type OverlayLayer } from "./focused-overlay";
 import type { Catalog, CatalogCommand, OverlayReach } from "./schema";
 
-export interface EngineStack {
+/** What is open over the page, as last read. */
+export interface StackState {
   /**
    * Whether global commands of this reach run under what is open: overlays are open, each ours,
    * and each lets them through. `under-most` runs under a `passthrough` overlay alone;
@@ -17,6 +18,11 @@ export interface EngineStack {
   passes(reach: OverlayReach): boolean;
   /** The scopes whose bindings can fire now, innermost last: `dialog` alone while one is open. */
   liveScopes(): readonly KeymapScope[];
+}
+
+/** Each question reads the overlays again; `now()` reads them once for several questions. */
+export interface EngineStack extends StackState {
+  now(): StackState;
   subscribe(listener: () => void): () => void;
 }
 
@@ -93,24 +99,28 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
   };
 
   const upstreamDialog = () => upstream.includes(DIALOG_SCOPE);
-  const tracker: EngineStack = {
-    passes(reach) {
-      read();
-      return (
-        !upstreamDialog() &&
-        ours.length > 0 &&
-        ours.every(({ kind }) =>
-          reach === "under-all" ? kind !== "alert-dialog" : kind === "passthrough"
-        )
-      );
-    },
+  const state: StackState = {
+    passes: (reach) =>
+      !upstreamDialog() &&
+      ours.length > 0 &&
+      ours.every(({ kind }) =>
+        reach === "under-all" ? kind !== "alert-dialog" : kind === "passthrough"
+      ),
     liveScopes() {
-      read();
       if (upstreamDialog() || ours.length > 0) return [DIALOG_SCOPE];
       // The engine reads a scope pushed twice at its last place, so keep that one.
       const scopes: KeymapScope[] = ["global", ...upstream];
       return scopes.filter((scope, index) => scopes.lastIndexOf(scope) === index);
     },
+  };
+  const now = () => {
+    read();
+    return state;
+  };
+  const tracker: EngineStack = {
+    passes: (reach) => now().passes(reach),
+    liveScopes: () => now().liveScopes(),
+    now,
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -131,11 +141,13 @@ export const appStack = trackEngineStack(appKeymap, focusedOverlays);
  */
 export function keysReach(catalog: Catalog, command: CatalogCommand, stack: EngineStack): boolean {
   const { scope } = catalog.context(command.context);
-  if (stack.liveScopes().includes(scope)) return true;
-  return scope === "global" && stack.passes(command.overlays ?? "under-most");
+  const now = stack.now();
+  if (now.liveScopes().includes(scope)) return true;
+  return scope === "global" && now.passes(command.overlays ?? "under-most");
 }
 
 /** The reaches that pass now, as one string, so a change re-renders and nothing else does. */
 export function passing(stack: EngineStack): string {
-  return (["under-most", "under-all"] as const).filter((reach) => stack.passes(reach)).join(" ");
+  const now = stack.now();
+  return (["under-most", "under-all"] as const).filter((reach) => now.passes(reach)).join(" ");
 }

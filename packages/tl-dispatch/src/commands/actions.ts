@@ -16,27 +16,20 @@ type CommandNamesIn<
 > = Id extends `${Context}.${infer Name}` ? Name : never;
 
 /**
- * Declares a feature's actions hook for one context, `useXActions(record, opts)`; a `build`
- * that takes no options gives `useXActions(record)`. `build` returns
+ * Declares a feature's actions hook for one context, `useXActions(record)`. `build` returns
  * a state for every command of the context, by name: the type check refuses a missing or an
  * unknown name, and the first call checks again for a catalog the type check cannot see.
  */
-export function defineActions<Id extends string, const Context extends string, Record_, Options>(
+export function defineActions<Id extends string, const Context extends string, Record_>(
   catalog: Catalog<Id>,
   context: Context,
-  build: (
-    record: Record_,
-    options: Options
-  ) => { readonly [Name in CommandNamesIn<Id, Context>]: CommandState }
-): (record: Record_, ...rest: unknown extends Options ? [] : [options: Options]) => CommandSpecs {
+  build: (record: Record_) => { readonly [Name in CommandNamesIn<Id, Context>]: CommandState }
+): (record: Record_) => CommandSpecs {
   const commands = catalog.commandsOf(context);
   const names = new Set(commands.map((command) => command.name));
   let checked = false;
-  return (record, ...rest) => {
-    const states: Readonly<Partial<Record<string, CommandState>>> = build(
-      record,
-      rest[0] as Options
-    );
+  return (record) => {
+    const states: Readonly<Partial<Record<string, CommandState>>> = build(record);
     if (!checked) {
       const missing = [...names].filter((name) => states[name] === undefined);
       const extra = Object.keys(states).filter((name) => !names.has(name));

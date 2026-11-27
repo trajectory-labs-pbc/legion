@@ -1,4 +1,9 @@
-import type { LayerSource, OverlayKind, OverlayLayer } from "@/commands/focused-overlay";
+import {
+  GLOBAL_KEYS_ATTRIBUTE,
+  type LayerSource,
+  type OverlayKind,
+  type OverlayLayer,
+} from "@/commands/focused-overlay";
 
 export interface OpenLayer extends OverlayLayer {
   close(): void;
@@ -43,7 +48,7 @@ export function openAppLayer(kind: OverlayKind): { close(): void } {
     kind === "alert-dialog" ? "alert-dialog-content" : "dialog-content"
   );
   popup.setAttribute("data-open", "");
-  if (kind === "passthrough") popup.setAttribute("data-global-keys", "");
+  if (kind === "passthrough") popup.setAttribute(GLOBAL_KEYS_ATTRIBUTE, "");
   popup.tabIndex = -1;
   document.body.append(popup);
   popup.focus();

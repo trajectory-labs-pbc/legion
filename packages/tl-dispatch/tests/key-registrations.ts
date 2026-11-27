@@ -16,6 +16,9 @@ export interface KeyRegistration {
   /** The label as written: a template's expressions read `{name}`, other expressions their source. */
   label: string | undefined;
   keys: string;
+  /** `inEditable` and `palette`, when each is written as `true` or `false`. */
+  inEditable?: boolean | undefined;
+  palette?: boolean | undefined;
 }
 
 function literalText(node: ts.Expression): string | undefined {
@@ -30,6 +33,12 @@ function property(node: ts.ObjectLiteralExpression, name: string): ts.Expression
       return member.initializer;
     if (ts.isShorthandPropertyAssignment(member) && member.name.text === name) return member.name;
   }
+  return undefined;
+}
+
+function literalBoolean(node: ts.Expression | undefined): boolean | undefined {
+  if (node?.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node?.kind === ts.SyntaxKind.FalseKeyword) return false;
   return undefined;
 }
 
@@ -119,9 +128,20 @@ export function keyRegistrations(
       const idNode = property(node, "id");
       const id = idNode === undefined ? undefined : literalText(idNode);
       const label = labelText(property(node, "label"));
+      const inEditable = literalBoolean(property(node, "inEditable"));
+      const palette = literalBoolean(property(node, "palette"));
       for (const text of texts) {
         if (text !== undefined) {
-          found.push({ file, line, scope: scopeOf(node), id, label, keys: text });
+          found.push({
+            file,
+            line,
+            scope: scopeOf(node),
+            id,
+            label,
+            keys: text,
+            inEditable,
+            palette,
+          });
         }
       }
     }

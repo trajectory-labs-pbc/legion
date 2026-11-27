@@ -2,7 +2,7 @@ import type { KeyBindingDescription, KeymapScope } from "@upstream-dispatch/feat
 
 import { UNDER_OVERLAY } from "./bindings";
 import { DEFAULT_GROUP } from "./groups";
-import { clashChecker, clashes, keyChecker } from "./keys";
+import { clashChecker, keySteps } from "./keys";
 import type { Catalog, CommandGroup } from "./schema";
 import type { UpstreamLabels } from "./upstream-labels";
 
@@ -18,10 +18,8 @@ export interface ShortcutSection {
   rows: readonly ShortcutRow[];
 }
 
-/** Keys every reader knows; the sheet leaves them out, and they still run. */
-const UNIVERSAL_KEYS = ["Escape"] as const;
-
-const UNIVERSAL = keyChecker(UNIVERSAL_KEYS);
+/** Every reader knows Escape: the sheet leaves out a key that starts with it, which still runs. */
+const startsWithEscape = (keys: string) => keySteps(keys)[0] === "Escape";
 
 function scopeGroup(scope: KeymapScope): CommandGroup {
   return { id: `scope:${scope}`, label: scope.charAt(0).toUpperCase() + scope.slice(1) };
@@ -52,7 +50,7 @@ export function liveShortcuts(
         (keys) => !clashesAny(taken, keys) && !clashesAny(claimed, keys)
       );
       claimed.push(...keys);
-      const shown = keys.filter((keys) => !clashes(UNIVERSAL, keys));
+      const shown = keys.filter((keys) => !startsWithEscape(keys));
       const own = catalog.find(binding.id.replace(UNDER_OVERLAY, ""));
       if (shown.length === 0 || own?.hideFrom?.includes("sheet") === true) continue;
       const group = own === undefined ? scopeGroup(scope) : (own.group ?? DEFAULT_GROUP);

@@ -6,8 +6,6 @@ import { useCommand } from "./use-command";
 
 export interface CommandButtonProps extends Omit<ButtonProps, "onClick" | "children" | "render"> {
   commandId: CommandId;
-  /** Shows the icon alone, named by `aria-label`. Defaults to true for an `icon*` size. */
-  iconOnly?: boolean;
   /** Replaces the catalog's label; the icon, the key and the run stay the command's. */
   label?: string;
   /** A disabled command hides its button unless this is set: a greyed primary looks broken. */
@@ -25,7 +23,6 @@ export function commandButtonVariant(view: CommandView, iconOnly: boolean): Butt
 /** A button for one command: its label, icon, key and gate come from the catalog, and a click runs what its key runs. */
 export function CommandButton({
   commandId,
-  iconOnly,
   label,
   size,
   variant,
@@ -35,7 +32,8 @@ export function CommandButton({
 }: CommandButtonProps) {
   const view = useCommand(commandId);
   if (view === undefined || (!view.enabled && !showIfDisabled)) return null;
-  const onlyIcon = iconOnly ?? size?.startsWith("icon") ?? false;
+  // An `icon*` size shows the icon alone, named by `aria-label`.
+  const onlyIcon = size?.startsWith("icon") ?? false;
   const shown = label ?? view.label;
   const Icon = view.command.icon;
   return (

@@ -2,9 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 import { act } from "react";
 
+import { press as pressOn } from "../../tests/keymap";
 import { openAppLayer } from "../../tests/layers";
-import { render, settle } from "../../tests/react";
+import { mount as mountView } from "../../tests/mount";
+import { settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
+import { until } from "../../tests/wait";
 import { appCatalog } from "./app-catalog";
 import { ShortcutsSheet } from "./shortcuts-sheet";
 import { ShortcutsSheetView } from "./shortcuts-sheet-view";
@@ -40,8 +43,7 @@ afterEach(() => {
 });
 
 function mount(disabled?: readonly string[]) {
-  const view = render(<Harness disabled={disabled} />);
-  cleanups.push(() => view.unmount());
+  mountView(<Harness disabled={disabled} />);
 }
 
 function openLayer(kind: Parameters<typeof openAppLayer>[0]) {
@@ -52,10 +54,7 @@ function openLayer(kind: Parameters<typeof openAppLayer>[0]) {
   cleanups.push(close);
 }
 
-const press = (key: string, init: KeyboardEventInit = {}) =>
-  settle(() => {
-    appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true, ...init }));
-  });
+const press = (key: string, init: KeyboardEventInit = {}) => pressOn(appKeymap, key, init);
 
 const sheet = () => document.body.querySelector<HTMLElement>('[data-slot="sheet-content"]');
 
@@ -152,13 +151,6 @@ describe("ShortcutsSheet", () => {
     expect(ran).toEqual(["search"]);
   });
 
-  test("under a sheet of ours only ? is listed, as only ? runs there", () => {
-    mount();
-    openLayer("overlay");
-    press("?", { shiftKey: true });
-    expect(rows()).toEqual(["Keyboard shortcuts: ?"]);
-  });
-
   test("control: under an alert dialog ? does nothing", () => {
     mount();
     openLayer("alert-dialog");
@@ -200,13 +192,10 @@ describe("ShortcutsSheet", () => {
         <ShortcutsSheet onOpenChange={state.setOpen} open={state.open} sections={state.sections} />
       );
     }
-    const view = render(<Lazy />);
-    cleanups.push(() => view.unmount());
+    mountView(<Lazy />);
     expect(sheet()).toBeNull();
     press("?", { shiftKey: true });
-    for (let tries = 0; tries < 20 && sheet() === null; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
-    }
+    await until(() => sheet() !== null);
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
     // The sheet takes the focus a moment after it opens.
     await focusSettles();

@@ -18,17 +18,13 @@ function useKeysReach(id: CommandId): boolean {
 }
 
 /**
- * The chips of the command's first key. None while it is not mounted or has no key, none while
- * an overlay masks its keys, and none while it is off unless asked: a chip for a dead key would
- * mislead.
+ * The chips of the command's first key. None while it is not mounted, is off or has no key, and
+ * none while an overlay masks its keys: a chip for a dead key would mislead.
  */
-export function useCommandShortcut(
-  id: CommandId,
-  { showIfDisabled = false }: { showIfDisabled?: boolean } = {}
-): ShortcutChips | null {
+export function useCommandShortcut(id: CommandId): ShortcutChips | null {
   const view = useCommand(id);
   const reaches = useKeysReach(id);
-  if (view === undefined || !reaches || (!view.enabled && !showIfDisabled)) return null;
+  if (view === undefined || !reaches || !view.enabled) return null;
   const first = view.command.keys?.[0];
   return first === undefined ? null : chipsOf(first);
 }

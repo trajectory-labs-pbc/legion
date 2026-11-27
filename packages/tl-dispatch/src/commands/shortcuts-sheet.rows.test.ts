@@ -1,15 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createKeymap,
-  DIALOG_SCOPE,
-  type KeyBinding,
-  type Keymap,
-} from "@upstream-dispatch/features/shell/keymap";
+import { DIALOG_SCOPE, type KeyBinding } from "@upstream-dispatch/features/shell/keymap";
 
-import { createLayerSource } from "../../tests/layers";
+import { registerContext } from "../../tests/keymap";
 import { defineActions } from "./actions";
-import { contextBindings } from "./bindings";
-import { trackEngineStack } from "./engine-stack";
 import { COMMAND_GROUPS } from "./groups";
 import { liveShortcuts } from "./live-shortcuts";
 import { createCatalog } from "./schema";
@@ -30,7 +23,7 @@ const catalog = createCatalog([
   },
 ]);
 
-const globalActions = defineActions(catalog, "global", (_r: null, _o: null) => ({
+const globalActions = defineActions(catalog, "global", (_r: null) => ({
   create: { run: () => {} },
   "inbox-drawer": { run: () => {} },
   next: { run: () => {} },
@@ -43,19 +36,7 @@ function page(id: string, keys: KeyBinding["keys"], label = id): KeyBinding {
 }
 
 function setup() {
-  const keymap: Keymap = createKeymap({
-    isMac: false,
-    setTimeout: () => 0,
-    clearTimeout: () => {},
-  });
-  const layers = createLayerSource();
-  const stack = trackEngineStack(keymap, layers);
-  const global = contextBindings(catalog, "global", globalActions(null, null), stack);
-  keymap.register("global", global.own);
-  keymap.register(
-    DIALOG_SCOPE,
-    global.underOverlays.map(({ binding }) => binding)
-  );
+  const { keymap, layers, stack } = registerContext(catalog, "global", globalActions(null));
   const sheet = () =>
     liveShortcuts(keymap.describe(), stack.liveScopes(), catalog, {
       "inbox:snooze": {
@@ -145,7 +126,7 @@ describe("the shortcuts sheet's rows", () => {
   });
 });
 
-describe("the sheet's filter", () => {
+describe("the sheet's chips", () => {
   const sections = [
     {
       group: COMMAND_GROUPS.general,

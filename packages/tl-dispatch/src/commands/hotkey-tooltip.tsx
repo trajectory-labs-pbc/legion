@@ -2,7 +2,7 @@ import { cloneElement, type ReactElement, type Ref, useEffect, useSyncExternalSt
 
 import { loadNamed } from "@/loading/lazy-named";
 import type { CommandId } from "./app-catalog";
-import type { HotkeyTooltipPopup } from "./hotkey-tooltip-popup";
+import type { HotkeyTooltipPopup, TooltipSide } from "./hotkey-tooltip-popup";
 import { ariaKeyShortcuts } from "./key-chips";
 import { useCommand, useCommandShortcut } from "./use-command";
 import { useKeptFocus } from "./use-kept-focus";
@@ -58,15 +58,13 @@ export function LabelTooltip({
 }: {
   children: Trigger;
   label: string;
-  side?: "top" | "right" | "bottom" | "left";
+  side?: TooltipSide;
 }) {
   const Popup = useTooltipPopup();
   const ref = useKeptFocus(children.props.ref);
   const trigger = cloneElement(children, { ref });
   if (Popup === undefined) return trigger;
-  return (
-    <Popup ariaKeyShortcuts={undefined} chips={null} label={label} side={side} trigger={trigger} />
-  );
+  return <Popup chips={null} label={label} side={side} trigger={trigger} />;
 }
 
 export interface HotkeyTooltipProps {
@@ -75,7 +73,7 @@ export interface HotkeyTooltipProps {
   children: Trigger;
   /** The wrapped control's own label, when it says more than the catalog's. */
   label?: string;
-  side?: "top" | "right" | "bottom" | "left";
+  side?: TooltipSide;
 }
 
 /**
@@ -89,16 +87,9 @@ export function HotkeyTooltip({ commandId, children, label, side }: HotkeyToolti
   const chips = useCommandShortcut(commandId);
   const Popup = useTooltipPopup();
   const ref = useKeptFocus(children.props.ref);
-  if (view === undefined) return cloneElement(children, { ref });
-  const keys = chips === null ? undefined : ariaKeyShortcuts(view.command.keys ?? []);
-  if (Popup === undefined) return cloneElement(children, { "aria-keyshortcuts": keys, ref });
-  return (
-    <Popup
-      ariaKeyShortcuts={keys}
-      chips={chips}
-      label={label ?? view.label}
-      side={side}
-      trigger={cloneElement(children, { ref })}
-    />
-  );
+  const keys =
+    view === undefined || chips === null ? undefined : ariaKeyShortcuts(view.command.keys ?? []);
+  const trigger = cloneElement(children, { "aria-keyshortcuts": keys, ref });
+  if (view === undefined || Popup === undefined) return trigger;
+  return <Popup chips={chips} label={label ?? view.label} side={side} trigger={trigger} />;
 }

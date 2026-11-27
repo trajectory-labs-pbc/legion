@@ -1,23 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import {
-  createKeymap,
   DIALOG_SCOPE,
   type Keymap,
-  type KeymapOptions,
   type KeymapScope,
   useKeymapScope,
 } from "@upstream-dispatch/features/shell/keymap";
 
+import { testKeymap } from "../../tests/keymap";
 import { render } from "../../tests/react";
 import { appStack } from "./engine-stack";
 import { clashes, keyChecker } from "./keys";
 
 // What the catalog and its bindings rely on in upstream's key engine, driven through its public
 // API, so an engine change fails here and not in the app.
-
-function engine(options: KeymapOptions = {}): Keymap {
-  return createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {}, ...options });
-}
 
 function press(keymap: Keymap, init: KeyboardEventInit, target?: HTMLElement): void {
   const event = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init });
@@ -39,7 +34,7 @@ function bound(keymap: Keymap, keys: string, scope: KeymapScope = "global") {
 
 describe("upstream's key engine", () => {
   test("fires a chord on its two presses, in order", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const fired = bound(keymap, "g i");
     press(keymap, { key: "g", code: "KeyG" });
     expect(keymap.pending()).toBe("g");
@@ -48,7 +43,7 @@ describe("upstream's key engine", () => {
   });
 
   test("reads $mod as Control or Meta", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const fired = bound(keymap, "$mod+k");
     press(keymap, { key: "k", code: "KeyK", ctrlKey: true });
     press(keymap, { key: "k", code: "KeyK", metaKey: true });
@@ -57,7 +52,7 @@ describe("upstream's key engine", () => {
   });
 
   test("matches a letter's Shift exactly, and a symbol by the character it types", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const shifted = bound(keymap, "Shift+S");
     const question = bound(keymap, "?");
     press(keymap, { key: "s", code: "KeyS" });
@@ -67,8 +62,8 @@ describe("upstream's key engine", () => {
   });
 
   test("on a Mac, matches an Alt combo by the key's position, not the character Option types", () => {
-    const mac = engine({ isMac: true });
-    const other = engine({ isMac: false });
+    const mac = testKeymap({ isMac: true });
+    const other = testKeymap({ isMac: false });
     const onMac = bound(mac, "$mod+Alt+m");
     const elsewhere = bound(other, "$mod+Alt+m");
     const init = { key: "µ", code: "KeyM", metaKey: true, altKey: true };
@@ -79,7 +74,7 @@ describe("upstream's key engine", () => {
   });
 
   test("fires a binding while a field has focus only when it says inEditable", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const fired: string[] = [];
     keymap.register("global", [
       { id: "k", keys: "$mod+k", label: "k", inEditable: true, run: () => fired.push("$mod+k") },
@@ -94,7 +89,7 @@ describe("upstream's key engine", () => {
   });
 
   test("consults only the dialog scope while a dialog is on its stack", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const global = bound(keymap, "c");
     const dialog = bound(keymap, "x", DIALOG_SCOPE);
     const pop = keymap.pushScope(DIALOG_SCOPE);
@@ -107,7 +102,7 @@ describe("upstream's key engine", () => {
   });
 
   test("in one scope, fires the first registration whose when() holds", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     const fired: string[] = [];
     keymap.register("global", [
       { id: "first", keys: "x", label: "first", when: () => false, run: () => fired.push("first") },
@@ -119,14 +114,14 @@ describe("upstream's key engine", () => {
   });
 
   test("in strict mode, throws on a key that starts another, in any scope, but not on equal keys", () => {
-    const keymap = engine({ strict: true });
+    const keymap = testKeymap({ strict: true });
     bound(keymap, "g i");
     expect(() => bound(keymap, "g", "issue")).toThrow("conflict");
     expect(() => bound(keymap, "g i", DIALOG_SCOPE)).not.toThrow();
   });
 
   test("offers a single-key binding in the palette by default, not one that fires while typing", () => {
-    const keymap = engine();
+    const keymap = testKeymap();
     keymap.register("global", [
       { id: "help", keys: "?", label: "Keyboard shortcuts", run: () => {} },
       { id: "search", keys: "$mod+k", label: "Search", inEditable: true, run: () => {} },

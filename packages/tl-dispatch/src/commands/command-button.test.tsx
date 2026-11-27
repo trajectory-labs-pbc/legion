@@ -1,9 +1,11 @@
-import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
 import { act } from "react";
 
-import { render, settle } from "../../tests/react";
+import { press as pressOn } from "../../tests/keymap";
+import { mount } from "../../tests/mount";
+import { settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
 import { CommandButton, commandButtonVariant } from "./command-button";
@@ -22,18 +24,7 @@ function Shell({ fired, enabled = true }: { fired: string[]; enabled?: boolean }
 // The tooltip's code is its own chunk; the shell loads it after the first paint.
 beforeAll(() => loadHotkeyTooltip());
 
-const mounted: { unmount(): void }[] = [];
-function mount(element: Parameters<typeof render>[0]) {
-  const view = render(element);
-  mounted.push(view);
-  return view;
-}
-afterEach(() => {
-  for (const view of mounted.splice(0)) view.unmount();
-});
-
-const press = (key: string) =>
-  appKeymap.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true }));
+const press = (key: string) => pressOn(appKeymap, key);
 
 const button = (container: HTMLElement) => container.querySelector("button");
 
@@ -101,7 +92,6 @@ describe("CommandButton", () => {
     );
     expect(button(hidden.container)).toBeNull();
     hidden.unmount();
-    mounted.length = 0;
     const shown = mount(
       <>
         <Shell enabled={false} fired={fired} />
@@ -143,7 +133,6 @@ describe("HotkeyTooltip", () => {
     );
     expect(button(on.container)?.getAttribute("aria-keyshortcuts")).toMatch(/^(Meta|Control)\+K$/);
     on.unmount();
-    mounted.length = 0;
     const off = mount(
       <>
         <Shell enabled={false} fired={[]} />

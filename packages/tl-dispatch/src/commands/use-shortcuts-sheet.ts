@@ -23,20 +23,15 @@ export interface ShortcutsSheetState {
  * The sheet's state. Opening reads the live keys at that moment, before the sheet's own layer
  * covers them: the engine evaluates each gate as it is read.
  */
-export function useShortcutsSheet(
-  read: () => readonly ShortcutSection[] = readLiveShortcuts
-): ShortcutsSheetState {
+export function useShortcutsSheet(): ShortcutsSheetState {
   const [state, setState] = useState<{ open: boolean; sections: readonly ShortcutSection[] }>({
     open: false,
     sections: [],
   });
-  const setOpen = useCallback(
-    (open: boolean) => {
-      if (open) setState({ open, sections: read() });
-      else setState((current) => ({ ...current, open }));
-    },
-    [read]
-  );
+  const setOpen = useCallback((open: boolean) => {
+    if (open) setState({ open, sections: readLiveShortcuts() });
+    else setState((current) => ({ ...current, open }));
+  }, []);
   // The key reads the last commit's toggle, so this open is the one on screen.
   const toggle = useCallback(() => setOpen(!state.open), [setOpen, state.open]);
   return { ...state, setOpen, toggle };

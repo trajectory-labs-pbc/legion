@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { appKeymap, createKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
-import { appStack, trackEngineStack } from "./engine-stack";
+import { press, testKeymap } from "../../tests/keymap";
+import { appStack, keysReach, passing, trackEngineStack } from "./engine-stack";
 import type { OverlayLayer } from "./focused-overlay";
+import { createCatalog } from "./schema";
 
 describe("an engine stack", () => {
   test("tells its listeners of an overlay a render read first", () => {
@@ -27,11 +29,38 @@ describe("an engine stack", () => {
     changed();
     expect(notified).toBe(1);
   });
+
+  test("reads the overlays once for a question that asks it twice", () => {
+    let reads = 0;
+    const open: readonly OverlayLayer[] = [{ kind: "passthrough" }];
+    const stack = trackEngineStack(createKeymap(), {
+      get: () => {
+        reads += 1;
+        return open;
+      },
+      subscribe: () => () => {},
+    });
+    const catalog = createCatalog([
+      {
+        name: "global",
+        parent: null,
+        scope: "global",
+        commands: [{ name: "create", label: "Create", keys: ["c"] }],
+      },
+    ]);
+    const asked = (question: () => unknown) => {
+      const before = reads;
+      question();
+      return reads - before;
+    };
+    expect(asked(() => passing(stack))).toBe(1);
+    expect(asked(() => keysReach(catalog, catalog.command("global.create"), stack))).toBe(1);
+  });
 });
 
 describe("a scope's cleanup", () => {
   test("run twice, leaves a second holder of the scope on the engine and in the stack", () => {
-    const keymap = createKeymap({ isMac: false, setTimeout: () => 0, clearTimeout: () => {} });
+    const keymap = testKeymap();
     const stack = trackEngineStack(keymap, { get: () => [], subscribe: () => () => {} });
     const fired: string[] = [];
     keymap.register("issue", [{ id: "x", keys: "x", label: "X", run: () => fired.push("x") }]);
@@ -40,7 +69,7 @@ describe("a scope's cleanup", () => {
     pop();
     pop();
     expect(stack.liveScopes()).toEqual(["global", "issue"]);
-    keymap.handleKeyDown(new KeyboardEvent("keydown", { key: "x", cancelable: true }));
+    press(keymap, "x");
     expect(fired).toEqual(["x"]);
   });
 });

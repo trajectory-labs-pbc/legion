@@ -72,14 +72,14 @@ export function ariaKeyShortcuts(
   keys: readonly string[],
   mac: boolean = IS_MAC
 ): string | undefined {
-  const presses = keys
-    .filter((key) => !/\s/.test(key.trim()))
-    .map((key) => {
-      const { modifiers, key: last } = splitStep(key.trim());
-      const names = modifiers.map((name) =>
-        name === "$mod" ? (mac ? "Meta" : "Control") : modifier(name).aria
-      );
-      return [...names, last.length === 1 ? last.toUpperCase() : last].join("+");
-    });
+  const presses = keys.flatMap((key) => {
+    const [step, ...rest] = keySteps(key);
+    if (step === undefined || rest.length > 0) return [];
+    const { modifiers, key: last } = splitStep(step);
+    const names = modifiers.map((name) =>
+      name === "$mod" ? (mac ? "Meta" : "Control") : modifier(name).aria
+    );
+    return [[...names, last.length === 1 ? last.toUpperCase() : last].join("+")];
+  });
   return presses.length === 0 ? undefined : presses.join(" ");
 }

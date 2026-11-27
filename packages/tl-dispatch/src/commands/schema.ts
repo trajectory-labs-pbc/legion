@@ -64,8 +64,6 @@ export interface CatalogCommand extends CommandDefinition {
 
 export interface Catalog<Id extends string = string> {
   context(name: string): CommandContext;
-  /** The context and its ancestors, nearest first. */
-  chain(name: string): readonly string[];
   command(id: Id): CatalogCommand;
   /** A command by an id read at run time, such as a key binding's. */
   find(id: string): CatalogCommand | undefined;
@@ -208,11 +206,6 @@ export function createCatalog<const Contexts extends readonly CommandContext[]>(
       const context = contexts.get(name);
       if (context === undefined) throw new Error(`no context "${name}"`);
       return context;
-    },
-    chain(name) {
-      const chain = chains.get(name);
-      if (chain === undefined) throw new Error(`no context "${name}"`);
-      return chain;
     },
     command(id) {
       const command = commands.get(id);

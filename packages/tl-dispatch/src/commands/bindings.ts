@@ -12,7 +12,7 @@ import {
 /** A global command's copy in the dialog scope ends in this, so the sheet shows it once. */
 export const UNDER_OVERLAY = ":under-overlay";
 
-function toBinding(spec: CommandSpec, gate: () => boolean): KeyBinding {
+function toBinding(spec: CommandSpec, gate: () => boolean = () => true): KeyBinding {
   const { command } = spec;
   return {
     id: command.id,
@@ -28,9 +28,9 @@ function toBinding(spec: CommandSpec, gate: () => boolean): KeyBinding {
   };
 }
 
-/** The key engine's bindings for a set of specs; the gate is read on every press. */
-export function toBindings(specs: CommandSpecs, gate: () => boolean = () => true): KeyBinding[] {
-  return specs.map((spec) => toBinding(spec, gate));
+/** The key engine's bindings for a set of specs. */
+export function toBindings(specs: CommandSpecs): KeyBinding[] {
+  return specs.map((spec) => toBinding(spec));
 }
 
 interface ContextBindings {

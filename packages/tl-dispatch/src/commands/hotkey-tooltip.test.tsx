@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, jest, spyOn, test } from "bun:test";
+import { describe, expect, jest, spyOn, test } from "bun:test";
 import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 import { act, createRef } from "react";
 
-import { render, settle } from "../../tests/react";
+import { mount } from "../../tests/mount";
+import { settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
 import type {
@@ -32,15 +33,10 @@ async function freshModule(): Promise<TooltipModule> {
   return await import(specifier);
 }
 
-const mounted: { unmount(): void }[] = [];
-afterEach(() => {
-  for (const view of mounted.splice(0)) view.unmount();
-});
-
 describe("HotkeyTooltip, while its code arrives", () => {
   test("a control focused before the code arrives keeps the focus after", async () => {
     const { HotkeyTooltip, loadHotkeyTooltip } = await freshModule();
-    const view = render(
+    const view = mount(
       <>
         <Shell />
         <HotkeyTooltip commandId="global.search">
@@ -48,7 +44,6 @@ describe("HotkeyTooltip, while its code arrives", () => {
         </HotkeyTooltip>
       </>
     );
-    mounted.push(view);
     const before = view.container.querySelector("button");
     expect(before?.getAttribute("data-slot")).toBeNull();
     settle(() => before?.focus());
@@ -61,7 +56,7 @@ describe("HotkeyTooltip, while its code arrives", () => {
 
   test("a control that was not focused does not take the focus when the code arrives", async () => {
     const { HotkeyTooltip, loadHotkeyTooltip } = await freshModule();
-    const view = render(
+    const view = mount(
       <>
         <Shell />
         <input aria-label="Elsewhere" />
@@ -70,7 +65,6 @@ describe("HotkeyTooltip, while its code arrives", () => {
         </HotkeyTooltip>
       </>
     );
-    mounted.push(view);
     const elsewhere = view.container.querySelector("input");
     settle(() => elsewhere?.focus());
     await act(() => loadHotkeyTooltip());
@@ -80,7 +74,7 @@ describe("HotkeyTooltip, while its code arrives", () => {
   test("the control's own ref follows it across the arrival", async () => {
     const { HotkeyTooltip, loadHotkeyTooltip } = await freshModule();
     const own = createRef<HTMLButtonElement>();
-    const view = render(
+    const view = mount(
       <>
         <Shell />
         <HotkeyTooltip commandId="global.search">
@@ -90,7 +84,6 @@ describe("HotkeyTooltip, while its code arrives", () => {
         </HotkeyTooltip>
       </>
     );
-    mounted.push(view);
     expect(own.current).toBe(view.container.querySelector("button"));
     await act(() => loadHotkeyTooltip());
     expect(own.current).toBe(view.container.querySelector("button"));
@@ -102,7 +95,7 @@ describe("HotkeyTooltip, while its code arrives", () => {
     const { HotkeyTooltip, loadHotkeyTooltip } = await freshModule();
     // Asked before the first tooltip mounts, so the mount's request is this one.
     const arrival = loadHotkeyTooltip(() => Promise.reject(new Error("chunk gone")));
-    const view = render(
+    const view = mount(
       <>
         <Shell />
         <HotkeyTooltip commandId="global.search">
@@ -110,7 +103,6 @@ describe("HotkeyTooltip, while its code arrives", () => {
         </HotkeyTooltip>
       </>
     );
-    mounted.push(view);
     await act(() => arrival);
     expect(logged).toHaveBeenCalled();
     logged.mockRestore();
@@ -123,12 +115,11 @@ describe("HotkeyTooltip, while its code arrives", () => {
 describe("LabelTooltip", () => {
   test("shows its label and no key on hover, once the tooltip's code arrives", async () => {
     const { LabelTooltip, loadHotkeyTooltip } = await freshModule();
-    const view = render(
+    const view = mount(
       <LabelTooltip label="Unpin Ada from the sidebar">
         <button aria-label="Unpin Ada from the sidebar" type="button" />
       </LabelTooltip>
     );
-    mounted.push(view);
     await act(() => loadHotkeyTooltip());
     const control = view.container.querySelector("button");
     expect(control?.getAttribute("data-slot")).toBe("tooltip-trigger");

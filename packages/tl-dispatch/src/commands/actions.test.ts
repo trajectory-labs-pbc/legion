@@ -22,7 +22,7 @@ interface Issue {
 }
 
 const ran: string[] = [];
-const useIssueActions = defineActions(catalog, "issue", (issue: Issue, _options: null) => ({
+const useIssueActions = defineActions(catalog, "issue", (issue: Issue) => ({
   open: { run: () => ran.push("open") },
   pin: { run: () => ran.push("pin"), enabled: !issue.closed },
   "copy-ref": { run: () => ran.push("copy-ref") },
@@ -30,7 +30,7 @@ const useIssueActions = defineActions(catalog, "issue", (issue: Issue, _options:
 
 describe("actions", () => {
   test("every member is always present, gated or not", () => {
-    expect(useIssueActions({ closed: true }, null).map((spec) => spec.command.name)).toEqual([
+    expect(useIssueActions({ closed: true }).map((spec) => spec.command.name)).toEqual([
       "open",
       "pin",
       "copy-ref",
@@ -39,18 +39,16 @@ describe("actions", () => {
 
   test("a hook that leaves a command out, or adds one the catalog lacks, fails the type check and throws on its first call", () => {
     // @ts-expect-error: `pin` and `copy-ref` are missing, and `archive` is not in the catalog.
-    const wrong = defineActions(catalog, "issue", (_r: null, _o: null) => ({
+    const wrong = defineActions(catalog, "issue", (_r: null) => ({
       open: { run: () => {} },
       archive: { run: () => {} },
     }));
-    expect(() => wrong(null, null)).toThrow(
-      "missing [pin, copy-ref], not in the catalog [archive]"
-    );
+    expect(() => wrong(null)).toThrow("missing [pin, copy-ref], not in the catalog [archive]");
   });
 
   test("a shut gate stops the run on every surface", () => {
     ran.length = 0;
-    const [open, pin] = useIssueActions({ closed: true }, null);
+    const [open, pin] = useIssueActions({ closed: true });
     if (open === undefined || pin === undefined) throw new Error("the issue lost its commands");
     expect(runCommand(pin)).toBe(false);
     expect(runCommand(open)).toBe(true);
