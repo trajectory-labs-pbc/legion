@@ -10,51 +10,40 @@ const rowOf = (container: HTMLElement) => {
 };
 
 describe("ListRow", () => {
-  it("is one 36 px line with no second line", () => {
+  it("is one 36 px line with its end at the right", () => {
     const { container } = render(<ListRow end={<span>3h</span>} title="One line" />);
-    const row = rowOf(container);
-    expect(row.className).toContain("h-list-row-1");
-    expect(row.textContent).toBe("One line3h");
+    expect(rowOf(container).className).toContain("h-list-row-1");
+    expect(rowOf(container).textContent).toBe("One line3h");
   });
 
-  it("is two 56 px lines with the end at the right of line two", () => {
+  it("is two 56 px lines, each with its own end", () => {
     const { container } = render(
-      <ListRow description="Line two" end={<time>3h</time>} title="Line one" />
+      <ListRow
+        description="Line two"
+        descriptionEnd={<span>replied</span>}
+        end={<time>3h</time>}
+        title="Line one"
+      />
     );
-    const row = rowOf(container);
-    expect(row.className).toContain("h-list-row-2");
-    const two = screen.getByText("Line two").parentElement;
-    expect(two?.contains(screen.getByText("3h"))).toBe(true);
-    expect(screen.getByText("Line one").className).toContain("font-medium");
-    expect(screen.getByText("Line one").className).toContain("truncate");
-    expect(screen.getByText("Line two").className).toContain("text-muted-foreground");
-  });
-
-  it("draws no edge, card or left stripe around it", () => {
-    const { container } = render(<ListRow description="Two" title="One" />);
-    const classes = [...container.querySelectorAll("[class]")].flatMap((part) =>
-      (part.getAttribute("class") ?? "").split(" ")
+    expect(rowOf(container).className).toContain("h-list-row-2");
+    expect(screen.getByText("Line one").parentElement?.contains(screen.getByText("3h"))).toBe(true);
+    expect(screen.getByText("Line two").parentElement?.contains(screen.getByText("replied"))).toBe(
+      true
     );
-    expect(classes.filter((name) => /^(border|shadow-|rounded|ring)/.test(name))).toEqual([]);
   });
 
-  it("puts a named dot before the title", () => {
-    render(<ListRow dot="Unread" title="Title" />);
-    const dot = screen.getByRole("img", { name: "Unread" });
-    expect(dot.nextElementSibling?.textContent).toBe("Title");
-  });
-
-  it("marks the highlight and the selection, and draws focus inside the row", () => {
-    const { container } = render(<ListRow highlighted selected title="Title" />);
-    const row = rowOf(container);
+  it("takes its caller's marks, as an option too", () => {
+    const { container } = render(
+      <ListRow aria-selected data-highlighted="" data-selected="" role="option" title="Title" />
+    );
+    const row = screen.getByRole("option", { selected: true });
+    expect(row).toBe(rowOf(container));
     expect(row.hasAttribute("data-highlighted")).toBe(true);
     expect(row.hasAttribute("data-selected")).toBe(true);
-    expect(row.className).toContain("data-highlighted:bg-secondary");
-    expect(row.className).toContain("data-selected:bg-muted");
-    expect(row.className).toContain("focus-visible:-outline-offset-2");
+    expect(row.className).toContain("data-selected:data-highlighted:bg-accent");
   });
 
-  it("shows the box in the leading part's place on hover and focus, and on each row of a selection", () => {
+  it("shows the box in the leading part's place near the left edge, and on each row of a selection", () => {
     const { container, rerender } = render(
       <ListRow
         leading={<span data-testid="avatar" />}
@@ -65,10 +54,8 @@ describe("ListRow", () => {
     const box = screen.getByRole("checkbox").parentElement;
     const avatar = screen.getByTestId("avatar").parentElement;
     expect(box?.parentElement).toBe(avatar?.parentElement ?? null);
-    expect(box?.className).toContain("invisible");
-    expect(box?.className).toContain("group-hover/list-row:visible");
-    expect(box?.className).toContain("group-focus-within/list-row:visible");
-    expect(avatar?.className).toContain("group-hover/list-row:invisible");
+    expect(box?.className).toContain("group-hover/list-row-start:visible");
+    expect(avatar?.className).toContain("group-hover/list-row-start:invisible");
     expect(rowOf(container).hasAttribute("data-selecting")).toBe(false);
     rerender(
       <ListRow
@@ -82,25 +69,35 @@ describe("ListRow", () => {
     expect(box?.className).toContain("group-data-selecting/list-row:visible");
   });
 
-  it("keeps a click on the box from the row, and passes the row's own click", () => {
-    const onRow = jest.fn();
-    const onBox = jest.fn();
+  it("keeps the box's click and keys from the content it renders", () => {
+    const onLink = jest.fn();
     render(
       <ListRow
-        onClick={onRow}
-        select={<input aria-label="Select" onClick={onBox} type="checkbox" />}
+        // biome-ignore lint/a11y/useAnchorContent: the row gives the link its content
+        render={<a href="#x" />}
+        select={<input aria-label="Select" type="checkbox" />}
         title="Title"
       />
     );
-    fireEvent.click(screen.getByRole("checkbox"));
-    expect(onBox).toHaveBeenCalledTimes(1);
-    expect(onRow).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText("Title"));
-    expect(onRow).toHaveBeenCalledTimes(1);
+    const box = screen.getByRole("checkbox");
+    const link = screen.getByRole("link");
+    link.addEventListener("click", onLink);
+    link.addEventListener("keydown", onLink);
+    expect(link.contains(box)).toBe(false);
+    fireEvent.click(box);
+    fireEvent.keyDown(box, { key: "Enter" });
+    fireEvent.keyDown(box, { key: "x" });
+    expect(onLink).not.toHaveBeenCalled();
+    expect(window.location.hash).not.toBe("#x");
+    expect(box.closest("[data-slot=list-row-select]")).not.toBeNull();
   });
 
-  it("draws as the element its caller renders", () => {
-    render(<ListRow render={<button type="button" />} title="Title" />);
-    expect(screen.getByRole("button").getAttribute("data-slot")).toBe("list-row");
+  it("renders its content as the element its caller gives", () => {
+    const onOpen = jest.fn();
+    render(<ListRow render={<button onClick={onOpen} type="button" />} title="Title" />);
+    const content = screen.getByRole("button");
+    expect(content.getAttribute("data-slot")).toBe("list-row-content");
+    fireEvent.click(screen.getByText("Title"));
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,38 +1,35 @@
 import { useRender } from "@base-ui/react/use-render";
 import { cn } from "cn";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { textVariants } from "#registry/legion/lib/typography";
 import { isDrawn } from "#registry/legion/lib/utils";
 
-interface ListRowProps {
+interface ListRowProps extends Omit<ComponentProps<"div">, "children" | "title"> {
   /** Line one, at weight 500; it truncates. */
   title: ReactNode;
   /** Line two, muted. With it the row has two lines and is 56 px; without it, one line and 36 px. */
   description?: ReactNode;
   /** The row's glyph or avatar at its left. */
   leading?: ReactNode;
-  /** The selection box: it takes the leading part's place on hover, on focus and while
-   *  `selecting`, and a click on it does not reach the row. */
+  /** The selection box: it takes the leading part's place while the pointer is near the row's left
+   *  edge, and while `selecting` (LR6). It sits beside the row's content, not in it, so its click
+   *  and its keys never reach the content; a list's key handlers ignore events from inside it
+   *  (`[data-slot=list-row-select]`). */
   select?: ReactNode;
   /** A selection exists in the list, so each row shows its box. */
   selecting?: boolean;
-  /** At the right of the last line, such as the row's time. */
+  /** At the right of line one: the properties, the unread dot, the time. */
   end?: ReactNode;
-  /** A dot before the title, named by this label. */
-  dot?: string;
-  /** The list's one highlight is on this row. */
-  highlighted?: boolean;
-  selected?: boolean;
+  /** At the right of line two. */
+  descriptionEnd?: ReactNode;
+  /** The row's content, which the whole row opens: a link or a button (LR4). */
+  render?: useRender.RenderProp;
 }
 
-// The box shows in the leading part's place while the row is hovered, focused or in a selection.
-const SHOW_SELECT =
-  "group-hover/list-row:visible group-focus-within/list-row:visible group-data-selecting/list-row:visible";
-const HIDE_LEADING =
-  "group-hover/list-row:invisible group-focus-within/list-row:invisible group-data-selecting/list-row:invisible";
-
-/** A list's row: one line at 36 px, or two at 56 px, and no edge or card around it (LR1, R2). */
+/** A list's row: one line at 36 px, or two at 56 px, and no edge or card around it (LR1, R2). The
+ *  caller marks it with `data-highlighted` and `data-selected`, and with `aria-selected` where the
+ *  row is an option. */
 function ListRow({
   title,
   description,
@@ -40,87 +37,86 @@ function ListRow({
   select,
   selecting = false,
   end,
-  dot,
-  highlighted = false,
-  selected = false,
-  className,
+  descriptionEnd,
   render,
+  className,
   ...props
-}: ListRowProps & Omit<useRender.ComponentProps<"div">, "title">) {
+}: ListRowProps) {
   const twoLines = isDrawn(description);
-  const hasLeading = isDrawn(leading);
-  const hasSelect = isDrawn(select);
-  const endPart = isDrawn(end) ? (
-    <span className="ml-auto flex shrink-0 items-center gap-2">{end}</span>
-  ) : null;
-  return useRender({
+  const content = useRender({
     defaultTagName: "div",
     render,
     props: {
-      "data-slot": "list-row",
-      "data-highlighted": highlighted ? "" : undefined,
-      "data-selected": selected ? "" : undefined,
-      "data-selecting": selecting || selected ? "" : undefined,
-      className: cn(
-        "group/list-row flex w-full min-w-0 shrink-0 items-center gap-2 px-3 text-left",
-        twoLines ? "h-list-row-2" : "h-list-row-1",
-        "data-highlighted:bg-secondary data-selected:bg-muted",
-        "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus",
-        className
-      ),
-      ...props,
+      "data-slot": "list-row-content",
+      // Its click area and its focus outline cover the row; the outline is inside it (FO2).
+      className:
+        "flex min-w-0 flex-1 flex-col justify-center text-left outline-none before:absolute before:inset-0 focus-visible:before:outline-2 focus-visible:before:-outline-offset-2 focus-visible:before:outline-focus",
       children: (
         <>
-          {hasLeading || hasSelect ? (
-            <span className="grid shrink-0 place-items-center *:col-start-1 *:row-start-1">
-              {hasLeading ? (
-                <span className={cn("flex", hasSelect ? HIDE_LEADING : null)}>{leading}</span>
-              ) : null}
-              {hasSelect ? (
-                // biome-ignore lint/a11y/noStaticElementInteractions: it only keeps the box's click from the row
-                // biome-ignore lint/a11y/useKeyWithClickEvents: the box inside takes its own keys
-                <span
-                  className={cn("invisible flex", SHOW_SELECT)}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {select}
-                </span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className={cn(textVariants({ weight: "medium" }), "min-w-0 truncate")}>
+              {title}
+            </span>
+            {isDrawn(end) ? (
+              <span className="ml-auto flex shrink-0 items-center gap-2">{end}</span>
+            ) : null}
+          </span>
+          {twoLines ? (
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(textVariants({ size: "caption", tone: "muted" }), "min-w-0 truncate")}
+              >
+                {description}
+              </span>
+              {isDrawn(descriptionEnd) ? (
+                <span className="ml-auto flex shrink-0 items-center gap-2">{descriptionEnd}</span>
               ) : null}
             </span>
           ) : null}
-          <span className="flex min-w-0 flex-1 flex-col justify-center">
-            <span className="flex min-w-0 items-center gap-2">
-              {dot === undefined ? null : (
-                <span
-                  data-slot="list-row-dot"
-                  aria-label={dot}
-                  className="size-2 shrink-0 rounded-full bg-primary"
-                  role="img"
-                />
-              )}
-              <span className={cn(textVariants({ weight: "medium" }), "min-w-0 truncate")}>
-                {title}
-              </span>
-              {twoLines ? null : endPart}
-            </span>
-            {twoLines ? (
-              <span className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    textVariants({ size: "caption", tone: "muted" }),
-                    "min-w-0 truncate"
-                  )}
-                >
-                  {description}
-                </span>
-                {endPart}
-              </span>
-            ) : null}
-          </span>
         </>
       ),
     },
   });
+  const hasSelect = isDrawn(select);
+  return (
+    <div
+      className={cn(
+        "group/list-row relative flex w-full min-w-0 shrink-0 items-stretch gap-2 px-3",
+        twoLines ? "h-list-row-2" : "h-list-row-1",
+        "data-highlighted:bg-secondary data-selected:bg-muted data-selected:data-highlighted:bg-accent",
+        className
+      )}
+      data-selecting={selecting ? "" : undefined}
+      data-slot="list-row"
+      {...props}
+    >
+      {isDrawn(leading) || hasSelect ? (
+        // The row's left edge, padding included: the pointer on it shows the box.
+        <span className="group/list-row-start relative z-10 -ml-3 grid shrink-0 place-items-center pl-3 *:col-start-1 *:row-start-1">
+          {isDrawn(leading) ? (
+            <span
+              className={cn(
+                "flex",
+                hasSelect &&
+                  "group-hover/list-row-start:invisible group-data-selecting/list-row:invisible"
+              )}
+            >
+              {leading}
+            </span>
+          ) : null}
+          {hasSelect ? (
+            <span
+              className="invisible flex group-hover/list-row-start:visible group-data-selecting/list-row:visible"
+              data-slot="list-row-select"
+            >
+              {select}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+      {content}
+    </div>
+  );
 }
 
 export { ListRow, type ListRowProps };
