@@ -811,6 +811,22 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
   ]);
 });
 
+test("a field's own value wider than the field passes the width check", async ({ page }) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  await page.locator(MAIN).evaluate((at) => {
+    const input = document.createElement("input");
+    input.style.width = "80px";
+    input.value = "x".repeat(200);
+    const area = document.createElement("textarea");
+    area.style.width = "80px";
+    area.wrap = "off";
+    area.value = "x".repeat(200);
+    at.append(input, area);
+  });
+  await hideLeftOut(page, machineLogin);
+  expect(await wideBoxes(page)).toEqual([]);
+});
+
 // At 390 px the page grows wider than the window. From 768 px the content panel clips it, and the
 // check names the box that clips.
 test("content wider than the window fails the width check at each width", async ({ page }) => {
