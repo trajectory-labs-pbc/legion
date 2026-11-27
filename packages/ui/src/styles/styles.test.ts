@@ -4,11 +4,14 @@ import { dirname, join, relative, resolve } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { Glob } from "bun";
+import type { VariantProps } from "class-variance-authority";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
 
-import { headingVariants, textVariants } from "../lib/typography";
+import { type HeadingSize, headingVariants, textVariants } from "../lib/typography";
 import { cn } from "../lib/utils";
+
+type TextSize = NonNullable<VariantProps<typeof textVariants>["size"]>;
 
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 
@@ -615,18 +618,26 @@ describe("the theme", () => {
       wraps.add(`${decl.prop}: ${decl.value}`);
     });
     expect([...wraps].sort()).toEqual(["text-wrap-style: balance", "text-wrap-style: pretty"]);
+    // Every size, so a new one fails to compile here until it is listed.
+    const headings = {
+      page: headingVariants({ size: "page", tone: "muted" }),
+      section: headingVariants({ size: "section", tone: "muted" }),
+      group: headingVariants({ size: "group", tone: "muted" }),
+      label: headingVariants({ size: "label", tone: "muted" }),
+    } satisfies Record<HeadingSize, string>;
+    const texts = {
+      body: textVariants({ size: "body", tone: "muted", weight: "medium" }),
+      caption: textVariants({ size: "caption", tone: "muted", weight: "medium" }),
+    } satisfies Record<TextSize, string>;
     const recipes = [
-      ...(["page", "section", "group", "label"] as const).map(
-        (size) => [headingVariants({ size, tone: "muted" }), "wrap-balance"] as const
-      ),
-      ...(["body", "caption"] as const).map(
-        (size) => [textVariants({ size, tone: "muted", weight: "medium" }), "wrap-pretty"] as const
-      ),
+      ...Object.values(headings).map((recipe) => [recipe, "wrap-balance"] as const),
+      ...Object.values(texts).map((recipe) => [recipe, "wrap-pretty"] as const),
     ];
     for (const [recipe, wrap] of recipes) {
-      const classes = cn(recipe, "truncate").split(" ");
-      expect(classes).toEqual(expect.arrayContaining([wrap, "truncate"]));
-      expect(classes.filter((name) => name.startsWith("whitespace-"))).toEqual([]);
+      const classes = recipe.split(" ");
+      expect(classes).toContain(wrap);
+      expect(classes.filter((name) => /^!?whitespace-/.test(utilityOf(name)))).toEqual([]);
+      expect(cn(recipe, "truncate")).toBe(`${recipe} truncate`);
     }
   });
 
