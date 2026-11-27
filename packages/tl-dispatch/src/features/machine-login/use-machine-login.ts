@@ -28,7 +28,8 @@ interface MachineLogin {
   lookUp(): void;
   lookup: KeyedWrite<RecordResponse, string>;
   /** How the field's code failed its lookup: the server refused that code, or the lookup failed
-   *  for a reason that says nothing of it. Null when the field holds another code. */
+   *  for a reason that says nothing of it. Null when the lookup did not fail, or the field holds
+   *  another code. */
   codeFailure: "refused" | "failed" | null;
   approve: KeyedWrite<DecisionResponse>;
   deny: KeyedWrite<StateResponse>;
