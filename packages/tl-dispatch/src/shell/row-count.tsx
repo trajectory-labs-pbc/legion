@@ -34,7 +34,10 @@ export function RowCountMark({
   );
 }
 
-/** A failed count in its own box: a danger icon whose tooltip says so, and whose click retries. */
+/**
+ * A failed count in its own box: a danger icon whose tooltip says so, and whose click retries.
+ * A refused count draws nothing, as asking again cannot change it; the row's page says why.
+ */
 export function CountRetry({
   className,
   fault,
@@ -44,6 +47,7 @@ export function CountRetry({
   fault: ReadFault;
   noun: string;
 }) {
+  if (fault.refusal !== undefined) return null;
   const label = `Could not load ${noun}. Retry`;
   return (
     <LabelTooltip label={label} side="right">

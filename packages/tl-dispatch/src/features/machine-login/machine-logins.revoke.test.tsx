@@ -85,8 +85,8 @@ function stub(revokeCall: (id: string) => Promise<void>, more: (typeof tablet)[]
       list.mockResolvedValue({ credentials });
     },
     /** The next list read fails. */
-    failList: () => {
-      list.mockRejectedValue(new ApiError(500, { code: "BROKER_DOWN", error: "broker down" }));
+    failList: (status = 500) => {
+      list.mockRejectedValue(new ApiError(status, { code: "BROKER_DOWN", error: "broker down" }));
     },
     restore: () => {
       list.mockRestore();
@@ -332,6 +332,27 @@ test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with 
   } finally {
     cleanup();
     stubs.restore();
+  }
+});
+
+test("RVL-13 a loaded list whose refresh is refused keeps its rows and says so, with no Retry", async () => {
+  for (const [status, line] of [
+    [403, "You cannot see the latest machine logins."],
+    [404, "Could not find the latest machine logins."],
+  ] as const) {
+    const user = userEvent.setup();
+    const stubs = stub(async () => stubs.failList(status));
+    try {
+      await user.click(await renderSection());
+      await confirmRevoke(user);
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toBe(line);
+      expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(screen.getByRole("button", revoke)).toBeDefined();
+    } finally {
+      cleanup();
+      stubs.restore();
+    }
   }
 });
 

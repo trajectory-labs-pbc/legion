@@ -348,6 +348,31 @@ describe("the sidebar", () => {
     ]);
   });
 
+  test("a count the server refuses draws no Retry and no number; a 500 beside it keeps its Retry", () => {
+    const refused = (refusal: "forbidden" | "not-found") => ({
+      count: undefined,
+      fault: { ...faultOf(() => {}), refusal },
+    });
+    const container = mountView({
+      destinations: [
+        destination("inbox", { ...refused("forbidden"), needsYou: true }),
+        destination("agents", refused("not-found")),
+        destination("priorities", { count: undefined, fault: faultOf(() => {}) }),
+      ],
+      pinnedAgents: OUT,
+      inLiveView: false,
+      pinnedIssues: OUT,
+      projects: OUT,
+    });
+    const rows = [...container.querySelectorAll("nav > ul > li")];
+    expect(rows.map((row) => row.querySelector("button")?.getAttribute("aria-label"))).toEqual([
+      undefined,
+      undefined,
+      "Could not load the Priorities count. Retry",
+    ]);
+    expect(rows.map((row) => row.textContent)).toEqual(["Inbox", "Agents", "Priorities"]);
+  });
+
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
     let projectReads = 0;
     const container = mount("/agents", {
@@ -461,6 +486,15 @@ describe("the sidebar", () => {
     const inboxRow = await mountInbox(readFailed, 3);
     expect(numberOf(inboxRow)).toBeNull();
     expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
+  });
+
+  test("an inbox read the server refuses or cannot find draws no Retry in the count's box", async () => {
+    for (const status of [403, 404]) {
+      const inboxRow = await mountInbox(() => json({ error: { code: "REFUSED" } }, status), 3);
+      expect(numberOf(inboxRow)).toBeNull();
+      expect(inboxRow?.closest("li")?.querySelector("button")).toBeNull();
+      for (const view of mounted.splice(0)) view.unmount();
+    }
   });
 
   /** Mounts the sidebar on reads `answer` gives, once the Inbox count has failed. */

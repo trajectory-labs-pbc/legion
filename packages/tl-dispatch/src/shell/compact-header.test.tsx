@@ -125,6 +125,18 @@ describe("CompactHeader", () => {
     );
   });
 
+  test("an Inbox read the server cannot find shows its line with no Retry", async () => {
+    const header = mount(
+      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+      inboxReads(() => json({ error: { code: "NOT_FOUND" } }, 404), 3),
+      new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    );
+    await waitFor(() => header.textContent?.includes("Could not find the Inbox count.") === true);
+    expect([...header.querySelectorAll("button")].some((b) => b.textContent === "Retry")).toBe(
+      false
+    );
+  });
+
   test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {
     let failing = true;
     const header = mount(

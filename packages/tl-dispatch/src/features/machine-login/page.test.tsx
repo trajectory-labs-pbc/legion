@@ -82,10 +82,10 @@ test("MLR-05 the logins list is read beside the capabilities read, not after the
   }
 });
 
-test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the focus", async () => {
+test("MLR-04 a capabilities read that fails with a 500 says so; Retry asks again and keeps the focus", async () => {
   const again = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities")
-    .mockRejectedValueOnce(new Error("broker down"))
+    .mockRejectedValueOnce(new ApiError(500, { code: "INTERNAL", error: "broker down" }))
     .mockReturnValueOnce(again.promise);
   const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
   try {
@@ -116,6 +116,23 @@ test("MLR-06 a capabilities read the server refuses says so with no Retry, as tr
     renderRoute();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("You cannot see the machine login page.");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+test("MLR-07 a capabilities read the server cannot find says the page is not found, with no Retry", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(
+    new ApiError(404, { code: "NOT_FOUND", error: "gone" })
+  );
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  try {
+    renderRoute();
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Could not find the machine login page.");
     expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
   } finally {
     cleanup();

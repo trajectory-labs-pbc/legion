@@ -26,7 +26,12 @@ export function readFailureOf(...reads: readonly UseQueryResult<unknown>[]): Rea
 /** A read whose refresh failed under what it shows, if so; the failure stays while its Retry runs. */
 export function refreshFailureOf(read: UseQueryResult<unknown>): RetryableFault | undefined {
   if (!read.isRefetchError) return undefined;
-  return { retrying: read.isFetching, retry: () => void read.refetch() };
+  const refusal = refusalOf(read.error);
+  return {
+    ...(refusal === undefined ? {} : { refusal }),
+    retrying: read.isFetching,
+    retry: () => void read.refetch(),
+  };
 }
 
 /** A failed read, announced, with a Retry that keeps the focus while it runs. */
