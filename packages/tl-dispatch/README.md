@@ -257,6 +257,8 @@ refuses to start it on a folder with no build.
   the browser stays after a reload (`unsent-write`), and a sign-out with an unsent change asks
   first (`sign-out-asks`; only the local mode confirms it). The first two pages change with no
   reload by the test.
+  `e2e/accessibility.e2e.ts`, in the local mode only, runs axe at WCAG 2.0 and 2.1 A and AA on
+  each region the app draws, in light and in dark, and leaves out upstream's widgets and pages.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.

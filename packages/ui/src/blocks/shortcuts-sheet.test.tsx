@@ -58,6 +58,17 @@ describe("ShortcutsSheet", () => {
     );
   });
 
+  it("puts its list in the tab order as a named region, with the focus ring", async () => {
+    sheet();
+    const dialog = await screen.findByRole("dialog");
+    const list = within(dialog).getByRole("region", { name: "Shortcuts" });
+    expect(list.dataset.slot).toBe("shortcuts-list");
+    expect(list.tabIndex).toBe(0);
+    expect(list.className.split(" ")).toEqual(
+      expect.arrayContaining(["focus-visible:outline-2", "focus-visible:outline-focus"])
+    );
+  });
+
   it("narrows to the rows that match the filter, and says when none does", async () => {
     sheet();
     const dialog = await screen.findByRole("dialog");

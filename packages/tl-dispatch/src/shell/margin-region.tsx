@@ -14,13 +14,15 @@ export function MarginRegion({
   >;
 }) {
   return (
-    <ErrorBoundary region="the margin" resetKey={pathname}>
-      <MarginColumn
-        collapsed={preferences.marginHidden}
-        onCollapsedChange={preferences.setMarginHidden}
-        onWidthChange={preferences.setMarginWidth}
-        width={preferences.marginWidth}
-      />
-    </ErrorBoundary>
+    <div className="contents" data-upstream-view>
+      <ErrorBoundary region="the margin" resetKey={pathname}>
+        <MarginColumn
+          collapsed={preferences.marginHidden}
+          onCollapsedChange={preferences.setMarginHidden}
+          onWidthChange={preferences.setMarginWidth}
+          width={preferences.marginWidth}
+        />
+      </ErrorBoundary>
+    </div>
   );
 }

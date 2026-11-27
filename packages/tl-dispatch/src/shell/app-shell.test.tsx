@@ -295,7 +295,10 @@ describe("AppShell", () => {
       '[data-testid="desktop-margin-shell"]'
     );
     expect(column?.hidden).toBe(false);
-    expect(column?.parentElement).toBe(view.container.querySelector("main")?.parentElement);
+    // Upstream's column sits in the mark of upstream's views, which draws no box of its own.
+    const mark = column?.parentElement;
+    expect(mark?.matches(".contents[data-upstream-view]")).toBe(true);
+    expect(mark?.parentElement).toBe(view.container.querySelector("main")?.parentElement);
   });
 
   /** The headings of the error fallbacks the shell draws, or those inside `within`. */

@@ -20,12 +20,9 @@ import {
 } from "../../dispatch/e2e/api";
 import { seedFakeGithub } from "../../dispatch/e2e/fake-github-helpers";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
-import { AGENT, personOf, readAsPerson, runProject } from "./flows";
+import { AGENT, personOf, readAsPerson, runProject, waitForQuiet } from "./flows";
 import { type Mark, routeMarks, type Seeded } from "./route-marks";
 import { deployed, expect, type Page, runName, test } from "./test";
-
-/** How long the page has no request in flight before an error it logs counts as logged. */
-const QUIET_MS = 500;
 
 /** What Chromium logs for a response of 404: on a not-found row, for its own id, that is the
  *  mark's cause. */
@@ -172,12 +169,8 @@ async function openEachRoute(page: Page, marks: ReturnType<typeof routeMarks>): 
       read = [];
       await page.goto(entry.href);
       await expect.soft(locate(page, entry.mark).first(), `${path}: its mark`).toBeVisible();
-      await expect
-        .poll(() => traffic.quietFor(QUIET_MS), {
-          intervals: [50],
-          message: `${path}: the page's requests settle`,
-        })
-        .toBe(true);
+      // An error the page logs counts as logged once its requests settle.
+      await waitForQuiet(traffic, `${path}: the page's requests settle`);
       if (entry.lands !== undefined) {
         const url = new URL(page.url());
         expect

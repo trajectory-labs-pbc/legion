@@ -30,7 +30,9 @@ export function SignInPage(): ReactNode {
       >
         Sign in with Google
       </Button>
-      <KeptWrites />
+      <div className="contents" data-upstream-view>
+        <KeptWrites />
+      </div>
     </MessagePage>
   );
 }

@@ -31,6 +31,7 @@
     "postcss": "8.5.32"
   },
   "rootPackages": [
+    "@axe-core/playwright",
     "@biomejs/biome",
     "@happy-dom/global-registrator",
     "@playwright/test",

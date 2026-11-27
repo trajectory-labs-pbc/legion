@@ -36,12 +36,14 @@ export function SidebarRegion({
 }) {
   if (issueRail) {
     return (
-      <IssueRail
-        navigationOpen={navigationOpen}
-        onOpenNavigation={onOpenNavigation}
-        project={project}
-        user={user}
-      />
+      <div className="contents" data-upstream-view>
+        <IssueRail
+          navigationOpen={navigationOpen}
+          onOpenNavigation={onOpenNavigation}
+          project={project}
+          user={user}
+        />
+      </div>
     );
   }
   if (inDrawer || folded) return null;

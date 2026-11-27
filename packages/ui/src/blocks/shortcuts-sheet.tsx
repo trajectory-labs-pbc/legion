@@ -77,7 +77,14 @@ function ShortcutsList({ sections }: { sections: readonly ShortcutSection[] }) {
           value={query}
         />
       </div>
-      <div data-slot="shortcuts-list" className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+      {/* The ring is inset, as a focused row's is (FO2): an outer one lies on the sheet's edge. */}
+      <section
+        aria-label="Shortcuts"
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+        data-slot="shortcuts-list"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: the list scrolls, and a keyboard alone scrolls it from this tab stop.
+        tabIndex={0}
+      >
         {shown.length === 0 ? (
           <p className={cn(textVariants({ tone: "muted" }), "py-10 text-center")}>
             {query.trim() === "" ? "No key works here." : `No shortcut matches “${query.trim()}”.`}
@@ -116,7 +123,7 @@ function ShortcutsList({ sections }: { sections: readonly ShortcutSection[] }) {
             </section>
           ))
         )}
-      </div>
+      </section>
     </>
   );
 }

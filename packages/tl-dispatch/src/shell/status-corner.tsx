@@ -27,8 +27,10 @@ export function StatusCorner({
       className="pointer-events-none fixed right-4 bottom-[max(var(--foot-floor),calc(var(--foot-banner-inset,0px)_+_1rem))] z-50 flex w-[min(28rem,calc(100vw-2rem))] flex-col items-end gap-2 [--foot-floor:5rem] xl:[--foot-floor:0px] *:pointer-events-auto"
       ref={corner}
     >
-      <PendingWritesIndicator />
-      <DraftsNotKept />
+      <div className="contents" data-upstream-view>
+        <PendingWritesIndicator />
+        <DraftsNotKept />
+      </div>
       {signOut?.error === undefined ? null : (
         <Alert size="compact" variant="danger">
           <AlertTitle>{signOut.error}</AlertTitle>

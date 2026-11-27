@@ -57,7 +57,9 @@ export function MainRegion({
           <PageRoutes />
         </Suspense>
       </ErrorBoundary>
-      <MountedLiveViews front={liveView ?? null} />
+      <div className="contents" data-upstream-view>
+        <MountedLiveViews front={liveView ?? null} />
+      </div>
     </main>
   );
 }

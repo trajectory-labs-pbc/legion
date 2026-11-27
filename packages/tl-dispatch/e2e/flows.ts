@@ -12,10 +12,19 @@ import {
 } from "../../dispatch/e2e/api";
 import { pendingWrites } from "../../dispatch/e2e/keyed-writes";
 import { type HeldPatches, holdIssuePatches } from "../../dispatch/e2e/pick-writes";
+import type { Traffic } from "../../dispatch/e2e/traffic";
 import { deployedSettings, storageCookies } from "./modes";
 import { deployed, expect, runName } from "./test";
 
 export const AGENT = { as: "agent" } as const;
+
+/** How long the page has no request in flight before it counts as drawn. */
+const QUIET_MS = 500;
+
+/** Waits until the page has had no request in flight for `QUIET_MS`. */
+export async function waitForQuiet(traffic: Traffic, message: string): Promise<void> {
+  await expect.poll(() => traffic.quietFor(QUIET_MS), { intervals: [50], message }).toBe(true);
+}
 
 /** A read through this worker's fetch, which the deployed mode guards (test.ts). */
 async function read<T>(path: string, headers: Record<string, string>): Promise<T> {

@@ -29,7 +29,9 @@ export function InboxPage(): ReactNode {
           Answered by you
         </Button>
       </div>
-      <Inbox />
+      <div className="contents" data-upstream-view>
+        <Inbox />
+      </div>
     </section>
   );
 }

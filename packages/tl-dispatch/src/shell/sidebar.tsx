@@ -54,12 +54,14 @@ function PinnedAgentRow({
           />
         }
       >
-        <AgentName
-          className="min-w-0 flex-1 truncate"
-          kind="static"
-          sessionId={agent.sessionId}
-          storedTitle={undefined}
-        />
+        <span className="contents" data-upstream-view>
+          <AgentName
+            className="min-w-0 flex-1 truncate"
+            kind="static"
+            sessionId={agent.sessionId}
+            storedTitle={undefined}
+          />
+        </span>
         <Count title={unreadRepliesLabel(agent.unread)} value={agent.unread} />
         <span className={textVariants({ className: "shrink-0", size: "caption", tone: "muted" })}>
           {viewState}
