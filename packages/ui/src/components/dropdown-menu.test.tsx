@@ -243,7 +243,7 @@ describe("DropdownMenu's drawn rows", () => {
         <DropdownMenuGroup>
           <DropdownMenuLabel>Move</DropdownMenuLabel>
         </DropdownMenuGroup>
-        <DropdownMenuSub>
+        <DropdownMenuSub defaultOpen>
           <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem>Backlog</DropdownMenuItem>
@@ -260,8 +260,9 @@ describe("DropdownMenu's drawn rows", () => {
         "Rename",
         "Move",
         "Move to",
+        "Backlog",
       ])
-    ).toEqual([false, false, false, false, true, true, true]);
+    ).toEqual([false, false, false, false, true, true, true, false]);
   });
 
   it("keeps no room in a menu whose rows mark no icon, though its open submenu marks one", async () => {
@@ -297,13 +298,19 @@ describe("DropdownMenu's drawn rows", () => {
     const rows = (
       <>
         <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem>
-          <CopyIcon aria-hidden data-icon="inline-start" />
-          Show copies
-        </DropdownMenuCheckboxItem>
         <DropdownMenuItem>Rename</DropdownMenuItem>
       </>
     );
-    expect(await roomOf(rows, ["Show done", "Show copies", "Rename"])).toEqual([true, true, true]);
+    expect(await roomOf(rows, ["Show done", "Rename"])).toEqual([true, true]);
+  });
+
+  it("keeps a checkbox row's room for its check when the row holds a marked icon", async () => {
+    const rows = (
+      <DropdownMenuCheckboxItem>
+        <CopyIcon aria-hidden data-icon="inline-start" />
+        Show copies
+      </DropdownMenuCheckboxItem>
+    );
+    expect(await roomOf(rows, ["Show copies"])).toEqual([true]);
   });
 });
