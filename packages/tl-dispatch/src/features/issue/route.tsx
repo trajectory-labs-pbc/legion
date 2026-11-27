@@ -5,7 +5,7 @@ import { routes } from "@/navigation/routes";
 import type { AppPage } from "@/shell/page-layout";
 import { issueQuery } from "@/upstream/queries";
 
-const IssuePage = lazyNamed(() => import("@/upstream/views/issue"), "IssuePage");
+const IssuePage = lazyNamed(() => import("./page"), "IssuePage");
 
 export const issue = {
   id: "issue",

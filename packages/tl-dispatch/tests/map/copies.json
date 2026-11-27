@@ -522,5 +522,12 @@
     "sha256": "6ea23d1895fdb70cb566b034aa5fd11596fa33194ea4cf979b0e5cefebf8b436",
     "outcome": "closed",
     "reason": "The shell's sidebar replaces this file whole. Upstream's change rewords the Priorities row's hover detail, which the shell's sidebar does not draw."
+  },
+  {
+    "file": "packages/dispatch/web/src/features/document/useProjectArtifact.ts",
+    "part": "useProjectArtifact",
+    "copy": "src/data/document-reads.ts",
+    "commit": "d317f2181ba777fbfc136d441c06ab6ccb9a3806",
+    "sha256": "9239e2c1e217fead4447447b475c335e686d7fd6c184f139fad4cd85865bde0c"
   }
 ]

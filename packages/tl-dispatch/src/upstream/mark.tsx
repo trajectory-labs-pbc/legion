@@ -16,10 +16,13 @@ export function upstreamView<Props extends object>(
   return UpstreamView;
 }
 
+/** The fork mark's attribute, which fork DOM drawn outside React inside a marked view carries too. */
+export const FORK_VIEW_ATTRIBUTE = "data-fork-view";
+
 /** Fork elements that a fork part passes into a marked upstream component. */
 export function ForkView({ children }: { children: ReactNode }) {
   return (
-    <span className="contents" data-fork-view>
+    <span className="contents" {...{ [FORK_VIEW_ATTRIBUTE]: true }}>
       {children}
     </span>
   );

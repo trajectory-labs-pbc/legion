@@ -8,7 +8,7 @@ import { renderApp } from "../../tests/app";
 import type { Move } from "../../tests/navigation";
 import { holdReads, holdShellReads, waitFor } from "../../tests/network";
 import { settle, sleep } from "../../tests/react";
-import { chunksArrive, shellChunksArrive } from "../../tests/shell-chunks";
+import { issuePageArrives, shellChunksArrive } from "../../tests/shell-chunks";
 import { answerRequests, quietConsoleError } from "../../tests/upstream";
 import { setWidth } from "../../tests/viewport";
 import { reader, signedInClient } from "../../tests/writes";
@@ -67,8 +67,6 @@ const press = (
       new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
     );
   });
-
-const issuePageArrives = () => chunksArrive(() => import("@/upstream/views/issue"));
 
 /** Keeps the issue page's reads of AB-1 pending. */
 const holdIssueReads = () =>

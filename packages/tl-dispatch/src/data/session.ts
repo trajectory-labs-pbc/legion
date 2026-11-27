@@ -36,6 +36,21 @@ export function forgetReads(client: QueryClient): void {
   client.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionKey[0] });
 }
 
+/**
+ * Calls `listener` each time the read of who is signed in names another person than the last one
+ * it named, as when another person signs in after a lapse, until the returned stop.
+ */
+export function onAnotherPerson(client: QueryClient, listener: () => void): () => void {
+  let person = client.getQueryData(sessionKey)?.login;
+  return client.getQueryCache().subscribe(({ query }) => {
+    if (query.queryKey[0] !== sessionKey[0]) return;
+    const login = client.getQueryData(sessionKey)?.login;
+    if (login === undefined || login === person) return;
+    if (person !== undefined) listener();
+    person = login;
+  });
+}
+
 /** Reads who is signed in again from nothing, as a sign-out does. */
 export function resetSession(client: QueryClient): void {
   void client.resetQueries({ queryKey: sessionKey });
