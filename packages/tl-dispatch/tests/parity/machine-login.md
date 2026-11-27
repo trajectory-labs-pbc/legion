@@ -55,3 +55,5 @@ This list holds only the items that the page's tests already named by ID, so it 
 | RVL-08 | Revoke | A revoked row hands the focus to a listed Revoke, or above the list | | |
 | RVL-09 | Revoke | A loaded list whose refresh fails keeps its rows and says so | | |
 | RVL-10 | Revoke | A revoked row hands the focus to a listed Revoke, not to a cut name drawn before it | | |
+| RVL-11 | Revoke | A revoked row hands the focus to the next row's Revoke | | |
+| RVL-12 | Revoke | The last row, once revoked, hands the focus to the row before it | | |
