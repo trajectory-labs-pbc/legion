@@ -548,7 +548,7 @@ function heightTokens(css: string): Record<string, number | string> {
 describe("the theme's heights", () => {
   it("are a table row, a small control, and a list row of 36 px and of 56 px", async () => {
     expect(heightTokens(globalsText)).toEqual(HEIGHTS);
-    const css = (await generate({ extra: ["h-list-row-1", "h-list-row-2"] })).toString();
+    const css = (await tailwind(globalsText)).build(["h-list-row-1", "h-list-row-2"]);
     expect(css).toContain("height: calc(var(--spacing) * 9)");
     expect(css).toContain("height: calc(var(--spacing) * 14)");
   });

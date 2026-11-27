@@ -28,17 +28,12 @@ describe("EmptyState", () => {
     expect(state?.getAttribute("role")).toBeNull();
   });
 
-  it("draws no icon and no action when its caller gives none", () => {
+  it.each([
+    undefined,
+    false,
+  ])("draws no icon and no action, nor their wrappers, for %p", (empty) => {
     const { container } = render(
-      <EmptyState description="New asks and replies for you show here." title="Nothing needs you" />
-    );
-    expect(container.querySelector("[aria-hidden]")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("draws no wrapper for a slot its caller sets to false", () => {
-    const { container } = render(
-      <EmptyState action={false} description="Nothing here." icon={false} title="Nothing" />
+      <EmptyState action={empty} description="Nothing here." icon={empty} title="Nothing" />
     );
     expect(container.querySelector("[aria-hidden]")).toBeNull();
     expect(container.querySelector("[data-slot=empty-state] > div")).toBeNull();
