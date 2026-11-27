@@ -46,6 +46,6 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 ## Checks
 
 - `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, and a control height outside the scale.
-- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, and of the focus outline and the field and state edges. In the components it also refuses a shadow other than the theme's two and the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
+- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, of the focus outline and the field and state edges, and of a priority's track against its filled bars and each row fill. In the components it also refuses a shadow other than the theme's two and the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
 - A reviewer checks each rule in the references that no test holds. Each rule there says how it is checked.
 - A change to a visible surface comes with a light and a dark screenshot of each page it changes.

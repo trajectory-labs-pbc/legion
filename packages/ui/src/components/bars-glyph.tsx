@@ -30,7 +30,9 @@ function BarsGlyph({
       ) : (
         BARS.map((bar, index) => (
           <rect
-            className={dash ? "fill-muted-foreground" : index < level ? "fill-foreground" : "fill-track"}
+            className={
+              dash ? "fill-muted-foreground" : index < level ? "fill-foreground" : "fill-track"
+            }
             height={dash ? 1.5 : bar.height}
             key={bar.x}
             rx={dash ? 0.75 : 1}
