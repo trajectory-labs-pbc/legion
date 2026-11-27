@@ -14,6 +14,9 @@ import { expect, type Page, runName } from "../test";
 /** Any parts' root, which `editor-aids.ts` marks. */
 export const PARTS = "[data-reading-aids-parts]";
 
+/** The element around a host page, which `hosts.tsx` marks. */
+export const HOST = "[data-reading-aids-host]";
+
 /** The parts' root of the page's document editor, which `editor-aids.ts` marks. */
 export const partsRoot = (page: Page) => documentEditor(page).locator(PARTS);
 

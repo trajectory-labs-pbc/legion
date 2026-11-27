@@ -9,6 +9,7 @@ export type {
   DispatchEvent,
   DocumentRead,
   InboxRow,
+  IssueAskRow,
   IssueDetails,
   LauncherCredentialResp,
   MyAnswerRow,

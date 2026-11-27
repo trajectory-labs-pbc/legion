@@ -89,6 +89,8 @@ test("names a file outside the aids' folder that only the lazy aids read, in the
         `${SRC}data/document-reads.ts`,
         `${SRC}upstream/logic/reading-aids.ts`,
         `${SRC}upstream/editor/engine.ts`,
+        `${SRC}upstream/widgets/plain-text.tsx`,
+        `${SRC}upstream/widgets/reference-link.tsx`,
         `${SRC}upstream/editor/frame.ts`,
       ],
       dynamicImports: ["editor-aids.js"],
@@ -99,6 +101,8 @@ test("names a file outside the aids' folder that only the lazy aids read, in the
     "hosts.js (loads without editor-aids.ts): data/document-reads.ts",
     "hosts.js (loads without editor-aids.ts): upstream/logic/reading-aids.ts",
     "hosts.js (loads without editor-aids.ts): upstream/editor/engine.ts",
+    "hosts.js (loads without editor-aids.ts): upstream/widgets/plain-text.tsx",
+    "hosts.js (loads without editor-aids.ts): upstream/widgets/reference-link.tsx",
   ]);
 });
 

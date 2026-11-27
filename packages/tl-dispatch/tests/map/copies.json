@@ -493,6 +493,15 @@
     "reason": "BarSeries in packages/ui copies the scale its two charts share, with empty points left out rather than passed as null and a top of 0 drawn on the floor"
   },
   {
+    "file": "packages/dispatch/web/src/features/doc/ProofDocument.tsx",
+    "part": "*",
+    "copy": "src/parts/reading-aids/read-first.tsx",
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "0bf1d1a67d5fad8d5abe99bc6c14744e3b9ce7dc0f19431e2e19b762ab3b1ba7",
+    "outcome": "ported",
+    "reason": "Read first replaces its Open-decisions navigator and hides its changed-since-read line; its other regions stay upstream's"
+  },
+  {
     "file": "packages/dispatch/web/src/features/inbox/BlockedOnYou.tsx",
     "part": "useNeedsYouCount",
     "copy": "src/data/inbox-count.ts",
