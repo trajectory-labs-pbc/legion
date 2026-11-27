@@ -605,13 +605,14 @@ async function hideLeftOut(page: Page, region: Region): Promise<void> {
 }
 
 /** Each box that scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
- *  content wider than itself. A box set to `overflow: hidden`, as cut text (`truncate`) is, is
- *  not read. A table's own box may scroll (FR4): packages/ui's Table scrolls a table wider than
- *  its column inside that box. */
+ *  content wider than itself. A box whose `overflow-x` is `hidden`, as cut text (`truncate`) is,
+ *  is not read. Two boxes may be wider inside (FR4): a table's own box, in which packages/ui's
+ *  Table scrolls a table wider than its column, and a field, which Chrome clips (`input`) or
+ *  scrolls (`textarea`) around its own value. */
 async function wideBoxes(page: Page): Promise<string[]> {
-  return page.evaluate((table) => {
+  return page.evaluate((allowed) => {
     const found: string[] = [];
-    for (const box of document.body.querySelectorAll(`:not(${table})`)) {
+    for (const box of document.body.querySelectorAll(`:not(${allowed})`)) {
       const { overflowX } = getComputedStyle(box);
       const does =
         overflowX === "clip"
@@ -630,7 +631,7 @@ async function wideBoxes(page: Page): Promise<string[]> {
       );
     }
     return found;
-  }, '[data-slot="table-container"]');
+  }, '[data-slot="table-container"], input, textarea');
 }
 
 /** Each region, opened once: axe reads it in light and dark, then Tab walks it in light and dark,
