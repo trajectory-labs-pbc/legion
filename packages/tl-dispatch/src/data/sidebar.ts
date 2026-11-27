@@ -7,7 +7,8 @@ import { type ShellRead, useShellRead } from "./shell-read";
 
 /** Each agent's state for the reader. */
 export function useAgentStates(): ShellRead<UserAgentStates> {
-  return useShellRead(useQuery(userAgentStateQuery()));
+  const options = userAgentStateQuery();
+  return useShellRead(useQuery(options), options.queryKey);
 }
 
 /** The pinned agents, oldest pin first, with their unread replies. */
@@ -26,17 +27,21 @@ export function usePinnedAgentRows(): readonly { sessionId: string; unread: numb
 
 /** The summary of the reader's priorities. */
 export function usePrioritySummary() {
-  return useShellRead(useQuery(prioritySummaryQuery()));
+  const options = prioritySummaryQuery();
+  return useShellRead(useQuery(options), options.queryKey);
 }
 
 /** The issues the reader pinned. */
 export function usePinnedIssues() {
+  const queryKey = ["issues", "pinned"];
   return useShellRead(
-    useQuery({ queryKey: ["issues", "pinned"], queryFn: () => api.listIssues({ pinned: true }) })
+    useQuery({ queryKey, queryFn: () => api.listIssues({ pinned: true }) }),
+    queryKey
   );
 }
 
 /** The projects the reader sees. */
 export function useProjects() {
-  return useShellRead(useQuery(projectsQuery()));
+  const options = projectsQuery();
+  return useShellRead(useQuery(options), options.queryKey);
 }

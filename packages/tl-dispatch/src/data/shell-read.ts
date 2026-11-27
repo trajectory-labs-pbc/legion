@@ -1,4 +1,4 @@
-import type { UseQueryResult } from "@tanstack/react-query";
+import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 import type { ReadFault } from "./read";
 import { useReadFailure } from "./read-failure";
 
@@ -8,6 +8,7 @@ export interface ShellRead<T> {
   readonly fault: ReadFault | undefined;
 }
 
-export function useShellRead<T>(query: UseQueryResult<T>): ShellRead<T> {
-  return { data: query.data, fault: useReadFailure(query) };
+/** `read` of the query under `key`, as the shell draws it. */
+export function useShellRead<T>(read: UseQueryResult<T>, key: QueryKey): ShellRead<T> {
+  return { data: read.data, fault: useReadFailure({ read, key }) };
 }
