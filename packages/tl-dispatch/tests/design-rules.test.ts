@@ -92,12 +92,12 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="[line-height:2]">', "raw size, weight"],
   ["tsx", '<p className="[letter-spacing:.1em]">', "raw size, weight"],
   ["tsx", '<p className="[text-transform:uppercase]">', "raw size, weight"],
-  ["tsx", '<h2 className="text-balance">', "no wrap style, wrap mode or smoothing"],
-  ["tsx", '<p className="wrap-pretty">', "no wrap style, wrap mode or smoothing"],
-  ["tsx", '<p className="[text-wrap-style:stable]">', "no wrap style, wrap mode or smoothing"],
-  ["tsx", '<p className="text-nowrap">', "no wrap style, wrap mode or smoothing"],
-  ["tsx", '<p className="subpixel-antialiased">', "no wrap style, wrap mode or smoothing"],
-  ["tsx", '<p className="[font-smooth:auto]">', "no wrap style, wrap mode or smoothing"],
+  ["tsx", '<h2 className="text-balance">', "no `text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="wrap-pretty">', "no `text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="[text-wrap-style:stable]">', "no `text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="text-nowrap">', "no `text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="subpixel-antialiased">', "no `text-wrap*` property or font smoothing"],
+  ["tsx", '<p className="[font-smooth:auto]">', "no `text-wrap*` property or font smoothing"],
   ["jsx", '<p className="text-sky-700">', "raw colour"],
   ["css", ".x { color: #123456; }", "raw colour"],
   ["css", ".x { color: rebeccapurple; }", "raw colour"],
@@ -105,8 +105,8 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
   ["css", ".x { animation: spin 1s; }", "motion"],
   ["css", ".x { @apply bg-sky-700; }", "@apply"],
-  ["css", ".x { text-wrap: balance; }", "no wrap style, wrap mode or smoothing"],
-  ["css", ".x { -webkit-font-smoothing: auto; }", "no wrap style, wrap mode or smoothing"],
+  ["css", ".x { text-wrap: balance; }", "no `text-wrap*` property or font smoothing"],
+  ["css", ".x { -webkit-font-smoothing: auto; }", "no `text-wrap*` property or font smoothing"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -140,7 +140,8 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
-  // A stylesheet answers upstream's markup, so it may set type; a class may not.
+  // A stylesheet answers upstream's markup, so it may set size, weight, leading and tracking; a
+  // class may not. Neither sets the wrap or the smoothing.
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
 ];
 

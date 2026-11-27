@@ -43,7 +43,7 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
-  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking or uppercase class, and no wrap style, wrap mode or smoothing",
+  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking or uppercase class, and no `text-wrap*` property or font smoothing in a class or a stylesheet: set the wrap mode with `whitespace-*` or `truncate`",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -145,10 +145,6 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
-/** The recipes own the wrap and the root the smoothing, so neither a class nor a stylesheet sets
- *  them. A page sets the wrap mode with `whitespace-*` or `truncate`. */
-const wrapOrSmoothing = (property: string) =>
-  /^text-wrap/.test(property) || /font-smooth/.test(property);
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -230,7 +226,8 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  if ((fromClass && typeSet(property, value)) || wrapOrSmoothing(property)) {
+  // The recipes own the wrap and the root the smoothing; no class or stylesheet sets them.
+  if ((fromClass && typeSet(property, value)) || /^text-wrap|font-smooth/.test(property)) {
     problems.push(RULES.type);
   }
   return problems;
