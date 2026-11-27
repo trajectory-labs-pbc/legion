@@ -13,6 +13,8 @@ export interface Visit {
   baseline?: BaselineChoice | null;
   /** The version the reader picked under "Compare with". */
   readonly compareWith?: number;
+  /** Each block's fold by id (true when open), and the `?q=` term last applied. */
+  readonly blockFolds: { readonly choices: Map<string, boolean>; term?: string };
 }
 
 /** The name of upstream's read of the reader's read mark of a document. */
@@ -34,7 +36,7 @@ function notify(): void {
 export function visitOf(artifactId: string): Visit {
   let visit = visits.get(artifactId);
   if (visit === undefined) {
-    visit = {};
+    visit = { blockFolds: { choices: new Map() } };
     visits.set(artifactId, visit);
   }
   return visit;

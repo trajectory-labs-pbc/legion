@@ -102,3 +102,35 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
 .reading-aids-change-fold > .reading-aids-earlier[hidden] {
   display: none;
 }
+
+/* A fold is a zero-height box, so upstream measures everything inside it at its fold line. */
+/* biome-ignore-start lint/complexity/noImportantStyles: a fold outranks every rule inside it */
+@media screen {
+  .reading-aids-folded,
+  .reading-aids-folded *,
+  .reading-aids-folded *::before,
+  .reading-aids-folded *::after {
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    gap: 0 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: a fold outranks every rule inside it */
+
+.reading-aids-fold-head {
+  margin: 0;
+  white-space: normal;
+}
+
+/* A printed document shows each block whole, so a fold and its head do not print. */
+@media print {
+  .reading-aids-fold-head {
+    display: none;
+  }
+}

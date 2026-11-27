@@ -20,6 +20,10 @@ export const HOST = "[data-reading-aids-host]";
 /** The parts' root of the page's document editor, which `editor-aids.ts` marks. */
 export const partsRoot = (page: Page) => documentEditor(page).locator(PARTS);
 
+/** The fold head's button of the block `blockId`, which `fold-head.ts` marks. */
+export const head = (page: Page, blockId: string) =>
+  page.locator(`[data-reading-aids-fold-head="${blockId}"] button`);
+
 /** How many parts' roots the page shows, anywhere: a hidden editor's root is not shown. */
 export const shownParts = (page: Page) =>
   page

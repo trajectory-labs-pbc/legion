@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
+import { FoldsControl, useBlockFolds } from "./block-folds-part";
 import { CountsLine } from "./counts-line";
 import { moveToBlock } from "./moves";
 import type { PartsProps } from "./parts-slot";
@@ -15,7 +16,12 @@ function AidCommands({ actions }: { actions: AidActions }): null {
   return null;
 }
 
-function DocumentParts({ document, entry, shown }: PartsProps & { document: AidedDocument }) {
+function DocumentParts({
+  document,
+  entry,
+  folds,
+  shown,
+}: PartsProps & { document: AidedDocument; folds: AidActions }) {
   useMeasuredRender();
   const readFirst = useReadFirst(entry, document);
   const baseline = useBaseline(document);
@@ -32,11 +38,13 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
       {shown ? (
         <AidCommands
           actions={{
+            ...folds,
             nextDecision: step && (() => step(1)),
             previousDecision: step && (() => step(-1)),
           }}
         />
       ) : null}
+      {folds.toggleFolds === undefined ? null : <FoldsControl />}
     </>
   );
 }
@@ -44,6 +52,12 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
 /** The parts above the document's text, drawn into its parts root; the shown one holds the keys. */
 export function AidParts(props: PartsProps) {
   const document = useAidedDocument(props.entry.documentRef);
-  if (document !== undefined) return <DocumentParts {...props} document={document} />;
-  return props.shown ? <AidCommands actions={{}} /> : null;
+  const folds = useBlockFolds(props.entry);
+  if (document !== undefined) return <DocumentParts {...props} document={document} folds={folds} />;
+  return (
+    <>
+      {props.shown ? <AidCommands actions={folds} /> : null}
+      {folds.toggleFolds === undefined ? null : <FoldsControl />}
+    </>
+  );
 }
