@@ -11,29 +11,43 @@ export function readRetry(failureCount: number, error: unknown): boolean {
   return refusalOf(error) === undefined && queryRetry(failureCount, error);
 }
 
+/** What a fault reads of a read. */
+type FailableRead = Pick<
+  UseQueryResult<unknown>,
+  "data" | "error" | "errorUpdatedAt" | "fetchStatus" | "isFetching"
+> & { refetch: () => unknown };
+
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
+
+/** A failure seen, with the time of the error it came from, which names its query. */
+type Seen = { at: number; failure: Failure | undefined };
 
 /**
  * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
  * A refetch clears the error of a read with no data until it answers, so a read keeps the failure
- * this component saw while it is asked again. A read this component never saw fail is loading
- * while it is out, so a failure from before it mounted shows only once the read answers again.
- * Every render passes the same reads in the same places, `undefined` for a read left out: what
- * was seen is kept by place.
+ * this component saw while the same query, known by its last error's time, is asked again. A read
+ * this component never saw fail is loading while it is out, so a failure from before it mounted,
+ * or another query's, shows only once the read answers again. Every render passes the same reads
+ * in the same places, `undefined` for a read left out: what was seen is kept by place.
  */
 export function useReadFailure(
-  ...reads: readonly (UseQueryResult<unknown> | undefined)[]
+  ...reads: readonly (FailableRead | undefined)[]
 ): ReadFault | undefined {
-  const [seen, setSeen] = useState<readonly (Failure | undefined)[]>([]);
-  const failures = reads.map((read, index): Failure | undefined => {
-    if (read === undefined || read.data !== undefined) return undefined;
-    if (read.error !== null) return refusalOf(read.error) ?? "retryable";
-    return read.fetchStatus === "idle" ? undefined : seen[index];
+  const [seen, setSeen] = useState<readonly Seen[]>([]);
+  const now = reads.map((read, index): Seen => {
+    const at = read?.errorUpdatedAt ?? 0;
+    if (read === undefined || read.data !== undefined) return { at, failure: undefined };
+    if (read.error !== null) return { at, failure: refusalOf(read.error) ?? "retryable" };
+    const last = seen[index];
+    const again = read.fetchStatus !== "idle" && last?.at === at;
+    return { at, failure: again ? last.failure : undefined };
   });
-  if (failures.length !== seen.length || failures.some((each, index) => each !== seen[index])) {
-    setSeen(failures);
-  }
+  const changed = now.some(
+    (each, index) => each.at !== seen[index]?.at || each.failure !== seen[index]?.failure
+  );
+  if (now.length !== seen.length || changed) setSeen(now);
+  const failures = now.map((each) => each.failure);
   if (failures.every((failure) => failure === undefined)) return undefined;
   const retrying = reads.some(
     (read, index) => failures[index] !== undefined && read?.isFetching === true

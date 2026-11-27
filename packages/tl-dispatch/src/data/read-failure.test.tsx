@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider, useQueries } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueries, useQuery } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -115,6 +115,53 @@ test("read-failure: a read refused before it mounts is loading until it answers 
 
   await act(async () => again.reject(answered(403)));
   expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
+});
+
+/** One read of the version the reader picked, and its failure. */
+function Picked({
+  version,
+  answer,
+}: {
+  version: string;
+  answer: (version: string) => Promise<unknown>;
+}) {
+  const read = useQuery({ queryKey: ["version", version], queryFn: () => answer(version) });
+  const fault = useReadFailure(read);
+  return (
+    <>
+      <p data-testid="fetching">{read.fetchStatus}</p>
+      {fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />}
+    </>
+  );
+}
+
+test("read-failure: a read picked again never shows the refusal of the read picked before it", async () => {
+  const again = Promise.withResolvers<never>();
+  const answers: Record<string, () => Promise<unknown>> = {
+    v8: () => Promise.reject(answered(500)),
+    v12: () => Promise.reject(answered(403)),
+  };
+  const answer = (version: string) => answers[version]?.() ?? Promise.reject(answered(500));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const pick = (version: string) => (
+    <QueryClientProvider client={client}>
+      <Picked answer={answer} version={version} />
+    </QueryClientProvider>
+  );
+  const view = render(pick("v8"));
+  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
+  view.rerender(pick("v12"));
+  await waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.")
+  );
+
+  answers.v8 = () => again.promise;
+  view.rerender(pick("v8"));
+  await waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe("fetching"));
+  expect([null, `${LOAD}Retry`]).toContain(screen.queryByRole("alert")?.textContent ?? null);
+
+  await act(async () => again.reject(answered(500)));
+  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
 });
 
 test("read-failure: Retry on a 500 beside a 403 asks both reads again", async () => {
