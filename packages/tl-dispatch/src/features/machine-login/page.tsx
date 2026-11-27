@@ -1,4 +1,4 @@
-import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { hashKey, queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { ReadFailure, readFailureOf } from "@/data/read-failure";
 import { NotFound } from "@/features/not-found";
@@ -7,9 +7,9 @@ import { PageSkeleton, useSkeleton } from "@/loading/page-skeleton";
 import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 
 /**
- * The page's code, kept in the query cache so a revisit draws the page at once; no refresh or
- * invalidation asks for it again. A failed load is kept until the route mounts again or a failed
- * read's Retry asks for the code too.
+ * The page's code, kept in the query cache so a revisit draws the page at once; once loaded,
+ * nothing loads it again. A failed load is asked for again when the route mounts again or the
+ * capabilities are read again.
  */
 const pageCodeQuery = queryOptions({
   queryKey: ["tl-dispatch", "machine-login-page-code"],
@@ -18,6 +18,8 @@ const pageCodeQuery = queryOptions({
   staleTime: "static",
   retry: false,
 });
+
+const capabilitiesHash = hashKey(credentialCapabilitiesQuery().queryKey);
 
 /**
  * Served only while the broker still serves the device grant. One skeleton covers both waits,
@@ -31,15 +33,20 @@ export function MachineLoginRoute(): ReactNode {
   useEffect(() => {
     void queryClient.prefetchQuery(machineLoginsQuery());
   }, [queryClient]);
-  const read = readFailureOf(capabilities);
-  // Retry also loads a failed page's code again, which nothing else asks for.
-  const fault = read && {
-    ...read,
-    retry: () => {
-      read.retry();
-      if (code.isError) void code.refetch();
-    },
-  };
+  const refetchCode = code.refetch;
+  // Each new capabilities read (Retry, the tab's return, a reconnect, a refresh) also asks again for
+  // a failed page code, as the read starts, so no render sees the old failure.
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== "updated" || event.action.type !== "fetch") return;
+        if (event.query.queryHash !== capabilitiesHash) return;
+        if (queryClient.getQueryState(pageCodeQuery.queryKey)?.status === "error")
+          void refetchCode();
+      }),
+    [queryClient, refetchCode]
+  );
+  const fault = readFailureOf(capabilities);
   const served = capabilities.data?.machine_code_page === true;
   // A query with no data goes back to pending when it loads again, so a refetch drops the failure.
   const waiting =

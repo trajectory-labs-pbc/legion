@@ -1,10 +1,11 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
+import { focusManager, onlineManager, QueryClient } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, Suspense } from "react";
 import { PageFallback } from "@/loading/page-skeleton";
 import { api } from "@/upstream/api";
+import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 import * as resilience from "@/upstream/shell";
 import { ErrorBoundary } from "@/upstream/shell";
 import { appTree } from "../../../tests/app";
@@ -15,6 +16,8 @@ import { MachineLoginRoute } from "./page";
 afterEach(() => {
   cleanup();
   mock.restore();
+  focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
 });
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -29,17 +32,15 @@ function renderRoute(): HTMLElement {
 
 const loading = { name: "Loading the page" };
 
-/** What the page outlet shows: the page, its skeleton, or nothing. */
+/** What the page outlet shows: the page's error, the page, its skeleton, or nothing. */
 const outletState = (host: HTMLElement) =>
-  shows(host, "h1")
-    ? "page"
-    : shows(host, '[role="status"][aria-label="Loading the page"]')
-      ? "skeleton"
-      : "blank";
-
-/** The outlet's state, or the page's error once the error boundary shows it. */
-const outletOrError = (host: HTMLElement) =>
-  shows(host, '[role="alert"]') ? "error" : outletState(host);
+  shows(host, '[role="alert"]')
+    ? "error"
+    : shows(host, "h1")
+      ? "page"
+      : shows(host, '[role="status"][aria-label="Loading the page"]')
+        ? "skeleton"
+        : "blank";
 
 /** The route inside the page outlet's boundary, where a page that suspends draws its fallback. */
 const inOutlet = (queryClient?: QueryClient) => (
@@ -60,13 +61,30 @@ function failingCode() {
   const state: { loads: boolean; gate?: Promise<void> } = { loads: false };
   const failed = Promise.withResolvers<void>();
   const importWhenOnline = resilience.importWhenOnline;
-  spyOn(resilience, "importWhenOnline").mockImplementation((load) => {
+  const loads = spyOn(resilience, "importWhenOnline").mockImplementation((load) => {
     if (state.loads) return (state.gate ?? Promise.resolve()).then(() => importWhenOnline(load));
     // A task later, every microtask that carries the rejection into the query has run.
     setTimeout(failed.resolve, 0);
     return Promise.reject(new Error("the chunk is gone"));
   });
-  return { state, failed: failed.promise };
+  return { state, failed: failed.promise, loads };
+}
+
+/** The page's code fails to load, then the capabilities read fails; later reads answer served. */
+async function bothFail() {
+  answers(true);
+  const code = failingCode();
+  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
+  spyOn(api, "getCredentialCapabilities")
+    .mockReturnValueOnce(answer.promise)
+    .mockResolvedValue({ machine_code_page: true });
+  render(inBoundary(routeTree()));
+  // The code's failure is in before the read fails.
+  await act(() => code.failed);
+  answer.reject(new Error("broker down"));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("Could not load the machine login page.");
+  return { code, alert };
 }
 
 test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {
@@ -215,7 +233,7 @@ test("MLR-06 a revisit, with the answer cached and the page's code loaded, draws
 test("MLR-07 a page's code that fails to load shows the page's error, with no skeleton before it", async () => {
   answers(true);
   failingCode();
-  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletOrError, {
+  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletState, {
     done: (state) => state === "error",
   });
   expect(changes.map((change) => change.state)).toEqual(["blank", "error"]);
@@ -226,7 +244,7 @@ test("MLR-07 outside act, a code load that failed shows the page's error as soon
   failingCode();
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletOrError, {
+  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletState, {
     done: (state) => state === "error",
     onChange: (change) => {
       if (change.state === "skeleton") {
@@ -236,7 +254,7 @@ test("MLR-07 outside act, a code load that failed shows the page's error as soon
   });
   expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "error"]);
   const [, skeleton, error] = changes;
-  expect((error?.at ?? 0) - (skeleton?.at ?? 0)).toBeLessThan(300);
+  expect((error?.at ?? 0) - (skeleton?.at ?? 0)).toBeLessThan(200);
 });
 
 test("MLR-08 a Dispatch without the device grant shows the not-found page, though the page's code failed to load", async () => {
@@ -248,20 +266,8 @@ test("MLR-08 a Dispatch without the device grant shows the not-found page, thoug
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
-test("MLR-08 a failed capabilities read shows its failure, and its Retry also loads the page's code that failed", async () => {
-  answers(true);
-  const code = failingCode();
-  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  spyOn(api, "getCredentialCapabilities")
-    .mockReturnValueOnce(answer.promise)
-    .mockResolvedValue({ machine_code_page: true });
-  render(inBoundary(routeTree()));
-  // The code's failure is in before the read fails.
-  await act(() => code.failed);
-  answer.reject(new Error("broker down"));
-  const alert = await screen.findByRole("alert");
-  expect(alert.textContent).toContain("Could not load the machine login page.");
-
+test("MLR-09 a failed capabilities read's Retry also loads the page's code that failed", async () => {
+  const { code, alert } = await bothFail();
   // The code comes only after the served answer, so the old failure must not stand meanwhile.
   const gate = Promise.withResolvers<void>();
   code.state.loads = true;
@@ -269,6 +275,49 @@ test("MLR-08 a failed capabilities read shows its failure, and its Retry also lo
   await userEvent.click(within(alert).getByRole("button", { name: "Retry" }));
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   gate.resolve();
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  // One Retry asks for the code once.
+  expect(code.loads).toHaveBeenCalledTimes(2);
+});
+
+test.each([
+  [
+    "the tab's return",
+    () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    },
+  ],
+  [
+    "a reconnect",
+    () => {
+      onlineManager.setOnline(false);
+      onlineManager.setOnline(true);
+    },
+  ],
+])("MLR-09 a failed capabilities read asked again on %s also loads the page's code that failed", async (_, askAgain) => {
+  const { code } = await bothFail();
+  code.state.loads = true;
+  act(askAgain);
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("MLR-09 a refresh that turns the page served loads the page's code that failed, and no other read asks for it", async () => {
+  answers(false);
+  const code = failingCode();
+  const queryClient = newClient();
+  render(inBoundary(routeTree(queryClient)));
+  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+  await act(() => code.failed);
+  await act(() => queryClient.refetchQueries({ queryKey: machineLoginsQuery().queryKey }));
+  expect(code.loads).toHaveBeenCalledTimes(1);
+
+  code.state.loads = true;
+  spyOn(api, "getCredentialCapabilities").mockResolvedValue({ machine_code_page: true });
+  await act(() =>
+    queryClient.invalidateQueries({ queryKey: credentialCapabilitiesQuery().queryKey })
+  );
   expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
 });
 
