@@ -1,7 +1,8 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
-import { type ReadFault, readFailureOf } from "@/features/read-failure";
+import type { RetryableFault } from "@/data/read";
+import { readFailureOf } from "@/features/read-failure";
 import { useAddress } from "@/navigation/hooks";
 import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
@@ -34,7 +35,7 @@ interface SidebarDestination {
 /** A section's rows, none while its read is out or after it failed. */
 export interface SectionRead<T> {
   rows: readonly T[] | undefined;
-  fault: ReadFault | undefined;
+  fault: RetryableFault | undefined;
 }
 
 function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
