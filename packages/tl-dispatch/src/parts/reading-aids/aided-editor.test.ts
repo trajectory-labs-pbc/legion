@@ -21,7 +21,7 @@ import {
   SPEC,
 } from "../../../tests/reading-aids/editor-fixtures";
 import { warmMarkdownRenderer } from "../../../tests/upstream";
-import { aidedEditor, HOST_ATTRIBUTE } from "./aided-editor";
+import { aidedEditor, HOST_ATTRIBUTE, sharedLoad } from "./aided-editor";
 import { installAids, PARTS_ATTRIBUTE } from "./editor-aids";
 import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
 import { REVEAL_BLOCK } from "./folds";
@@ -66,13 +66,32 @@ test.each([
 
 test("a failed load of the aids gives upstream's plain editor, the one editor in its root", async () => {
   const root = rootIn(HOST_ATTRIBUTE);
-  const failed = aidedEditor(() => Promise.reject(new Error("The aids' chunk is gone.")));
+  const failed = aidedEditor(
+    sharedLoad(() => Promise.reject(new Error("The aids' chunk is gone.")))
+  );
   const handle = keep(await failed(root, options(new Y.Doc(), SPEC)));
   handle.setMarkdown("First block.");
   expect(handle.view.state.doc.textContent).toBe("First block.");
   expect(root.querySelectorAll(".ProseMirror")).toHaveLength(1);
   expect(partsRoots(handle)).toHaveLength(0);
   expect(partsSlot.entries()).toEqual([]);
+});
+
+test("a failed load of the aids is tried again by the next editor, and a load that answers is kept", async () => {
+  const aids = await import("./editor-aids");
+  let loads = 0;
+  const editor = aidedEditor(
+    sharedLoad(async () => {
+      loads += 1;
+      if (loads === 1) throw new Error("The aids' chunk is gone.");
+      return aids;
+    })
+  );
+  const opened = async () => keep(await editor(rootIn(HOST_ATTRIBUTE), options(new Y.Doc(), SPEC)));
+  expect(partsRoots(await opened())).toHaveLength(0);
+  expect(partsRoots(await opened())).toHaveLength(1);
+  expect(partsRoots(await opened())).toHaveLength(1);
+  expect(loads).toBe(2);
 });
 
 test("a failed install of the aids gives upstream's plain editor, the one editor in its root", async () => {
