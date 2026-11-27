@@ -255,9 +255,19 @@
           "body": {
             "@apply bg-background text-foreground": {}
           },
+          "html": {
+            "-webkit-font-smoothing": "antialiased",
+            "-moz-osx-font-smoothing": "grayscale"
+          },
           "svg.lucide[stroke-width=\"2\"]": {
             "stroke-width": "var(--icon-stroke)"
           }
+        },
+        "@utility wrap-balance": {
+          "text-wrap-style": "balance"
+        },
+        "@utility wrap-pretty": {
+          "text-wrap-style": "pretty"
         }
       }
     },

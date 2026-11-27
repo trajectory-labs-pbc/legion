@@ -75,9 +75,7 @@ export function MachineLoginPage(): ReactNode {
 
   return (
     <section className="max-w-180 space-y-8">
-      <SurfaceTitle className="text-balance" size="page">
-        Enter machine login code
-      </SurfaceTitle>
+      <SurfaceTitle size="page">Enter machine login code</SurfaceTitle>
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(event) => {

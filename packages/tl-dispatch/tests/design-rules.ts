@@ -44,6 +44,7 @@ export const RULES = {
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
   type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
+  wrap: "the wrap style comes from `Heading` and `textVariants`: a page sets none (`text-balance`, `text-pretty`)",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -145,6 +146,9 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
+/** A wrap style a class may not set: the type recipes own it. */
+const wrapStyled = (property: string, value: string) =>
+  /^text-wrap(-style)?$/.test(property) && /\b(balance|pretty)\b/.test(value);
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -226,6 +230,7 @@ export function declarationProblems(
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
+  if (fromClass && wrapStyled(property, value)) problems.push(RULES.wrap);
   return problems;
 }
 

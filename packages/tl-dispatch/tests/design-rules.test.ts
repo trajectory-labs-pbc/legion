@@ -92,6 +92,9 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="[line-height:2]">', "raw size, weight"],
   ["tsx", '<p className="[letter-spacing:.1em]">', "raw size, weight"],
   ["tsx", '<p className="[text-transform:uppercase]">', "raw size, weight"],
+  ["tsx", '<h2 className="text-balance">', "the wrap style comes from"],
+  ["tsx", '<p className="md:text-pretty">', "the wrap style comes from"],
+  ["tsx", '<p className="wrap-pretty">', "the wrap style comes from"],
   ["jsx", '<p className="text-sky-700">', "raw colour"],
   ["css", ".x { color: #123456; }", "raw colour"],
   ["css", ".x { color: rebeccapurple; }", "raw colour"],
@@ -113,7 +116,10 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<button className="h-8 px-3">'],
   ["tsx", '<button className="min-h-11">'],
   ["tsx", '<input type="checkbox" className="size-4" />'],
-  ["tsx", '<p className="text-danger text-right text-pretty font-mono tabular-nums capitalize">'],
+  [
+    "tsx",
+    '<p className="text-danger text-right text-nowrap text-wrap font-mono tabular-nums capitalize">',
+  ],
   [
     "tsx",
     '<a className="outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">',

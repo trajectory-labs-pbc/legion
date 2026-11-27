@@ -7,6 +7,9 @@ import { Glob } from "bun";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
 
+import { type HeadingSize, headingVariants, textVariants } from "../lib/typography";
+import { cn } from "../lib/utils";
+
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 
 const src = join(import.meta.dirname, "..");
@@ -595,6 +598,17 @@ describe("the theme", () => {
     expect(THEMES.dark.get("scrim")).toBe("rgb(0 0 0 / 0.6)");
   });
 
+  it("smooths text once, on the root", () => {
+    const smoothing: string[] = [];
+    generated.walkDecls(/font-smoothing$/, (decl) => {
+      smoothing.push(`${where(decl)} { ${decl.prop}: ${decl.value} }`);
+    });
+    expect(smoothing).toEqual([
+      "@layer base > html { -webkit-font-smoothing: antialiased }",
+      "@layer base > html { -moz-osx-font-smoothing: grayscale }",
+    ]);
+  });
+
   it.each(
     Object.entries(THEMES)
   )("keeps each colour at its contrast on every surface it sits on, %s", (_name, tokens) => {
@@ -660,5 +674,30 @@ describe("the theme", () => {
         onCard(state)
       );
     }
+  });
+});
+
+const HEADING_SIZES = ["page", "section", "group", "label"] as const satisfies HeadingSize[];
+
+describe("the type recipes", () => {
+  it.each([
+    ...HEADING_SIZES.map((size) => [
+      `heading ${size}`,
+      headingVariants({ size, tone: "muted" }),
+      "balance",
+    ]),
+    ...(["body", "caption"] as const).map((size) => [
+      `text ${size}`,
+      textVariants({ size, tone: "muted" }),
+      "pretty",
+    ]),
+  ])("wrap %s by style alone, so a `truncate` beside it holds", async (_name, recipe, style) => {
+    const classes = cn(recipe, "truncate").split(" ");
+    const css = postcss.parse((await tailwind(globalsText)).build(classes));
+    const wraps: string[] = [];
+    css.walkDecls(/^(text-wrap|white-space)/, (decl) => {
+      if (where(decl).startsWith("@layer utilities")) wraps.push(`${decl.prop}: ${decl.value}`);
+    });
+    expect(wraps.sort()).toEqual([`text-wrap-style: ${style}`, "white-space: nowrap"]);
   });
 });

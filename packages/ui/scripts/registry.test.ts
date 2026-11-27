@@ -38,6 +38,13 @@ describe("registry.json", () => {
     expect(base?.body).toEqual({ "@apply bg-background text-foreground": {} });
   });
 
+  it("installs the theme's utilities, so the type recipes' wrap classes draw", () => {
+    const theme = buildRegistry().items.find((item) => item.name === "theme");
+    const css = (theme as { css?: Record<string, unknown> } | undefined)?.css;
+    expect(css?.["@utility wrap-balance"]).toEqual({ "text-wrap-style": "balance" });
+    expect(css?.["@utility wrap-pretty"]).toEqual({ "text-wrap-style": "pretty" });
+  });
+
   it("refuses two rules with one selector, of which the JSON would keep only the last", () => {
     expect(() => toJson(postcss.parse("body { color: red } body { margin: 0 }").nodes)).toThrow(
       "body"

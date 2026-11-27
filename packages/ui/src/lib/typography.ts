@@ -10,7 +10,7 @@ const TONE = {
 
 export type Tone = keyof typeof TONE;
 
-export const headingVariants = cva("", {
+export const headingVariants = cva("wrap-balance", {
   variants: {
     size: {
       // A record's title wraps, and breaks a long word rather than overflow.
@@ -25,7 +25,7 @@ export const headingVariants = cva("", {
 
 export type HeadingSize = NonNullable<VariantProps<typeof headingVariants>["size"]>;
 
-export const textVariants = cva("", {
+export const textVariants = cva("wrap-pretty", {
   variants: {
     size: {
       body: "text-sm",

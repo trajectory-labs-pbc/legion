@@ -30,7 +30,7 @@ export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
   const pending = record.state === "pending";
   return (
     <div className="space-y-3">
-      <Heading className="text-pretty" size="section">
+      <Heading size="section">
         <span className="wrap-anywhere">{(record.identifiers ?? []).join(", ")}</span>{" "}
         {pending ? "asks" : "asked"} to start{" "}
         {record.service ? `worker pods as ${record.service}` : "agent sessions as you"}
@@ -71,7 +71,7 @@ export function RecordFacts({ record }: { record: RecordResponse }): ReactNode {
         </div>
       )}
       {pending && record.service ? (
-        <p className={textVariants({ className: "text-pretty", tone: "muted" })}>
+        <p className={textVariants({ tone: "muted" })}>
           It is a service's login from before services logged in with their own Kubernetes token,
           and no one can approve it any more: deny it, or let it expire.
         </p>

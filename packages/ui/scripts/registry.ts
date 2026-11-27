@@ -184,6 +184,8 @@ function themeItem(tokens: Root, css: Root): RegistryItem {
       withoutVariables(dark),
       atRule(tokens, "media", "(prefers-color-scheme: dark)"),
       base.clone({ nodes: baseRules }),
+      // The theme's own utilities: the type recipes name them.
+      ...tokens.nodes.filter((node) => node instanceof AtRule && node.name === "utility"),
     ]),
   };
 }
