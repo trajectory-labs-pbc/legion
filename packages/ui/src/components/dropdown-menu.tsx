@@ -59,7 +59,8 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
 }
 
 // When a row marks its leading icon `data-icon="inline-start"`, as on a Button, or is a checkbox,
-// every row without that mark and every label keeps the icon's room. A row holds no other such mark.
+// every row without that mark and every label keeps the icon's room. Only a row's leading icon
+// carries the mark.
 const ICON_ROOM_CLASS =
   "in-[[role=menu]:has(:is([data-icon=inline-start],[role=menuitemcheckbox]))]:not-has-[[data-icon=inline-start]]:ps-8";
 
