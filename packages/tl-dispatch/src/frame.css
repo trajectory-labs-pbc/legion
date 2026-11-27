@@ -31,16 +31,6 @@
   }
 }
 
-/* Under a finger a field's text is 16 px, upstream's text-sm fields too, so a phone does not
-   zoom in on it. */
-@media (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-  textarea,
-  select {
-    font-size: var(--text-base);
-  }
-}
-
 /* The sidebar's width, which the margin sheet beside it starts at. */
 :root {
   --sidebar-width: calc(var(--spacing) * 60);
