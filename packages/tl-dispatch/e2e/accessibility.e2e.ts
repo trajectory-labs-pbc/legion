@@ -17,6 +17,7 @@ import type { FakeLauncherCredential } from "../../dispatch/e2e/fake-broker";
 import { setLauncherCredentials, setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
 import { withIssuePage } from "../../dispatch/e2e/issue-page-option";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
+import { assertPageFits } from "../../dispatch/e2e/unclipped";
 import type { RecordResponse } from "../../dispatch/web/src/api/types";
 import { AGENT, heldStatusChange, runIssue, waitForQuiet } from "./flows";
 import { SIGN_OUT } from "./modes";
@@ -780,19 +781,26 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
   });
   await appendWide(page, '[data-testid="wide-box"]');
   expect(await sidewaysScrolls(page, machineLogin)).toEqual([
-    expect.stringMatching(/^div "wide-box": 2000 px in \d+ px$/),
+    expect.stringMatching(/^div "wide-box" scrolls 2000 px in \d+ px$/),
   ]);
 });
 
-test("content wider than a phone widens the page and fails the width check at 390 px only", async ({
-  page,
-}) => {
+// At 390 px the page grows wider than the window. From 768 px the content panel clips it, and the
+// check names the box that clips.
+test("content wider than the window fails the width check at each width", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
   await appendWide(page, MAIN);
   for (const viewport of WIDTHS) {
     await page.setViewportSize(viewport);
-    expect(await sidewaysScrolls(page, machineLogin), `at ${viewport.width} px`).toEqual(
-      viewport === PHONE ? [expect.stringMatching(/^the page: \d+ px in \d+ px$/)] : []
-    );
+    const boxes = await sidewaysScrolls(page, machineLogin);
+    if (viewport === PHONE) {
+      await expect(assertPageFits(page)).rejects.toThrow("px wide in a 390px viewport");
+      expect.soft(boxes, "at 390 px").toEqual([]);
+    } else {
+      await assertPageFits(page);
+      expect
+        .soft(boxes, `at ${viewport.width} px`)
+        .toEqual([expect.stringMatching(/^div ".*" clips \d+ px in \d+ px$/)]);
+    }
   }
 });
