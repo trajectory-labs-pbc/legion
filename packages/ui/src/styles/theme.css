@@ -269,7 +269,7 @@
 }
 
 /* The wrap style alone: `text-balance` and `text-pretty` also set the wrap mode, so they undo a
-   `truncate` beside them. The type recipes use these. */
+   `truncate` beside them. The type recipes and the tooltip use these. */
 @utility wrap-balance {
   text-wrap-style: balance;
 }

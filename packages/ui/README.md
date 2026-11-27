@@ -64,8 +64,8 @@ installs from the default branch, not from the ref you asked for.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, text
-  smoothed once on the root, no wrap property but `text-wrap-style`, and corners from
-  the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and the only other
+  smoothed once on the root, no `text-wrap*` property but `text-wrap-style`, and corners from the
+  theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and the only other
   radius is `rounded-full`, which a source check allows on seven parts only: the radio item and its
   dot, the switch and its thumb, the slider thumb, the avatar and the avatar group's count. A list
   row draws its focus outline inside itself, as a scroll container does, so its list does not clip
