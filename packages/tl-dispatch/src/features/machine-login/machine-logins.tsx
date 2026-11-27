@@ -48,6 +48,8 @@ type RevokeQuestion = ReturnType<typeof createAlertDialogHandle<LauncherCredenti
 const HEADINGS = ["Machine", "Credential", "Approved by", "Issued", "Expires"] as const;
 const MUTED = textVariants({ tone: "muted" });
 const CUT_CELL = "w-1/4 max-w-0";
+/** The headings and the actions column. */
+const COLUMNS = HEADINGS.length + 1;
 
 // A pod login (`person` set) and a service's token login have no approver.
 function approvedBy(login: LauncherCredentialResp): string {
@@ -144,13 +146,12 @@ function RevokeQuestionDialog({
 
 const LOADING_ROWS = [0, 1, 2];
 
-/** The list's rows while they load: still boxes at the row height, named for a screen reader. */
+/** The list's rows while they load: still boxes as tall as a row's Revoke, with no hover fill. */
 function LoadingRows(): ReactNode {
   return LOADING_ROWS.map((row) => (
-    <TableRow key={row}>
-      <TableCell colSpan={HEADINGS.length + 1}>
-        {row === 0 ? <span className="sr-only">Loading machine logins</span> : null}
-        <Skeleton className="h-4 w-full" />
+    <TableRow className="hover:bg-transparent" key={row}>
+      <TableCell colSpan={COLUMNS}>
+        <Skeleton className="h-control-sm w-full" />
       </TableCell>
     </TableRow>
   ));
@@ -167,11 +168,10 @@ function LoginRows({
   question: RevokeQuestion;
   revoke: Revoke;
 }): ReactNode {
-  const span = HEADINGS.length + 1;
   if (logins.length === 0) {
     return (
       <TableRow>
-        <TableCell className={MUTED} colSpan={span}>
+        <TableCell className={MUTED} colSpan={COLUMNS}>
           No live machine logins.
         </TableCell>
       </TableRow>
@@ -220,7 +220,7 @@ function LoginRows({
       </TableRow>
       {refused?.credential_id === login.credential_id ? (
         <TableRow>
-          <TableCell className="whitespace-normal" colSpan={span}>
+          <TableCell className="whitespace-normal" colSpan={COLUMNS}>
             <WriteFailure
               anew="Pressing Revoke again sends a new revoke."
               error={revoke.error}
@@ -274,6 +274,16 @@ export const MachineLogins = memo(function MachineLogins({
   const fault = readFailureOf(logins);
   const refreshFault = refreshFailureOf(logins);
   const skeleton = useSkeleton(logins.data === undefined && fault === undefined);
+  const rows = skeleton ? (
+    <LoadingRows />
+  ) : logins.data === undefined ? undefined : (
+    <LoginRows
+      logins={logins.data}
+      newCredential={newCredential}
+      question={question}
+      revoke={revoke}
+    />
+  );
   return (
     <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>
       <div className="space-y-1">
@@ -304,9 +314,9 @@ export const MachineLogins = memo(function MachineLogins({
       {refreshFault !== undefined ? (
         <ReadFailure fault={refreshFault} noun="the latest machine logins" />
       ) : null}
-      {skeleton || logins.data !== undefined ? (
+      {rows !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">
-          <Table aria-busy={skeleton}>
+          <Table aria-busy={skeleton} aria-label={skeleton ? "Loading machine logins" : undefined}>
             <TableHeader>
               <TableRow>
                 {HEADINGS.map((heading) => (
@@ -319,18 +329,7 @@ export const MachineLogins = memo(function MachineLogins({
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {skeleton || logins.data === undefined ? (
-                <LoadingRows />
-              ) : (
-                <LoginRows
-                  logins={logins.data}
-                  newCredential={newCredential}
-                  question={question}
-                  revoke={revoke}
-                />
-              )}
-            </TableBody>
+            <TableBody>{rows}</TableBody>
           </Table>
         </div>
       ) : fault !== undefined ? (

@@ -1,5 +1,5 @@
 import { cn } from "@legion/ui/lib/utils";
-import { PageSuspense } from "@/loading/page-skeleton";
+import { Suspense } from "react";
 import { PageRoutes } from "@/navigation/route-tree";
 import { ForkView } from "@/upstream/mark";
 import {
@@ -37,9 +37,9 @@ export function MainRegion({ shell }: { shell: ShellLayout }) {
     >
       <ErrorBoundary region="this page" resetKey={pathname}>
         <ForkView>
-          <PageSuspense fallback={<Fallback />}>
+          <Suspense fallback={<Fallback />}>
             <PageRoutes />
-          </PageSuspense>
+          </Suspense>
         </ForkView>
       </ErrorBoundary>
       <MountedLiveViews front={liveView ?? null} />

@@ -15,7 +15,7 @@ This list holds only the items that the page's tests already named by ID, so it 
 | --- | --- | --- | --- | --- |
 | MLR-01 | Route | A Dispatch without the device grant shows the fork's not-found page | | |
 | MLR-02 | Route | A Dispatch with the device grant shows the machine login page | | |
-| MLR-03 | Route | A page skeleton after 200 ms while the capabilities answer is out | | |
+| MLR-03 | Route | One page skeleton after 200 ms while the capabilities answer or the page's code is out, held 300 ms once shown | changed | Upstream draws nothing while the answer is out, then the outlet's fallback while the page's code loads |
 | MLR-04 | Route | A failed capabilities read says so, and Retry asks again | | |
 | MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |

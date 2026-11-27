@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { type ReactNode, use } from "react";
-import { render, settle } from "../../tests/react";
+import { afterEach, describe, expect, jest, test } from "bun:test";
+import { lazy, type ReactNode, Suspense } from "react";
+import { changesOutsideAct, shows } from "../../tests/outside-act";
+import { render } from "../../tests/react";
 import { onFakeClock, tick } from "../../tests/upstream";
-import { PageFallback, PageSuspense, useSkeleton } from "./page-skeleton";
+import { PageFallback, useSkeleton } from "./page-skeleton";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -29,56 +30,25 @@ describe("PageFallback", () => {
     });
   });
 
-  test("SHL-43 a page whose code comes 50 ms after the skeleton showed waits until it has stood 300 ms", async () => {
-    await onFakeClock(async () => {
-      const code = Promise.withResolvers<void>();
-      function Page(): ReactNode {
-        use(code.promise);
-        return <h1>The page</h1>;
-      }
-      const view = await settle(async () =>
-        render(
-          <PageSuspense fallback={<PageFallback />}>
-            <Page />
-          </PageSuspense>
+  test("SHL-43 outside act, a page whose code comes at 100 ms shows no sooner than 300 ms, and no skeleton before 200 ms", async () => {
+    const Page = lazy(
+      () =>
+        new Promise<{ default: () => ReactNode }>((resolve) =>
+          setTimeout(() => resolve({ default: () => <h1>The page</h1> }), 100)
         )
-      );
-      cleanups.push(() => view.unmount());
-      await tick(250);
-      expect(skeletonOf(view.container)).not.toBeNull();
-      code.resolve();
-      await tick(200);
-      expect(skeletonOf(view.container)).not.toBeNull();
-      expect(view.container.querySelector("h1")).toBeNull();
-      await tick(100);
-      expect(skeletonOf(view.container)).toBeNull();
-      expect(view.container.querySelector("h1")?.textContent).toBe("The page");
-    });
-  });
-
-  test("SHL-43 a page whose code comes before 200 ms draws no skeleton", async () => {
-    await onFakeClock(async () => {
-      const code = Promise.withResolvers<void>();
-      function Page(): ReactNode {
-        use(code.promise);
-        return <h1>The page</h1>;
-      }
-      const view = await settle(async () =>
-        render(
-          <PageSuspense fallback={<PageFallback />}>
-            <Page />
-          </PageSuspense>
-        )
-      );
-      cleanups.push(() => view.unmount());
-      await tick(100);
-      code.resolve();
-      for (let step = 0; step < 6; step += 1) {
-        await tick(50);
-        expect(skeletonOf(view.container)).toBeNull();
-      }
-      expect(view.container.querySelector("h1")?.textContent).toBe("The page");
-    });
+    );
+    const changes = await changesOutsideAct(
+      <Suspense fallback={<PageFallback />}>
+        <Page />
+      </Suspense>,
+      (host) =>
+        shows(host, "h1") ? "page" : shows(host, '[role="status"]') ? "skeleton" : "blank",
+      { done: (state) => state === "page" }
+    );
+    const page = changes.find((change) => change.state === "page");
+    const skeleton = changes.find((change) => change.state === "skeleton");
+    expect(page?.at).toBeGreaterThanOrEqual(300);
+    expect(skeleton === undefined || skeleton.at >= 200).toBe(true);
   });
 });
 
@@ -121,6 +91,19 @@ describe("useSkeleton", () => {
       expect(view.container.textContent).toBe("skeleton");
       view.rerender(<Probe waiting={false} />);
       await tick(0);
+      expect(view.container.textContent).toBe("content");
+    });
+  });
+
+  test("a clock set back while a skeleton shows holds it no longer than 300 ms", async () => {
+    await onFakeClock(async () => {
+      const view = render(<Probe waiting />);
+      cleanups.push(() => view.unmount());
+      await tick(250);
+      expect(view.container.textContent).toBe("skeleton");
+      jest.setSystemTime(Date.now() - 60_000);
+      view.rerender(<Probe waiting={false} />);
+      await tick(300);
       expect(view.container.textContent).toBe("content");
     });
   });
