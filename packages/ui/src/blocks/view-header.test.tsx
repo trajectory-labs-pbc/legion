@@ -28,4 +28,22 @@ describe("ViewHeader", () => {
     const { container } = render(<ViewHeader count={0} title="Inbox" />);
     expect(container.querySelector("header")?.children).toHaveLength(1);
   });
+
+  it("draws no wrapper for a slot its caller sets to false", () => {
+    const { container } = render(<ViewHeader end={false} tabs={false} title="Inbox" />);
+    expect(container.querySelector("header")?.children).toHaveLength(1);
+  });
+
+  it("clips the tabs, so they never paint over the end controls", () => {
+    render(
+      <ViewHeader
+        end={<button type="button">Display</button>}
+        tabs={<a href="/x">Tab</a>}
+        title="Inbox"
+      />
+    );
+    expect(screen.getByRole("link", { name: "Tab" }).parentElement?.className).toContain(
+      "overflow-hidden"
+    );
+  });
 });

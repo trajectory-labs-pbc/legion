@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { isDrawn } from "#registry/legion/lib/utils";
 import { Count } from "#registry/legion/ui/count";
 import { SurfaceTitle } from "#registry/legion/ui/heading";
 
@@ -30,10 +31,10 @@ function ViewHeader({
         {title}
       </SurfaceTitle>
       {count === undefined ? null : <Count value={count} />}
-      {tabs === undefined ? null : <div className="flex min-w-0 items-center gap-1">{tabs}</div>}
-      {end === undefined ? null : (
-        <div className="ml-auto flex shrink-0 items-center gap-1">{end}</div>
-      )}
+      {isDrawn(tabs) ? (
+        <div className="flex min-w-0 items-center gap-1 overflow-hidden">{tabs}</div>
+      ) : null}
+      {isDrawn(end) ? <div className="ml-auto flex shrink-0 items-center gap-1">{end}</div> : null}
     </header>
   );
 }
