@@ -42,7 +42,9 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **ES3** An empty Inbox says the person is done ("You have no open asks") with no action. Check: reviewer.
 
-**ES4** While data loads, a list shows still skeleton rows at the row height, with no shimmer, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Check: reviewer.
+**ES4** While data loads, a list shows still skeleton rows at the row height, with no shimmer, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Once shown, it stays at least 300 ms, so it never flashes. Use `useSkeleton` and `PageSuspense` in `src/loading/page-skeleton.tsx`. Check: `page-skeleton.test.tsx` holds the delay and the hold on a fake clock; the machine logins test MLS-11 holds the list's skeleton rows.
+
+**ES5** On a filter, sort or search change, the rows stay until the new rows come; no skeleton shows. Put `placeholderData: keepPreviousData` only on query keys the fork owns, never on upstream's query options. Search waits about 250 ms after typing stops before it asks again. Linear: a filtered list keeps its rows while it loads. Pages: every list with a filter, a sort or a search. Check: (new) with the Inbox rebuild, the first fork list: with the server's answer held, a test changes the filter and finds the old rows and no skeleton.
 
 ## Toasts (TO)
 

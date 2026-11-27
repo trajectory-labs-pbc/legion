@@ -22,7 +22,7 @@ Linear publishes no pixel sizes for its app; a size here is this app's choice, a
 
 **LR2** An issue row shows, left to right: the selection box, the priority glyph, the key (`muted-foreground`, tabular figures), the status glyph, the title (`foreground`), then at the right labels, the project, the claim or assignee avatar, and the update time (`muted-foreground`). Other records keep this order: their state glyph, their id, their title, then their metadata at the right. Linear: the issue row. Pages: every list. Check: reviewer against the row's screenshot.
 
-**LR3** One highlight per list, shared by the pointer and the keyboard. `j` or `↓` and `k` or `↑` move it; the pointer moves it on hover. The highlighted row is `bg-secondary`. No row is highlighted when the list opens. Linear: list navigation. Check: (new) the shared list-keys test.
+**LR3** One highlight per list, shared by the pointer and the keyboard. `j` or `↓` and `k` or `↑` move it; the pointer moves it on hover. The highlighted row is `bg-secondary`. No row is highlighted when the list opens. The highlight follows the record id through a refetch, not the row's position. Linear: list navigation. Check: (new) the shared list-keys test; (new) with the Inbox rebuild, a refetch that adds a row above keeps the highlight on its record.
 
 **LR4** Enter or a click opens the highlighted record. `$mod`+click opens it in a new tab. The whole row is the link; a control inside the row (a status glyph, a checkbox) stops the click from reaching the row. Linear: the issue row. Check: (new) tests.
 
