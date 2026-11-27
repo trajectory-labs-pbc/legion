@@ -72,39 +72,22 @@ export interface DeployedSettings {
  *  stacks manifest's `DATABASE_URL`. */
 const DATABASE_VARIABLES = ["DATABASE_URL", stacksVariable] as const;
 
-interface Cookie {
-  name?: unknown;
-  domain?: unknown;
-  expires?: unknown;
-}
-
-/** Why the storage state signs nobody in at `baseURL`, or undefined when its session cookie does. */
-function sessionCookieProblem(file: string, baseURL: string): string | undefined {
+/**
+ * Why the storage state holds no session cookie, or undefined when it holds one. Whether the
+ * cookie signs someone in at the server is the whoami test's to find.
+ */
+function sessionCookieProblem(file: string): string | undefined {
   let cookies: unknown;
   try {
     cookies = (JSON.parse(readFileSync(file, "utf8")) as { cookies?: unknown } | null)?.cookies;
   } catch (error) {
     return `E2E_STORAGE_STATE (${file}) is not a storage state: ${String(error)}`;
   }
-  const host = new URL(baseURL).hostname;
-  // A cookie's domain covers that host and, written with a leading dot, its subdomains.
-  const covers = (domain: unknown) =>
-    typeof domain === "string" &&
-    (host === domain.replace(/^\./, "") || (domain.startsWith(".") && host.endsWith(domain)));
-  const session = (Array.isArray(cookies) ? (cookies as Cookie[]) : []).find(
-    (cookie) => cookie?.name === sessionCookieName && covers(cookie.domain)
-  );
-  if (session === undefined) {
-    return `E2E_STORAGE_STATE (${file}) holds no ${sessionCookieName} cookie for ${host}.`;
-  }
-  if (
-    typeof session.expires === "number" &&
-    session.expires !== -1 &&
-    session.expires * 1000 < Date.now()
-  ) {
-    return `E2E_STORAGE_STATE (${file}) holds a ${sessionCookieName} cookie that has expired.`;
-  }
-  return undefined;
+  const named = (cookie: unknown) =>
+    (cookie as { name?: unknown } | null)?.name === sessionCookieName;
+  return Array.isArray(cookies) && cookies.some(named)
+    ? undefined
+    : `E2E_STORAGE_STATE (${file}) holds no ${sessionCookieName} cookie.`;
 }
 
 /** The deployed mode's settings; throws, naming each problem, before any test runs. */
@@ -123,8 +106,8 @@ export function deployedSettings(env: NodeJS.ProcessEnv = process.env): Deployed
     problems.push(`E2E_PHASE is ${phase}, not one of ${Object.keys(PHASES).join(", ")}.`);
   }
   const storageState = env.E2E_STORAGE_STATE ?? "";
-  if (storageState !== "" && env.PLAYWRIGHT_BASE_URL) {
-    const problem = sessionCookieProblem(storageState, env.PLAYWRIGHT_BASE_URL);
+  if (storageState !== "") {
+    const problem = sessionCookieProblem(storageState);
     if (problem !== undefined) problems.push(problem);
   }
   if (problems.length > 0) {

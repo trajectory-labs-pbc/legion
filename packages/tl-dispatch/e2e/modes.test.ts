@@ -83,22 +83,12 @@ describe("the deployed mode", () => {
     }
   });
 
-  test("refuses a storage state that signs nobody in at the server", () => {
+  test("refuses a storage state with no session cookie", () => {
     const start = (state: string) => () =>
       deployedSettings(deployedEnv({ E2E_STORAGE_STATE: state }));
-    expect(start(stateFile([{ ...session, name: "other" }]))).toThrow(
-      "holds no dsession cookie for dispatch.example"
-    );
-    expect(start(stateFile([{ ...session, domain: "other.example" }]))).toThrow(
-      "holds no dsession cookie for dispatch.example"
-    );
-    expect(start(stateFile([{ ...session, expires: 1 }]))).toThrow("has expired");
+    expect(start(stateFile([{ ...session, name: "other" }]))).toThrow("holds no dsession cookie.");
+    expect(start(stateFile("{}"))).toThrow("holds no dsession cookie.");
     expect(start(stateFile("{"))).toThrow("is not a storage state");
-  });
-
-  test("takes a session cookie of a parent domain", () => {
-    const env = deployedEnv({ E2E_STORAGE_STATE: stateFile([{ ...session, domain: ".example" }]) });
-    expect(() => deployedSettings(env)).not.toThrow();
   });
 
   test("refuses a dev sign-in and a sign-out, and sends every other request", async () => {

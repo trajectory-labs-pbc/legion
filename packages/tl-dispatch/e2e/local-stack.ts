@@ -17,11 +17,6 @@ import { serveDist } from "./server";
 
 const LOGIN = "alice";
 
-async function answer(response: Response, what: string): Promise<Response> {
-  if (!response.ok) throw new Error(`${what}: ${response.status} ${await response.text()}`);
-  return response;
-}
-
 /** The storage state and the agent token of `LOGIN` at `base`. */
 async function credentials(base: string, dir: string): Promise<{ state: string; token: string }> {
   const signIn = await fetch(new URL(devSignInPath(LOGIN), base), { redirect: "manual" });
@@ -29,14 +24,14 @@ async function credentials(base: string, dir: string): Promise<{ state: string; 
   if (cookie === undefined) {
     throw new Error(`dev sign-in as ${LOGIN}: ${signIn.status}, and no session cookie`);
   }
-  const minted = await answer(
-    await fetch(new URL("/api/v1/me/agent-tokens", base), {
-      body: JSON.stringify({ name: "deployed-mode run", scopes: [] }),
-      headers: { "Content-Type": "application/json", Cookie: cookie, Origin: new URL(base).origin },
-      method: "POST",
-    }),
-    "minting an agent token"
-  );
+  const minted = await fetch(new URL("/api/v1/me/agent-tokens", base), {
+    body: JSON.stringify({ name: "deployed-mode run", scopes: [] }),
+    headers: { "Content-Type": "application/json", Cookie: cookie, Origin: new URL(base).origin },
+    method: "POST",
+  });
+  if (!minted.ok) {
+    throw new Error(`minting an agent token: ${minted.status} ${await minted.text()}`);
+  }
   const { token } = (await minted.json()) as { token: string };
   const equals = cookie.indexOf("=");
   const state = join(dir, "state.json");
