@@ -1,7 +1,7 @@
 // For each route of the route map (src/pages/index.ts), the address the route test opens and a
 // heading, a labelled region or a text that only that route's page shows. A route with no entry
-// here fails the test, and so does an entry for a route the map no longer has. Every route opens
-// in both modes.
+// here fails route-marks.test.ts, and so does an entry for a route the map no longer has. Every
+// route opens in both modes.
 //
 // The local mode seeds through upstream's api.ts and its fakes; the deployed mode seeds only
 // `as: "agent"` with E2E_AGENT_TOKEN, and reads the signed-in person with the storage state's

@@ -245,8 +245,8 @@ load no page module:
   upstream's default run does.
   `e2e/routes.e2e.ts` opens each route of the route map in both modes, and fails on a route
   whose mark, a heading, a labelled region or a text only that route's page shows, does not
-  show, on a console error, and on a route with no mark in `e2e/route-marks.ts`. That file's
-  header names what each mode seeds for each route, and the mark the deployed mode expects where
+  show, and on a console error. `e2e/route-marks.test.ts`, a unit test, fails on a route with
+  no mark in `e2e/route-marks.ts`, the file whose header names what each mode seeds for each route, and the mark the deployed mode expects where
   it seeds nothing.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev

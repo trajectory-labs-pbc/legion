@@ -20,7 +20,6 @@ import {
 } from "../../dispatch/e2e/api";
 import { seedFakeGithub } from "../../dispatch/e2e/fake-github-helpers";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
-import { forkRoutes } from "../tests/map/links";
 import { type Mark, routeMarks, type Seeded } from "./route-marks";
 import { deployed, expect, type Page, runName, test } from "./test";
 
@@ -164,15 +163,8 @@ interface Logged {
 }
 
 async function openEachRoute(page: Page, marks: ReturnType<typeof routeMarks>): Promise<void> {
-  const paths = forkRoutes().map((route) => route.path);
-  expect(
-    paths.filter((path) => !(path in marks)),
-    "routes with no mark in e2e/route-marks.ts"
-  ).toEqual([]);
-  expect(
-    Object.keys(marks).filter((path) => !paths.includes(path)),
-    "marks of routes the route map does not have"
-  ).toEqual([]);
+  // route-marks.test.ts holds these paths to the route map's.
+  const paths = Object.keys(marks);
 
   // The errors of the route open now.
   let errors: Logged[] = [];
