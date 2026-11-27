@@ -1,4 +1,4 @@
-# Records, status and inline editing
+# Records, status, inline editing and forms
 
 A record is an issue, a document, an agent, a priority, a machine or a broadcast.
 
@@ -43,3 +43,17 @@ A record is an issue, a document, an agent, a priority, a machine or a broadcast
 **IE4** A form with more than one field keeps an explicit submit: `$mod+Enter` submits it from any field, Escape closes it, and a form with changes asks first. A create form opens from the `?create=` URL key and shows its properties as a row of chips under the text fields, each opening the same picker as IE1. Linear: the create-issue form. Pages: create issue, new priority, settings sections. Check: (new) tests for `$mod+Enter` and a dirty Escape.
 
 **IE5** Every write of a record goes through `useWrite` in `src/data/write.ts`, which owns the write's optimistic value and its failure. The caller names each query the value stands in and how the value changes it, and writes no `onMutate`, no `onError` and no cache update of its own. The write first cancels the reads already out for those queries, then shows the new value. A read, a poll or a live event that comes while the write is out waits until the write ends, so none of them shows the old value. When the write ends, either way, those queries are read again, and after a failure so is one that no view reads, and one that held nothing before the write holds nothing again, unless a newer write changed it since: this brings back the server's value, not a saved copy, so it does not undo another write of the same record. A failure shows in one toast that says what failed and why, with Retry only when a second try can work: no Retry for a 403, a 404 or a conflict that only the reader can settle. A write the reader stopped says it may have been made, and its Retry makes the same press again. Undo shows only when the write and its inverse change that one record. Only a costly write that cannot be undone asks first, in an `AlertDialog` of the UI package, never in `confirm`. A read through `useRead` in `src/data/read.ts` refuses the same way: a 403 or a 404 has no Retry, and a 404 of the page's own record shows the not-found page. A read's 409 keeps its Retry, because the conflict rule is for writes. A view that mounts on a failed read, or moves to one, shows it loading while it is read again, and shows a failure only once it has seen one. Where a page's failed reads mix a refusal with a failure that can be tried again, the Retry stays. Check: `src/data/write.test.tsx` and `src/data/read.test.tsx`; the layering table lets only `src/data` and the composition root import the query library.
+
+## Forms (FM)
+
+**FM1** A dialog holds at most three fields. A longer form is a sheet. Pages: create issue, new priority, settings sections. Check: reviewer; (new) a test per multi-field form that counts its fields.
+
+**FM2** Every field has a label that names it (`Label` with `htmlFor`). A placeholder only shows the value's shape, such as `XXXX-XXXX`; it is never the label. Pages: machine login, every form. Check: the machine login tests find the code field by its label; the axe run in `packages/tl-dispatch/e2e/accessibility.e2e.ts`.
+
+**FM3** A server's field error shows under its field, and the field names it: `aria-describedby` points at the error, and `aria-invalid` is set when the server refused the value. A failure that says nothing of the value, such as a 5xx or a stopped send, leaves `aria-invalid` off. When the server refuses several fields, the first of them gets the focus. Pages: machine login, every form. Check: MLP-02 and MLP-05; (new) a 422 test per multi-field form that finds the focus on the first refused field.
+
+**FM4** During a submit the fields stay enabled. The pressed button shows that it is busy and keeps the focus. Another button that would write the same record waits until the write ends. Pages: machine login, every form. Check: MLP-08, MLP-09 and MLP-10.
+
+**FM5** A field's text is 14 px, and 16 px on a coarse pointer (`pointer-coarse:text-base`), so a phone does not zoom in on it. The pointer sets the size, never the width. Check: the `Input`, `Textarea` and `Combobox` tests in `packages/ui`.
+
+**FM6** A form's keys are IE4's: `$mod+Enter` submits, and Escape on a form with changes asks first. Check: IE4's.
