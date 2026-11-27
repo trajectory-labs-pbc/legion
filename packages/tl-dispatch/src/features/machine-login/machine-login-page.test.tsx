@@ -253,7 +253,23 @@ test("MLP-05 a lookup the reader stopped says it may have been made", async () =
         })
       )
     ).toBeDefined();
-    // MLP-11: the code field names the note, and a stopped lookup says nothing of the code.
+  } finally {
+    realClock();
+    cleanup();
+    queryClient.clear();
+    lookup.mockRestore();
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLP-11 the code field names a stopped lookup's note and stays valid", async () => {
+  jest.useFakeTimers();
+  const lookup = spyOn(api, "lookupMachineCredential").mockRejectedValue(dropped());
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    await stoppedPage(queryClient);
+    await stopTheLateWrite(queryClient);
     const field = screen.getByLabelText("Code shown on the machine");
     expect(field).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
     expect(field).not.toHaveAttribute("aria-invalid");
