@@ -226,7 +226,8 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  // The recipes own the wrap, the root the smoothing: no page's class or app stylesheet sets them.
+  // The recipes own the wrap, the root the smoothing: no class or app stylesheet under src/
+  // sets them.
   if ((fromClass && typeSet(property, value)) || /^text-wrap|font-smooth/.test(property)) {
     problems.push(RULES.type);
   }
