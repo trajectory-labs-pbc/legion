@@ -15,6 +15,30 @@
   }
 }
 
+/* A menu's entries share one height below 1280 px, where upstream floors a link at 44 px and
+   leaves every other entry as it is: under a mouse the link keeps the entry's own height, and
+   under a finger every entry takes the floor. */
+@media (max-width: 1279px) and (pointer: fine) {
+  [data-slot="dropdown-menu-content"] a[role="menuitem"] {
+    min-width: revert-layer;
+    min-height: revert-layer;
+  }
+}
+
+@media (max-width: 1279px) and (pointer: coarse) {
+  [data-slot="dropdown-menu-content"] [role="menuitem"] {
+    min-height: calc(var(--spacing) * 11);
+  }
+}
+
+/* Beside the sidebar, upstream's folded margin sheet starts at the sidebar's edge, so its bar
+   leaves the account at the sidebar's foot in view. Open, it is a dialog over the whole page. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  :root:has([data-testid="sidebar"]) [data-testid="margin-sheet"][data-expanded="false"] {
+    left: calc(var(--spacing) * 60);
+  }
+}
+
 /* Upstream's sticky margin sheet stays under the panel's top border, or its stuck top row. */
 @media (min-width: 80rem) {
   [data-testid="content-panel"] [data-testid="margin-sheet"] {

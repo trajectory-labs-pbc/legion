@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
-import { PACKAGE_ROOT, sourceFiles, UPSTREAM_WEB } from "./source";
+import { sourceFiles } from "./source";
+
+// The Inbox count's reads follow upstream's needs-you count: tests/map/copies.json pins
+// `useNeedsYouCount` and `useCredentialRequests`, so a change to either fails there.
 
 const scripts = sourceFiles().filter((file) => /\.[cm]?[jt]sx?$/.test(file.path));
 const naming = (pattern: RegExp) =>
@@ -16,27 +17,4 @@ test("only features/needs-you imports AttentionMark", () => {
 
 test("no script names the warning colour: the mark is the only way to draw it", () => {
   expect(naming(/\bwarning\b/i)).toEqual([]);
-});
-
-/** The queries and hooks `name`'s body in `file` calls, `useQuery` aside: the reads it makes. */
-function readsOf(file: string, name: string): string[] {
-  const text = readFileSync(file, "utf8");
-  const start = text.indexOf("{", text.indexOf(`export function ${name}(`));
-  const body = text.slice(start, text.indexOf("\n}\n", start));
-  return [...body.matchAll(/\b(\w+)\(/g)]
-    .map((call) => call[1] ?? "")
-    .filter((call) => call !== "useQuery" && (call.endsWith("Query") || call.startsWith("use")));
-}
-
-test("the Inbox count reads what upstream's needs-you count reads, so a new read fails here", () => {
-  expect(
-    readsOf(join(UPSTREAM_WEB, "features/inbox/BlockedOnYou.tsx"), "useNeedsYouCount")
-  ).toEqual(["inboxQuery", "whoAmIQuery", "useCredentialRequests"]);
-  expect(
-    readsOf(join(UPSTREAM_WEB, "features/credentials/pending.ts"), "useCredentialRequests")
-  ).toContain("credentialPendingQuery");
-  const ours = readsOf(join(PACKAGE_ROOT, "src/shell/inbox-count.ts"), "useInboxRowCount");
-  for (const read of ["inboxQuery", "whoAmIQuery", "credentialPendingQuery"]) {
-    expect(ours).toContain(read);
-  }
 });

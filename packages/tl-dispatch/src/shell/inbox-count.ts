@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { inboxQuery, myRepliesCountQuery, whoAmIQuery } from "@upstream-dispatch/api/queries";
 import { credentialPendingQuery } from "@upstream-dispatch/features/credentials/pending";
 import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
-import { useIsHuman } from "@upstream-dispatch/hooks/useIsHuman";
 import { needsYouLabel } from "@/features/needs-you";
 import { readFailureOf } from "@/features/read-failure";
 import type { RowCount } from "./row-count";
@@ -14,15 +13,18 @@ import type { RowCount } from "./row-count";
  * leaves another count in its place.
  */
 export function useInboxRowCount(): RowCount {
-  const human = useIsHuman();
   const inbox = useQuery(inboxQuery());
   const viewer = useQuery(whoAmIQuery());
+  const human = viewer.data?.kind === "user";
   const credentials = useQuery(credentialPendingQuery());
   const replies = useQuery({ ...myRepliesCountQuery(), enabled: human });
   const waiting = useNeedsYouCount();
   const reads = human ? [inbox, viewer, credentials, replies] : [inbox, viewer, credentials];
   if (reads.some((read) => read.data === undefined)) {
-    return { count: undefined, needsYou: true, fault: readFailureOf(...reads) };
+    // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
+    const retried =
+      credentials.data === null ? reads.filter((read) => read !== credentials) : reads;
+    return { count: undefined, needsYou: true, fault: readFailureOf(...retried) };
   }
   const unread = replies.data ?? 0;
   if (waiting > 0 || unread === 0) {

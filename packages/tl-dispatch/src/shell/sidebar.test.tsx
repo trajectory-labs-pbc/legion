@@ -3,13 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 
-import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
-import { render, settle, sleep } from "../../tests/react";
+import { render, settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
 import { Sidebar, SidebarView } from "./sidebar";
@@ -39,13 +38,13 @@ const user = { kind: "user", login: "reader" } as const satisfies Pick<
   "kind" | "login"
 >;
 
-function Commands({ enabled, onPeek }: { enabled: boolean; onPeek?: () => void }) {
+function Commands({ onPeek }: { onPeek?: () => void }) {
   const run = () => {};
   useGlobalCommands({
     openSearch: run,
     toggleShortcuts: run,
     createIssue: run,
-    goTo: enabled ? run : () => {},
+    goTo: run,
     openDocuments: undefined,
     openAnswers: run,
     openMachineLogins: run,
@@ -56,6 +55,9 @@ function Commands({ enabled, onPeek }: { enabled: boolean; onPeek?: () => void }
   });
   return null;
 }
+
+/** The shell reads the last `mount` with an `answer` was asked, in order. */
+let answered: string[] = [];
 
 function mount(
   path: string,
@@ -74,11 +76,11 @@ function mount(
   } = {}
 ) {
   if (answer === undefined) holdShellReads();
-  else answerShellReads(answer);
+  else answered = answerShellReads(answer).asked;
   const view = render(
     <QueryClientProvider client={client}>
       <MemoryNavigationProvider path={path}>
-        {commands ? <Commands enabled onPeek={onPeek} /> : null}
+        {commands ? <Commands onPeek={onPeek} /> : null}
         <Sidebar peek={peek} user={user as AuthenticatedUser} />
       </MemoryNavigationProvider>
     </QueryClientProvider>
@@ -88,32 +90,6 @@ function mount(
 }
 
 const PEEK = "Peek inbox";
-
-/** Moves a mouse onto `element`, or off it with `leave`. */
-function hover(element: Element, leave = false) {
-  settle(() => {
-    const [pointer, mouse] = leave
-      ? ["pointerleave", "mouseleave"]
-      : ["pointerenter", "mouseenter"];
-    element.dispatchEvent(new PointerEvent(pointer, { bubbles: true, pointerType: "mouse" }));
-    element.dispatchEvent(new MouseEvent(mouse, { bubbles: true }));
-    if (!leave) element.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-  });
-}
-
-/** The open tooltip's text and its key chips. */
-async function tooltipOf(element: Element) {
-  hover(element);
-  await sleep(700);
-  const popup = document.querySelector('[data-slot="tooltip-content"]');
-  const shown = {
-    side: popup?.getAttribute("data-side"),
-    text: popup?.textContent,
-    keys: [...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent),
-  };
-  hover(element, true);
-  return shown;
-}
 
 function rowsOf(container: HTMLElement) {
   return [...container.querySelectorAll("nav > ul > li > a")].map((row) => ({
@@ -168,7 +144,6 @@ describe("the sidebar", () => {
   });
 
   test("shows no key at rest: a row's G chord is in its tooltip", async () => {
-    await loadHotkeyTooltip();
     const container = mount("/");
     expect(container.querySelectorAll("kbd")).toHaveLength(0);
     const inboxRow = rowsOf(container)[0]?.row;
@@ -180,7 +155,6 @@ describe("the sidebar", () => {
   });
 
   test("Peek takes the Inbox count's box on the row's hover or focus, named with its key", async () => {
-    await loadHotkeyTooltip();
     const peeked: string[] = [];
     const container = mount("/agents", { onPeek: () => peeked.push("peek"), peek: true });
     const peek = container.querySelector<HTMLButtonElement>(`[aria-label="${PEEK}"]`);
@@ -432,20 +406,35 @@ describe("the sidebar", () => {
     expect(retry()).toBeUndefined();
   });
 
+  test("a failed agent state is one failure, on the Agents row: no pinned agents section for it", async () => {
+    const container = mount("/inbox", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) =>
+        url.endsWith("/api/v1/me/agents/state")
+          ? json({ error: { code: "INTERNAL" } }, 500)
+          : undefined,
+    });
+    const agentsRetry = '[aria-label="Could not load the Agents count. Retry"]';
+    await waitFor(() => container.querySelector(agentsRetry) !== null);
+    expect(container.querySelectorAll('[aria-label$=". Retry"], [role="alert"]')).toHaveLength(1);
+    expect(headingsOf(container)).not.toContain("Pinned agents");
+  });
+
   /** Mounts the sidebar on the inbox `inbox` answers and `unread` unread threads, once both are asked. */
   async function mountInbox(inbox: () => Response | undefined, unread: number, peek = false) {
-    const asked = new Set<string>();
-    const answer = inboxReads(inbox, unread);
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       onPeek: () => {},
       peek,
-      answer: (url) => {
-        if (url.endsWith("/api/v1/inbox") || url.includes("/api/v1/me/replies")) asked.add(url);
-        return answer(url);
-      },
+      answer: inboxReads(inbox, unread),
     });
-    await waitFor(() => asked.size === 2);
+    const counted = () =>
+      new Set(
+        answered.filter(
+          (url) => url.endsWith("/api/v1/inbox") || url.includes("/api/v1/me/replies")
+        )
+      );
+    await waitFor(() => counted().size === 2);
     await sleep(150);
     return container.querySelector('nav a[href="/"]');
   }
@@ -491,33 +480,54 @@ describe("the sidebar", () => {
     expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
   });
 
-  test("the Inbox count's Retry asks every read the count needs again", async () => {
-    const asked: string[] = [];
-    let failing = true;
-    const answer = inboxReads(
-      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
-      3
-    );
+  /** Mounts the sidebar on reads `answer` gives, once the Inbox count has failed. */
+  async function mountFailedInbox(answer: (url: string) => Response | undefined) {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-      answer: (url) => {
-        asked.push(url);
-        return answer(url);
-      },
+      answer,
     });
     const retry = () =>
       container
         .querySelector('nav a[href="/"]')
         ?.closest("li")
         ?.querySelector<HTMLButtonElement>(`[aria-label="${INBOX_RETRY}"]`) ?? undefined;
-    const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => retry() !== undefined);
-    asked.length = 0;
+    return { container, retry };
+  }
+
+  test("the Inbox count's Retry asks every read the count needs again", async () => {
+    let failing = true;
+    const { container, retry } = await mountFailedInbox(
+      inboxReads(
+        () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
+        3
+      )
+    );
+    const mark = () => container.querySelector('[data-slot="attention-mark"]');
+    answered.length = 0;
     failing = false;
     settle(() => retry()?.click());
     await waitFor(() => mark() !== null);
-    expect(unasked(asked)).toEqual([]);
+    expect(unasked(answered)).toEqual([]);
     expect(mark()?.getAttribute("aria-label")).toBe("Needs you: 2");
+  });
+
+  test("with no secrets broker, the Inbox count's Retry leaves the credential list unasked", async () => {
+    let failing = true;
+    const reads = inboxReads(
+      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
+      3
+    );
+    // A deployment with no broker answers the list with null, which upstream never asks again.
+    const { container, retry } = await mountFailedInbox((url) =>
+      url.includes("/api/v1/credential-requests") ? json(null) : reads(url)
+    );
+    const mark = () => container.querySelector('[data-slot="attention-mark"]');
+    answered.length = 0;
+    failing = false;
+    settle(() => retry()?.click());
+    await waitFor(() => mark() !== null);
+    expect(unasked(answered)).toEqual(["/api/v1/credential-requests"]);
   });
 
   test("counts at the row's edge: the needs-you mark on the Inbox alone, the rest muted", () => {

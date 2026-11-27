@@ -3,19 +3,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { act, type ReactNode } from "react";
 
-import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { GlobalCommands } from "../../tests/global-shell";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { NavigationPanel } from "./navigation-panel";
-import type { SignOut } from "./use-sign-out";
 
 const user = { kind: "user", login: "reader", event_head: "0" } as const;
 const cleanups: (() => void)[] = [];
 beforeAll(async () => {
-  await loadHotkeyTooltip();
   // The account's menu is its own chunk: draw it once, so each test starts with it in place.
   mount(panel({}));
   await shellChunksArrive();
@@ -53,15 +50,20 @@ async function openAccount(container: HTMLElement) {
   );
 }
 
-function panel(signOut: Partial<SignOut>, compact = false, onClose = () => {}) {
+/** The panel under every global command, which records its id in `fired` when it runs. */
+function panel(
+  { fired, pending = false }: { fired?: string[]; pending?: boolean },
+  compact = false,
+  onClose = () => {}
+) {
   return (
     <>
-      <GlobalCommands />
+      <GlobalCommands fired={fired} />
       <NavigationPanel
         closeButtonRef={{ current: null }}
         compact={compact}
         onClose={onClose}
-        signOut={{ start: () => {}, pending: false, error: undefined, ...signOut }}
+        signOut={{ pending }}
         user={user}
       />
     </>
@@ -69,15 +71,15 @@ function panel(signOut: Partial<SignOut>, compact = false, onClose = () => {}) {
 }
 
 describe("NavigationPanel", () => {
-  test("names the account, and its menu's Sign out runs the shell's sign-out", async () => {
-    let started = 0;
-    const container = mount(panel({ start: () => (started += 1) }));
+  test("names the account, and its menu's Sign out runs the palette's Sign out command", async () => {
+    const fired: string[] = [];
+    const container = mount(panel({ fired }));
     // Two steps: no Sign out on the panel itself, and opening the menu signs nobody out.
     expect(buttonNamed(container, "Sign out")).toBeUndefined();
     const signOut = await openAccount(container);
-    expect(started).toBe(0);
+    expect(fired).toEqual([]);
     settle(() => signOut?.click());
-    expect(started).toBe(1);
+    expect(fired).toEqual(["global.sign-out"]);
   });
 
   test("the account's menu opens the reader's own page", async () => {
@@ -89,23 +91,14 @@ describe("NavigationPanel", () => {
     expect(page?.getAttribute("href")).toBe("/people/reader");
   });
 
-  test("shows the shell's refusal with a Retry; both show they are busy while a sign-out is out", () => {
-    let started = 0;
-    const start = () => (started += 1);
-    const error = "The sign-out did not go through.";
-    const idle = mount(panel({ error, start }));
-    expect(idle.querySelector('[role="alert"]')?.textContent).toContain("did not go through");
-    settle(() => buttonNamed(idle, "Retry")?.click());
-    expect(started).toBe(1);
+  test("while a sign-out is out, the account shows it is busy", () => {
+    const idle = mount(panel({}));
+    expect(buttonNamed(idle, ACCOUNT)?.hasAttribute("aria-busy")).toBe(false);
     // One panel at a time: each mounts the global commands.
     for (const cleanup of cleanups.splice(0)) cleanup();
 
-    const busy = mount(panel({ error, pending: true, start }));
-    for (const name of [ACCOUNT, "Retry"]) {
-      expect(buttonNamed(busy, name)?.getAttribute("aria-busy")).toBe("true");
-    }
-    settle(() => buttonNamed(busy, "Retry")?.click());
-    expect(started).toBe(1);
+    const busy = mount(panel({ pending: true }));
+    expect(buttonNamed(busy, ACCOUNT)?.getAttribute("aria-busy")).toBe("true");
   });
 
   test("while a sign-out is out, the account's menu does not open", async () => {

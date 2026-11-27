@@ -16,15 +16,13 @@ function Kbd({ className, ...props }: ComponentProps<"kbd">) {
   );
 }
 
-/** A key in steps, one cap per key: a combination's caps sit together (`[["⌘", "K"]]`), and a
- *  sequence puts a muted "then" between its steps (`[["G"], ["I"]]`). */
-function KbdSequence({
-  className,
-  steps,
-}: {
-  className?: string;
-  steps: readonly (readonly string[])[];
-}) {
+/** A key's caps by step, one cap per key: `[["⌘", "K"]]` for a combination, `[["G"], ["I"]]`
+ *  for a sequence. */
+type KeySteps = readonly (readonly string[])[];
+
+/** A key in steps: a combination's caps sit together, and a sequence puts a muted "then" between
+ *  its steps. */
+function KbdSequence({ className, steps }: { className?: string; steps: KeySteps }) {
   if (steps.length === 0) return null;
   return (
     <span data-slot="kbd-sequence" className={cn("inline-flex items-center gap-0.5", className)}>
@@ -46,4 +44,4 @@ function KbdSequence({
   );
 }
 
-export { Kbd, KbdSequence };
+export { Kbd, KbdSequence, type KeySteps };

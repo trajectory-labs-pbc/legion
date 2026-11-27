@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, json, waitFor } from "../../tests/network";
-import { render, settle, sleep } from "../../tests/react";
+import { render, settle, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
 const PEEK = "Peek inbox";
@@ -16,12 +15,15 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
+/** The shell reads the last `mount` was asked, in order. */
+let answered: string[] = [];
+
 function mount(
   children: ReactNode,
   answer: (url: string) => Response | undefined = () => undefined,
   client = new QueryClient()
 ) {
-  answerShellReads(answer);
+  answered = answerShellReads(answer).asked;
   const view = render(
     <QueryClientProvider client={client}>
       <MemoryNavigationProvider path="/agents">
@@ -67,7 +69,6 @@ describe("CompactHeader", () => {
   });
 
   test("Peek has the catalog's one name and its own icon, and its tooltip shows the name with its key", async () => {
-    await loadHotkeyTooltip();
     const away = mount(
       <CompactHeader navigationOpen={false} onInbox={false} onOpenNavigation={() => {}} />
     );
@@ -75,21 +76,9 @@ describe("CompactHeader", () => {
     if (peek === null) throw new Error("no Peek");
     expect(peek.textContent).toBe("");
     expect(peek.querySelector("svg")?.getAttribute("class")).toContain("lucide-eye");
-    settle(() => {
-      peek.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" }));
-      peek.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-      peek.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-    await sleep(700);
-    const popup = document.querySelector('[data-slot="tooltip-content"]');
-    expect(popup?.textContent).toStartWith(PEEK);
-    expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
-      "I",
-    ]);
-    settle(() => {
-      peek.dispatchEvent(new PointerEvent("pointerleave", { bubbles: true, pointerType: "mouse" }));
-      peek.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
-    });
+    const tooltip = await tooltipOf(peek);
+    expect(tooltip.text).toStartWith(PEEK);
+    expect(tooltip.keys).toEqual(["I"]);
   });
 
   test("the Inbox counts what waits on the reader in the mark; unread agents are muted", async () => {
@@ -121,21 +110,15 @@ describe("CompactHeader", () => {
     await waitFor(() => count() !== null);
     expect(count()?.textContent).toBe("3");
     expect(header.querySelector('[data-slot="attention-mark"]')).toBeNull();
+    // The row names its count on hover, as the Agents row does.
+    expect(count()?.closest("a")?.getAttribute("title")).toBe("3 unread threads");
   });
 
   test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {
-    const asked: string[] = [];
     let failing = true;
-    const answer = inboxReads(
-      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json([])),
-      3
-    );
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      (url) => {
-        asked.push(url);
-        return answer(url);
-      },
+      inboxReads(() => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json([])), 3),
       new QueryClient({ defaultOptions: { queries: { retry: false } } })
     );
     const retry = () =>
@@ -146,11 +129,11 @@ describe("CompactHeader", () => {
     // The 44 px bar has no room for the sentence: it takes the line below.
     expect(header.querySelector("header")?.textContent).not.toContain("Could not load");
     expect(count()).toBeNull();
-    asked.length = 0;
+    answered.length = 0;
     failing = false;
     settle(() => retry()?.click());
     await waitFor(() => count() !== null);
-    expect(unasked(asked)).toEqual([]);
+    expect(unasked(answered)).toEqual([]);
     expect(count()?.textContent).toBe("3");
   });
 

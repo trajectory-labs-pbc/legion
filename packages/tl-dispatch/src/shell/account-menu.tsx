@@ -6,26 +6,28 @@ import {
   DropdownMenuTrigger,
 } from "@legion/ui/components/dropdown-menu";
 import { textVariants } from "@legion/ui/lib/typography";
-import { ChevronsUpDownIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { ChevronsUpDownIcon, UserIcon } from "lucide-react";
+import { commandStore } from "@/commands/command-store";
+import { useCommand } from "@/commands/use-command";
 import { PageLink } from "@/navigation/page-link";
 import { people } from "@/pages/people";
 
 /** The account's button and menu: the reader's own page, and Sign out. Sign out sits in the menu:
- *  two deliberate steps, never one stray click. Its own chunk: the menu's popup code is not needed
- *  for first paint. */
+ *  two deliberate steps, never one stray click; it is the palette's Sign out command, run as the
+ *  palette runs it. Its own chunk: the menu's popup code is not needed for first paint. */
 export function AccountMenu({
   login,
   onNavigate,
-  onSignOut,
   pending,
 }: {
   login: string;
   /** Called when the reader opens their page, so a drawer closes. */
   onNavigate?: () => void;
-  onSignOut: () => void;
   /** A sign-out is under way. */
   pending: boolean;
 }) {
+  const signOut = useCommand("global.sign-out");
+  const SignOutIcon = signOut?.command.icon;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -52,10 +54,15 @@ export function AccountMenu({
           <UserIcon aria-hidden />
           Your page
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onSignOut}>
-          <LogOutIcon aria-hidden />
-          Sign out
-        </DropdownMenuItem>
+        {signOut === undefined ? null : (
+          <DropdownMenuItem
+            disabled={!signOut.enabled}
+            onClick={() => commandStore.run("global.sign-out")}
+          >
+            {SignOutIcon === undefined ? null : <SignOutIcon aria-hidden />}
+            {signOut.label}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

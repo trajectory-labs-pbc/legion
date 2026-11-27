@@ -1,9 +1,10 @@
+import type { KeySteps } from "@legion/ui/components/kbd";
 import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
 
 import { keySteps, splitStep } from "./keys";
 
-/** A key's caps by step, one cap per key: `[["⌘", "K"]]` for a press, `[["G"], ["I"]]` for a chord. */
-export type ShortcutChips = readonly (readonly string[])[];
+/** A key's caps by step, as the UI package draws them. */
+export type ShortcutChips = KeySteps;
 
 /** The platform the key engine matches `$mod` for, so the chips and the engine agree. */
 export const IS_MAC = MOD_KEY_LABEL === "⌘";

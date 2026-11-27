@@ -1,4 +1,3 @@
-import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
 import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import type { RefObject } from "react";
@@ -20,8 +19,8 @@ export function NavigationPanel({
   /** Drawn in a drawer, which a Close button ends. */
   compact: boolean;
   onClose: () => void;
-  /** Held by the shell, so a refusal outlives the narrow screen's menu. */
-  signOut: Pick<SignOut, "start" | "pending" | "error">;
+  /** Held by the shell; its refusal shows in the status corner, which outlives the panel. */
+  signOut: Pick<SignOut, "pending">;
   user: AuthenticatedUser;
 }) {
   return (
@@ -61,26 +60,15 @@ export function NavigationPanel({
         )}
       </div>
       <Sidebar onNavigate={compact ? onClose : undefined} peek={!compact} user={user} />
-      <div className="mt-auto flex flex-col gap-1 pt-4">
+      <div className="mt-auto pt-4">
         {/* The row keeps its height while the menu's code loads. */}
         <div className="min-h-control-sm">
           <AccountMenu
             login={user.login}
             onNavigate={compact ? onClose : undefined}
-            onSignOut={signOut.start}
             pending={signOut.pending}
           />
         </div>
-        {signOut.error === undefined ? null : (
-          <Alert size="compact" variant="danger">
-            <AlertTitle>{signOut.error}</AlertTitle>
-            <AlertAction>
-              <Button loading={signOut.pending} onClick={signOut.start} size="xs" variant="outline">
-                Retry
-              </Button>
-            </AlertAction>
-          </Alert>
-        )}
       </div>
     </>
   );

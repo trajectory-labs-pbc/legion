@@ -87,6 +87,11 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="text-[length:var(--size)]">', "raw size, weight"],
   ["tsx", '<p className="text-[calc(1rem+1px)]">', "raw size, weight"],
   ["tsx", '<p className="font-(weight:--weight)">', "raw size, weight"],
+  ["tsx", '<p className="[font-size:13px]">', "raw size, weight"],
+  ["tsx", '<p className="md:[font-weight:550]">', "raw size, weight"],
+  ["tsx", '<p className="[line-height:2]">', "raw size, weight"],
+  ["tsx", '<p className="[letter-spacing:.1em]">', "raw size, weight"],
+  ["tsx", '<p className="[text-transform:uppercase]">', "raw size, weight"],
   ["jsx", '<p className="text-sky-700">', "raw colour"],
   ["css", ".x { color: #123456; }", "raw colour"],
   ["css", ".x { color: rebeccapurple; }", "raw colour"],
@@ -124,6 +129,8 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { animation: spin 1s; } }"],
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
+  // A stylesheet answers upstream's markup, so it may set type; a class may not.
+  ["css", ".x { font-size: 13px; font-weight: 500; }"],
 ];
 
 const controlPath = (index: number, extension: string) =>

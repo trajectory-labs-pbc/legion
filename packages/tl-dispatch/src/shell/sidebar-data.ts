@@ -133,18 +133,25 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"
-    ).map((destination) => ({
-      name: destination.name,
-      label: destination.label,
-      icon: destination.icon,
-      page: NAV_PAGES[destination.name],
-      current: pathUnder(NAV_PAGES[destination.name].path, pathname),
-      count: counts[destination.name],
-    })),
-    pinnedAgents: sectionOf(pinnedAgents, (agent) => ({
-      ...agent,
-      selected: agent.sessionId === open.liveView,
-    })),
+    ).map(({ name, label, icon }) => {
+      const page = NAV_PAGES[name];
+      return {
+        name,
+        label,
+        icon,
+        page,
+        current: pathUnder(page.path, pathname),
+        count: counts[name],
+      };
+    }),
+    pinnedAgents: {
+      rows: pinnedAgents.data?.map((agent) => ({
+        ...agent,
+        selected: agent.sessionId === open.liveView,
+      })),
+      // The Agents row reads the same state, and its count's Retry is the one that reports it.
+      fault: undefined,
+    },
     inLiveView: open.liveView !== undefined,
     pinnedIssues: sectionOf(pinnedIssues, (pinned) => ({
       key: pinned.key,

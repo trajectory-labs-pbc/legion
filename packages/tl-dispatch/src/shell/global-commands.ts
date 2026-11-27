@@ -1,6 +1,6 @@
 import { type CommandState, defineActions } from "@/commands/actions";
 import { appCatalog } from "@/commands/app-catalog";
-import type { NavName } from "@/commands/nav";
+import { type NavName, navActions } from "@/commands/nav";
 import { useRegisterCommands } from "@/commands/use-register-commands";
 
 /** What the shell's global commands do here; an absent action shuts its command's gate. */
@@ -32,13 +32,7 @@ const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalAct
   search: { run: actions.openSearch },
   help: { run: actions.toggleShortcuts },
   create: { run: actions.createIssue },
-  "go-inbox": { run: () => actions.goTo("inbox") },
-  "go-agents": { run: () => actions.goTo("agents") },
-  "go-priorities": { run: () => actions.goTo("priorities") },
-  "go-delivery": { run: () => actions.goTo("delivery") },
-  "go-pipeline": { run: () => actions.goTo("pipeline") },
-  "go-machines": { run: () => actions.goTo("machines") },
-  "go-settings": { run: () => actions.goTo("settings") },
+  ...navActions(actions.goTo),
   "go-documents": off(actions.openDocuments),
   "go-project": { run: actions.openSearch },
   "go-answered": { run: actions.openAnswers },

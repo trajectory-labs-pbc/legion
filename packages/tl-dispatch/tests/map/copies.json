@@ -462,6 +462,20 @@
     "sha256": "0ee3aa5cad6b6d25af2c57c3ce8d3b0a8d436a154d6f744363ea6a482221bd78"
   },
   {
+    "file": "packages/dispatch/web/src/features/credentials/pending.ts",
+    "part": "useCredentialRequests",
+    "copy": "src/shell/inbox-count.ts",
+    "commit": "d317f2181ba777fbfc136d441c06ab6ccb9a3806",
+    "sha256": "e98c84ce3987cb21a5abcd2408b81ff0e979d5961914a4d17c2ff774b4e4c0e9"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/inbox/BlockedOnYou.tsx",
+    "part": "useNeedsYouCount",
+    "copy": "src/shell/inbox-count.ts",
+    "commit": "46d9b0b1228fbf1ac4ecf6a45300f93a5cf33966",
+    "sha256": "e4f1998d9e34ea4f3ea86ba03fe37bd3876a131d72ea1c5923ddcad1e320208b"
+  },
+  {
     "file": "packages/dispatch/web/src/features/shell/NotFoundPage.tsx",
     "part": "*",
     "copy": "src/pages/not-found/not-found.tsx",

@@ -192,3 +192,92 @@ test("the folded margin's rail sits on the canvas, not in upstream's dark naviga
   expect(draw(false)).toEqual(["rgb(2, 6, 23)", "rgb(241, 245, 249)"]);
   expect(draw(true)).toEqual(["rgb(250, 249, 247)", "rgb(93, 92, 89)"]);
 });
+
+const browser = (window as unknown as { happyDOM: { setViewport(size: { width: number }): void } })
+  .happyDOM;
+
+/** Loads `css` at `width`, and puts the width and the document back after the test. */
+function sheetAt(width: number, css: string) {
+  const before = window.innerWidth;
+  browser.setViewport({ width });
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.append(style);
+  const parts: HTMLElement[] = [];
+  cleanups.push(() => {
+    for (const part of parts) part.remove();
+    style.remove();
+    browser.setViewport({ width: before });
+  });
+  const add = (
+    tag: string,
+    attributes: Record<string, string>,
+    parent: HTMLElement = document.body
+  ) => {
+    const part = document.createElement(tag);
+    for (const [name, value] of Object.entries(attributes)) part.setAttribute(name, value);
+    parent.append(part);
+    if (parent === document.body) parts.push(part);
+    return part;
+  };
+  return add;
+}
+
+describe("the folded margin sheet beside the sidebar", () => {
+  /** Where the sheet's left edge is at `width`, with the sidebar drawn or not. */
+  const leftOf = (width: number, { sidebar = true, expanded = false } = {}) => {
+    const add = sheetAt(width, `:root { --spacing: 0.25rem; }\n${FRAME_CSS}`);
+    if (sidebar) add("nav", { "data-testid": "sidebar" });
+    const sheet = add("aside", {
+      "data-testid": "margin-sheet",
+      "data-expanded": String(expanded),
+    });
+    return getComputedStyle(sheet).left;
+  };
+
+  test("from 768 to 1279 px it starts at the sidebar's edge, so the account at its foot stays in view", () => {
+    // The sidebar is `w-60`: 240 px on the 4 px spacing.
+    for (const width of [768, 1024, 1279]) {
+      expect(px(leftOf(width), {})).toBe(240);
+    }
+  });
+
+  test("control: it keeps upstream's place with no sidebar, open as a dialog, or as a column from 1280 px", () => {
+    expect(leftOf(1024, { sidebar: false })).toBe("");
+    expect(leftOf(1024, { expanded: true })).toBe("");
+    expect(leftOf(1280)).toBe("");
+    expect(leftOf(767)).toBe("");
+  });
+});
+
+describe("a menu's entries below 1280 px", () => {
+  /** Upstream's floor below 1280 px, from its stylesheet, which loads no further here. */
+  const FLOOR = "@media (max-width: 1279px) { a:not(.prose a) { min-height: 44px; } }";
+
+  const entries = (frame: boolean) => {
+    const add = sheetAt(1024, frame ? `${FLOOR}\n${FRAME_CSS}` : FLOOR);
+    const menu = add("div", { "data-slot": "dropdown-menu-content" });
+    return add("a", { role: "menuitem" }, menu);
+  };
+
+  test("under a mouse a link keeps the entry's own height, as Sign out beside it does", () => {
+    expect(getComputedStyle(entries(true)).minHeight).not.toBe("44px");
+  });
+
+  test("control: without frame.css upstream's floor makes the link taller than its neighbours", () => {
+    expect(getComputedStyle(entries(false)).minHeight).toBe("44px");
+  });
+
+  test("under a finger every entry takes the 44 px floor", () => {
+    // happy-dom has a mouse alone, so the finger's rule is read rather than drawn.
+    const floors = parseCss(FRAME_CSS).declarations.filter(
+      (declaration) =>
+        declaration.property === "min-height" &&
+        declaration.context.some((prelude) => prelude.includes("pointer: coarse"))
+    );
+    expect(floors.map((floor) => floor.context.at(-1))).toEqual([
+      '[data-slot="dropdown-menu-content"] [role="menuitem"]',
+    ]);
+    expect(px(floors[0]?.value, { spacing: 4 })).toBe(44);
+  });
+});

@@ -31,7 +31,7 @@ export function inboxReads(inbox: () => Response | undefined, unread: number) {
 }
 
 /** The reads the Inbox count needs, as their addresses start. */
-export const INBOX_COUNT_READS = [
+const INBOX_COUNT_READS = [
   "/auth/whoami",
   "/api/v1/inbox",
   "/api/v1/credential-requests",

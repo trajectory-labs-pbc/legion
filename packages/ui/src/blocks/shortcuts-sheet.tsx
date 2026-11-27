@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { textVariants } from "#registry/legion/lib/typography";
 import { Heading } from "#registry/legion/ui/heading";
 import { Input } from "#registry/legion/ui/input";
-import { KbdSequence } from "#registry/legion/ui/kbd";
+import { KbdSequence, type KeySteps } from "#registry/legion/ui/kbd";
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,7 @@ import {
 interface ShortcutRow {
   id: string;
   label: string;
-  keys: readonly (readonly (readonly string[])[])[];
+  keys: readonly KeySteps[];
 }
 
 interface ShortcutSection {

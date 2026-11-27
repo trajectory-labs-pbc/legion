@@ -2,7 +2,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cn } from "cn";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import { highlightClass, popupMotion } from "#registry/legion/lib/overlay-styles";
-import { KbdSequence } from "#registry/legion/ui/kbd";
+import { KbdSequence, type KeySteps } from "#registry/legion/ui/kbd";
 import { useIsInsideModalSurface } from "#registry/legion/ui/modal-surface-context";
 
 function DropdownMenu<Payload = unknown>({ modal, ...props }: MenuPrimitive.Root.Props<Payload>) {
@@ -170,13 +170,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 }
 
 /** A menu row's key at its right, drawn as the app draws every key. */
-function DropdownMenuShortcut({
-  className,
-  steps,
-}: {
-  className?: string;
-  steps: readonly (readonly string[])[];
-}) {
+function DropdownMenuShortcut({ className, steps }: { className?: string; steps: KeySteps }) {
   return <KbdSequence className={cn("ml-auto", className)} steps={steps} />;
 }
 

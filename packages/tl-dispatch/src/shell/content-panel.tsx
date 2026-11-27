@@ -21,7 +21,11 @@ function useStuck(
       { rootMargin: `${-line}px 0px 0px 0px` }
     );
     observer.observe(at);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      // A row drawn again starts at rest, not stuck as it last was.
+      setStuck(false);
+    };
   }, [mark, row, on]);
   return on && stuck;
 }
@@ -52,6 +56,8 @@ export function ContentPanel({
   const stuck = useStuck(mark, row, sidebarFolded && !issueFrame);
   return (
     <div
+      // The issue frame keeps both boxes, drawn as their contents, so main and the margin stay
+      // mounted when the reader switches it on or off.
       className={
         issueFrame
           ? "contents"
@@ -65,23 +71,25 @@ export function ContentPanel({
       }
       data-testid={issueFrame ? undefined : "content-panel"}
     >
-      {sidebarFolded && !issueFrame ? <div aria-hidden ref={mark} /> : null}
       {sidebarFolded && !issueFrame ? (
-        // A sticky row for Show sidebar. Its strip is drawn only while it is stuck.
-        <div
-          className="sticky top-(--panel-inset) z-10 flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg md:data-stuck:rounded-t-none before:absolute before:-inset-x-(--border-width) before:bottom-full before:hidden before:h-(--panel-inset) before:border-b before:border-border before:bg-background data-stuck:before:block"
-          data-stuck={stuck || undefined}
-          data-testid="panel-header"
-          ref={row}
-        >
-          <CommandButton
-            commandId="global.toggle-sidebar"
-            label="Show sidebar"
-            ref={openerRef}
-            size="icon-sm"
-            tooltipSide="bottom"
-          />
-        </div>
+        <>
+          <div aria-hidden ref={mark} />
+          {/* A sticky row for Show sidebar. Its strip is drawn only while it is stuck. */}
+          <div
+            className="sticky top-(--panel-inset) z-10 flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg md:data-stuck:rounded-t-none before:absolute before:-inset-x-(--border-width) before:bottom-full before:hidden before:h-(--panel-inset) before:border-b before:border-border before:bg-background data-stuck:before:block"
+            data-stuck={stuck || undefined}
+            data-testid="panel-header"
+            ref={row}
+          >
+            <CommandButton
+              commandId="global.toggle-sidebar"
+              label="Show sidebar"
+              ref={openerRef}
+              size="icon-sm"
+              tooltipSide="bottom"
+            />
+          </div>
+        </>
       ) : null}
       <div
         className={

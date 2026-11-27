@@ -34,9 +34,10 @@ export function CompactHeader({
           aria-current={onInbox ? "page" : undefined}
           className="shrink-0"
           render={<PageLink page={inbox.routes.home} />}
+          title={inboxCount.label}
         >
           Inbox
-          <RowCountMark count={inboxCount} title={inboxCount.label} />
+          <RowCountMark count={inboxCount} />
         </NavRow>
         {(agentsCount.count ?? 0) === 0 ? null : (
           <NavRow

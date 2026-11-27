@@ -44,7 +44,7 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
       openShortcuts={overlays.openShortcuts}
     >
       <ShellFrame fillsViewport={shell.fillsViewport}>
-        <StatusCorner />
+        <StatusCorner signOut={signOut} />
         {shell.compact && !shell.issueFrame ? (
           <CompactHeader
             navigationOpen={overlays.navigationOpen}

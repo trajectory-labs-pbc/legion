@@ -1,15 +1,13 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { appKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
-
-import { act } from "react";
 
 import { press as pressOn } from "../../tests/keymap";
 import { mount } from "../../tests/mount";
-import { settle } from "../../tests/react";
+import { hoverTooltip, settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { appCatalog } from "./app-catalog";
 import { CommandButton, commandButtonVariant } from "./command-button";
-import { HotkeyTooltip, loadHotkeyTooltip } from "./hotkey-tooltip";
+import { HotkeyTooltip } from "./hotkey-tooltip";
 import { useCommandShortcut } from "./use-command";
 import { useRegisterCommands } from "./use-register-commands";
 
@@ -20,9 +18,6 @@ function Shell({ fired, enabled = true }: { fired: string[]; enabled?: boolean }
   useRegisterCommands(appCatalog, "global", globalSpecs(fired, enabled));
   return null;
 }
-
-// The tooltip's code is its own chunk; the shell loads it after the first paint.
-beforeAll(() => loadHotkeyTooltip());
 
 const press = (key: string) => pressOn(appKeymap, key);
 
@@ -166,16 +161,7 @@ describe("HotkeyTooltip", () => {
     );
     const trigger = button(container);
     if (trigger === null) throw new Error("no button");
-    settle(() => {
-      trigger.dispatchEvent(
-        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
-      );
-      trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-      trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-    await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
-    settle(() => {});
-    const popup = document.querySelector('[data-slot="tooltip-content"]');
+    const popup = await hoverTooltip(trigger);
     expect(popup?.textContent).toBe("Create issueC");
     expect([...(popup?.querySelectorAll("kbd") ?? [])].map((kbd) => kbd.textContent)).toEqual([
       "C",
@@ -194,16 +180,7 @@ describe("HotkeyTooltip", () => {
     );
     const trigger = button(container);
     if (trigger === null) throw new Error("no button");
-    settle(() => {
-      trigger.dispatchEvent(
-        new PointerEvent("pointerenter", { bubbles: true, pointerType: "mouse" })
-      );
-      trigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-      trigger.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-    await act(() => new Promise((resolve) => setTimeout(resolve, 700)));
-    settle(() => {});
-    const keys = document.querySelector('[data-slot="tooltip-content"] [data-slot="kbd-sequence"]');
+    const keys = (await hoverTooltip(trigger))?.querySelector('[data-slot="kbd-sequence"]');
     expect(keys?.querySelectorAll("kbd")).toHaveLength(2);
     expect([...(keys?.children ?? [])].map((part) => part.tagName === "KBD")).toEqual(
       then ? [true, false, true] : [true, true]

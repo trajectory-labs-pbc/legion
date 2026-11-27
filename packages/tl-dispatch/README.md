@@ -168,15 +168,6 @@ then, a swap means running both routers.
   `connection-error-page.tsx`, or the shell for the person signed in.
 - `page-fallbacks.tsx`: what main shows while a page's code loads.
 
-## Image
-
-- `docker/`: `Dockerfile` builds the fork's envoy image, upstream's with this app added at
-  `/srv/tl-dispatch`, and `envoy-dispatch.sh` stops the server from starting on a web folder
-  with no build.
-- `DISPATCH_WEB_DIST` names the build the server serves: `/srv/dispatch-web` (upstream's, the
-  image's default) or `/srv/tl-dispatch`. Both are in every image, so a rollback sets it back to
-  `/srv/dispatch-web`.
-
 ## Install
 
 The app is outside the root workspaces. It takes React and the other libraries upstream's web app

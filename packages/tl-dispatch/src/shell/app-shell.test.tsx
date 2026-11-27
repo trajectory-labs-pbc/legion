@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { KeymapProvider } from "@upstream-dispatch/features/shell/KeymapProvider";
 import { http } from "msw";
-import { act } from "react";
 
+import { commandStore } from "@/commands/command-store";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdShellReads } from "../../tests/network";
-import { render, settle } from "../../tests/react";
+import { render, settle, sleep } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { AppShell } from "./app-shell";
 
@@ -57,7 +57,7 @@ async function mount(path = "/no-such-page") {
 /** Waits, a step at a time, for the menu's sheet, whose code loads when it first opens. */
 async function until(done: () => boolean) {
   for (let tries = 0; tries < 40 && !done(); tries += 1) {
-    await act(() => new Promise((resolve) => setTimeout(resolve, 25)));
+    await sleep(25);
   }
 }
 
@@ -85,7 +85,7 @@ describe("AppShell", () => {
     const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
     // The sign-out first waits for the other tabs' answers.
     for (let tries = 0; tries < 40 && alert() === ""; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+      await sleep(50);
     }
     expect(alert()).toContain("did not go through");
     click("Close navigation");
@@ -93,6 +93,19 @@ describe("AppShell", () => {
     settle(() => menuButton(document.body)?.click());
     await until(() => button(account) !== undefined);
     expect(alert()).toContain("did not go through");
+  });
+
+  test("a refused sign-out from the palette says so, with a Retry, while the sidebar is folded away", async () => {
+    viewport(1024);
+    const view = await mount();
+    settle(() => commandStore.run("global.toggle-sidebar"));
+    expect(view.container.querySelector('[data-testid="sidebar"]')).toBeNull();
+    settle(() => commandStore.run("global.sign-out"));
+    const alert = () => document.body.querySelector('[role="alert"]');
+    // The sign-out first waits for the other tabs' answers.
+    await until(() => alert() !== null);
+    expect(alert()?.textContent).toContain("did not go through");
+    expect(alert()?.querySelector("button")?.textContent).toBe("Retry");
   });
 
   test("? anywhere on the shell opens the shortcuts sheet, whose code loads then", async () => {
@@ -104,11 +117,11 @@ describe("AppShell", () => {
     });
     const sheet = () => document.body.querySelector('[data-slot="sheet-content"]');
     for (let tries = 0; tries < 20 && sheet() === null; tries += 1) {
-      await act(() => new Promise((resolve) => setTimeout(resolve, 10)));
+      await sleep(10);
     }
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
     // The sheet takes the focus a moment after it opens.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    await sleep(50);
   });
 
   const foldKeys = [
@@ -180,7 +193,7 @@ describe("AppShell", () => {
     settle(() => part("sidebar")?.querySelector<HTMLElement>("a[href]")?.focus());
     expect(part("sidebar")?.contains(document.activeElement)).toBe(true);
     // The focused button shows its tooltip, which places itself a moment later.
-    const placed = () => act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    const placed = () => sleep(50);
     pressOnFocus(init);
     expect(document.activeElement).toBe(button("Show sidebar"));
     await placed();

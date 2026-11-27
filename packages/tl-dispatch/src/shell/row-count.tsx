@@ -21,18 +21,16 @@ export interface RowCount {
 export function RowCountMark({
   className,
   count,
-  title,
 }: {
   className?: string;
   count: RowCount | undefined;
-  title?: string;
 }) {
   if (count?.fault !== undefined) return null;
   const value = count?.count ?? 0;
   return count?.needsYou ? (
-    <NeedsYouMark className={className} count={value} title={title} />
+    <NeedsYouMark className={className} count={value} />
   ) : (
-    <Count className={className} title={title} value={value} />
+    <Count className={className} value={value} />
   );
 }
 

@@ -125,6 +125,11 @@ const fades = (property: string, value: string) =>
       outsideParentheses(value)
         .split(",")
         .every((item) => /^(opacity|none)\b/.test(item.trim()));
+/** What a class may not set: type comes from `Heading` and `textVariants`. */
+const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "letter-spacing"]);
+const typeSet = (property: string, value: string) =>
+  TYPE_PROPERTY.has(property) ||
+  (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -162,12 +167,13 @@ function radiusAllowed(
 
 /**
  * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
- * size the script rule checks; no other class or stylesheet sets an infinite radius.
+ * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
+ * is set for a class's CSS, which may not set type; a stylesheet may.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
   tokens: ThemeTokens,
-  { circle = false }: { circle?: boolean } = {}
+  { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
   const { property, value, context } = declaration;
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
@@ -204,6 +210,7 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
+  if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
 
@@ -293,7 +300,7 @@ async function classViolations(
   for (const declaration of await compiledDeclarations([...classes.keys()])) {
     const name = sourceClass(declaration.context, classes);
     const circle = name !== undefined && utilityOf(name) === "rounded-full";
-    const problems = declarationProblems(declaration, tokens, { circle });
+    const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
     if (problems.length === 0) continue;
     const where =
       name === undefined ? [{ file: "(compiled CSS)", line: 0 }] : (classes.get(name) ?? []);
@@ -432,8 +439,6 @@ function utilityOf(word: string): string {
 }
 
 const HEIGHT = /^(min-h|h|size)-(.+)$/;
-const TYPE_CLASS =
-  /^(text-(xs|sm|base|lg|\d*xl|\[(length:.+|[\d.]+(px|r?em)|calc\(.+\))\]|\(length:.+\))(\/.+)?|font-(thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+\]|\(weight:.+\))|leading-.+|tracking-.+|uppercase|lowercase)$/;
 const inScale = (kind: string, value: string) =>
   (kind !== "min-h" && CONTROL_HEIGHTS.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
@@ -464,9 +469,6 @@ function scriptViolations(
   const visit = (node: ts.Node) => {
     if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
       const utilities = node.text.split(/\s+/).map(utilityOf);
-      for (const utility of utilities) {
-        if (TYPE_CLASS.test(utility)) refuse(node, utility, RULES.type);
-      }
       if (
         utilities.includes("rounded-full") &&
         !utilities.some((utility) => /^size-\d+(\.\d+)?$/.test(utility))
