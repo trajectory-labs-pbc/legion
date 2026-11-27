@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { ListRow } from "#registry/legion/blocks/list-row";
 
@@ -66,6 +66,27 @@ describe("ListRow", () => {
     );
     expect(rowOf(container).hasAttribute("data-selecting")).toBe(true);
     expect(box?.className).toContain("group-data-selecting/list-row:visible");
+  });
+
+  it("shows the box while the focus is in the row", () => {
+    const { container } = render(
+      <ListRow
+        leading={<span data-testid="avatar" />}
+        render={<button type="button" />}
+        select={<input aria-label="Select" type="checkbox" />}
+        title="Title"
+      />
+    );
+    const row = rowOf(container);
+    expect(row.contains(document.activeElement)).toBe(false);
+    act(() => screen.getByRole("button").focus());
+    expect(row.contains(document.activeElement)).toBe(true);
+    expect(screen.getByRole("checkbox").parentElement?.className).toContain(
+      "group-focus-within/list-row:visible"
+    );
+    expect(screen.getByTestId("avatar").parentElement?.className).toContain(
+      "group-focus-within/list-row:invisible"
+    );
   });
 
   it("keeps the box's click and keys from the content it renders", () => {

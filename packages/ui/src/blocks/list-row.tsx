@@ -13,7 +13,7 @@ interface ListRowProps extends Omit<ComponentProps<"div">, "children" | "title">
   /** The row's glyph or avatar at its left. */
   leading?: ReactNode;
   /** The selection box: it takes the leading part's place while the pointer is near the row's left
-   *  edge, and while `selecting` (LR6). It sits beside the row's content, not in it, so its click
+   *  edge, while the focus is in the row, and while `selecting` (LR6). It sits beside the row's content, not in it, so its click
    *  and its keys never reach the content; a list's key handlers ignore events from inside it
    *  (`[data-slot=list-row-select]`). */
   select?: ReactNode;
@@ -98,7 +98,7 @@ function ListRow({
               className={cn(
                 "flex",
                 hasSelect &&
-                  "group-hover/list-row-start:invisible group-data-selecting/list-row:invisible"
+                  "group-hover/list-row-start:invisible group-focus-within/list-row:invisible group-data-selecting/list-row:invisible"
               )}
             >
               {leading}
@@ -106,7 +106,7 @@ function ListRow({
           ) : null}
           {hasSelect ? (
             <span
-              className="invisible flex group-hover/list-row-start:visible group-data-selecting/list-row:visible"
+              className="invisible flex group-hover/list-row-start:visible group-focus-within/list-row:visible group-data-selecting/list-row:visible"
               data-slot="list-row-select"
             >
               {select}
