@@ -3,6 +3,7 @@ import { compile } from "@tailwindcss/node";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CopyIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "#registry/legion/ui/button";
 import {
@@ -173,15 +174,26 @@ function loadDrawnCss(): void {
 const keepsIconRoom = (node: Element) =>
   getComputedStyle(node).paddingInlineStart === "calc(4px * 8)";
 
-// Which menus have the icon room needs a real `:has()`: packages/tl-dispatch/e2e/menus.e2e.ts.
+/** Opens a menu holding `rows`, and says which of the rows named in `names` keep an icon's room. */
+async function roomOf(rows: ReactNode, names: readonly string[]): Promise<boolean[]> {
+  render(
+    <DropdownMenu defaultOpen>
+      <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
+      <DropdownMenuContent>{rows}</DropdownMenuContent>
+    </DropdownMenu>
+  );
+  await screen.findByRole("menu");
+  loadDrawnCss();
+  return names.map((name) => keepsIconRoom(screen.getByText(name)));
+}
+
 describe("DropdownMenu's drawn rows", () => {
   it("draws a separator only between rows: none first, none last, one where two meet", async () => {
     render(
       <DropdownMenu defaultOpen>
         <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuGroup />
-          <DropdownMenuSeparator data-testid="after-empty-group" />
+          <DropdownMenuSeparator data-testid="first" />
           <DropdownMenuItem>Rename</DropdownMenuItem>
           <DropdownMenuSeparator data-testid="pair-1" />
           <DropdownMenuSeparator data-testid="pair-2" />
@@ -191,8 +203,6 @@ describe("DropdownMenu's drawn rows", () => {
             <DropdownMenuLabel>Copy</DropdownMenuLabel>
             <DropdownMenuItem>Link</DropdownMenuItem>
           </DropdownMenuGroup>
-          <DropdownMenuSeparator data-testid="before-empty-group" />
-          <DropdownMenuGroup />
           <DropdownMenuSeparator data-testid="last" />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -206,67 +216,80 @@ describe("DropdownMenu's drawn rows", () => {
     expect(drawn).toEqual(["pair-2", "before-group"]);
   });
 
-  it("keeps the room on a row without a leading icon, a trailing chevron included, and on a label", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <CopyIcon aria-hidden />
-            Copy link
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span data-icon="inline-start" />
-            Assign to me
-          </DropdownMenuItem>
-          <DropdownMenuItem>Rename</DropdownMenuItem>
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Move</DropdownMenuLabel>
-          </DropdownMenuGroup>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem>Backlog</DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+  it("gives every other row and each label the room when a row marks its icon inline-start", async () => {
+    const rows = (
+      <>
+        <DropdownMenuItem>
+          <CopyIcon aria-hidden data-icon="inline-start" />
+          Copy link
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <span data-icon="inline-start" />
+          Assign to me
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <span>
+            <CopyIcon aria-hidden data-icon="inline-start" />
+          </span>
+          Wrapped
+        </DropdownMenuItem>
+        <DropdownMenuRadioGroup value="list">
+          <DropdownMenuRadioItem value="list">
+            <CopyIcon aria-hidden data-icon="inline-start" />
+            List
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Move</DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem>Backlog</DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </>
     );
-    const withIcon = await screen.findByRole("menuitem", { name: "Copy link" });
-    loadDrawnCss();
-    expect(keepsIconRoom(withIcon)).toBe(false);
-    expect(keepsIconRoom(screen.getByRole("menuitem", { name: "Assign to me" }))).toBe(false);
-    for (const row of [
-      screen.getByRole("menuitem", { name: "Rename" }),
-      screen.getByRole("menuitem", { name: "Move to" }),
-      screen.getByRole("menuitemcheckbox", { name: "Show done" }),
-      screen.getByText("Move"),
-    ])
-      expect(keepsIconRoom(row)).toBe(true);
+    expect(
+      await roomOf(rows, [
+        "Copy link",
+        "Assign to me",
+        "Wrapped",
+        "List",
+        "Rename",
+        "Move",
+        "Move to",
+      ])
+    ).toEqual([false, false, false, false, true, true, true]);
   });
 
-  it("reads a radio row's leading icon and keeps a checkbox row's check room", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>View</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuRadioGroup value="list">
-            <DropdownMenuRadioItem value="list">
-              <CopyIcon aria-hidden />
-              List
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-          <DropdownMenuCheckboxItem checked>
-            <span data-icon="inline-start" />
-            Show done
-          </DropdownMenuCheckboxItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+  it("keeps no room in a menu whose rows mark no icon, an unmarked leading icon included", async () => {
+    const rows = (
+      <>
+        <DropdownMenuItem>
+          <CopyIcon aria-hidden />
+          Copy link
+        </DropdownMenuItem>
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem>Backlog</DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </>
     );
-    const radio = await screen.findByRole("menuitemradio", { name: "List" });
-    loadDrawnCss();
-    expect(keepsIconRoom(radio)).toBe(false);
-    expect(keepsIconRoom(screen.getByRole("menuitemcheckbox", { name: "Show done" }))).toBe(true);
+    expect(await roomOf(rows, ["Copy link", "Rename", "Move to"])).toEqual([false, false, false]);
+  });
+
+  it("keeps the room on a checkbox row, for its check, and on every row beside it", async () => {
+    const rows = (
+      <>
+        <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+      </>
+    );
+    expect(await roomOf(rows, ["Show done", "Rename"])).toEqual([true, true]);
   });
 });

@@ -58,11 +58,10 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-// When one row of the menu leads with an icon, or is a checkbox, every row without one and every
-// label keeps that room. A row leads with an icon when its first element child is an svg not
-// marked `data-icon="inline-end"`, or when it has a child marked `data-icon="inline-start"`.
+// When a row marks its leading icon `data-icon="inline-start"`, as on a Button, or is a checkbox,
+// every row without that mark and every label keeps the icon's room.
 const ICON_ROOM_CLASS =
-  "in-[[role=menu]:has([role^=menuitem]>:is(svg:first-child:not([data-icon=inline-end]),[data-icon=inline-start]),[role=menuitemcheckbox])]:not-has-[>:is(svg:first-child:not([data-icon=inline-end]),[data-icon=inline-start])]:ps-8";
+  "in-[[role=menu]:has(:is([data-icon=inline-start],[role=menuitemcheckbox]))]:not-has-[[data-icon=inline-start]]:ps-8";
 
 const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} ${ICON_ROOM_CLASS} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
 
@@ -105,7 +104,7 @@ function DropdownMenuCheckboxItem({
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       closeOnClick={closeOnClick}
-      className={cn(ITEM_CLASS, "ps-8", className)}
+      className={cn(ITEM_CLASS, className)}
       {...props}
     >
       <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
@@ -135,12 +134,12 @@ function DropdownMenuRadioItem({
       className={cn(ITEM_CLASS, "pe-8", className)}
       {...props}
     >
-      {children}
       <span className="pointer-events-none absolute end-2 flex size-3.5 items-center justify-center">
         <MenuPrimitive.RadioItemIndicator>
           <CheckIcon aria-hidden="true" className="size-4" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
+      {children}
     </MenuPrimitive.RadioItem>
   );
 }
@@ -160,10 +159,9 @@ function DropdownMenuLabel({ className, ...props }: MenuPrimitive.GroupLabel.Pro
 }
 
 // A separator sits in the content, between rows or groups. It draws when a row comes anywhere
-// before it and a row right after it, so none draws first, last, or twice in a row. An empty group
-// (no label, no rows) is no row, so one right after a separator hides it.
+// before it and a row right after it, so none draws first, last, or twice in a row.
 const SEPARATOR_CLASS =
-  "-mx-1 my-1 hidden h-px bg-border [:not([data-slot=dropdown-menu-separator]):not([role=group]:empty)~&]:has-[+:not([data-slot=dropdown-menu-separator]):not([role=group]:empty)]:block";
+  "-mx-1 my-1 hidden h-px bg-border [:not([data-slot=dropdown-menu-separator])~&]:has-[+:not([data-slot=dropdown-menu-separator])]:block";
 
 function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   return (
@@ -200,7 +198,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon aria-hidden="true" className="ms-auto size-4" data-icon="inline-end" />
+      <ChevronRightIcon aria-hidden="true" className="ms-auto size-4" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
