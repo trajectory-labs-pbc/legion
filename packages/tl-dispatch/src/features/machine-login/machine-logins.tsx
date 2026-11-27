@@ -18,6 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@legion/ui/components/collapsible";
 import { Heading } from "@legion/ui/components/heading";
+import { Skeleton } from "@legion/ui/components/skeleton";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Fragment, memo, type ReactNode, useRef, useState } from "react";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/data/read-failure";
 import { WriteFailure } from "@/data/write-failure";
+import { useSkeleton } from "@/loading/page-skeleton";
 import type { LauncherCredentialResp } from "@/upstream/contract";
 import { machineName } from "@/upstream/logic/machine-login";
 import { machineLoginsQuery } from "@/upstream/queries";
@@ -138,6 +140,20 @@ function RevokeQuestionDialog({
       }
     </AlertDialog>
   );
+}
+
+const LOADING_ROWS = [0, 1, 2];
+
+/** The list's rows while they load: still boxes at the row height, named for a screen reader. */
+function LoadingRows(): ReactNode {
+  return LOADING_ROWS.map((row) => (
+    <TableRow key={row}>
+      <TableCell colSpan={HEADINGS.length + 1}>
+        {row === 0 ? <span className="sr-only">Loading machine logins</span> : null}
+        <Skeleton className="h-4 w-full" />
+      </TableCell>
+    </TableRow>
+  ));
 }
 
 function LoginRows({
@@ -257,6 +273,7 @@ export const MachineLogins = memo(function MachineLogins({
     isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
   const fault = readFailureOf(logins);
   const refreshFault = refreshFailureOf(logins);
+  const skeleton = useSkeleton(logins.data === undefined && fault === undefined);
   return (
     <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>
       <div className="space-y-1">
@@ -287,9 +304,9 @@ export const MachineLogins = memo(function MachineLogins({
       {refreshFault !== undefined ? (
         <ReadFailure fault={refreshFault} noun="the latest machine logins" />
       ) : null}
-      {logins.data !== undefined ? (
+      {skeleton || logins.data !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">
-          <Table>
+          <Table aria-busy={skeleton}>
             <TableHeader>
               <TableRow>
                 {HEADINGS.map((heading) => (
@@ -303,20 +320,22 @@ export const MachineLogins = memo(function MachineLogins({
               </TableRow>
             </TableHeader>
             <TableBody>
-              <LoginRows
-                logins={logins.data}
-                newCredential={newCredential}
-                question={question}
-                revoke={revoke}
-              />
+              {skeleton || logins.data === undefined ? (
+                <LoadingRows />
+              ) : (
+                <LoginRows
+                  logins={logins.data}
+                  newCredential={newCredential}
+                  question={question}
+                  revoke={revoke}
+                />
+              )}
             </TableBody>
           </Table>
         </div>
       ) : fault !== undefined ? (
         <ReadFailure fault={fault} noun="machine logins" />
-      ) : (
-        <p className={MUTED}>Loading machine logins…</p>
-      )}
+      ) : null}
       <RevokeQuestionDialog finalFocus={finalFocus} question={question} revoke={revoke} />
     </section>
   );

@@ -12,6 +12,7 @@ import { MemoryNavigationProvider } from "../../../tests/navigation";
 import {
   GrantsSection,
   keyedAttempt,
+  onFakeClock,
   realClock,
   tick,
   userOnFakeClock,
@@ -550,6 +551,48 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
       Reflect.deleteProperty(proto, "scrollWidth");
       Reflect.deleteProperty(proto, "clientWidth");
     }
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 300 ms once shown", async () => {
+  const answer = Promise.withResolvers<{ credentials: LauncherCredentialResp[] }>();
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockReturnValue(answer.promise);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    await onFakeClock(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MachineLogins />
+        </QueryClientProvider>
+      );
+      const section = within(screen.getByRole("region", { name: "Machine logins" }));
+      await tick(150);
+      expect(section.queryByRole("table")).toBeNull();
+      expect(section.queryByText(/Loading/)).toBeNull();
+
+      await tick(100);
+      const table = section.getByRole("table");
+      expect(table).toHaveAttribute("aria-busy", "true");
+      expect(within(table).getByText("Loading machine logins")).toHaveClass("sr-only");
+      const rows = within(table).getAllByRole("row").slice(1);
+      expect(rows.map((row) => row.querySelectorAll('[data-slot="skeleton"]').length)).toEqual([
+        1, 1, 1,
+      ]);
+
+      answer.resolve({ credentials: [devbox] });
+      await tick(200);
+      expect(section.queryByText("devbox.example.com")).toBeNull();
+      expect(section.getByRole("table")).toHaveAttribute("aria-busy", "true");
+
+      await tick(100);
+      expect(section.getByText("devbox.example.com")).toBeDefined();
+      expect(section.getByRole("table")).toHaveAttribute("aria-busy", "false");
+      expect(section.queryByText("Loading machine logins")).toBeNull();
+    });
+  } finally {
+    cleanup();
+    queryClient.clear();
     getMachineLogins.mockRestore();
   }
 });

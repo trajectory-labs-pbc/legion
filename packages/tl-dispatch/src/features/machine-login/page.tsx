@@ -3,7 +3,7 @@ import { type ReactNode, useEffect } from "react";
 import { ReadFailure, readFailureOf } from "@/data/read-failure";
 import { NotFound } from "@/features/not-found";
 import { lazyNamed } from "@/loading/lazy-named";
-import { PageFallback } from "@/loading/page-skeleton";
+import { PageSkeleton, useSkeleton } from "@/loading/page-skeleton";
 import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 
 const loadPage = () => import("./machine-login-page");
@@ -20,6 +20,8 @@ export function MachineLoginRoute(): ReactNode {
     void queryClient.prefetchQuery(machineLoginsQuery());
   }, [queryClient]);
   const fault = readFailureOf(capabilities);
+  const skeleton = useSkeleton(capabilities.data === undefined && fault === undefined);
+  if (skeleton) return <PageSkeleton label="Loading the page" />;
   if (fault !== undefined) {
     return (
       <div className="max-w-180">
@@ -27,6 +29,6 @@ export function MachineLoginRoute(): ReactNode {
       </div>
     );
   }
-  if (capabilities.data === undefined) return <PageFallback />;
+  if (capabilities.data === undefined) return null;
   return capabilities.data.machine_code_page === true ? <MachineLoginPage /> : <NotFound />;
 }
