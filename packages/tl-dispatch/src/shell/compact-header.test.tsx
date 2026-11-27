@@ -113,6 +113,18 @@ describe("CompactHeader", () => {
     expect(count()?.closest("a")?.getAttribute("title")).toBe("3 unread threads");
   });
 
+  test("an Inbox read the server refuses shows its line with no Retry", async () => {
+    const header = mount(
+      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+      inboxReads(() => json({ error: { code: "FORBIDDEN" } }, 403), 3),
+      new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    );
+    await waitFor(() => header.textContent?.includes("You cannot see the Inbox count.") === true);
+    expect([...header.querySelectorAll("button")].some((b) => b.textContent === "Retry")).toBe(
+      false
+    );
+  });
+
   test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {
     let failing = true;
     const header = mount(

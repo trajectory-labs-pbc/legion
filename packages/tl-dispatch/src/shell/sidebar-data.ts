@@ -1,7 +1,7 @@
 import { NAV_DESTINATIONS, NAV_NAMES, type NavName } from "@/commands/destinations";
 import type { CommandIcon } from "@/commands/schema";
 import { totalUnreadReplies, unreadRepliesLabel } from "@/data/agent-pins";
-import type { RetryableFault } from "@/data/read";
+import type { ReadFault } from "@/data/read";
 import type { AuthenticatedUser } from "@/data/session";
 import type { ShellRead } from "@/data/shell-read";
 import {
@@ -30,7 +30,7 @@ interface SidebarDestination {
 /** A section's rows, none while its read is out or after it failed. */
 export interface SectionRead<T> {
   rows: readonly T[] | undefined;
-  fault: RetryableFault | undefined;
+  fault: ReadFault | undefined;
 }
 
 function sectionOf<T, R>(read: ShellRead<readonly T[]>, row: (item: T) => R): SectionRead<R> {

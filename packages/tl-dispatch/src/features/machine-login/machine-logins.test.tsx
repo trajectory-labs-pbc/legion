@@ -5,7 +5,7 @@ import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import { api } from "@/upstream/api";
+import { ApiError, api } from "@/upstream/api";
 import type { ApproverGrantResp, LauncherCredentialResp } from "@/upstream/contract";
 import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
@@ -550,6 +550,22 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
       Reflect.deleteProperty(proto, "scrollWidth");
       Reflect.deleteProperty(proto, "clientWidth");
     }
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLS-11 a machine logins read the server cannot find says so with no Retry", async () => {
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
+    new ApiError(404, { code: "NOT_FOUND", error: "gone" })
+  );
+  try {
+    renderPage();
+    const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+    const alert = await section.findByRole("alert");
+    expect(alert.textContent).toBe("Could not find machine logins.");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+  } finally {
+    cleanup();
     getMachineLogins.mockRestore();
   }
 });

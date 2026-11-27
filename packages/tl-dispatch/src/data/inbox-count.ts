@@ -30,12 +30,13 @@ export function useInboxCount(): ShellRead<InboxCount> {
     const retried =
       credentials.data === null ? reads.filter((read) => read !== credentials) : reads;
     const fault = readFailureOf(...retried);
+    if (fault?.retry === undefined) return { data: undefined, fault };
     // The count is made with the session, so its Retry asks the session again too.
     const retry = () => {
       askSessionAgain();
-      fault?.retry();
+      fault.retry();
     };
-    return { data: undefined, fault: fault && { retrying: fault.retrying, retry } };
+    return { data: undefined, fault: { retrying: fault.retrying, retry } };
   }
   return { data: { waiting, unread: replies.data ?? 0 }, fault: undefined };
 }

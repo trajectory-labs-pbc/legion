@@ -328,6 +328,26 @@ describe("the sidebar", () => {
     expect(openOf(mountView(data))).toEqual([false, false]);
   });
 
+  test("a section the server refuses says so with no Retry, as trying again cannot change it", () => {
+    const refused = (refusal: "forbidden" | "not-found") => ({
+      rows: undefined,
+      fault: { retrying: false, refusal },
+    });
+    const container = mountView({
+      destinations: [],
+      pinnedAgents: refused("forbidden"),
+      inLiveView: false,
+      pinnedIssues: refused("not-found"),
+      projects: failedRead(() => {}),
+    });
+    const alerts = [...container.querySelectorAll('[role="alert"]')];
+    expect(alerts.map((alert) => alert.textContent)).toEqual([
+      "You cannot see pinned agents.",
+      "Could not find pinned issues.",
+      "Could not load projects.Retry",
+    ]);
+  });
+
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
     let projectReads = 0;
     const container = mount("/agents", {

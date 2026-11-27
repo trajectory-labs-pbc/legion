@@ -2,7 +2,7 @@ import { Button } from "@legion/ui/components/button";
 import { Count } from "@legion/ui/components/count";
 import { CircleAlertIcon } from "lucide-react";
 import { LabelTooltip } from "@/commands/hotkey-tooltip";
-import type { RetryableFault } from "@/data/read";
+import type { ReadFault } from "@/data/read";
 import { NeedsYouMark } from "@/parts/needs-you";
 
 /** A count beside a row; none at zero. */
@@ -14,7 +14,7 @@ export interface RowCount {
   /** Names the count on hover where no key tooltip names its row. */
   label?: string;
   /** A read it needs failed with nothing to show. */
-  fault?: RetryableFault;
+  fault?: ReadFault;
 }
 
 /** A row's count: what waits on the reader in the mark, else a muted number; none if it failed. */
@@ -41,7 +41,7 @@ export function CountRetry({
   noun,
 }: {
   className?: string;
-  fault: RetryableFault;
+  fault: ReadFault;
   noun: string;
 }) {
   const label = `Could not load ${noun}. Retry`;

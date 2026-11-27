@@ -47,7 +47,7 @@ export interface ReadOptions<TQueryFnData, T> {
 }
 
 // A read's 409 keeps its Retry: the conflict rule is for writes.
-function refusalOf(error: unknown): RefusedFault["refusal"] | undefined {
+export function refusalOf(error: unknown): RefusedFault["refusal"] | undefined {
   if (!(error instanceof ApiError)) return undefined;
   if (error.status === 403) return "forbidden";
   return error.status === 404 ? "not-found" : undefined;
