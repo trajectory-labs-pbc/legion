@@ -43,7 +43,8 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
-  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking, uppercase or lowercase class, and no `text-wrap*` property or font smoothing in a class or a stylesheet; set the wrap mode with `whitespace-*` or `truncate`",
+  type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking, uppercase or lowercase class",
+  wrap: "the recipes set the wrap and the root the smoothing: no `text-wrap*` property or font smoothing in a class or a stylesheet; set the wrap mode with `whitespace-*` or `truncate`",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -145,6 +146,8 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
+/** What nothing may set: the recipes set the wrap, the root the smoothing. */
+const WRAP_OR_SMOOTHING = /^text-wrap|font-smooth/;
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -183,8 +186,7 @@ function radiusAllowed(
 /**
  * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
  * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
- * is set for a class's CSS, which may not set type; a stylesheet may, but for the wrap and the
- * smoothing.
+ * is set for a class's CSS, which may not set type; a stylesheet may.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
@@ -226,11 +228,8 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  // The recipes own the wrap, the root the smoothing: no class or app stylesheet under src/
-  // sets them.
-  if ((fromClass && typeSet(property, value)) || /^text-wrap|font-smooth/.test(property)) {
-    problems.push(RULES.type);
-  }
+  if (fromClass && typeSet(property, value)) problems.push(RULES.type);
+  if (WRAP_OR_SMOOTHING.test(property)) problems.push(RULES.wrap);
   return problems;
 }
 
