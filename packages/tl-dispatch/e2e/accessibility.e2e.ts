@@ -514,8 +514,8 @@ async function focusColour(page: Page): Promise<string> {
  *  first stop on the walk's first press. The body stands for nothing having the focus. The body
  *  is marked only as a first stop, so a page with no stop comes round, and the focus can leave
  *  the page more than once before Tab comes back. The read waits two animation frames: a modal
- *  dialog's focus guard takes the focus from Tab and moves it on in the next frame, and the
- *  second frame is spare. */
+ *  dialog's focus guard takes the focus from Tab and moves it on in the next frame, so one frame
+ *  is enough, and the second is spare. */
 async function readStop({
   first,
   focus,
