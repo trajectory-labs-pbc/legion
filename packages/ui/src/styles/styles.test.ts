@@ -373,7 +373,15 @@ describe("the components", () => {
     const widths = everyToken.filter(({ token }) => utilityOf(token) === "outline-2");
     expect(widths.length).toBeGreaterThan(10);
     for (const { path, token } of widths) {
-      expect(tokensOf(path), `${path}: ${token}`).toContain(`${variantsOf(token)}outline-offset-2`);
+      // A scroll container draws its ring inside its own edge.
+      const offsets = [
+        `${variantsOf(token)}outline-offset-2`,
+        `${variantsOf(token)}-outline-offset-2`,
+      ];
+      expect(
+        tokensOf(path).some((each) => offsets.includes(each)),
+        `${path}: ${token}`
+      ).toBe(true);
       expect(tokensOf(path), `${path}: ${token}`).toContain(`${variantsOf(token)}outline-focus`);
     }
   });
