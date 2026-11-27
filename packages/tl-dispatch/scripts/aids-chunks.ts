@@ -23,6 +23,8 @@ const LAZY_OUTSIDE: readonly string[] = [
   "data/document-reads.ts",
   "upstream/logic/reading-aids.ts",
   "upstream/editor/engine.ts",
+  "upstream/widgets/plain-text.tsx",
+  "upstream/widgets/reference-link.tsx",
 ];
 
 const WORKER_ONLY = "upstream/editor/worker.ts";

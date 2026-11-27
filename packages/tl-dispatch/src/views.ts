@@ -70,6 +70,8 @@ export const replacedViews: readonly string[] = [
   "features/credentials/MachineLoginRoute.tsx",
   "features/credentials/MachineLoginsSection.tsx",
   "features/credentials/RevocableList.tsx",
+  // Its Open-decisions navigator and its "Changed since you last read" line only.
+  "features/doc/ProofDocument.tsx",
   "features/shell/NotFoundPage.tsx",
   "features/sidebar/Sidebar.tsx",
 ];
