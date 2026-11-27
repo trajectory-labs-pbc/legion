@@ -69,13 +69,12 @@ function InputGroupAddon({
 }
 
 function InputGroupButton({
-  className,
   type = "button",
   variant = "ghost",
   size = "icon-xs",
   ...props
 }: ButtonProps) {
-  return <Button type={type} variant={variant} size={size} className={className} {...props} />;
+  return <Button type={type} variant={variant} size={size} {...props} />;
 }
 
 function InputGroupText({ className, ...props }: ComponentProps<"span">) {

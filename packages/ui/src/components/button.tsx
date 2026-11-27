@@ -30,9 +30,8 @@ const buttonVariants = cva(
           "border border-input bg-field hover:bg-secondary hover:text-secondary-foreground [&>[data-slot=spinner]]:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 [&>[data-slot=spinner]]:text-secondary-foreground",
-        // On a navigation surface, a ghost button hovers as a row does.
         ghost:
-          "hover:bg-secondary hover:text-secondary-foreground in-data-[slot=nav-surface]:hover:bg-sidebar-accent/50 in-data-[slot=nav-surface]:hover:text-sidebar-accent-foreground [&>[data-slot=spinner]]:text-foreground",
+          "hover:bg-secondary hover:text-secondary-foreground [&>[data-slot=spinner]]:text-foreground",
         link: "text-foreground underline-offset-4 hover:underline [&>[data-slot=spinner]]:text-foreground",
         // A destructive action beside others: danger text, the danger tint on hover.
         "quiet-danger": "text-danger hover:bg-danger-tint [&>[data-slot=spinner]]:text-danger",

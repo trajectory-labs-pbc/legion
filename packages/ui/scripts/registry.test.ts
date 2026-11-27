@@ -20,6 +20,17 @@ describe("registry.json", () => {
     expect(committed, "run `bun run registry` in packages/ui").toEqual(buildRegistry());
   });
 
+  it("installs the theme's base rules beside the stylesheet's, so an icon draws at the theme's stroke", () => {
+    const theme = buildRegistry().items.find((item) => item.name === "theme");
+    const base = (theme?.css as Record<string, Record<string, unknown>> | undefined)?.[
+      "@layer base"
+    ];
+    expect(base?.['svg.lucide[stroke-width="2"]']).toEqual({
+      "stroke-width": "var(--icon-stroke)",
+    });
+    expect(base?.body).toEqual({ "@apply bg-background text-foreground": {} });
+  });
+
   it("lists a package a component imports for its side effect or loads on demand", () => {
     const item = componentItem("badge", (path) =>
       path.endsWith("badge.tsx") ? 'import "lucide-react";\nconst load = () => import("cn");\n' : ""

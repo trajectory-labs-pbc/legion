@@ -7,6 +7,7 @@ import {
   lockVersionProblems,
   resolvePackageDir,
   rootPackages,
+  rootTargets,
   rootVersions,
 } from "./link-root-packages";
 
@@ -23,7 +24,7 @@ describe("the root packages", () => {
     expect(resolvePackageDir("hoisted", join(root, "packages/dispatch"))).toBe(
       realpathSync(join(root, "node_modules/hoisted"))
     );
-    expect(rootVersions(["hoisted"], join(root, "packages/dispatch"))).toEqual(
+    expect(rootVersions(rootTargets(["hoisted"], join(root, "packages/dispatch")))).toEqual(
       new Map([["hoisted", "1.0.0"]])
     );
     expect(() => resolvePackageDir("absent", join(root, "packages/dispatch"))).toThrow(
@@ -47,6 +48,6 @@ describe("the root packages", () => {
 
   test("this package's lock records each root package at the root install's version", () => {
     const lock = readFileSync(join(pkg, "bun.lock"), "utf8");
-    expect(lockVersionProblems(lock, rootVersions(rootPackages(pkg)))).toEqual([]);
+    expect(lockVersionProblems(lock, rootVersions(rootTargets(rootPackages(pkg))))).toEqual([]);
   });
 });

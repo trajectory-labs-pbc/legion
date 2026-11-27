@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync 
 import { dirname, join, relative, resolve } from "node:path";
 
 /** Upstream's web app, which the root install's packages resolve from. */
-export const upstreamApp = join(import.meta.dir, "../../dispatch");
+const upstreamApp = join(import.meta.dir, "../../dispatch");
 
 const isStrings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -44,11 +44,16 @@ export function resolvePackageDir(name: string, from: string): string {
   );
 }
 
-/** Each root package's version, as the root install has it. */
-export function rootVersions(names: string[], from = upstreamApp): Map<string, string> {
+/** Each root package's directory, as the root install resolves it. */
+export function rootTargets(names: string[], from = upstreamApp): Map<string, string> {
+  return new Map(names.map((name) => [name, resolvePackageDir(name, from)]));
+}
+
+/** Each package's version, read from its directory. */
+export function rootVersions(targets: ReadonlyMap<string, string>): Map<string, string> {
   return new Map(
-    names.map((name) => {
-      const manifest = readManifest(resolvePackageDir(name, from));
+    [...targets].map(([name, target]) => {
+      const manifest = readManifest(target);
       if (!("version" in manifest) || typeof manifest.version !== "string") {
         throw new Error(`${name} has no version`);
       }
@@ -97,20 +102,19 @@ function link(target: string, path: string): void {
 function main(argument: string | undefined): string {
   if (argument === undefined) throw new Error("usage: link-root-packages.ts <package directory>");
   const pkg = resolve(argument);
-  const names = rootPackages(pkg);
-  const targets = names.map((name) => ({ name, target: resolvePackageDir(name, upstreamApp) }));
+  const targets = rootTargets(rootPackages(pkg));
   const problems = lockVersionProblems(
     readFileSync(join(pkg, "bun.lock"), "utf8"),
-    rootVersions(names)
+    rootVersions(targets)
   );
   if (problems.length > 0) throw new Error(problems.join("\n"));
-  for (const { name, target } of targets) {
+  for (const [name, target] of targets) {
     link(target, join(pkg, "node_modules", name));
     for (const [command, file] of commands(name, target)) {
       link(join(target, file), join(pkg, "node_modules/.bin", command));
     }
   }
-  return `${names.length} packages linked from the root install into ${relative(process.cwd(), pkg) || "."}`;
+  return `${targets.size} packages linked from the root install into ${relative(process.cwd(), pkg) || "."}`;
 }
 
 if (import.meta.main) {

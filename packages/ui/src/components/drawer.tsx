@@ -1,7 +1,7 @@
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "cn";
 import type { ComponentProps } from "react";
-import { coveredClass, modalPopupMotion } from "#registry/legion/lib/overlay-styles";
+import { coveredClass, modalPopupMotion, scrimClass } from "#registry/legion/lib/overlay-styles";
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
 import { ModalSurfaceProvider } from "#registry/legion/ui/modal-surface-context";
@@ -16,7 +16,8 @@ function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props) 
     <DrawerPrimitive.Backdrop
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 z-50 min-h-dvh bg-scrim/50 opacity-[calc(1-var(--drawer-swipe-progress))] motion-safe:transition-opacity motion-safe:duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 data-swiping:duration-0",
+        scrimClass,
+        "min-h-dvh opacity-[calc(1-var(--drawer-swipe-progress))] data-swiping:duration-0",
         className
       )}
       {...props}

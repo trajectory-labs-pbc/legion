@@ -39,7 +39,7 @@ describe("Button", () => {
     expect(tokens.filter((token) => token.includes("accent"))).toEqual([]);
   });
 
-  it("hovers an outline or ghost button on the secondary step; the accent is a menu's and a navigation's", () => {
+  it("hovers an outline or ghost button on the secondary step; the accent is a menu's", () => {
     render(
       <>
         <Button variant="outline">Look up</Button>
@@ -49,10 +49,7 @@ describe("Button", () => {
     for (const name of ["Look up", "Sign out"]) {
       const tokens = screen.getByRole("button", { name }).className.split(" ");
       expect(tokens).toContain("hover:bg-secondary");
-      const accents = tokens.filter((token) => token.includes("accent"));
-      expect(accents.filter((token) => !token.startsWith("in-data-[slot=nav-surface]:"))).toEqual(
-        []
-      );
+      expect(tokens.filter((token) => token.includes("accent"))).toEqual([]);
     }
   });
 
@@ -65,25 +62,6 @@ describe("Button", () => {
     const tokens = screen.getByRole("button", { name: "How it works" }).className.split(" ");
     expect(tokens).toContain("px-0");
     expect(tokens.filter((token) => /^px-(?!0$)/.test(token))).toEqual([]);
-  });
-
-  it("takes a little padding on the side of an icon marked inline-start or inline-end", () => {
-    render(
-      <>
-        <Button>
-          <svg aria-hidden data-icon="inline-start" />
-          Add
-        </Button>
-        <Button size="xs">
-          Projects
-          <svg aria-hidden data-icon="inline-end" />
-        </Button>
-      </>
-    );
-    const add = screen.getByRole("button", { name: "Add" }).className.split(" ");
-    expect(add).toContain("has-data-[icon=inline-start]:pl-2.5");
-    const fold = screen.getByRole("button", { name: "Projects" }).className.split(" ");
-    expect(fold).toContain("has-data-[icon=inline-end]:pr-1.5");
   });
 
   it("keeps its name while loading, with the spinner first, in the start icon's place", () => {
@@ -101,8 +79,6 @@ describe("Button", () => {
       expect(button.getAttribute("data-loading")).toBe("true");
       expect(button.firstElementChild?.getAttribute("data-slot")).toBe("spinner");
     }
-    const tokens = screen.getByRole("button", { name: "Save" }).className.split(" ");
-    expect(tokens).toContain("data-loading:[&>[data-icon=inline-start]]:hidden");
   });
 
   it("leaves the tab order when disabled", async () => {

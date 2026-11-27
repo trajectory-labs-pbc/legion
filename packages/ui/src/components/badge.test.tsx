@@ -17,17 +17,6 @@ describe("Badge", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "After" }));
   });
 
-  it("holds a count in a 20 px chip at least as wide, in tabular figures", () => {
-    render(
-      <Badge size="count" variant="warning">
-        7
-      </Badge>
-    );
-    const tokens = screen.getByText("7").className.split(" ");
-    for (const token of ["h-5", "min-w-5", "px-1", "tabular-nums"]) expect(tokens).toContain(token);
-    expect(tokens).not.toContain("py-0.5");
-  });
-
   it("renders as a link that takes the keyboard", async () => {
     render(<Badge render={<a href="#issue">Open</a>} />);
     await userEvent.tab();

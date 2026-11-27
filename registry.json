@@ -240,6 +240,9 @@
           },
           "body": {
             "@apply bg-background text-foreground": {}
+          },
+          "svg.lucide[stroke-width=\"2\"]": {
+            "stroke-width": "var(--icon-stroke)"
           }
         }
       }
@@ -280,6 +283,11 @@
           "path": "packages/ui/src/components/alert.tsx",
           "type": "registry:ui",
           "target": "@ui/alert.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -478,6 +486,11 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -789,7 +802,12 @@
     {
       "name": "select",
       "type": "registry:ui",
-      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
       "files": [
         {
           "path": "packages/ui/src/components/select.tsx",
@@ -800,6 +818,11 @@
           "path": "packages/ui/src/lib/overlay-styles.ts",
           "type": "registry:lib",
           "target": "@lib/overlay-styles.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -903,12 +926,17 @@
     {
       "name": "table",
       "type": "registry:ui",
-      "dependencies": ["cn@0.2.6"],
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
       "files": [
         {
           "path": "packages/ui/src/components/table.tsx",
           "type": "registry:ui",
           "target": "@ui/table.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },

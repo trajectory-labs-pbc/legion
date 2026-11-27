@@ -1,7 +1,11 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
 import { cn } from "cn";
 import { type ComponentProps, createContext, type RefObject, useContext, useRef } from "react";
-import { coveredClass, modalPopupMotion, scrimClass } from "#registry/legion/lib/overlay-styles";
+import {
+  dialogPopupClass,
+  modalViewportClass,
+  scrimClass,
+} from "#registry/legion/lib/overlay-styles";
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
 import { Button, type ButtonVariants } from "#registry/legion/ui/button";
 import { OverlayOutline, SurfaceTitleElement } from "#registry/legion/ui/heading";
@@ -39,17 +43,12 @@ function AlertDialogContent({ className, children, ...props }: AlertDialogPrimit
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Viewport
         data-slot="alert-dialog-viewport"
-        className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain p-4"
+        className={modalViewportClass}
       >
         <AlertDialogPrimitive.Popup
           data-slot="alert-dialog-content"
           initialFocus={() => cancelRef.current}
-          className={cn(
-            "relative m-auto grid w-full gap-4 rounded-xl border bg-popover p-6 text-popover-foreground shadow-dialog outline-hidden sm:max-w-lg",
-            modalPopupMotion,
-            coveredClass,
-            className
-          )}
+          className={cn(dialogPopupClass, className)}
           {...props}
         >
           <CancelRefContext.Provider value={cancelRef}>

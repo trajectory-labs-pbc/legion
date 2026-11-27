@@ -243,16 +243,4 @@
   svg.lucide[stroke-width="2"] {
     stroke-width: var(--icon-stroke);
   }
-
-  /* Faint text holds 4.5:1 on the panels, not on the accent fill of a highlighted, open, current
-     or hovered entry: there it takes the muted colour. Each part names the class that fills it. */
-  :where(
-      [class*="data-highlighted:bg-accent"][data-highlighted],
-      [class*="data-popup-open:bg-accent"][data-popup-open],
-      [class*="aria-[current=page]:bg-sidebar-accent"][aria-current="page"],
-      [class*="hover:bg-accent"]:hover,
-      [class*="hover:bg-sidebar-accent"]:hover
-    ) {
-    --faint-foreground: var(--muted-foreground);
-  }
 }

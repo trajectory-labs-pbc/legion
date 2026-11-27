@@ -2,7 +2,8 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
 import { useRef } from "react";
-import { popupMotion } from "#registry/legion/lib/overlay-styles";
+import { listItemClass, popupMotion } from "#registry/legion/lib/overlay-styles";
+import { textVariants } from "#registry/legion/lib/typography";
 import { Button } from "#registry/legion/ui/button";
 import {
   InputGroup,
@@ -49,7 +50,6 @@ function ComboboxTrigger({
 }
 
 function ComboboxClear({
-  className,
   label = "Clear",
   ...props
 }: ComboboxPrimitive.Clear.Props & { label?: string }) {
@@ -58,7 +58,6 @@ function ComboboxClear({
       data-slot="combobox-clear"
       aria-label={label}
       render={<InputGroupButton />}
-      className={className}
       {...props}
     >
       <XIcon aria-hidden="true" className="pointer-events-none" />
@@ -158,12 +157,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
-      className={cn(
-        "relative flex h-control-sm w-full cursor-default items-center gap-2 rounded-sm pr-8 pl-2 text-sm outline-hidden select-none",
-        "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:inset-ring data-highlighted:inset-ring-muted-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(listItemClass, className)}
       {...props}
     >
       {children}
@@ -186,7 +180,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)}
+      className={cn("px-2 py-1.5", textVariants({ size: "caption", tone: "muted" }), className)}
       {...props}
     />
   );
@@ -201,7 +195,8 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
       className={cn(
-        "hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex",
+        textVariants({ tone: "muted" }),
+        "hidden w-full justify-center py-2 text-center group-data-empty/combobox-content:flex",
         className
       )}
       {...props}

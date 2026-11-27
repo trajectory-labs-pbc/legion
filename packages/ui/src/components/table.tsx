@@ -1,5 +1,6 @@
 import { cn } from "cn";
 import type { ComponentProps } from "react";
+import { textVariants } from "#registry/legion/lib/typography";
 
 function Table({ className, ...props }: ComponentProps<"table">) {
   return (
@@ -80,7 +81,7 @@ function TableCaption({ className, ...props }: ComponentProps<"caption">) {
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-4 text-sm text-muted-foreground", className)}
+      className={cn("mt-4", textVariants({ tone: "muted" }), className)}
       {...props}
     />
   );

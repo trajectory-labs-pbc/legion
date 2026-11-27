@@ -8,7 +8,12 @@ function NavSurface({ className, render, ...props }: useRender.ComponentProps<"a
     render,
     props: {
       "data-slot": "nav-surface",
-      className: cn("border-sidebar-border bg-background text-sidebar-foreground", className),
+      className: cn(
+        "border-sidebar-border bg-background text-sidebar-foreground",
+        // A ghost button here hovers as a row does.
+        "[&_[data-slot=button][data-variant=ghost]]:hover:bg-sidebar-accent/50 [&_[data-slot=button][data-variant=ghost]]:hover:text-sidebar-accent-foreground",
+        className
+      ),
       ...props,
     },
   });

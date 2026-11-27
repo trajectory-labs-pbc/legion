@@ -23,11 +23,13 @@ async function tailwind(css: string) {
   return compile(css, { base: dirname(globals), from: globals, onDependency: () => {} });
 }
 
-/** The CSS Tailwind generates from the stylesheet over the sources it names, and `extra` classes. */
+// No mutation changes the sources, so they are scanned once.
+const base = await tailwind(globalsText);
+const candidates = new Scanner({ sources: base.sources }).scan();
+
+/** The CSS Tailwind generates from the stylesheet over the sources, and `extra` classes. */
 async function generate({ css = globalsText, extra = [] }: Mutation = {}): Promise<Root> {
-  const compiler = await tailwind(css);
-  const candidates = new Scanner({ sources: compiler.sources }).scan();
-  return postcss.parse(compiler.build([...candidates, ...extra]));
+  return postcss.parse((await tailwind(css)).build([...candidates, ...extra]));
 }
 
 /** The at-rules and selectors around a node, outermost first. */
@@ -77,13 +79,10 @@ const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
 // The theme's four steps: 4, 6, 8 and 12 px at an 8 px --radius.
 const FACTOR = String.raw`(0\.5|0\.75|1|1\.5)`;
-const RADIUS = new RegExp(
-  String.raw`^(0|var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\)|calc\(infinity \* 1px\))$`
-);
 // A corner step: --radius, or --radius times one of the steps' factors, or another step.
-const STEP = new RegExp(
-  String.raw`^(var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\))$`
-);
+const STEPS = String.raw`var\(--radius(-(sm|md|lg|xl))?\)|calc\(var\(--radius\) \* ${FACTOR}\)`;
+const STEP = new RegExp(`^(${STEPS})$`);
+const RADIUS = new RegExp(String.raw`^(0|${STEPS}|calc\(infinity \* 1px\))$`);
 // The theme's shadows. Each one's colour is the shadow tint, so a scheme sets how dark it is.
 const THEME_SHADOW = /\.shadow-(popover|dialog)$/;
 const TINT = "var(--tw-shadow-color, var(--shadow-tint))";
@@ -239,9 +238,10 @@ const ROUND_SLOTS = [
 const generated = await generate();
 
 describe("the generated CSS", () => {
-  it("is built from every source directory and every stylesheet", async () => {
-    const { sources } = await tailwind(globalsText);
-    const sourced = sources.map((source) => relative(src, resolve(source.base, source.pattern)));
+  it("is built from every source directory and every stylesheet", () => {
+    const sourced = base.sources.map((source) =>
+      relative(src, resolve(source.base, source.pattern))
+    );
     const directories = readdirSync(src, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && !["styles", "test"].includes(entry.name))
       .map((entry) => entry.name);
@@ -343,14 +343,11 @@ describe("the design-rule check fails", () => {
   });
 });
 
-// Each part that takes the highlight step, and each part an edge alone marks, with its state.
-const HIGHLIGHTS: readonly (readonly [string, string])[] = [
-  ["components/combobox.tsx", "data-highlighted:"],
-  ["components/dropdown-menu.tsx", "data-highlighted:"],
-  ["components/dropdown-menu.tsx", "data-popup-open:"],
-  ["components/select.tsx", "data-highlighted:"],
-];
+// Each part an edge marks, with its state: a list's highlighted item, an open submenu, an active
+// tab and a pressed toggle.
 const MARKED: readonly (readonly [string, string])[] = [
+  ["lib/overlay-styles.ts", "data-highlighted:"],
+  ["components/dropdown-menu.tsx", "data-popup-open:"],
   ["components/tabs.tsx", "group-data-[variant=default]/tabs-list:data-active:"],
   ["components/toggle.tsx", "data-pressed:"],
 ];
@@ -384,11 +381,7 @@ describe("the components", () => {
   });
 
   it("mark a highlighted item, an open submenu, an active tab and a pressed toggle with an edge", () => {
-    for (const [path, state] of HIGHLIGHTS) {
-      expect(tokensOf(path), path).toContain(`${state}bg-accent`);
-      expect(tokensOf(path), path).toContain(`${state}text-accent-foreground`);
-    }
-    for (const [path, state] of [...HIGHLIGHTS, ...MARKED]) {
+    for (const [path, state] of MARKED) {
       expect(tokensOf(path), path).toContain(`${state}inset-ring`);
       expect(tokensOf(path), path).toContain(`${state}inset-ring-muted-foreground`);
     }
@@ -496,7 +489,7 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["sidebar-foreground", "sidebar"],
   ["sidebar-accent-foreground", "sidebar-accent"],
   ["sidebar-accent-foreground", "sidebar-accent/50 background"],
-  // Faint text: a count, a time, a placeholder. A hovered or selected row draws it in muted.
+  // Faint text: a count, a time, a placeholder, on the panels.
   ["faint-foreground", "card"],
   ["faint-foreground", "popover"],
   ["faint-foreground", "sidebar"],
@@ -504,67 +497,18 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ["muted-foreground", "sidebar-accent"],
 ];
 
-/** The selector part each state's variant draws on. */
-const ACCENT_STATES: Readonly<Record<string, string>> = {
-  hover: ":hover",
-  "data-highlighted": "[data-highlighted]",
-  "data-popup-open": "[data-popup-open]",
-  "aria-[current=page]": '[aria-current="page"]',
-};
-
-/** A class's accent fill as `state:fill`, or why the faint-text rule cannot follow it: a fill on
- *  a descendant (`[&_…]:`, `*:`) or in another element's state (`group-`, `peer-`) matches the
- *  rule on the element that carries the class, not the one filled. */
-function accentFill(name: string): string | undefined {
-  const match = /^(.+:)?([^:]+):(bg-(?:sidebar-)?accent)(?:\/\d+)?$/.exec(name);
-  if (match === null) return undefined;
-  const elsewhere = `${match[1] ?? ""}${match[2]}`
-    .split(/:(?![^[]*\])/)
-    .filter((variant) => /^(\[[^\]]*&[_>~+]|\*{1,2}$|group-|peer-)/.test(variant));
-  return elsewhere.length > 0 ? `refused ${name}` : `${match[2]}:${match[3]}`;
-}
-
-describe("accentFill", () => {
-  it("refuses a fill on a descendant or in another element's state, and reads the rest", () => {
-    expect(
-      accentFill("[&_[data-slot=button][data-variant=ghost]]:hover:bg-sidebar-accent/50")
-    ).toStartWith("refused");
-    expect(accentFill("group-hover:bg-accent")).toStartWith("refused");
-    expect(accentFill("*:hover:bg-accent")).toStartWith("refused");
-    expect(accentFill("in-data-[slot=nav-surface]:hover:bg-sidebar-accent/50")).toBe(
-      "hover:bg-sidebar-accent"
-    );
-    expect(accentFill("aria-[current=page]:bg-sidebar-accent")).toBe(
-      "aria-[current=page]:bg-sidebar-accent"
-    );
-    expect(accentFill("bg-accent")).toBeUndefined();
-  });
-});
+// Each colour, the surface under it and the contrast it keeps there: text 4.5:1; the focus
+// outline, the state edge, an invalid edge and a field's edge 3:1; the highlight step 1.3:1.
+const CONTRASTS: readonly (readonly [string, string, number])[] = [
+  ...TEXT_PAIRS.map(([text, ground]) => [text, ground, 4.5] as const),
+  ...["background", "card", "popover", "field", "muted", "accent"].flatMap((ground) =>
+    ["focus", "muted-foreground", "danger"].map((edge) => [edge, ground, 3] as const)
+  ),
+  ...["background", "card", "popover", "muted"].map((ground) => ["input", ground, 3] as const),
+  ["accent", "popover", 1.3],
+];
 
 describe("the theme", () => {
-  it("draws faint text in the muted colour on each accent fill an entry takes", () => {
-    const selectors: string[] = [];
-    generated.walkDecls("--faint-foreground", (decl) => {
-      if (decl.value === "var(--muted-foreground)" && decl.parent instanceof Rule) {
-        selectors.push(decl.parent.selector);
-      }
-    });
-    expect(selectors).toHaveLength(1);
-    // Each fill's own part: the class that draws it, in the state that shows it.
-    const found = SOURCES.flatMap(({ text }) => classTokens(text)).flatMap((name) => {
-      const fill = accentFill(name);
-      return fill === undefined ? [] : [fill];
-    });
-    expect(found.filter((fill) => fill.startsWith("refused"))).toEqual([]);
-    const fills = new Set(found);
-    expect(fills.size).toBeGreaterThan(4);
-    for (const fill of fills) {
-      const state = fill.slice(0, fill.lastIndexOf(":"));
-      const part = ACCENT_STATES[state] ?? `${state}: no selector part`;
-      expect(selectors[0]).toContain(`[class*="${fill}"]${part}`);
-    }
-  });
-
   it("has a pair for every text colour the components use", () => {
     const texts = new Set<string>();
     generated.walkDecls("color", (decl) => {
@@ -586,45 +530,12 @@ describe("the theme", () => {
 
   it.each(
     Object.entries(THEMES)
-  )("keeps text at 4.5:1 on every surface it sits on, %s", (_name, tokens) => {
-    for (const [text, ground] of TEXT_PAIRS) {
+  )("keeps each colour at its contrast on every surface it sits on, %s", (_name, tokens) => {
+    for (const [fore, ground, min] of CONTRASTS) {
       expect(
-        contrast(colour(tokens, text), colour(tokens, ground)),
-        `${text} on ${ground}`
-      ).toBeGreaterThanOrEqual(4.5);
+        contrast(colour(tokens, fore), colour(tokens, ground)),
+        `${fore} on ${ground}`
+      ).toBeGreaterThanOrEqual(min);
     }
-  });
-
-  it.each(
-    Object.entries(THEMES)
-  )("keeps the focus outline, the state edge and an invalid edge at 3:1 on every surface, %s", (_name, tokens) => {
-    for (const ground of ["background", "card", "popover", "field", "muted", "accent"]) {
-      for (const edge of ["focus", "muted-foreground", "danger"]) {
-        expect(
-          contrast(colour(tokens, edge), colour(tokens, ground)),
-          `${edge} on ${ground}`
-        ).toBeGreaterThanOrEqual(3);
-      }
-    }
-  });
-
-  it.each(
-    Object.entries(THEMES)
-  )("keeps a field's edge at 3:1 on the page, a card, a dialog and muted, %s", (_name, tokens) => {
-    for (const ground of ["background", "card", "popover", "muted"]) {
-      expect(
-        contrast(colour(tokens, "input"), colour(tokens, ground)),
-        `input on ${ground}`
-      ).toBeGreaterThanOrEqual(3);
-    }
-  });
-
-  it.each(
-    Object.entries(THEMES)
-  )("makes the highlight step visible on a popover, %s", (_name, tokens) => {
-    expect(
-      contrast(colour(tokens, "accent"), colour(tokens, "popover")),
-      "accent on popover"
-    ).toBeGreaterThanOrEqual(1.3);
   });
 });

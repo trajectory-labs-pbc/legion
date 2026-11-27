@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { textVariants } from "#registry/legion/lib/typography";
 import { SurfaceTitle } from "#registry/legion/ui/heading";
 
 /** A page that stands in for the app: who it is from, a title, and what to do next. */
@@ -18,7 +19,7 @@ function MessagePage({
       className="grid min-h-dvh place-items-center bg-background px-6 text-foreground"
     >
       <section className="w-full max-w-md border bg-card p-8 text-card-foreground">
-        <p className="text-sm font-medium text-muted-foreground">{eyebrow}</p>
+        <p className={textVariants({ tone: "muted", weight: "medium" })}>{eyebrow}</p>
         <SurfaceTitle className="mt-3" size="page">
           {title}
         </SurfaceTitle>

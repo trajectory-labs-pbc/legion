@@ -4,8 +4,8 @@ import { XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import {
   closeButtonClass,
-  coveredClass,
-  modalPopupMotion,
+  dialogPopupClass,
+  modalViewportClass,
   scrimClass,
 } from "#registry/legion/lib/overlay-styles";
 import { headingVariants, textVariants } from "#registry/legion/lib/typography";
@@ -37,18 +37,10 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Viewport
-        data-slot="dialog-viewport"
-        className="fixed inset-0 z-50 flex overflow-y-auto overscroll-contain p-4"
-      >
+      <DialogPrimitive.Viewport data-slot="dialog-viewport" className={modalViewportClass}>
         <DialogPrimitive.Popup
           data-slot="dialog-content"
-          className={cn(
-            "relative m-auto grid w-full gap-4 rounded-xl border bg-popover p-6 text-popover-foreground shadow-dialog outline-hidden sm:max-w-lg",
-            modalPopupMotion,
-            coveredClass,
-            className
-          )}
+          className={cn(dialogPopupClass, className)}
           {...props}
         >
           <ModalSurfaceProvider>

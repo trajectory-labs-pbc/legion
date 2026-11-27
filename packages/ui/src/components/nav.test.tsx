@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { Button } from "#registry/legion/ui/button";
 import { NavRow, NavSurface } from "#registry/legion/ui/nav";
 
 describe("NavRow", () => {
@@ -43,17 +42,11 @@ describe("NavRow", () => {
     expect(tokens.filter((token) => token.includes("font-"))).toEqual([]);
   });
 
-  it("gives a ghost button on the surface the rows' hover on the button itself, not the surface", () => {
-    render(
-      <NavSurface aria-label="Navigation">
-        <Button variant="ghost">Search</Button>
-      </NavSurface>
-    );
-    const surface = screen.getByRole("complementary", { name: "Navigation" }).className.split(" ");
-    expect(surface.filter((token) => token.includes("hover:"))).toEqual([]);
-    const button = screen.getByRole("button", { name: "Search" }).className.split(" ");
+  it("gives a ghost button on the surface the rows' hover", () => {
+    render(<NavSurface aria-label="Navigation" />);
+    const tokens = screen.getByRole("complementary", { name: "Navigation" }).className.split(" ");
     for (const hover of ["bg-sidebar-accent/50", "text-sidebar-accent-foreground"]) {
-      expect(button).toContain(`in-data-[slot=nav-surface]:hover:${hover}`);
+      expect(tokens).toContain(`[&_[data-slot=button][data-variant=ghost]]:hover:${hover}`);
     }
   });
 });

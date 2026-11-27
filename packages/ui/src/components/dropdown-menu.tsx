@@ -2,7 +2,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cn } from "cn";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps } from "react";
-import { popupMotion } from "#registry/legion/lib/overlay-styles";
+import { highlightClass, popupMotion } from "#registry/legion/lib/overlay-styles";
 import { useIsInsideModalSurface } from "#registry/legion/ui/modal-surface-context";
 
 function DropdownMenu<Payload = unknown>({ modal, ...props }: MenuPrimitive.Root.Props<Payload>) {
@@ -58,8 +58,7 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-const ITEM_CLASS =
-  "relative flex h-7 cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:inset-ring data-highlighted:inset-ring-muted-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground";
+const ITEM_CLASS = `relative flex h-7 cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
 
 const DESTRUCTIVE_CLASS =
   "data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger-tint data-[variant=destructive]:data-highlighted:text-danger data-[variant=destructive]:*:[svg]:text-danger!";

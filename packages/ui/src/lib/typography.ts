@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
-// The one type scale: components take sizes from these recipes, not from raw text classes.
+// The one type scale: headings and running text take their sizes from these recipes, not from raw
+// text classes. A control (a button, a field) sizes its own label.
 
 const TONE = {
   default: "",
@@ -26,20 +27,13 @@ export type HeadingSize = NonNullable<VariantProps<typeof headingVariants>["size
 export const textVariants = cva("", {
   variants: {
     size: {
-      display: "text-xl",
-      title: "text-base",
       body: "text-sm",
       caption: "text-xs",
-      inherit: "",
     },
     tone: TONE,
     weight: {
-      normal: "font-normal",
       medium: "font-medium",
-      semibold: "font-semibold",
     },
   },
   defaultVariants: { size: "body" },
 });
-
-export type TextVariantProps = VariantProps<typeof textVariants>;

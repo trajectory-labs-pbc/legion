@@ -1,7 +1,8 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { popupMotion } from "#registry/legion/lib/overlay-styles";
+import { listItemClass, popupMotion } from "#registry/legion/lib/overlay-styles";
+import { textVariants } from "#registry/legion/lib/typography";
 
 const Select = SelectPrimitive.Root;
 
@@ -87,7 +88,7 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
-      className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)}
+      className={cn("px-2 py-1.5", textVariants({ size: "caption", tone: "muted" }), className)}
       {...props}
     />
   );
@@ -97,12 +98,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(
-        "relative flex h-control-sm w-full cursor-default items-center gap-2 rounded-sm pr-8 pl-2 text-sm outline-hidden select-none",
-        "data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:inset-ring data-highlighted:inset-ring-muted-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(listItemClass, className)}
       {...props}
     >
       <span

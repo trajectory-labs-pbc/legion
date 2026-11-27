@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentType, ReactElement } from "react";
 
 import { Button } from "#registry/legion/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "#registry/legion/ui/dialog";
@@ -10,9 +11,90 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "#registry/legion/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "#registry/legion/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "#registry/legion/ui/sheet";
 
 // Base UI stacks the overlays: these check what the package's parts rely on.
+
+type Modal = { modal?: boolean };
+const modalProp = ({ modal }: Modal) => (modal === undefined ? {} : { modal });
+
+function Menu(props: Modal) {
+  return (
+    <DropdownMenu {...modalProp(props)}>
+      <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
+      <DropdownMenuContent aria-label="Popup">
+        <DropdownMenuItem>One</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Pop(props: Modal) {
+  return (
+    <Popover {...modalProp(props)}>
+      <PopoverTrigger>Filter</PopoverTrigger>
+      <PopoverContent>
+        <PopoverTitle>Popup</PopoverTitle>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function InDialog({ children }: { children: ReactElement }) {
+  return (
+    <Dialog defaultOpen>
+      <DialogContent>
+        <DialogTitle>Surface</DialogTitle>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Base UI marks the page inert around a modal popup; the count of marked elements tells modal from not.
+async function inertAdded(ui: ReactElement, trigger: string, role: string): Promise<number> {
+  render(ui);
+  const before = document.querySelectorAll("[data-base-ui-inert]").length;
+  await userEvent.click(screen.getByRole("button", { name: trigger }));
+  await screen.findByRole(role, { name: "Popup" });
+  const added = document.querySelectorAll("[data-base-ui-inert]").length - before;
+  cleanup();
+  return added;
+}
+
+const POPUPS: readonly (readonly [string, ComponentType<Modal>, string, string])[] = [
+  ["a menu", Menu, "Menu", "menu"],
+  ["a popover", Pop, "Filter", "dialog"],
+];
+
+describe.each(POPUPS)("%s", (_name, Popup, trigger, role) => {
+  it("is modal inside a dialog and not on the page", async () => {
+    const added = (ui: ReactElement) => inertAdded(ui, trigger, role);
+    const onPage = await added(<Popup />);
+    expect(onPage).toBe(await added(<Popup modal={false} />));
+    expect(onPage).not.toBe(await added(<Popup modal />));
+    const inDialog = await added(
+      <InDialog>
+        <Popup />
+      </InDialog>
+    );
+    expect(inDialog).toBe(
+      await added(
+        <InDialog>
+          <Popup modal />
+        </InDialog>
+      )
+    );
+    expect(inDialog).not.toBe(
+      await added(
+        <InDialog>
+          <Popup modal={false} />
+        </InDialog>
+      )
+    );
+  });
+});
 
 function DialogInSheet() {
   return (

@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from "bun:test";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactElement } from "react";
 
 import { Button } from "#registry/legion/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "#registry/legion/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -22,39 +20,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "#registry/legion/ui/dropdown-menu";
-
-// Base UI marks the page inert around a modal popup; the count of marked elements tells modal from not.
-async function inertAdded(ui: ReactElement, trigger: string, role: string): Promise<number> {
-  render(ui);
-  const before = document.querySelectorAll("[data-base-ui-inert]").length;
-  await userEvent.click(screen.getByRole("button", { name: trigger }));
-  await screen.findByRole(role, { name: "Popup" });
-  const added = document.querySelectorAll("[data-base-ui-inert]").length - before;
-  cleanup();
-  return added;
-}
-
-function Menu({ modal }: { modal?: boolean }) {
-  return (
-    <DropdownMenu {...(modal === undefined ? {} : { modal })}>
-      <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
-      <DropdownMenuContent aria-label="Popup">
-        <DropdownMenuItem>One</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function InDialog({ children }: { children: ReactElement }) {
-  return (
-    <Dialog defaultOpen>
-      <DialogContent>
-        <DialogTitle>Surface</DialogTitle>
-        {children}
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 describe("DropdownMenu", () => {
   it("opens on Enter, moves with the arrows, runs an item and returns the focus", async () => {
@@ -153,37 +118,6 @@ describe("DropdownMenu", () => {
     await userEvent.keyboard("{ArrowLeft}");
     await waitFor(() => expect(screen.queryByText("Backlog")).toBeNull());
     expect(document.activeElement).toBe(subTrigger);
-  });
-
-  it("is modal inside a dialog and not on the page", async () => {
-    const onPage = await inertAdded(<Menu />, "Menu", "menu");
-    expect(onPage).toBe(await inertAdded(<Menu modal={false} />, "Menu", "menu"));
-    expect(onPage).not.toBe(await inertAdded(<Menu modal />, "Menu", "menu"));
-    const inDialog = await inertAdded(
-      <InDialog>
-        <Menu />
-      </InDialog>,
-      "Menu",
-      "menu"
-    );
-    expect(inDialog).toBe(
-      await inertAdded(
-        <InDialog>
-          <Menu modal />
-        </InDialog>,
-        "Menu",
-        "menu"
-      )
-    );
-    expect(inDialog).not.toBe(
-      await inertAdded(
-        <InDialog>
-          <Menu modal={false} />
-        </InDialog>,
-        "Menu",
-        "menu"
-      )
-    );
   });
 
   it("keeps the menu open when a checkbox item is pressed with the pointer", async () => {

@@ -158,7 +158,12 @@ function themeItem(tokens: Root, css: Root): RegistryItem {
         : []
     )
   );
+  // One base layer: the stylesheet's rules without the font ones, then the theme's own.
   const base = atRule(css, "layer", "base");
+  const baseRules = [
+    ...(base.nodes ?? []).filter((node) => !appliesFont(node)),
+    ...(atRule(tokens, "layer", "base").nodes ?? []),
+  ];
   const light = rule(tokens, ":root");
   const dark = rule(tokens, ".dark");
   return {
@@ -173,7 +178,7 @@ function themeItem(tokens: Root, css: Root): RegistryItem {
       withoutVariables(light),
       withoutVariables(dark),
       atRule(tokens, "media", "(prefers-color-scheme: dark)"),
-      base.clone({ nodes: (base.nodes ?? []).filter((node) => !appliesFont(node)) }),
+      base.clone({ nodes: baseRules }),
     ]),
   };
 }
