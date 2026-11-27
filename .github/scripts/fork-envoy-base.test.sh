@@ -228,6 +228,19 @@ go pull_request
 check "a pull request with no imaged ancestor fails" "$(is "$status/$out" 1/)"
 check "  with an error line" "$(contains "$err" "^::error::no first-parent ancestor of $head")"
 
+# 4000 commits: their ids passed as one argument would exceed the kernel's 128 KiB limit on one.
+git init -q -b main "$work/long"
+for n in $(seq 1 4000); do
+  printf 'commit refs/heads/main\nmark :%s\ncommitter t <t@t> 0 +0000\ndata 0\n' "$n"
+  if [ "$n" -gt 1 ]; then printf 'from :%s\n' $((n - 1)); fi
+done | git -C "$work/long" fast-import --quiet
+root=$(git -C "$work/long" rev-list --max-parents=0 HEAD)
+run pr-long "$work/long"
+main_runs "$root" "$ok"
+go pull_request
+check "a pull request on a history longer than one argument holds finds its imaged ancestor" \
+  "$(contains "$(calls)" "^docker .*ghcr.io/owner/legion/envoy:$root ")"
+
 git clone -q --depth 2 "file://$work/repo" "$work/shallow"
 run shallow "$work/shallow"
 main_runs "$grandparent" "$ok"

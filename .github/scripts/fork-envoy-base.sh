@@ -53,11 +53,11 @@ if [ "$event" = pull_request ]; then
   # with a successful run, and the newer ones whose run is still going.
   found=$(gh_read gh api "$runs?branch=main&per_page=100" \
     --jq '[.workflow_runs[] | {sha: .head_sha, status, conclusion}]')
-  ancestors=$(git rev-list --first-parent "$commit")
   # Prints that commit, then the newer ones, on one line; nothing when no commit has one.
-  picked=$(jq -rn --argjson runs "$found" --arg line "$ancestors" '
+  # The line comes on stdin: a long history passes the kernel's limit on one argument.
+  picked=$(git rev-list --first-parent "$commit" | jq -rRn --argjson runs "$found" '
     def ran(f): . as $sha | $runs | any(.sha == $sha and f);
-    ($line | split("\n") | map(select(. != ""))) as $line
+    [inputs] as $line
     | (first($line | to_entries[] | select(.value | ran(.conclusion == "success")) | .key) // null) as $at
     | if $at == null then empty
       else [$line[$at]] + ($line[:$at] | map(select(ran(.status != "completed")))) | join(" ")
