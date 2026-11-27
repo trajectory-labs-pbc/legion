@@ -37,11 +37,11 @@ export const RULES = {
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
   fade: "a transition moves opacity alone: a row's hover and highlight change at once",
   layer:
-    "a layer names its theme token (`z-raised`, `z-overlay`, or `var(--layer-*)` in a stylesheet), never a number",
+    "a layer names its theme token (`z-raised`, `z-overlay`, or `var()` of the theme's `--layer-*` in a stylesheet), never a number",
   duration:
-    "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var(--duration-*)` in a stylesheet), never a number or the `transition` shorthand",
+    "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
   themeOnly:
-    "a layer, a fade's length and the disabled opacity are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
+    "a layer, a fade's length (`--default-transition-duration` too) and the disabled opacity are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -161,10 +161,11 @@ const typeSet = (property: string, value: string) =>
 /** What a `transition-*` class compiles its length to: the `duration-*` class's, or the default. */
 const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
 /** The variables the theme alone declares. */
-const THEME_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
-/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
+const THEME_ONLY = /^--(layer|duration)-|^--(disabled-opacity|default-transition-duration)$/;
+/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it but
+ *  the important mark. */
 const namesOne = (value: string, names: ReadonlySet<string>) =>
-  names.has(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "");
+  names.has(/^var\(\s*(--[\w-]+)\s*\)(\s*!important)?$/.exec(value)?.[1] ?? "");
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -195,9 +196,8 @@ function radiusAllowed(
   if (value === "calc(infinity * 1px)") return circle;
   // The theme's corners compile inline, to the value of their token.
   if (radiusValues.has(value)) return true;
-  // Or it names one corner token, with no fallback and nothing around it.
-  const name = /^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1];
-  return name !== undefined && radii.has(name);
+  // Or it names one corner token.
+  return namesOne(value, radii);
 }
 
 /**
@@ -211,6 +211,11 @@ export function declarationProblems(
   { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
   const { property, value, context } = declaration;
+  // `@property` gives a variable its initial value, so a theme token's is the theme's alone.
+  const registers = context.some((prelude) =>
+    THEME_ONLY.test(/^@property\s+(\S+)/.exec(prelude)?.[1] ?? "")
+  );
+  if (registers) return [RULES.themeOnly];
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);

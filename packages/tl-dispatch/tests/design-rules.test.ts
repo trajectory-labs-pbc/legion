@@ -57,7 +57,11 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { z-index: 50; }", "a layer names its theme token"],
   ["tsx", "<p style={{ zIndex: 50 }} />", "a layer set in a style"],
   ["tsx", '<div className="z-(--layer-bogus)">', "a layer names its theme token"],
-  ["tsx", '<div className="motion-safe:duration-(--duration-slow)">', "a fade's length"],
+  [
+    "tsx",
+    '<div className="motion-safe:duration-(--duration-slow)">',
+    "a fade's length names its theme token",
+  ],
   [
     "css",
     "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-bogus); } }",
@@ -66,12 +70,27 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<div className="[--layer-overlay:9999] z-overlay">', "declared in the theme alone"],
   ["css", ":root { --layer-overlay: 9999; }", "declared in the theme alone"],
   ["css", ":root { --duration-popup: 2s; }", "declared in the theme alone"],
+  ["css", ":root { --default-transition-duration: 2s; }", "declared in the theme alone"],
+  [
+    "tsx",
+    '<div className="[--default-transition-duration:2s] motion-safe:transition-opacity">',
+    "declared in the theme alone",
+  ],
+  [
+    "css",
+    '@property --duration-popup { syntax: "<time>"; inherits: false; initial-value: 2s; }',
+    "declared in the theme alone",
+  ],
   [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
     "a fade's length names its theme token",
   ],
-  ["tsx", '<div className="motion-safe:[transition:opacity_1s]">', "a fade's length"],
+  [
+    "tsx",
+    '<div className="motion-safe:[transition:opacity_1s]">',
+    "a fade's length names its theme token",
+  ],
   [
     "css",
     "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity var(--duration-popup); } }",
@@ -156,6 +175,7 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<div className="motion-safe:animate-spin motion-safe:transition-opacity">'],
   ["tsx", '<div className="motion-safe:transition-[opacity] motion-safe:transition-none">'],
   ["tsx", '<div className="z-raised focus:z-overlay">'],
+  ["tsx", '<div className="!z-overlay">'],
   [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',

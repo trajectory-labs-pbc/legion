@@ -72,8 +72,16 @@ const INSET_EDGE = "inset 0 0 0 1px var(--tw-inset-ring-color, currentcolor)";
 // A fade's length and a layer name a token the theme declares on :root; a `transition-*`
 // class's own length is the duration class's, or the default.
 const DURATIONS = new Set(["initial", "var(--tw-duration, var(--default-transition-duration))"]);
-// The variables the theme's :root alone declares.
+// The variables the theme's :root alone declares, and the names it gives them.
 const ROOT_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
+const ROOT_TOKENS = new Set<string>();
+postcss.parse(readFileSync(join(src, "styles/theme.css"), "utf8")).each((node) => {
+  if (node instanceof Rule && node.selector === ":root") {
+    node.each((decl) => {
+      if (decl.type === "decl" && ROOT_ONLY.test(decl.prop)) ROOT_TOKENS.add(decl.prop);
+    });
+  }
+});
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
@@ -94,15 +102,13 @@ function designProblems(css: Root): string[] {
   const say = (node: Node, text: string, why: string) => {
     problems.push(`${where(node)} { ${text} }: ${why}`);
   };
-  const rootTokens = new Set<string>();
-  css.walkDecls(/^--/, (decl) => {
-    if (where(decl) === ":root") rootTokens.add(decl.prop);
-  });
-  /** Whether `value` is `var(...)` of a :root token whose name starts with `prefix`. */
+  /** Whether `value` is `var(...)` of a token of the theme's :root whose name starts with `prefix`. */
   const namesRoot = (value: string, prefix: string) => {
     const name = value.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "";
-    return name.startsWith(prefix) && rootTokens.has(name);
+    return name.startsWith(prefix) && ROOT_TOKENS.has(name);
   };
+  // Each token of the theme's :root is declared there once, and nowhere else.
+  const declared = new Set<string>();
 
   css.walkDecls((decl) => {
     const { prop, value } = decl;
@@ -139,8 +145,11 @@ function designProblems(css: Root): string[] {
     if (prop === "z-index" && !namesRoot(value, "--layer-")) {
       say(decl, text, "a layer that names no theme token");
     }
-    if (ROOT_ONLY.test(prop) && where(decl) !== ":root") {
-      say(decl, text, "a theme token declared outside the theme's :root");
+    if (ROOT_ONLY.test(prop)) {
+      if (where(decl) !== ":root" || !ROOT_TOKENS.has(prop) || declared.has(prop)) {
+        say(decl, text, "a theme token declared outside the theme's :root");
+      }
+      declared.add(prop);
     }
     if (prop === "--default-transition-duration" && value !== "150ms") {
       say(decl, text, "a duration outside 150 to 200 ms");
@@ -352,6 +361,16 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
     "a theme token declared outside the theme's :root",
   ],
   [
+    "a layer the theme lacks, declared on another :root",
+    { css: `${globalsText}\n:root { --layer-toast: 100; }`, extra: ["z-(--layer-toast)"] },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
+    "a layer declared again on another :root",
+    { css: `${globalsText}\n:root { --layer-overlay: 9999; }` },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
     "a layer the theme lacks",
     { extra: ["z-(--layer-bogus)"] },
     "a layer that names no theme token",
@@ -482,8 +501,11 @@ describe("the components", () => {
     ).toEqual([]);
     const primary = buttonVariants({ variant: "default" }).split(" ");
     const button = tokensOf("components/button.tsx");
+    // The base and the size classes, which every variant takes, hold neither.
+    const shared = buttonVariants({ variant: null }).split(" ");
     for (const each of PRIMARY_DISABLED) {
       expect(primary, each).toContain(each);
+      expect(shared, each).not.toContain(each);
       expect(button.filter((token) => token === each).length, each).toBe(1);
     }
   });
