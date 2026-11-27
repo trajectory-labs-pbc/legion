@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNeedsYouCount } from "@/upstream/data-hooks";
 import { credentialPendingQuery, inboxQuery, myRepliesCountQuery } from "@/upstream/queries";
-import { readFailureOf } from "./read-failure";
+import { useReadFailure } from "./read-failure";
 import { useAskSessionAgain, useSession } from "./session";
 import type { ShellRead } from "./shell-read";
 
@@ -25,11 +25,11 @@ export function useInboxCount(): ShellRead<InboxCount> {
   const waiting = useNeedsYouCount();
   const askSessionAgain = useAskSessionAgain();
   const reads = human ? [inbox, credentials, replies] : [inbox, credentials];
+  // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
+  const fault = useReadFailure(
+    ...(credentials.data === null ? reads.filter((read) => read !== credentials) : reads)
+  );
   if (session.state !== "ready" || reads.some((read) => read.data === undefined)) {
-    // With no secrets broker the list is held, never asked again, so a Retry leaves it alone.
-    const retried =
-      credentials.data === null ? reads.filter((read) => read !== credentials) : reads;
-    const fault = readFailureOf(...retried);
     if (fault?.retry === undefined) return { data: undefined, fault };
     // The count is made with the session, so its Retry asks the session again too.
     const retry = () => {

@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { ApiError } from "@/upstream/api";
 import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { answerShellReads, json, readFailed, waitFor } from "../../tests/network";
-import { settle, tooltipOf } from "../../tests/react";
+import { settle, sleep, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
 const PEEK = "Peek inbox";
@@ -113,28 +114,28 @@ describe("CompactHeader", () => {
     expect(count()?.closest("a")?.getAttribute("title")).toBe("3 unread threads");
   });
 
-  test("an Inbox read the server refuses shows its line with no Retry", async () => {
-    const header = mount(
-      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      inboxReads(() => json({ error: { code: "FORBIDDEN" } }, 403), 3),
-      new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    );
-    await waitFor(() => header.textContent?.includes("You cannot see the Inbox count.") === true);
-    expect([...header.querySelectorAll("button")].some((b) => b.textContent === "Retry")).toBe(
-      false
-    );
-  });
-
-  test("an Inbox read the server cannot find shows its line with no Retry", async () => {
-    const header = mount(
-      <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      inboxReads(() => json({ error: { code: "NOT_FOUND" } }, 404), 3),
-      new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    );
-    await waitFor(() => header.textContent?.includes("Could not find the Inbox count.") === true);
-    expect([...header.querySelectorAll("button")].some((b) => b.textContent === "Retry")).toBe(
-      false
-    );
+  test("an Inbox read the server refuses or cannot find draws no line and no Retry", async () => {
+    for (const status of [403, 404]) {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const header = mount(
+        <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+        inboxReads({ inbox: () => json({ error: { code: "REFUSED" } }, status), unread: 3 }),
+        client
+      );
+      // The refusal landed, and the header drew what it makes of it.
+      await waitFor(() =>
+        client
+          .getQueryCache()
+          .getAll()
+          .some(
+            (query) => query.state.error instanceof ApiError && query.state.error.status === status
+          )
+      );
+      await sleep(100);
+      expect(header.textContent).not.toContain("Inbox count");
+      expect(header.querySelector("button[aria-busy], [role='alert']")).toBeNull();
+      for (const cleanup of cleanups.splice(0).reverse()) cleanup();
+    }
   });
 
   test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {

@@ -6,12 +6,13 @@ import { routes } from "@/navigation/routes";
 import { AppName } from "./app-name";
 import { useInboxRowCount } from "./inbox-count";
 import { PeekButton } from "./peek-button";
-import { RowCountMark } from "./row-count";
+import { RowCountMark, retryableFaultOf } from "./row-count";
 import { useAgentsRowCount } from "./sidebar-data";
 
 /**
  * The narrow screen's top bar, one 44 px row: the name, the Inbox and unread agents, and the menu.
- * A failed Inbox count says so on a line below it, since the row has no room for the sentence.
+ * A failed Inbox count says so on a line below it, since the row has no room for the sentence;
+ * a refused one draws nothing.
  */
 export function CompactHeader({
   navigationOpen,
@@ -24,6 +25,8 @@ export function CompactHeader({
 }) {
   const inboxCount = useInboxRowCount();
   const agentsCount = useAgentsRowCount();
+  // A refused count draws nothing, as beside a sidebar row.
+  const inboxFault = retryableFaultOf(inboxCount);
   return (
     <>
       <NavSurface className="flex h-11 shrink-0 items-center gap-1 px-2" render={<header />}>
@@ -60,9 +63,9 @@ export function CompactHeader({
           </Button>
         </div>
       </NavSurface>
-      {inboxCount.fault === undefined ? null : (
+      {inboxFault === undefined ? null : (
         <NavSurface className="px-2 pb-1" render={<div />}>
-          <ReadFailure fault={inboxCount.fault} noun="the Inbox count" />
+          <ReadFailure fault={inboxFault} noun="the Inbox count" />
         </NavSurface>
       )}
     </>

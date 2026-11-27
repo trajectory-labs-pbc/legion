@@ -554,34 +554,23 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
   }
 });
 
-test("MLS-11 a machine logins read the server cannot find says so with no Retry", async () => {
-  const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
-    new ApiError(404, { code: "NOT_FOUND", error: "gone" })
-  );
-  try {
-    renderPage();
-    const section = within(await screen.findByRole("region", { name: "Machine logins" }));
-    const alert = await section.findByRole("alert");
-    expect(alert.textContent).toBe("Could not find machine logins.");
-    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
-  } finally {
-    cleanup();
-    getMachineLogins.mockRestore();
-  }
-});
-
-test("MLS-12 a machine logins read the server refuses says so with no Retry", async () => {
-  const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
-    new ApiError(403, { code: "FORBIDDEN", error: "no" })
-  );
-  try {
-    renderPage();
-    const section = within(await screen.findByRole("region", { name: "Machine logins" }));
-    const alert = await section.findByRole("alert");
-    expect(alert.textContent).toBe("You cannot see machine logins.");
-    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
-  } finally {
-    cleanup();
-    getMachineLogins.mockRestore();
-  }
-});
+for (const [id, status, line] of [
+  ["MLS-11", 404, "Could not find machine logins."],
+  ["MLS-12", 403, "You cannot see machine logins."],
+] as const) {
+  test(`${id} a machine logins read the server answers with a ${status} says so with no Retry`, async () => {
+    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
+      new ApiError(status, { code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", error: "no" })
+    );
+    try {
+      renderPage();
+      const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+      const alert = await section.findByRole("alert");
+      expect(alert.textContent).toBe(line);
+      expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+    } finally {
+      cleanup();
+      getMachineLogins.mockRestore();
+    }
+  });
+}

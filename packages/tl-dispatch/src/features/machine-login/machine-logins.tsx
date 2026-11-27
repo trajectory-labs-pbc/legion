@@ -31,7 +31,7 @@ import { textVariants } from "@legion/ui/lib/typography";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Fragment, memo, type ReactNode, useRef, useState } from "react";
-import { ReadFailure, readFailureOf, refreshFailureOf } from "@/data/read-failure";
+import { ReadFailure, refreshFailureOf, useReadFailure } from "@/data/read-failure";
 import { WriteFailure } from "@/data/write-failure";
 import type { LauncherCredentialResp } from "@/upstream/contract";
 import { machineName } from "@/upstream/logic/machine-login";
@@ -255,7 +255,7 @@ export const MachineLogins = memo(function MachineLogins({
   // question knows its login, not the row the login stood in.
   const finalFocus = (login: LauncherCredentialResp) =>
     isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
-  const fault = readFailureOf(logins);
+  const fault = useReadFailure(logins);
   const refreshFault = refreshFailureOf(logins);
   return (
     <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>
@@ -285,7 +285,7 @@ export const MachineLogins = memo(function MachineLogins({
         </Collapsible>
       </div>
       {refreshFault !== undefined ? (
-        <ReadFailure fault={refreshFault} noun="the latest machine logins" />
+        <ReadFailure fault={refreshFault} noun="machine logins" refresh />
       ) : null}
       {logins.data !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">

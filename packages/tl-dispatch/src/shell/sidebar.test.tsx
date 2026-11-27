@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/destinations";
+import { ApiError } from "@/upstream/api";
 import type { AuthenticatedUser, InboxRow } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
@@ -328,49 +329,21 @@ describe("the sidebar", () => {
     expect(openOf(mountView(data))).toEqual([false, false]);
   });
 
-  test("a section the server refuses says so with no Retry, as trying again cannot change it", () => {
-    const refused = (refusal: "forbidden" | "not-found") => ({
-      rows: undefined,
-      fault: { retrying: false, refusal },
+  test("a section the server refuses or cannot find says so with no Retry", async () => {
+    const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) => {
+        if (url.endsWith("/api/v1/projects")) return json({ error: { code: "FORBIDDEN" } }, 403);
+        if (url.includes("pinned=true")) return json({ error: { code: "NOT_FOUND" } }, 404);
+        return undefined;
+      },
     });
-    const container = mountView({
-      destinations: [],
-      pinnedAgents: refused("forbidden"),
-      inLiveView: false,
-      pinnedIssues: refused("not-found"),
-      projects: failedRead(() => {}),
-    });
-    const alerts = [...container.querySelectorAll('[role="alert"]')];
-    expect(alerts.map((alert) => alert.textContent)).toEqual([
-      "You cannot see pinned agents.",
+    const alerts = () => [...container.querySelectorAll('[role="alert"]')];
+    await waitFor(() => alerts().length === 2);
+    expect(alerts().map((alert) => alert.textContent)).toEqual([
       "Could not find pinned issues.",
-      "Could not load projects.Retry",
+      "You cannot see projects.",
     ]);
-  });
-
-  test("a count the server refuses draws no Retry and no number; a 500 beside it keeps its Retry", () => {
-    const refused = (refusal: "forbidden" | "not-found") => ({
-      count: undefined,
-      fault: { ...faultOf(() => {}), refusal },
-    });
-    const container = mountView({
-      destinations: [
-        destination("inbox", { ...refused("forbidden"), needsYou: true }),
-        destination("agents", refused("not-found")),
-        destination("priorities", { count: undefined, fault: faultOf(() => {}) }),
-      ],
-      pinnedAgents: OUT,
-      inLiveView: false,
-      pinnedIssues: OUT,
-      projects: OUT,
-    });
-    const rows = [...container.querySelectorAll("nav > ul > li")];
-    expect(rows.map((row) => row.querySelector("button")?.getAttribute("aria-label"))).toEqual([
-      undefined,
-      undefined,
-      "Could not load the Priorities count. Retry",
-    ]);
-    expect(rows.map((row) => row.textContent)).toEqual(["Inbox", "Agents", "Priorities"]);
   });
 
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
@@ -488,11 +461,32 @@ describe("the sidebar", () => {
     expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
   });
 
-  test("an inbox read the server refuses or cannot find draws no Retry in the count's box", async () => {
+  test("an inbox read the server refuses or cannot find draws no Retry, so Peek keeps the count's box", async () => {
     for (const status of [403, 404]) {
-      const inboxRow = await mountInbox(() => json({ error: { code: "REFUSED" } }, status), 3);
-      expect(numberOf(inboxRow)).toBeNull();
-      expect(inboxRow?.closest("li")?.querySelector("button")).toBeNull();
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const container = mount("/agents", {
+        answer: inboxReads({
+          inbox: () => json({ error: { code: "REFUSED" } }, status),
+          unread: 3,
+        }),
+        client,
+        onPeek: () => {},
+        peek: true,
+      });
+      // The refusal landed, and the row drew what it makes of it.
+      await waitFor(() =>
+        client
+          .getQueryCache()
+          .getAll()
+          .some(
+            (query) => query.state.error instanceof ApiError && query.state.error.status === status
+          )
+      );
+      await sleep(100);
+      const row = container.querySelector('nav a[href="/"]')?.closest("li");
+      expect(numberOf(row?.querySelector("a") ?? null)).toBeNull();
+      expect(row?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).toBeNull();
+      expect(row?.querySelector(`[aria-label="${PEEK}"]`)).not.toBeNull();
       for (const view of mounted.splice(0)) view.unmount();
     }
   });

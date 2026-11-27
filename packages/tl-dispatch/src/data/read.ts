@@ -6,7 +6,10 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ApiError } from "@/upstream/api";
+import { ApiError, isNoRoute, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
+
+/** Why asking a read again cannot change its answer: a 403 or a 404. */
+export type Refusal = "forbidden" | "not-found";
 
 /** A read that failed and can be tried again; the failure stays while it is read again. */
 export interface RetryableFault {
@@ -21,7 +24,7 @@ export interface RefusedFault {
   /** It is being read again, though no Retry of the reader's asked. */
   readonly retrying: boolean;
   readonly retry?: undefined;
-  readonly refusal: "forbidden" | "not-found";
+  readonly refusal: Refusal;
 }
 
 export type ReadFault = RetryableFault | RefusedFault;
@@ -46,9 +49,14 @@ export interface ReadOptions<TQueryFnData, T> {
   readonly select?: (data: TQueryFnData) => T;
 }
 
-// A read's 409 keeps its Retry: the conflict rule is for writes.
-export function refusalOf(error: unknown): RefusedFault["refusal"] | undefined {
-  if (!(error instanceof ApiError)) return undefined;
+/**
+ * The one sort of a failed read. A 404 from a Dispatch process with no route for the read is no
+ * refusal: while a release rolls out, another process can answer it. A read's 409 keeps its Retry:
+ * the conflict rule is for writes.
+ */
+export function refusalOf(error: unknown): Refusal | undefined {
+  if (!(error instanceof ApiError) || isNoRoute(error)) return undefined;
+  if (error.message === NO_ROUTE_ROLLING_RELEASE_MESSAGE) return undefined;
   if (error.status === 403) return "forbidden";
   return error.status === 404 ? "not-found" : undefined;
 }
