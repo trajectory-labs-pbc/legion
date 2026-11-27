@@ -8,7 +8,8 @@
 //
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
-// six pages the fork draws, at 390, 768 and 1440 px, with nothing that scrolls sideways (FR4).
+// the pages the fork draws, at 390, 768 and 1440 px, each fits the window, and no box in it scrolls
+// or clips content wider than itself (FR4).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -75,6 +76,9 @@ interface Region {
 }
 
 /** A serious or critical axe finding. */
+/** What every check leaves out of `region`: upstream's views, and the region's own `exclude`. */
+const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
+
 interface Finding {
   rule: string;
   impact: string;
@@ -604,33 +608,38 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   return unmarked;
 }
 
-/** What scrolls sideways once upstream's views and what `region` leaves out are hidden: the page
- *  itself, and each box that scrolls. A table's own box may scroll (FR4): packages/ui's Table
- *  scrolls a table wider than its column inside that box. What the content panel clips, from
- *  768 px, scrolls nothing, so it is not found. */
-async function sidewaysScrolls(page: Page, region: Region): Promise<string[]> {
-  const hidden = [UPSTREAM_VIEW, ...(region.exclude ?? [])].join(", ");
-  await page.addStyleTag({ content: `${hidden} { display: none !important; }` });
+/** Hides upstream's views and what `region` leaves out, so the width check reads only the fork's
+ *  layout. */
+async function hideLeftOut(page: Page, region: Region): Promise<void> {
+  await page.addStyleTag({
+    content: `${leftOut(region).join(", ")} { display: none !important; }`,
+  });
+}
+
+/** Each box that scrolls or clips content wider than itself. A table's own box may scroll (FR4):
+ *  packages/ui's Table scrolls a table wider than its column inside that box. */
+async function wideBoxes(page: Page): Promise<string[]> {
   return page.evaluate((table) => {
-    const scrolls: string[] = [];
-    const root = document.scrollingElement ?? document.documentElement;
-    if (root.scrollWidth > root.clientWidth) {
-      scrolls.push(`the page: ${root.scrollWidth} px in ${root.clientWidth} px`);
-    }
+    const found: string[] = [];
     for (const box of document.body.querySelectorAll(`:not(${table})`)) {
       const { overflowX } = getComputedStyle(box);
-      if (overflowX !== "auto" && overflowX !== "scroll") continue;
-      if (box.scrollWidth <= box.clientWidth) continue;
+      const does =
+        overflowX === "clip"
+          ? "clips"
+          : overflowX === "auto" || overflowX === "scroll"
+            ? "scrolls"
+            : null;
+      if (does === null || box.scrollWidth <= box.clientWidth) continue;
       const name =
         box.getAttribute("data-testid") ??
         box.getAttribute("data-slot") ??
         box.getAttribute("aria-label") ??
         box.getAttribute("class")?.slice(0, 60);
-      scrolls.push(
-        `${box.tagName.toLowerCase()} "${name ?? ""}": ${box.scrollWidth} px in ${box.clientWidth} px`
+      found.push(
+        `${box.tagName.toLowerCase()} "${name ?? ""}" ${does} ${box.scrollWidth} px in ${box.clientWidth} px`
       );
     }
-    return scrolls;
+    return found;
   }, '[data-slot="table-container"]');
 }
 
@@ -657,19 +666,25 @@ function walkEach(list: readonly Region[]): void {
   }
 }
 
+/** Each page, opened once and resized to each width: the page fits the window, and no box in it
+ *  scrolls or clips content wider than itself. */
 function fitEach(list: readonly Region[]): void {
   for (const region of list) {
-    for (const viewport of WIDTHS) {
-      test(`the ${region.name} scrolls nothing sideways at ${viewport.width} px`, async ({
-        page,
-      }) => {
-        await openRegion(page, { ...region, viewport });
-        expect(
-          await sidewaysScrolls(page, region),
-          `${region.name} at ${viewport.width} px`
-        ).toEqual([]);
-      });
-    }
+    test(`the ${region.name} fits 390, 768 and 1440 px, and no box in it is too narrow`, async ({
+      page,
+    }) => {
+      await openRegion(page, { ...region, viewport: PHONE });
+      await hideLeftOut(page, region);
+      for (const viewport of WIDTHS) {
+        await page.setViewportSize(viewport);
+        await assertPageFits(page);
+        // A resize settles a render or two later (assertPageFits says why), so the boxes are
+        // read until they hold.
+        await expect
+          .poll(() => wideBoxes(page), { message: `${region.name} at ${viewport.width} px` })
+          .toEqual([]);
+      }
+    });
   }
 }
 
@@ -780,7 +795,8 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
     at.append(box);
   });
   await appendWide(page, '[data-testid="wide-box"]');
-  expect(await sidewaysScrolls(page, machineLogin)).toEqual([
+  await hideLeftOut(page, machineLogin);
+  expect(await wideBoxes(page)).toEqual([
     expect.stringMatching(/^div "wide-box" scrolls 2000 px in \d+ px$/),
   ]);
 });
@@ -790,16 +806,16 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
 test("content wider than the window fails the width check at each width", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
   await appendWide(page, MAIN);
+  await hideLeftOut(page, machineLogin);
   for (const viewport of WIDTHS) {
     await page.setViewportSize(viewport);
-    const boxes = await sidewaysScrolls(page, machineLogin);
     if (viewport === PHONE) {
       await expect(assertPageFits(page)).rejects.toThrow("px wide in a 390px viewport");
-      expect.soft(boxes, "at 390 px").toEqual([]);
+      expect(await wideBoxes(page), "at 390 px").toEqual([]);
     } else {
       await assertPageFits(page);
-      expect
-        .soft(boxes, `at ${viewport.width} px`)
+      await expect
+        .poll(() => wideBoxes(page), { message: `at ${viewport.width} px` })
         .toEqual([expect.stringMatching(/^div ".*" clips \d+ px in \d+ px$/)]);
     }
   }
