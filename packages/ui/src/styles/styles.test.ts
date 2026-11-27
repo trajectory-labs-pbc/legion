@@ -4,14 +4,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { Glob } from "bun";
-import type { VariantProps } from "class-variance-authority";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
 
-import { type HeadingSize, headingVariants, textVariants } from "../lib/typography";
+import { type HeadingSize, headingVariants, type TextSize, textVariants } from "../lib/typography";
 import { cn } from "../lib/utils";
-
-type TextSize = NonNullable<VariantProps<typeof textVariants>["size"]>;
 
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 

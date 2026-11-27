@@ -42,3 +42,5 @@ export const textVariants = cva("wrap-pretty", {
 });
 
 export type TextVariantProps = VariantProps<typeof textVariants>;
+
+export type TextSize = NonNullable<VariantProps<typeof textVariants>["size"]>;
