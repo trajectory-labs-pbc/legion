@@ -129,7 +129,7 @@ describe("SettingsFoot", () => {
       </SettingsSection>
     );
     const save = screen.getByRole("button", { name: "Save" });
-    expect(save.closest("form")).toBe(screen.getByRole("form"));
+    expect(save.closest("form")).toBe(screen.getByRole<HTMLFormElement>("form"));
     const foot = save.parentElement;
     expect(foot?.textContent).toBe("SaveA save reads each source again.");
     expect(foot?.lastElementChild?.className).toContain("text-muted-foreground");
