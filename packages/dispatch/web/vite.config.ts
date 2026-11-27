@@ -106,6 +106,8 @@ export default defineConfig({
     __DISPATCH_BUILD__: JSON.stringify(
       process.env.DISPATCH_BUILD ?? process.env.GITHUB_SHA ?? Date.now().toString()
     ),
+    // The commit an image build passes in; empty everywhere else.
+    __DISPATCH_COMMIT__: JSON.stringify(process.env.DISPATCH_COMMIT ?? ""),
   },
   resolve: {
     // The source-only editor and Dispatch both reach this constructor. Historical-version

@@ -77,7 +77,9 @@ COPY scripts/third-party-notices.ts scripts/third-party-notices.ts
 WORKDIR /repo/packages/contracts
 RUN bun run gen:go
 WORKDIR /repo/packages/dispatch
-RUN bun run build:web
+# The dashboard shows the commit it was built from.
+ARG LEGION_COMMIT=
+RUN DISPATCH_COMMIT="$LEGION_COMMIT" bun run build:web
 
 # Go version must match go.mod.
 # ghcr.io/cybermonklabs/legion/ci, the copy of golang:1.27.3-alpine (.github/ci-images.yaml)
