@@ -673,7 +673,7 @@ test("an input without its label inside an upstream widget's wrapper is left out
 });
 
 // The run's own controls for the walk and the widths, on the machine login page: a button with no
-// outline fails the walk, and a box wider than a phone fails the width check.
+// outline fails the walk, and a box that scrolls content wider than a phone fails the width check.
 test("a control without the focus outline fails the Tab walk", async ({ page }) => {
   await openRegion(page, machineLogin);
   await page.locator(MAIN).evaluate((at) => {
@@ -689,12 +689,18 @@ test("a control without the focus outline fails the Tab walk", async ({ page }) 
   ]);
 });
 
-test("a box wider than a phone fails the width check", async ({ page }) => {
+test("a box that scrolls sideways fails the width check", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
   await page.locator(MAIN).evaluate((at) => {
     const box = document.createElement("div");
-    box.style.width = "1000px";
+    box.dataset.testid = "wide-box";
+    box.style.overflowX = "auto";
+    const wide = document.createElement("div");
+    wide.style.width = "1000px";
+    box.append(wide);
     at.append(box);
   });
-  expect(await sidewaysScrolls(page, machineLogin)).not.toEqual([]);
+  expect(await sidewaysScrolls(page, machineLogin)).toContainEqual(
+    expect.stringMatching(/^div "wide-box": 1000 px in /)
+  );
 });
