@@ -1,8 +1,6 @@
-import { KbdSequence } from "@legion/ui/components/kbd";
+import { KbdSequence, type KeySteps } from "@legion/ui/components/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/tooltip";
 import type { ReactElement } from "react";
-
-import type { ShortcutChips } from "./key-chips";
 
 /** Where a tooltip opens beside its control. */
 export type TooltipSide = "top" | "right" | "bottom" | "left";
@@ -10,7 +8,7 @@ export type TooltipSide = "top" | "right" | "bottom" | "left";
 interface HotkeyTooltipPopupProps {
   trigger: ReactElement;
   label: string;
-  chips: ShortcutChips | null;
+  chips: KeySteps | null;
   side: TooltipSide | undefined;
 }
 

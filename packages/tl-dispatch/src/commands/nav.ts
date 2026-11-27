@@ -42,16 +42,6 @@ export function navCommandName(name: NavName): NavCommandName {
   return `go-${name}`;
 }
 
-/** Each destination's `go-*` action: it runs `goTo` with its own destination. */
-export function navActions(goTo: (destination: NavName) => void): {
-  readonly [Name in NavCommandName]: { run: () => void };
-} {
-  // One entry per destination; defineActions refuses a missing or extra name when it first runs.
-  return Object.fromEntries(
-    NAV_DESTINATIONS.map(({ name }) => [navCommandName(name), { run: () => goTo(name) }])
-  ) as { readonly [Name in NavCommandName]: { run: () => void } };
-}
-
 export function navCommandDefinitions(): readonly (CommandDefinition & {
   name: NavCommandName;
 })[] {

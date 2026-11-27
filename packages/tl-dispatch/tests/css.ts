@@ -60,3 +60,51 @@ export function importedPath(prelude: string): string | undefined {
   const match = /^(?:url\(\s*)?(["'])(.*?)\1|^url\(\s*([^)"'\s]+)\s*\)/.exec(prelude);
   return match === null ? undefined : (match[2] ?? match[3]);
 }
+
+/** The parts of `text` between top-level `separator`s. */
+export function split(text: string, separator: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let part = "";
+  for (const char of text) {
+    // A class in an attribute selector holds commas too: `[class~="shadow-[0_0_0_1px_x,0_2px_y]"]`.
+    if (char === "(" || char === "[") depth += 1;
+    if (char === ")" || char === "]") depth -= 1;
+    if (char === separator && depth === 0) {
+      parts.push(part.trim());
+      part = "";
+    } else part += char;
+  }
+  parts.push(part.trim());
+  return parts;
+}
+
+/** A selector's specificity as one number: ids, then classes, then elements. `:where()` adds
+ *  nothing, and `:is()`, `:not()` and `:has()` add their heaviest argument. */
+export function specificity(selector: string): number {
+  let rest = selector;
+  let total = 0;
+  for (let call = /:(where|is|not|has)\(/.exec(rest); call !== null; ) {
+    const start = call.index + call[0].length;
+    let end = start;
+    for (let depth = 1; depth > 0; end += 1) {
+      if (rest[end] === "(") depth += 1;
+      if (rest[end] === ")") depth -= 1;
+    }
+    if (call[1] !== "where") {
+      total += Math.max(...split(rest.slice(start, end - 1), ",").map(specificity));
+    }
+    rest = `${rest.slice(0, call.index)} ${rest.slice(end)}`;
+    call = /:(where|is|not|has)\(/.exec(rest);
+  }
+  const take = (pattern: RegExp) => {
+    const found = rest.match(pattern)?.length ?? 0;
+    rest = rest.replace(pattern, " ");
+    return found;
+  };
+  const attributes = take(/\[[^\]]*\]/g);
+  const elements = take(/::[\w-]+/g);
+  const ids = take(/#(?:\\.|[\w-])+/g);
+  const marks = attributes + take(/[.:](?:\\.|[\w-])+/g);
+  return total + ids * 1e6 + marks * 1e3 + elements + take(/[a-z][\w-]*/gi);
+}

@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DeliverySettingsForm } from "@upstream-dispatch/features/delivery/DeliverySettingsForm";
 import { railBg, railBorder, railText } from "@upstream-dispatch/theme/classes";
 
-import { parseCss } from "../tests/css";
+import { type CssDeclaration, parseCss, specificity, split } from "../tests/css";
 import { render } from "../tests/react";
-import { PACKAGE_ROOT } from "../tests/source";
+import { PACKAGE_ROOT, UPSTREAM_WEB } from "../tests/source";
 
 // frame.css answers upstream's markup, so these tests draw upstream's own Delivery settings form
 // in the panel and read what the cascade gives it.
@@ -203,42 +203,42 @@ function sheetAt(width: number, css: string) {
   const style = document.createElement("style");
   style.textContent = css;
   document.head.append(style);
-  const parts: HTMLElement[] = [];
+  const host = document.body.appendChild(document.createElement("div"));
   cleanups.push(() => {
-    for (const part of parts) part.remove();
+    host.remove();
     style.remove();
     browser.setViewport({ width: before });
   });
-  const add = (
-    tag: string,
-    attributes: Record<string, string>,
-    parent: HTMLElement = document.body
-  ) => {
+  return (tag: string, attributes: Record<string, string>, parent: HTMLElement = host) => {
     const part = document.createElement(tag);
     for (const [name, value] of Object.entries(attributes)) part.setAttribute(name, value);
     parent.append(part);
-    if (parent === document.body) parts.push(part);
     return part;
   };
-  return add;
 }
 
 describe("the folded margin sheet beside the sidebar", () => {
-  /** Where the sheet's left edge is at `width`, with the sidebar drawn or not. */
-  const leftOf = (width: number, { sidebar = true, expanded = false } = {}) => {
+  /** The sheet's left edge and the sidebar's width at `width`, with the sidebar drawn or not.
+   *  The sidebar's width is its `w-(--sidebar-width)` class, which loads no Tailwind here. */
+  const placeAt = (width: number, { sidebar = true, expanded = false } = {}) => {
     const add = sheetAt(width, `:root { --spacing: 0.25rem; }\n${FRAME_CSS}`);
-    if (sidebar) add("nav", { "data-testid": "sidebar" });
+    const nav = sidebar
+      ? add("nav", { "data-testid": "sidebar", style: "width: var(--sidebar-width)" })
+      : undefined;
     const sheet = add("aside", {
       "data-testid": "margin-sheet",
       "data-expanded": String(expanded),
     });
-    return getComputedStyle(sheet).left;
+    return { left: getComputedStyle(sheet).left, sidebar: nav ? getComputedStyle(nav).width : "" };
   };
+  const leftOf = (width: number, options?: { sidebar?: boolean; expanded?: boolean }) =>
+    placeAt(width, options).left;
 
   test("from 768 to 1279 px it starts at the sidebar's edge, so the account at its foot stays in view", () => {
-    // The sidebar is `w-60`: 240 px on the 4 px spacing.
     for (const width of [768, 1024, 1279]) {
-      expect(px(leftOf(width), {})).toBe(240);
+      const { left, sidebar } = placeAt(width);
+      expect(left).not.toBe("");
+      expect(left).toBe(sidebar);
     }
   });
 
@@ -250,22 +250,50 @@ describe("the folded margin sheet beside the sidebar", () => {
   });
 });
 
-describe("a menu's entries below 1280 px", () => {
-  /** Upstream's floor below 1280 px, from its stylesheet, which loads no further here. */
-  const FLOOR = "@media (max-width: 1279px) { a:not(.prose a) { min-height: 44px; } }";
+describe("below 1280 px, upstream's 44 px floor", () => {
+  // Both stylesheets are outside any layer and frame.css loads later, so a frame.css rule wins
+  // where its selector is at least as specific as upstream's. happy-dom does not weigh `:not()`
+  // as a browser does, so the winner is worked out from the selectors.
+  const UPSTREAM = parseCss(readFileSync(join(UPSTREAM_WEB, "styles.css"), "utf8")).declarations;
+  const FRAME = parseCss(FRAME_CSS).declarations;
 
-  const entries = (frame: boolean) => {
-    const add = sheetAt(1024, frame ? `${FLOOR}\n${FRAME_CSS}` : FLOOR);
-    const menu = add("div", { "data-slot": "dropdown-menu-content" });
-    return add("a", { role: "menuitem" }, menu);
-  };
+  /** The specificity of the heaviest selector in `media` that sets `element`'s min-height; -1
+   *  with none. */
+  const heaviest = (declarations: readonly CssDeclaration[], media: string, element: Element) =>
+    Math.max(
+      -1,
+      ...declarations
+        .filter(({ property, context }) => property === "min-height" && context[0] === media)
+        .flatMap(({ context }) => split(context[1] ?? "", ","))
+        .filter((selector) => {
+          try {
+            return element.matches(selector);
+          } catch {
+            // A selector the DOM here cannot read is none of these plain elements'.
+            return false;
+          }
+        })
+        .map(specificity)
+    );
 
-  test("under a mouse a link keeps the entry's own height, as Sign out beside it does", () => {
-    expect(getComputedStyle(entries(true)).minHeight).not.toBe("44px");
-  });
-
-  test("control: without frame.css upstream's floor makes the link taller than its neighbours", () => {
-    expect(getComputedStyle(entries(false)).minHeight).toBe("44px");
+  test.each([
+    [
+      "a menu's link entry, as tall as Sign out beside it",
+      "data-slot",
+      "dropdown-menu-content",
+      "a",
+    ],
+    ["a link in the navigation", "data-slot", "nav-surface", "a"],
+    ["a button in the navigation", "data-slot", "nav-surface", "button"],
+    ["a link in the panel's top row", "data-testid", "panel-header", "a"],
+    ["a button in the panel's top row", "data-testid", "panel-header", "button"],
+  ])("under a mouse, gives way to %s", (_name, attribute, value, tag) => {
+    const add = sheetAt(1024, "");
+    const element = add(tag, { role: "menuitem" }, add("div", { [attribute]: value }));
+    const floor = heaviest(UPSTREAM, "@media (max-width: 1279px)", element);
+    expect(floor).toBeGreaterThan(-1);
+    const own = heaviest(FRAME, "@media (max-width: 1279px) and (pointer: fine)", element);
+    expect(own).toBeGreaterThanOrEqual(floor);
   });
 
   test("under a finger every entry takes the 44 px floor", () => {

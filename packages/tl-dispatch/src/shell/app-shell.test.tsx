@@ -82,6 +82,10 @@ describe("AppShell", () => {
       (item) => item.textContent === "Sign out"
     );
     settle(() => signOut?.click());
+    // The menu closes; the corner says the sign-out is under way.
+    expect(document.body.querySelector('[data-testid="signing-out"]')?.textContent).toBe(
+      "Signing out…"
+    );
     const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
     // The sign-out first waits for the other tabs' answers.
     for (let tries = 0; tries < 40 && alert() === ""; tries += 1) {
@@ -154,7 +158,7 @@ describe("AppShell", () => {
     const { part, button } = await foldable();
     expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("standard");
     expect(part("panel-header")).toBeNull();
-    expect(part("sidebar")?.className).toContain("w-60");
+    expect(part("sidebar")?.className).toContain("w-(--sidebar-width)");
     expect(part("content-panel")?.className).not.toContain("md:ml-(--panel-inset)");
     pressOnFocus(init);
     expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("full-width");

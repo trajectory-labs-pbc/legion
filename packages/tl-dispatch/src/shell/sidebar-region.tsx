@@ -48,7 +48,7 @@ export function SidebarRegion({
   return (
     <NavSurface
       aria-label="Navigation"
-      className="relative order-1 w-60 shrink-0 [overflow-anchor:none]"
+      className="relative order-1 w-(--sidebar-width) shrink-0 [overflow-anchor:none]"
       data-testid="sidebar"
       ref={sidebarRef}
     >

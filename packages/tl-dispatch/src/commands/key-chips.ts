@@ -3,9 +3,6 @@ import { MOD_KEY_LABEL } from "@upstream-dispatch/features/shell/keymap";
 
 import { keySteps, splitStep } from "./keys";
 
-/** A key's caps by step, as the UI package draws them. */
-export type ShortcutChips = KeySteps;
-
 /** The platform the key engine matches `$mod` for, so the chips and the engine agree. */
 export const IS_MAC = MOD_KEY_LABEL === "⌘";
 
@@ -39,7 +36,7 @@ function modifier(name: string): { mac: string; other: string; aria: string } {
 }
 
 /** The caps of a key in the engine's syntax, by step: `⌘` `K` on a Mac, `Ctrl` `K` elsewhere. */
-export function chipsOf(keys: string, mac: boolean = IS_MAC): ShortcutChips {
+export function chipsOf(keys: string, mac: boolean = IS_MAC): KeySteps {
   return keySteps(keys).map((step) => {
     const { modifiers, key } = splitStep(step);
     const names = modifiers.map((name) => (mac ? modifier(name).mac : modifier(name).other));
@@ -48,8 +45,8 @@ export function chipsOf(keys: string, mac: boolean = IS_MAC): ShortcutChips {
 }
 
 /** A row's keys as chip sequences; a run of three or more consecutive digits is one chip, `1–9`. */
-export function rowChips(keys: readonly string[], mac: boolean = IS_MAC): readonly ShortcutChips[] {
-  const chips: ShortcutChips[] = [];
+export function rowChips(keys: readonly string[], mac: boolean = IS_MAC): readonly KeySteps[] {
+  const chips: KeySteps[] = [];
   let index = 0;
   while (index < keys.length) {
     const first = keys[index] ?? "";

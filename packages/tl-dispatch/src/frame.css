@@ -19,7 +19,7 @@
    leaves every other entry as it is: under a mouse the link keeps the entry's own height, and
    under a finger every entry takes the floor. */
 @media (max-width: 1279px) and (pointer: fine) {
-  [data-slot="dropdown-menu-content"] a[role="menuitem"] {
+  [data-slot="dropdown-menu-content"] a[role="menuitem"]:not(.prose a) {
     min-width: revert-layer;
     min-height: revert-layer;
   }
@@ -31,11 +31,16 @@
   }
 }
 
+/* The sidebar's width, which the margin sheet beside it starts at. */
+:root {
+  --sidebar-width: calc(var(--spacing) * 60);
+}
+
 /* Beside the sidebar, upstream's folded margin sheet starts at the sidebar's edge, so its bar
    leaves the account at the sidebar's foot in view. Open, it is a dialog over the whole page. */
 @media (min-width: 768px) and (max-width: 1279px) {
   :root:has([data-testid="sidebar"]) [data-testid="margin-sheet"][data-expanded="false"] {
-    left: calc(var(--spacing) * 60);
+    left: var(--sidebar-width);
   }
 }
 

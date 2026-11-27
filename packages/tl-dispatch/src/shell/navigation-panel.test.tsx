@@ -50,7 +50,8 @@ async function openAccount(container: HTMLElement) {
   );
 }
 
-/** The panel under every global command, which records its id in `fired` when it runs. */
+/** The panel under every global command, which records its id in `fired` when it runs; while
+ *  `pending`, the shell has shut Sign out, as it does during a sign-out. */
 function panel(
   { fired, pending = false }: { fired?: string[]; pending?: boolean },
   compact = false,
@@ -58,12 +59,11 @@ function panel(
 ) {
   return (
     <>
-      <GlobalCommands fired={fired} />
+      <GlobalCommands fired={fired} shut={pending ? ["global.sign-out"] : []} />
       <NavigationPanel
         closeButtonRef={{ current: null }}
         compact={compact}
         onClose={onClose}
-        signOut={{ pending }}
         user={user}
       />
     </>

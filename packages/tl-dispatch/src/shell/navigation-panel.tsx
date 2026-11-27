@@ -5,22 +5,18 @@ import { CommandButton } from "@/commands/command-button";
 import { lazyRegion } from "@/loading/lazy-region";
 import { AppName } from "./app-name";
 import { Sidebar } from "./sidebar";
-import type { SignOut } from "./use-sign-out";
 
 /** The sidebar's contents: the name row with search and new issue, the destinations, and the account. */
 export function NavigationPanel({
   closeButtonRef,
   compact,
   onClose,
-  signOut,
   user,
 }: {
   closeButtonRef: RefObject<HTMLButtonElement | null>;
   /** Drawn in a drawer, which a Close button ends. */
   compact: boolean;
   onClose: () => void;
-  /** Held by the shell; its refusal shows in the status corner, which outlives the panel. */
-  signOut: Pick<SignOut, "pending">;
   user: AuthenticatedUser;
 }) {
   return (
@@ -63,11 +59,7 @@ export function NavigationPanel({
       <div className="mt-auto pt-4">
         {/* The row keeps its height while the menu's code loads. */}
         <div className="min-h-control-sm">
-          <AccountMenu
-            login={user.login}
-            onNavigate={compact ? onClose : undefined}
-            pending={signOut.pending}
-          />
+          <AccountMenu login={user.login} onNavigate={compact ? onClose : undefined} />
         </div>
       </div>
     </>

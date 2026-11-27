@@ -74,6 +74,10 @@ describe("useSignOut", () => {
     await waitFor(() => expect(signOut()?.error).toContain("did not go through"));
     expect(signOut()?.pending).toBe(false);
     expect(client.getQueryData<string>(["inbox"])).toBe("kept");
+    // Put away, the refusal goes and the session stays.
+    settle(() => signOut()?.clearError());
+    expect(signOut()?.error).toBeUndefined();
+    expect(client.getQueryData<string>(["inbox"])).toBe("kept");
   });
 
   test("a sign-out that goes through drops every read but who is here", async () => {

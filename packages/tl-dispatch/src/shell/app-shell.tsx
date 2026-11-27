@@ -33,7 +33,6 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
       closeButtonRef={overlays.closeButtonRef}
       compact={shell.inDrawer}
       onClose={overlays.closeNavigation}
-      signOut={signOut}
       user={user}
     />
   );

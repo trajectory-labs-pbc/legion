@@ -37,6 +37,8 @@ export interface SignOut {
   pending: boolean;
   /** Why the last sign-out failed, while it is this person's. */
   error: string | undefined;
+  /** Puts the refusal away; the session stays. */
+  clearError: () => void;
   /** The question asked before changes are discarded; kept while it closes. */
   question: string | undefined;
   /** The question is open. */
@@ -94,6 +96,7 @@ export function useSignOut(login: string): SignOut {
     },
     pending: write.isPending || askingTabs,
     error: refused && write.error !== null ? signOutFailure(write.error) : undefined,
+    clearError: write.reset,
     question: question?.text,
     asking: question?.open === true,
     confirm: () => {

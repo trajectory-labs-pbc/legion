@@ -18,16 +18,15 @@ import { people } from "@/pages/people";
 export function AccountMenu({
   login,
   onNavigate,
-  pending,
 }: {
   login: string;
   /** Called when the reader opens their page, so a drawer closes. */
   onNavigate?: () => void;
-  /** A sign-out is under way. */
-  pending: boolean;
 }) {
   const signOut = useCommand("global.sign-out");
   const SignOutIcon = signOut?.command.icon;
+  // The shell shuts the command while a sign-out is under way.
+  const pending = signOut?.enabled === false;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

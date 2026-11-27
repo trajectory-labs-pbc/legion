@@ -14,7 +14,7 @@ export function ShellSkeleton(): ReactNode {
       <NavSurface className="flex h-11 items-center px-2 md:hidden" render={<header />}>
         <AppNameText />
       </NavSurface>
-      <NavSurface className="hidden p-2 md:block md:min-h-dvh md:w-60 md:shrink-0">
+      <NavSurface className="hidden p-2 md:block md:min-h-dvh md:w-(--sidebar-width) md:shrink-0">
         <div className="flex h-11 items-center">
           <AppNameText />
         </div>
