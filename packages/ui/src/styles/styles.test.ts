@@ -609,6 +609,27 @@ describe("the theme", () => {
     ]);
   });
 
+  it("sets no `text-wrap` but `text-wrap-style`, so a `truncate` beside a recipe holds", () => {
+    const wraps = new Set<string>();
+    generated.walkDecls(/^text-wrap/, (decl) => {
+      wraps.add(`${decl.prop}: ${decl.value}`);
+    });
+    expect([...wraps].sort()).toEqual(["text-wrap-style: balance", "text-wrap-style: pretty"]);
+    const recipes = [
+      ...(["page", "section", "group", "label"] as const).map(
+        (size) => [headingVariants({ size, tone: "muted" }), "wrap-balance"] as const
+      ),
+      ...(["body", "caption"] as const).map(
+        (size) => [textVariants({ size, tone: "muted", weight: "medium" }), "wrap-pretty"] as const
+      ),
+    ];
+    for (const [recipe, wrap] of recipes) {
+      const classes = cn(recipe, "truncate").split(" ");
+      expect(classes).toEqual(expect.arrayContaining([wrap, "truncate"]));
+      expect(classes.filter((name) => name.startsWith("whitespace-"))).toEqual([]);
+    }
+  });
+
   it.each(
     Object.entries(THEMES)
   )("keeps each colour at its contrast on every surface it sits on, %s", (_name, tokens) => {
@@ -673,22 +694,6 @@ describe("the theme", () => {
       expect(onCard("faint-foreground"), `faint-foreground quieter than ${state}`).toBeLessThan(
         onCard(state)
       );
-    }
-  });
-});
-
-describe("the type recipes", () => {
-  it("and every component set the wrap style alone, so a `truncate` beside it holds", () => {
-    const wraps = new Set<string>();
-    generated.walkDecls(/^text-wrap/, (decl) => {
-      wraps.add(`${decl.prop}: ${decl.value}`);
-    });
-    expect([...wraps].sort()).toEqual(["text-wrap-style: balance", "text-wrap-style: pretty"]);
-    for (const [recipe, wrap] of [
-      [headingVariants({ size: "page", tone: "muted" }), "wrap-balance"],
-      [textVariants({ tone: "muted" }), "wrap-pretty"],
-    ]) {
-      expect(cn(recipe, "truncate").split(" ")).toEqual(expect.arrayContaining([wrap, "truncate"]));
     }
   });
 });
