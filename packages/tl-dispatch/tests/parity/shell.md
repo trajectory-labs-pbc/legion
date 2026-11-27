@@ -19,7 +19,7 @@ The package's README, "Checks", has the rules.
 
 | ID | Region | Item | Mark | Note |
 | --- | --- | --- | --- | --- |
-| SHL-1 | Providers | The query client and the router | | |
+| SHL-1 | Providers | The query client and the router | changed | Its retry policy, `readRetry`, applies to every read, upstream's components included: it never asks a 403 or a 404 again by itself, where upstream's `queryRetry` keeps a 404 with no known code retryable |
 | SHL-2 | Providers | `KeymapProvider` | | |
 | SHL-3 | Providers | `MarginProvider` | | |
 | SHL-4 | Providers | `ReferenceNamesProvider` | | |
