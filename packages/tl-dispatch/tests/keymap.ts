@@ -17,15 +17,11 @@ export function testKeymap(options: KeymapOptions = {}): Keymap {
 }
 
 /**
- * A context's specs registered on `keymap` as `useRegisterCommands` registers them, with every
- * copy under overlays at once, over a stack of overlays the test opens.
+ * A context's specs registered on a new key engine as `useRegisterCommands` registers them, with
+ * every copy under overlays at once, over a stack of overlays the test opens.
  */
-export function registerContext(
-  catalog: Catalog,
-  context: string,
-  specs: CommandSpecs,
-  keymap: Keymap = testKeymap()
-) {
+export function registerContext(catalog: Catalog, context: string, specs: CommandSpecs) {
+  const keymap = testKeymap();
   const layers = createLayerSource();
   const stack = trackEngineStack(keymap, layers);
   const { scope, own, underOverlays } = contextBindings(catalog, context, specs, stack);

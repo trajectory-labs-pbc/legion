@@ -20,8 +20,8 @@ export interface StackState {
   liveScopes(): readonly KeymapScope[];
 }
 
-/** Each question reads the overlays again; `now()` reads them once for several questions. */
-export interface EngineStack extends StackState {
+export interface EngineStack {
+  /** Reads the overlays once, for every question asked of the answer. */
   now(): StackState;
   subscribe(listener: () => void): () => void;
 }
@@ -43,7 +43,8 @@ const trackers = globalThis.__tlDispatchEngineStacks;
  */
 export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineStack {
   const existing = trackers.get(keymap);
-  if (existing !== undefined) return existing;
+  // A tracker an older copy of this module built may lack a method; rebuild it.
+  if (existing !== undefined && "now" in existing) return existing;
   const upstream: KeymapScope[] = [];
   const listeners = new Set<() => void>();
   const notify = () => {
@@ -118,8 +119,6 @@ export function trackEngineStack(keymap: Keymap, layers: LayerSource): EngineSta
     return state;
   };
   const tracker: EngineStack = {
-    passes: (reach) => now().passes(reach),
-    liveScopes: () => now().liveScopes(),
     now,
     subscribe(listener) {
       listeners.add(listener);

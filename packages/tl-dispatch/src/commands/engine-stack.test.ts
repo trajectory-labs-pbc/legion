@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { appKeymap, createKeymap, DIALOG_SCOPE } from "@upstream-dispatch/features/shell/keymap";
 
 import { press, testKeymap } from "../../tests/keymap";
-import { appStack, keysReach, passing, trackEngineStack } from "./engine-stack";
+import { appStack, type EngineStack, keysReach, passing, trackEngineStack } from "./engine-stack";
 import type { OverlayLayer } from "./focused-overlay";
 import { createCatalog } from "./schema";
 
@@ -23,7 +23,7 @@ describe("an engine stack", () => {
     });
     open = [{ kind: "passthrough" }];
     // A render that runs between the overlay's opening and its focus event reads the stack.
-    expect(stack.passes("under-most")).toBe(true);
+    expect(stack.now().passes("under-most")).toBe(true);
     changed();
     expect(notified).toBe(1);
     changed();
@@ -56,6 +56,14 @@ describe("an engine stack", () => {
     expect(asked(() => passing(stack))).toBe(1);
     expect(asked(() => keysReach(catalog, catalog.command("global.create"), stack))).toBe(1);
   });
+
+  test("replaces a tracker an older copy of this module left on the window", () => {
+    const keymap = createKeymap();
+    const older = { subscribe: () => () => {} } as unknown as EngineStack;
+    globalThis.__tlDispatchEngineStacks?.set(keymap, older);
+    const stack = trackEngineStack(keymap, { get: () => [], subscribe: () => () => {} });
+    expect(stack.now().liveScopes()).toEqual(["global"]);
+  });
 });
 
 describe("a scope's cleanup", () => {
@@ -68,7 +76,7 @@ describe("a scope's cleanup", () => {
     const pop = keymap.pushScope("issue");
     pop();
     pop();
-    expect(stack.liveScopes()).toEqual(["global", "issue"]);
+    expect(stack.now().liveScopes()).toEqual(["global", "issue"]);
     press(keymap, "x");
     expect(fired).toEqual(["x"]);
   });
@@ -81,7 +89,7 @@ describe("the live scopes", () => {
     keymap.pushScope("issue");
     keymap.pushScope("document");
     keymap.pushScope("issue");
-    expect(stack.liveScopes()).toEqual(["global", "document", "issue"]);
+    expect(stack.now().liveScopes()).toEqual(["global", "document", "issue"]);
   });
 });
 
@@ -96,10 +104,10 @@ describe("the app's engine stack", () => {
       notified += 1;
     });
     const close = appKeymap.pushScope(DIALOG_SCOPE);
-    expect(appStack.liveScopes()).toEqual([DIALOG_SCOPE]);
+    expect(appStack.now().liveScopes()).toEqual([DIALOG_SCOPE]);
     close();
     stop();
-    expect(appStack.liveScopes()).toEqual(["global"]);
+    expect(appStack.now().liveScopes()).toEqual(["global"]);
     expect(notified).toBe(2);
   });
 });

@@ -136,11 +136,11 @@ describe("upstream's key engine", () => {
       useKeymapScope(DIALOG_SCOPE);
       return null;
     }
-    expect(appStack.liveScopes()).toEqual(["global"]);
+    expect(appStack.now().liveScopes()).toEqual(["global"]);
     const mounted = render(<UpstreamDialog />);
-    expect(appStack.liveScopes()).toEqual([DIALOG_SCOPE]);
+    expect(appStack.now().liveScopes()).toEqual([DIALOG_SCOPE]);
     mounted.unmount();
-    expect(appStack.liveScopes()).toEqual(["global"]);
+    expect(appStack.now().liveScopes()).toEqual(["global"]);
   });
 });
 

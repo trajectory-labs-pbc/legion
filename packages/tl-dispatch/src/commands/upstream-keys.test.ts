@@ -107,6 +107,15 @@ describe("upstream's shell keys", () => {
     expect(catalog.filter((keys) => !live.includes(keys))).toEqual([]);
     expect(live.filter((keys) => !catalog.includes(keys))).toEqual([]);
   });
+
+  test("are read with their flags, and a flag that is not true or false stops the scan", () => {
+    const written = (flag: string) =>
+      `useKeymap("global", [{ id: "x", keys: "x", label: "X", run, inEditable: ${flag} }]);`;
+    expect(keyRegistrations("app.tsx", written("true"))[0]?.inEditable).toBe(true);
+    expect(() => keyRegistrations("app.tsx", written("typing"))).toThrow(
+      "sets a flag to typing, which no scan reads"
+    );
+  });
 });
 
 /**

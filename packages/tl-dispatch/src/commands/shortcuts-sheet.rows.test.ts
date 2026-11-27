@@ -38,7 +38,7 @@ function page(id: string, keys: KeyBinding["keys"], label = id): KeyBinding {
 function setup() {
   const { keymap, layers, stack } = registerContext(catalog, "global", globalActions(null));
   const sheet = () =>
-    liveShortcuts(keymap.describe(), stack.liveScopes(), catalog, {
+    liveShortcuts(keymap.describe(), stack.now().liveScopes(), catalog, {
       "inbox:snooze": {
         upstream: "Snooze the focused ask, or every selected ask",
         label: "Snooze",

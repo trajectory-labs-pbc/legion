@@ -16,7 +16,7 @@ export interface KeyRegistration {
   /** The label as written: a template's expressions read `{name}`, other expressions their source. */
   label: string | undefined;
   keys: string;
-  /** `inEditable` and `palette`, when each is written as `true` or `false`. */
+  /** `inEditable` and `palette`, when written: the scan refuses any value but `true` or `false`. */
   inEditable?: boolean | undefined;
   palette?: boolean | undefined;
 }
@@ -36,10 +36,12 @@ function property(node: ts.ObjectLiteralExpression, name: string): ts.Expression
   return undefined;
 }
 
-function literalBoolean(node: ts.Expression | undefined): boolean | undefined {
-  if (node?.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (node?.kind === ts.SyntaxKind.FalseKeyword) return false;
-  return undefined;
+/** A flag written as `true` or `false`; one written as anything else stops the scan. */
+function literalBoolean(node: ts.Expression | undefined, where: string): boolean | undefined {
+  if (node === undefined) return undefined;
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  throw new Error(`${where} sets a flag to ${node.getText()}, which no scan reads`);
 }
 
 function hasMember(node: ts.ObjectLiteralExpression, name: string): boolean {
@@ -128,8 +130,9 @@ export function keyRegistrations(
       const idNode = property(node, "id");
       const id = idNode === undefined ? undefined : literalText(idNode);
       const label = labelText(property(node, "label"));
-      const inEditable = literalBoolean(property(node, "inEditable"));
-      const palette = literalBoolean(property(node, "palette"));
+      const where = `${file}:${line}`;
+      const inEditable = literalBoolean(property(node, "inEditable"), where);
+      const palette = literalBoolean(property(node, "palette"), where);
       for (const text of texts) {
         if (text !== undefined) {
           found.push({

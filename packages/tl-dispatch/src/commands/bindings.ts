@@ -28,11 +28,6 @@ function toBinding(spec: CommandSpec, gate: () => boolean = () => true): KeyBind
   };
 }
 
-/** The key engine's bindings for a set of specs. */
-export function toBindings(specs: CommandSpecs): KeyBinding[] {
-  return specs.map((spec) => toBinding(spec));
-}
-
 interface ContextBindings {
   scope: KeymapScope;
   /** The context's own bindings, in its scope. */
@@ -49,14 +44,15 @@ export function contextBindings(
   stack: EngineStack
 ): ContextBindings {
   const { scope } = catalog.context(context);
-  const own = toBindings(specs);
+  // Not `map(toBinding)`: the index would become the gate.
+  const own = specs.map((spec) => toBinding(spec));
   const underOverlays =
     scope === "global"
       ? specs
           .filter((spec) => (spec.command.keys ?? []).length > 0)
           .map((spec) => {
             const reach = spec.command.overlays ?? "under-most";
-            const binding = toBinding(spec, () => stack.passes(reach));
+            const binding = toBinding(spec, () => stack.now().passes(reach));
             return {
               reach,
               binding: { ...binding, id: `${binding.id}${UNDER_OVERLAY}`, palette: false },

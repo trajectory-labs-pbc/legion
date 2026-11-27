@@ -8,7 +8,12 @@ import { UPSTREAM_LABELS } from "./upstream-labels";
 
 /** The keys that run now, below anything the sheet itself opens. */
 function readLiveShortcuts(): ShortcutSection[] {
-  return liveShortcuts(appKeymap.describe(), appStack.liveScopes(), appCatalog, UPSTREAM_LABELS);
+  return liveShortcuts(
+    appKeymap.describe(),
+    appStack.now().liveScopes(),
+    appCatalog,
+    UPSTREAM_LABELS
+  );
 }
 
 export interface ShortcutsSheetState {

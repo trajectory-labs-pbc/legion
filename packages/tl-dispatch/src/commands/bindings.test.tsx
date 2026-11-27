@@ -22,11 +22,12 @@ import {
 
 import { press, registerContext } from "../../tests/keymap";
 import { openAppLayer } from "../../tests/layers";
-import { render, settle } from "../../tests/react";
+import { mount } from "../../tests/mount";
+import { settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
 import { until } from "../../tests/wait";
 import { appCatalog } from "./app-catalog";
-import { contextBindings, toBindings, UNDER_OVERLAY } from "./bindings";
+import { contextBindings, UNDER_OVERLAY } from "./bindings";
 import { commandStore } from "./command-store";
 import { type CommandSpecs, createCatalog } from "./schema";
 import { useRegisterCommands } from "./use-register-commands";
@@ -81,7 +82,8 @@ function openUpstreamPalette(keymap: Keymap, fired: string[]): () => void {
 
 describe("bindings", () => {
   test("carry the catalog's typing and palette fields", () => {
-    const [search, create] = toBindings(recorder("global", []));
+    const { stack } = setup();
+    const [search, create] = contextBindings(catalog, "global", recorder("global", []), stack).own;
     expect(search).toMatchObject({ id: "global.search", keys: ["$mod+k"], inEditable: true });
     expect([search?.palette, create?.palette]).toEqual([false, true]);
     expect(create?.when?.()).toBe(true);
@@ -209,7 +211,7 @@ describe("useRegisterCommands on the app's engine", () => {
 
   test("registers the shell's keys, passes them under a drawer, and yields to the palette", () => {
     const fired: string[] = [];
-    const shell = render(<Shell fired={fired} />);
+    const shell = mount(<Shell fired={fired} />);
     const tap = (key: string, init: KeyboardEventInit = {}) => press(appKeymap, key, init);
     tap("c");
     let sheet: ReturnType<typeof openAppLayer> | undefined;
@@ -217,7 +219,7 @@ describe("useRegisterCommands on the app's engine", () => {
       sheet = openAppLayer("passthrough");
     });
     tap("?", { shiftKey: true });
-    const palette = render(<UpstreamPalette fired={fired} />);
+    const palette = mount(<UpstreamPalette fired={fired} />);
     tap("k", { ctrlKey: true });
     tap("c");
     palette.unmount();
@@ -239,29 +241,25 @@ describe("useRegisterCommands on the app's engine", () => {
         </Dialog>
       </>
     );
-    const view = render(page(true));
-    try {
-      const save = () =>
-        document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
-      await until(() => save() !== null);
-      settle(() => save()?.focus());
-      expect(
-        save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)
-      ).toBe(true);
-      const tap = (key: string, init: KeyboardEventInit = {}) => press(appKeymap, key, init);
-      tap("c");
-      tap("g");
-      tap("i");
-      tap("?", { shiftKey: true });
-      expect(fired).toEqual(["global.help"]);
-      // Control: once the dialog has closed, the same key runs.
-      view.rerender(page(false));
-      await until(() => save() === null);
-      tap("c");
-      expect(fired).toEqual(["global.help", "global.create"]);
-    } finally {
-      view.unmount();
-    }
+    const view = mount(page(true));
+    const save = () =>
+      document.body.querySelector<HTMLElement>('[data-slot="dialog-content"] button');
+    await until(() => save() !== null);
+    settle(() => save()?.focus());
+    expect(save()?.closest('[data-slot="dialog-content"]')?.contains(document.activeElement)).toBe(
+      true
+    );
+    const tap = (key: string, init: KeyboardEventInit = {}) => press(appKeymap, key, init);
+    tap("c");
+    tap("g");
+    tap("i");
+    tap("?", { shiftKey: true });
+    expect(fired).toEqual(["global.help"]);
+    // Control: once the dialog has closed, the same key runs.
+    view.rerender(page(false));
+    await until(() => save() === null);
+    tap("c");
+    expect(fired).toEqual(["global.help", "global.create"]);
   });
 
   test("? does not run with the focus in a select that is open over an alert dialog", async () => {
@@ -270,7 +268,7 @@ describe("useRegisterCommands on the app's engine", () => {
       { value: "open", label: "Open" },
       { value: "done", label: "Done" },
     ];
-    const view = render(
+    const view = mount(
       <>
         <Shell fired={fired} />
         <AlertDialog open>
@@ -292,21 +290,19 @@ describe("useRegisterCommands on the app's engine", () => {
         </AlertDialog>
       </>
     );
-    try {
-      const popup = (slot: string) =>
-        document.body.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
-      const option = () => popup("select-content")?.querySelector<HTMLElement>('[role="option"]');
-      // A popup with no option yet answers null, not undefined.
-      await until(() => option() != null);
-      settle(() => option()?.focus());
-      // The select's popup is in a portal: the focus is in it, and outside the alert dialog's.
-      expect(popup("select-content")?.contains(document.activeElement)).toBe(true);
-      expect(popup("alert-dialog-content")?.contains(document.activeElement)).toBe(false);
-      press(appKeymap, "?", { shiftKey: true });
-      expect(fired).toEqual([]);
-    } finally {
-      view.unmount();
-    }
+    const popup = (slot: string) =>
+      document.body.querySelector<HTMLElement>(`[data-slot="${slot}"]`);
+    const option = () => popup("select-content")?.querySelector<HTMLElement>('[role="option"]');
+    // A popup with no option yet answers null, not undefined.
+    await until(() => option() != null);
+    settle(() => option()?.focus());
+    // The select's popup is in a portal: the focus is in it, and outside the alert dialog's.
+    expect(popup("select-content")?.contains(document.activeElement)).toBe(true);
+    expect(popup("alert-dialog-content")?.contains(document.activeElement)).toBe(false);
+    press(appKeymap, "?", { shiftKey: true });
+    expect(fired).toEqual([]);
+    // Closed in the row: an open select positions itself again after the row ends, outside act.
+    view.unmount();
   });
 
   test("a new label reaches the engine's list, which copies a label when it registers", () => {
@@ -322,15 +318,14 @@ describe("useRegisterCommands on the app's engine", () => {
     }
     const createLabel = () =>
       appKeymap.describe().find((binding) => binding.id === "global.create")?.label;
-    const view = render(<Labelled label="Create issue" />);
+    const view = mount(<Labelled label="Create issue" />);
     expect(createLabel()).toBe("Create issue");
     view.rerender(<Labelled label="Create a sub-issue" />);
     expect(createLabel()).toBe("Create a sub-issue");
-    view.unmount();
   });
 
   test("registers the under-overlay copies only while they can fire, so no chord waits under upstream's dialogs", () => {
-    const view = render(<Shell fired={[]} />);
+    mount(<Shell fired={[]} />);
     const copies = () =>
       appKeymap
         .describe()
@@ -350,7 +345,6 @@ describe("useRegisterCommands on the app's engine", () => {
     });
     expect(copies()).toContain(`global.go-inbox${UNDER_OVERLAY}`);
     settle(() => drawer?.close());
-    view.unmount();
   });
 
   test("the command store takes each commit's gate, label and run", () => {
@@ -366,7 +360,7 @@ describe("useRegisterCommands on the app's engine", () => {
       useRegisterCommands(appCatalog, "global", specs(props.enabled, props.label, props.tag));
       return null;
     }
-    const view = render(<Live enabled={false} label="Create issue" tag="first" />);
+    const view = mount(<Live enabled={false} label="Create issue" tag="first" />);
     expect(commandStore.view("global.create")?.enabled).toBe(false);
     view.rerender(<Live enabled label="Create a sub-issue" tag="second" />);
     expect(commandStore.view("global.create")).toMatchObject({
@@ -375,6 +369,5 @@ describe("useRegisterCommands on the app's engine", () => {
     });
     commandStore.run("global.create");
     expect(fired).toEqual(["second"]);
-    view.unmount();
   });
 });
