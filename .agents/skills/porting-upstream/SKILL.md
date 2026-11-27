@@ -9,7 +9,7 @@ tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no lon
 
 ## What to port
 
-- The weekly sync merges upstream's main into the sync branch (`fork-sync`) and keeps one pull request open from it. Nothing else reports a port: no issue is opened.
+- The daily sync merges upstream's main into the sync branch (`fork-sync`) and keeps one pull request open from it. Nothing else reports a port: no issue is opened.
 - The sync pull request runs the gates in `tests/map` (below). A gate fails when an upstream commit changed a view file of a page this app draws, a part this app copied, or a route. Each upstream commit behind a failure is one port.
 - Do every port before the sync pull request merges. A red gate is never a flake: read its message.
 - Port every fix, new action, new key, new URL form, new view state (empty, loading, error), new live update and copy change.
