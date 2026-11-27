@@ -31,7 +31,7 @@ export const pages = [
 ] as const satisfies readonly Page[];
 
 /** Each route of a page upstream draws takes upstream's frame, unless it declares its own. */
-const framed = pages.map((page) =>
+const framed = pages.map((page: Page) =>
   page.server === "fork"
     ? page
     : {

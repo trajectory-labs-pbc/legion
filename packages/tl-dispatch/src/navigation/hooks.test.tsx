@@ -3,13 +3,14 @@ import { useNavigationType } from "react-router-dom";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { render, settle } from "../../tests/react";
 import { useAddress, usePageNavigate, usePageParams, usePageSearch } from "./hooks";
-import { pageRoute } from "./page-route";
+import { type PageRoute, pageRoute } from "./page-route";
 import { createRouteTree } from "./route-tree";
 
 const machine = pageRoute({ path: "/machines/:machine", element: null, search: ["tab"] });
 
 // The tree of a small app: navigation's tests name none of the app's pages.
-const { PageRoutes, useCurrentPage } = createRouteTree([
+type TestPage = { id: string; routes: Record<string, PageRoute<string, string, unknown>> };
+const { PageRoutes, useCurrentPage } = createRouteTree<unknown, TestPage>([
   { id: "machines", routes: { machine } },
   { id: "issue", routes: { issue: pageRoute({ path: "/issues/:key/*", element: null }) } },
   { id: "priorities", routes: { one: pageRoute({ path: "/priorities/:id", element: null }) } },
