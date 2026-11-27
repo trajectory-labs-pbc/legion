@@ -149,7 +149,7 @@ const LOADING_ROWS = [0, 1, 2];
  *  headings stay near where the loaded rows put them. */
 function LoadingRows(): ReactNode {
   return LOADING_ROWS.map((row) => (
-    <TableRow className="hover:bg-transparent" key={row}>
+    <TableRow key={row}>
       <TableCell className={CUT_CELL}>
         <Skeleton className="h-4 w-full" />
       </TableCell>

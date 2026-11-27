@@ -583,8 +583,6 @@ test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 3
       const rows = within(table).getAllByRole("row").slice(1);
       expect(rows).toHaveLength(3);
       for (const row of rows) {
-        // No hover fill: a skeleton row is not one to pick.
-        expect(row).toHaveClass("hover:bg-transparent");
         const cells = [...row.querySelectorAll("td")];
         // The Machine and Approved by cells take a loaded row's fixed quarter.
         expect(cells[0]).toHaveClass("w-1/4", "max-w-0");
