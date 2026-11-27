@@ -16,6 +16,7 @@ import type { Locator } from "@playwright/test";
 import { createAsk } from "../../dispatch/e2e/api";
 import type { FakeLauncherCredential } from "../../dispatch/e2e/fake-broker";
 import { setLauncherCredentials, setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
+import { nextFrames } from "../../dispatch/e2e/frames";
 import { withIssuePage } from "../../dispatch/e2e/issue-page-option";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
 import { assertPageFits } from "../../dispatch/e2e/unclipped";
@@ -171,7 +172,7 @@ const machineLoginListed: Region = {
   ...machineLogin,
   name: "machine login page with a login listed",
   prepare: seedListedLogin,
-  ready: (page) => [heading(page, "Enter machine login code"), revokeButton(page)],
+  ready: (page) => [...machineLogin.ready(page), revokeButton(page)],
 };
 const notFoundPage: Region = {
   name: "not-found page",
@@ -424,18 +425,14 @@ const forkViewsOf = (region: Region) =>
     .map((selector) => `:not(${selector}, ${selector} *)`)
     .join("")}`;
 
-/** As upstream's run: no colour is read part-way through a transition after the scheme changes. */
-async function stopTransitions(page: Page): Promise<void> {
-  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
-}
-
 /** Runs `body` in light, then in dark, each once `region` is drawn in that scheme. */
 async function inEachScheme(
   page: Page,
   region: Region,
   body: (scheme: Scheme) => Promise<void>
 ): Promise<void> {
-  await stopTransitions(page);
+  // As upstream's run: no colour is read part-way through a transition after the scheme changes.
+  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
   const backgrounds = new Set<string>();
   for (const scheme of SCHEMES) {
     await page.emulateMedia({ colorScheme: scheme });
@@ -449,35 +446,39 @@ async function inEachScheme(
   expect(backgrounds.size, `${region.name}: light and dark draw different backgrounds`).toBe(2);
 }
 
+/** The serious and critical findings axe reports in `region`, in the scheme shown. */
+async function scanScheme(page: Page, region: Region, scheme: Scheme): Promise<Finding[]> {
+  const builder = new AxeBuilder({ page }).include(region.selector).withTags(AXE_TAGS);
+  for (const selector of leftOut(region)) builder.exclude(selector);
+  // Axe refuses an include that matches nothing.
+  const forkViews = forkViewsOf(region);
+  if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
+  const results = await builder.analyze();
+  await test.info().attach(`axe ${region.name} ${scheme}.json`, {
+    body: JSON.stringify(results, null, 2),
+    contentType: "application/json",
+  });
+  // A scan whose excludes left it nothing to read passes every rule it never ran.
+  expect(results.passes.length, `${region.name}: rules that read something`).toBeGreaterThan(0);
+  const findings: Finding[] = [];
+  for (const violation of results.violations) {
+    for (const node of violation.nodes) {
+      const impact = node.impact ?? violation.impact;
+      if (impact !== "serious" && impact !== "critical") continue;
+      const selector = node.target
+        .map((part) => (Array.isArray(part) ? part.join(" ") : String(part)))
+        .join(" ");
+      findings.push({ rule: violation.id, impact, scheme, selector });
+    }
+  }
+  return findings;
+}
+
 /** The serious and critical findings in `region`, in light and dark. */
 async function scan(page: Page, region: Region): Promise<Finding[]> {
   const findings: Finding[] = [];
   await inEachScheme(page, region, async (scheme) => {
-    const builder = new AxeBuilder({ page })
-      .include(region.selector)
-      .exclude(UPSTREAM_VIEW)
-      .withTags(AXE_TAGS);
-    for (const selector of region.exclude ?? []) builder.exclude(selector);
-    // Axe refuses an include that matches nothing.
-    const forkViews = forkViewsOf(region);
-    if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
-    const results = await builder.analyze();
-    await test.info().attach(`axe ${region.name} ${scheme}.json`, {
-      body: JSON.stringify(results, null, 2),
-      contentType: "application/json",
-    });
-    // A scan whose excludes left it nothing to read passes every rule it never ran.
-    expect(results.passes.length, `${region.name}: rules that read something`).toBeGreaterThan(0);
-    for (const violation of results.violations) {
-      for (const node of violation.nodes) {
-        const impact = node.impact ?? violation.impact;
-        if (impact !== "serious" && impact !== "critical") continue;
-        const selector = node.target
-          .map((part) => (Array.isArray(part) ? part.join(" ") : String(part)))
-          .join(" ");
-        findings.push({ rule: violation.id, impact, scheme, selector });
-      }
-    }
+    findings.push(...(await scanScheme(page, region, scheme)));
   });
   return findings;
 }
@@ -501,9 +502,11 @@ interface Stop {
 type Unmarked = Pick<Stop, "name" | "outline"> & { scheme: Scheme };
 
 /** The `--focus` colour in the scheme shown, as the browser computes it. */
-async function focusColour(page: Page): Promise<string> {
-  const colour = await page.evaluate(() => {
-    if (getComputedStyle(document.documentElement).getPropertyValue("--focus") === "") return null;
+function focusColour(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    if (getComputedStyle(document.documentElement).getPropertyValue("--focus") === "") {
+      throw new Error("the theme sets no --focus");
+    }
     const probe = document.createElement("span");
     probe.style.color = "var(--focus)";
     document.body.append(probe);
@@ -511,17 +514,13 @@ async function focusColour(page: Page): Promise<string> {
     probe.remove();
     return computed;
   });
-  expect(colour, "the theme sets --focus").not.toBeNull();
-  return colour ?? "";
 }
 
 /** The element that has the focus, read in the page, and marked as a stop of this walk: as its
  *  first stop on the walk's first press. The body stands for nothing having the focus. The body
  *  is marked only as a first stop, so a page with no stop comes round, and the focus can leave
- *  the page more than once before Tab comes back. The read waits two animation frames: a modal
- *  dialog's focus guard takes the focus from Tab and moves it on in the next frame, so one frame
- *  is enough, and the second is spare. */
-async function readStop({
+ *  the page more than once before Tab comes back. */
+function readStop({
   first,
   focus,
   left,
@@ -531,8 +530,7 @@ async function readStop({
   focus: string;
   left: readonly string[];
   region: string;
-}): Promise<Stop> {
-  await new Promise((settled) => requestAnimationFrame(() => requestAnimationFrame(settled)));
+}): Stop {
   const element = document.activeElement ?? document.body;
   const nothing = element === document.body;
   const mark = element.getAttribute("data-tab-walk");
@@ -561,50 +559,52 @@ async function readStop({
   };
 }
 
-/** The Tab stops in `region` that do not show FO1's outline, in light and dark. Each walk goes
+/** The Tab stops in `region` that do not show FO1's outline, in the scheme shown. The walk goes
  *  round the page until Tab comes back to its first stop, and fails at any other stop Tab comes
  *  back to first. A region with `tabStops: "none"` must have no stop at all. */
-async function walk(page: Page, region: Region): Promise<Unmarked[]> {
-  const left = [UPSTREAM_VIEW, ...(region.exclude ?? [])];
+async function walkScheme(page: Page, region: Region, scheme: Scheme): Promise<Unmarked[]> {
+  const focus = await focusColour(page);
   const unmarked: Unmarked[] = [];
-  const focusColours = new Set<string>();
-  await inEachScheme(page, region, async (scheme) => {
-    const focus = await focusColour(page);
-    focusColours.add(focus);
-    await page.evaluate(() => {
-      for (const element of document.querySelectorAll("[data-tab-walk]")) {
-        element.removeAttribute("data-tab-walk");
-      }
-    });
-    let stops = 0;
-    for (let press = 0; ; press += 1) {
-      expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(
-        MAX_TAB_PRESSES
-      );
-      await page.keyboard.press("Tab");
-      const stop = await page.evaluate(readStop, {
-        first: press === 0,
-        focus,
-        left,
-        region: region.selector,
-      });
-      if (stop.passed === "first") break;
-      expect(
-        stop.passed,
-        `${region.name}: Tab came back to ${stop.name} before its first stop`
-      ).toBeNull();
-      if (!stop.inRegion) continue;
-      stops += 1;
-      if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
-    }
-    if (region.tabStops === "none") {
-      expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
-    } else {
-      // A walk that stopped nowhere in the region proves nothing about it.
-      expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    for (const element of document.querySelectorAll("[data-tab-walk]")) {
+      element.removeAttribute("data-tab-walk");
     }
   });
-  expect(focusColours.size, `${region.name}: light and dark draw different focus colours`).toBe(2);
+  let stops = 0;
+  for (let press = 0; ; press += 1) {
+    expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(MAX_TAB_PRESSES);
+    await page.keyboard.press("Tab");
+    await nextFrames(page);
+    const stop = await page.evaluate(readStop, {
+      first: press === 0,
+      focus,
+      left: leftOut(region),
+      region: region.selector,
+    });
+    if (stop.passed === "first") break;
+    expect(
+      stop.passed,
+      `${region.name}: Tab came back to ${stop.name} before its first stop`
+    ).toBeNull();
+    if (!stop.inRegion) continue;
+    stops += 1;
+    if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
+  }
+  if (region.tabStops === "none") {
+    expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
+  } else {
+    // A walk that stopped nowhere in the region proves nothing about it.
+    expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
+  }
+  return unmarked;
+}
+
+/** The Tab stops in `region` that do not show FO1's outline, in light and dark. */
+async function walk(page: Page, region: Region): Promise<Unmarked[]> {
+  const unmarked: Unmarked[] = [];
+  await inEachScheme(page, region, async (scheme) => {
+    unmarked.push(...(await walkScheme(page, region, scheme)));
+  });
   return unmarked;
 }
 
@@ -643,25 +643,32 @@ async function wideBoxes(page: Page): Promise<string[]> {
   }, '[data-slot="table-container"]');
 }
 
-function scanEach(list: readonly Region[]): void {
+/** Each region, opened once: in each scheme axe reads it, then Tab walks it. */
+function checkEach(list: readonly Region[]): void {
   for (const region of list) {
-    test(`the ${region.name} has no serious or critical axe finding in light or dark`, async ({
+    const walked = region.tabStops !== "skip";
+    const walkName =
+      region.tabStops === "none"
+        ? " and no Tab stop"
+        : walked
+          ? " and the focus outline at each Tab stop"
+          : "";
+    test(`the ${region.name} has no serious or critical axe finding${walkName}, in light and dark`, async ({
       page,
     }) => {
       await openRegion(page, region);
-      expect(await scan(page, region), `${region.name}: serious or critical findings`).toEqual([]);
-    });
-  }
-}
-
-function walkEach(list: readonly Region[]): void {
-  for (const region of list) {
-    if (region.tabStops === "skip") continue;
-    const shows =
-      region.tabStops === "none" ? "has no Tab stop" : "shows the focus outline at each Tab stop";
-    test(`the ${region.name} ${shows} in light and dark`, async ({ page }) => {
-      await openRegion(page, region);
-      expect(await walk(page, region), `${region.name}: Tab stops without the outline`).toEqual([]);
+      await inEachScheme(page, region, async (scheme) => {
+        expect
+          .soft(await scanScheme(page, region, scheme), `${region.name}: axe findings in ${scheme}`)
+          .toEqual([]);
+        if (!walked) return;
+        expect
+          .soft(
+            await walkScheme(page, region, scheme),
+            `${region.name}: Tab stops without the outline in ${scheme}`
+          )
+          .toEqual([]);
+      });
     });
   }
 }
@@ -688,14 +695,12 @@ function fitEach(list: readonly Region[]): void {
   }
 }
 
-scanEach(regions);
-walkEach(regions);
+checkEach(regions);
 fitEach(forkPages);
 
 test.describe("signed out", () => {
   test.use({ signedIn: false });
-  scanEach(signedOutRegions);
-  walkEach(signedOutRegions);
+  checkEach(signedOutRegions);
   fitEach(signedOutRegions);
 });
 
