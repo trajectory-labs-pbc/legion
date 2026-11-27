@@ -3,6 +3,7 @@ import { EXEMPT } from "./design-config";
 import {
   compiledDeclarations,
   type DesignViolation,
+  declarationProblems,
   designViolations,
   RULES,
   themeTokens,
@@ -76,9 +77,6 @@ const REFUSED: readonly [string, string, string][] = [
     '<div className="[--default-transition-duration:2s] motion-safe:transition-opacity">',
     "declared in the theme alone",
   ],
-  ["css", "@layer properties { .x { z-index: 9999; } }", "a layer names its theme token"],
-  ["tsx", '<div className="[@layer_properties]:z-50">', "a layer names its theme token"],
-  ["tsx", '<div className="[@layer_properties]:bg-[red]">', "raw colour"],
   ["tsx", '<a className="[@layer_properties]:ring-[red]">', "focus"],
   [
     "css",
@@ -390,6 +388,21 @@ describe("design rules", () => {
     expect([...tokens.layers]).toEqual(["--layer-top"]);
     expect([...tokens.durations]).toEqual(["--duration-quick"]);
     expect(tokens.colours.has("--brand")).toBe(true);
+  });
+
+  // No class compiles into these blocks, so each checks one condition of the skip directly.
+  test.each([
+    [
+      "z-index",
+      "50",
+      ["@layer properties", "@supports x", "*, ::before, ::after, ::backdrop"],
+      "a layer names its theme token",
+    ],
+    ["--tw-ring-color", "red", ["@media x", "*, ::before, ::after, ::backdrop"], "focus"],
+  ] as const)("checks compiled %s: %s in %j, which is not Tailwind's own block", (property, value, context, rule) => {
+    const tokens = themeTokens(":root { --layer-overlay: 50; }");
+    const problems = declarationProblems({ property, value, context }, tokens, { fromClass: true });
+    expect(problems.join("\n")).toContain(rule);
   });
 
   test("a file is exempt only by the list: a file that says it maps upstream is checked", () => {
