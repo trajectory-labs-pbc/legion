@@ -182,9 +182,9 @@ async function roomOf(rows: ReactNode, names: readonly string[]): Promise<boolea
       <DropdownMenuContent>{rows}</DropdownMenuContent>
     </DropdownMenu>
   );
-  await screen.findByRole("menu");
+  const found = await Promise.all(names.map((name) => screen.findByText(name)));
   loadDrawnCss();
-  return names.map((name) => keepsIconRoom(screen.getByText(name)));
+  return found.map(keepsIconRoom);
 }
 
 describe("DropdownMenu's drawn rows", () => {
@@ -264,7 +264,7 @@ describe("DropdownMenu's drawn rows", () => {
     ).toEqual([false, false, false, false, true, true, true]);
   });
 
-  it("keeps no room in a menu whose rows mark no icon, an unmarked leading icon included", async () => {
+  it("keeps no room in a menu whose rows mark no icon, though its open submenu marks one", async () => {
     const rows = (
       <>
         <DropdownMenuItem>
@@ -272,24 +272,38 @@ describe("DropdownMenu's drawn rows", () => {
           Copy link
         </DropdownMenuItem>
         <DropdownMenuItem>Rename</DropdownMenuItem>
-        <DropdownMenuSub>
+        <DropdownMenuSub defaultOpen>
           <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuItem>Backlog</DropdownMenuItem>
+            <DropdownMenuItem>
+              <CopyIcon aria-hidden data-icon="inline-start" />
+              Backlog
+            </DropdownMenuItem>
+            <DropdownMenuItem>Done</DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       </>
     );
-    expect(await roomOf(rows, ["Copy link", "Rename", "Move to"])).toEqual([false, false, false]);
+    expect(await roomOf(rows, ["Copy link", "Rename", "Move to", "Backlog", "Done"])).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
   });
 
   it("keeps the room on a checkbox row, for its check, and on every row beside it", async () => {
     const rows = (
       <>
         <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem>
+          <CopyIcon aria-hidden data-icon="inline-start" />
+          Show copies
+        </DropdownMenuCheckboxItem>
         <DropdownMenuItem>Rename</DropdownMenuItem>
       </>
     );
-    expect(await roomOf(rows, ["Show done", "Rename"])).toEqual([true, true]);
+    expect(await roomOf(rows, ["Show done", "Show copies", "Rename"])).toEqual([true, true, true]);
   });
 });

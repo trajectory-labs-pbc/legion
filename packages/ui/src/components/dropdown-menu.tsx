@@ -59,7 +59,7 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
 }
 
 // When a row marks its leading icon `data-icon="inline-start"`, as on a Button, or is a checkbox,
-// every row without that mark and every label keeps the icon's room.
+// every row without that mark and every label keeps the icon's room. A row holds no other such mark.
 const ICON_ROOM_CLASS =
   "in-[[role=menu]:has(:is([data-icon=inline-start],[role=menuitemcheckbox]))]:not-has-[[data-icon=inline-start]]:ps-8";
 
@@ -93,7 +93,8 @@ function DropdownMenuLinkItem({ className, ...props }: MenuPrimitive.LinkItem.Pr
   );
 }
 
-// A checkbox item stays open, so several can change in one visit; a radio item closes on its choice.
+// A checkbox item stays open, so several can change in one visit, and always keeps its check's room;
+// a radio item closes on its choice.
 function DropdownMenuCheckboxItem({
   className,
   children,
@@ -104,7 +105,7 @@ function DropdownMenuCheckboxItem({
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       closeOnClick={closeOnClick}
-      className={cn(ITEM_CLASS, className)}
+      className={cn(ITEM_CLASS, "ps-8", className)}
       {...props}
     >
       <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
