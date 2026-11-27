@@ -6,9 +6,9 @@
 // `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
 // only: the deployed mode leaves this file out (modes.ts).
 //
-// Beside it, with the same scope: a Tab walk over each region, in light and in dark, that finds
-// FO1's outline at every stop; and each page the fork draws, at 390, 768 and 1440 px, with nothing
-// that scrolls sideways (FR4).
+// Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
+// round the page back to its first stop and finds FO1's outline at every stop in the region; and
+// six pages the fork draws, at 390, 768 and 1440 px, with nothing that scrolls sideways (FR4).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -28,7 +28,8 @@ type Scheme = (typeof SCHEMES)[number];
 const PHONE = { width: 390, height: 844 };
 /** The widths a page must fit with nothing scrolling sideways: a phone, a tablet and a desktop. */
 const WIDTHS = [PHONE, { width: 768, height: 1024 }, { width: 1440, height: 900 }] as const;
-/** More Tab presses than any region's walk takes to come back to its first stop. */
+/** More Tab presses than any region's walk takes to come back to its first stop. A walk that
+ *  passes nothing twice but never comes back fails here. */
 const MAX_TAB_PRESSES = 200;
 const ASK = `${runName} ask?`;
 const MACHINE_CODE = "WXYZ-4321";
@@ -478,8 +479,9 @@ async function scan(page: Page, region: Region): Promise<Finding[]> {
 
 /** Where the focus rests after a Tab press. */
 interface Stop {
-  /** The walk has stopped here before: it has come round. */
-  seen: boolean;
+  /** "first" when the focus is back at the walk's first stop, "again" at another stop the walk
+   *  has passed, else null. */
+  passed: "first" | "again" | null;
   /** The element's tag and name. */
   name: string;
   /** In the region, and not in what it leaves out. */
@@ -508,28 +510,36 @@ async function focusColour(page: Page): Promise<string> {
   return colour ?? "";
 }
 
-/** The element that has the focus, read in the page, and marked as a stop of this walk. The body
- *  stands for nothing having the focus, so a page with no stop comes round too. */
+/** The element that has the focus, read in the page, and marked as a stop of this walk: as its
+ *  first stop on the walk's first press. The body stands for nothing having the focus. It is
+ *  marked only as a first stop, so a page with no stop comes round, and the focus can leave the
+ *  page more than once before Tab comes back. */
 function readStop({
+  first,
   focus,
   left,
   region,
 }: {
+  first: boolean;
   focus: string;
   left: readonly string[];
   region: string;
 }): Stop {
   const element = document.activeElement ?? document.body;
-  const seen = element.hasAttribute("data-tab-walk");
-  element.setAttribute("data-tab-walk", "");
-  if (element === document.body) {
-    return { seen, inRegion: false, name: "nothing", outline: "", outlined: false };
+  const nothing = element === document.body;
+  const mark = element.getAttribute("data-tab-walk");
+  if (mark === null && (first || !nothing)) {
+    element.setAttribute("data-tab-walk", first ? "first" : "");
+  }
+  const passed = mark === "first" ? "first" : mark === null || nothing ? null : "again";
+  if (nothing) {
+    return { passed, inRegion: false, name: "nothing", outline: "", outlined: false };
   }
   const label = element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40);
   const style = getComputedStyle(element);
   const box = element.getBoundingClientRect();
   return {
-    seen,
+    passed,
     inRegion:
       element.closest(region) !== null &&
       !left.some((selector) => element.closest(selector) !== null),
@@ -546,8 +556,8 @@ function readStop({
 }
 
 /** The Tab stops in `region` that do not show FO1's outline, in light and dark. Each walk goes
- *  round the page until Tab comes back to a stop it has passed. A region with `tabStops: "none"`
- *  must have no stop at all. */
+ *  round the page until Tab comes back to its first stop, and fails at any other stop Tab comes
+ *  back to first. A region with `tabStops: "none"` must have no stop at all. */
 async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   const left = [UPSTREAM_VIEW, ...(region.exclude ?? [])];
   const unmarked: Unmarked[] = [];
@@ -562,18 +572,29 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
     });
     let stops = 0;
     for (let press = 0; ; press += 1) {
-      expect(press, `${region.name}: Tab comes back round`).toBeLessThan(MAX_TAB_PRESSES);
+      expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(
+        MAX_TAB_PRESSES
+      );
       await page.keyboard.press("Tab");
-      const stop = await page.evaluate(readStop, { focus, left, region: region.selector });
-      if (stop.seen) break;
+      const stop = await page.evaluate(readStop, {
+        first: press === 0,
+        focus,
+        left,
+        region: region.selector,
+      });
+      if (stop.passed === "first") break;
+      expect(
+        stop.passed,
+        `${region.name}: Tab came back to ${stop.name} before its first stop`
+      ).toBeNull();
       if (!stop.inRegion) continue;
       stops += 1;
       if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
     }
-    // A walk that stopped nowhere in the region proves nothing about it.
     if (region.tabStops === "none") {
       expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
     } else {
+      // A walk that stopped nowhere in the region proves nothing about it.
       expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
     }
   });
