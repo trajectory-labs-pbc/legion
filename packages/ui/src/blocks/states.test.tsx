@@ -35,6 +35,14 @@ describe("EmptyState", () => {
     expect(container.querySelector("[aria-hidden]")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it("draws no wrapper for a slot its caller sets to false", () => {
+    const { container } = render(
+      <EmptyState action={false} description="Nothing here." icon={false} title="Nothing" />
+    );
+    expect(container.querySelector("[aria-hidden]")).toBeNull();
+    expect(container.querySelector("[data-slot=empty-state] > div")).toBeNull();
+  });
 });
 
 describe("ErrorState", () => {
@@ -53,15 +61,14 @@ describe("ErrorState", () => {
 });
 
 describe("LoadingState", () => {
-  it("is a busy status named by its label, around its still placeholder", () => {
+  it("is a status named by its label, around its still placeholder", () => {
     render(
       <LoadingState label="Loading the list">
         <div data-testid="rows" />
       </LoadingState>
     );
-    const status = screen.getByRole("status");
-    expect(status.getAttribute("aria-busy")).toBe("true");
-    expect(status.textContent).toBe("Loading the list");
+    const status = screen.getByRole("status", { name: "Loading the list" });
+    expect(status.hasAttribute("aria-busy")).toBe(false);
     expect(status.contains(screen.getByTestId("rows"))).toBe(true);
     expect(status.querySelector("[data-slot=spinner]")).toBeNull();
   });
