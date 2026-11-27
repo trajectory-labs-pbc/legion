@@ -24,13 +24,8 @@ describe("ViewHeader", () => {
     );
   });
 
-  it("draws only its title when its caller gives nothing else", () => {
-    const { container } = render(<ViewHeader count={0} title="Inbox" />);
-    expect(container.querySelector("header")?.children).toHaveLength(1);
-  });
-
-  it("draws no wrapper for a slot its caller sets to false", () => {
-    const { container } = render(<ViewHeader end={false} tabs={false} title="Inbox" />);
+  it.each([undefined, false])("draws only its title when its other slots are %p", (empty) => {
+    const { container } = render(<ViewHeader count={0} end={empty} tabs={empty} title="Inbox" />);
     expect(container.querySelector("header")?.children).toHaveLength(1);
   });
 

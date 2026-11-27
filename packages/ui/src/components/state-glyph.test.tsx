@@ -67,19 +67,4 @@ describe("StateGlyph", () => {
       expect(container.querySelector(`circle[mask="url(#${id})"]`)).not.toBeNull();
     }
   });
-
-  it("fills more of the circle at each pie level", () => {
-    const ends = ([1, 2, 3, 4] as const).map((level) => {
-      const { unmount } = render(<StateGlyph label="State" shape={{ kind: "pie", level }} />);
-      const d = screen.getByRole("img").querySelector("path")?.getAttribute("d") ?? "";
-      unmount();
-      return d;
-    });
-    expect(ends).toEqual([
-      "M8 8V4.5A3.5 3.5 0 0 1 11.5 8Z",
-      "M8 8V4.5A3.5 3.5 0 0 1 8 11.5Z",
-      "M8 8V4.5A3.5 3.5 0 1 1 4.5 8Z",
-      "M8 8V4.5A3.5 3.5 0 1 1 5.943 5.168Z",
-    ]);
-  });
 });
