@@ -175,7 +175,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
   );
 }
 
-/** A menu row's key at its right, drawn as the app draws every key. */
+/** A menu row's key at its end, drawn as the app draws every key. */
 function DropdownMenuShortcut({ className, steps }: { className?: string; steps: KeySteps }) {
   return <KbdSequence className={cn("ms-auto", className)} steps={steps} />;
 }
