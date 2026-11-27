@@ -1011,6 +1011,28 @@
       ]
     },
     {
+      "name": "truncated-text",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/truncated-text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/truncated-text.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/tooltip.tsx",
+          "type": "registry:ui",
+          "target": "@ui/tooltip.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        }
+      ]
+    },
+    {
       "name": "message-page",
       "type": "registry:block",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],

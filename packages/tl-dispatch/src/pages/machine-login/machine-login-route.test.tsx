@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { MemoryNavigationProvider } from "../../../tests/navigation";
@@ -22,6 +22,7 @@ test("MLR-01 a Dispatch without the device grant shows the fork's not-found page
   const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
     machine_code_page: false,
   });
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
   try {
     renderRoute();
     expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
@@ -29,6 +30,7 @@ test("MLR-01 a Dispatch without the device grant shows the fork's not-found page
   } finally {
     cleanup();
     capabilities.mockRestore();
+    logins.mockRestore();
   }
 });
 
@@ -51,6 +53,7 @@ test("MLR-02 a Dispatch with the device grant shows the machine login page", asy
 test("MLR-03 the route shows a page skeleton after 200 ms while the capabilities answer is out", async () => {
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
   try {
     const container = renderRoute();
     expect(capabilities).toHaveBeenCalledTimes(1);
@@ -63,6 +66,25 @@ test("MLR-03 the route shows a page skeleton after 200 ms while the capabilities
   } finally {
     cleanup();
     capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+test("MLR-05 the logins list is read beside the capabilities read, not after the page mounts", async () => {
+  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  try {
+    renderRoute();
+    await waitFor(() => expect(logins).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
+
+    answer.resolve({ machine_code_page: true });
+    expect(await screen.findByText("No live machine logins.")).toBeDefined();
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
   }
 });
 

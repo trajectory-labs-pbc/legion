@@ -26,11 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@legion/ui/components/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/tooltip";
+import { TruncatedText } from "@legion/ui/components/truncated-text";
 import { textVariants } from "@legion/ui/lib/typography";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { Fragment, type ReactNode, useCallback, useRef, useState } from "react";
+import { Fragment, memo, type ReactNode, useRef, useState } from "react";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/features/read-failure";
 import { WriteFailure } from "@/writes/write-failure";
 import {
@@ -48,54 +48,8 @@ import { isListed, type Revoke, useRevoke } from "./use-revoke";
 type RevokeQuestion = ReturnType<typeof createAlertDialogHandle<LauncherCredentialResp>>;
 
 const HEADINGS = ["Machine", "Credential", "Approved by", "Issued", "Expires"] as const;
-/** Where the focus goes once a revoked row takes its Revoke away: a listed Revoke, else above the list. */
-const afterRevoke = ({ root }: { root: HTMLElement | null }) =>
-  firstUsable(
-    ...(root?.querySelectorAll<HTMLElement>("tbody button") ?? []),
-    root?.querySelector<HTMLElement>('[data-slot="collapsible-trigger"]')
-  );
-const FOCUS_FALLBACKS: readonly FocusFallback[] = [afterRevoke];
 const MUTED = textVariants({ tone: "muted" });
 const CUT_CELL = "w-1/4 max-w-0";
-
-/** A long name cut to its cell, and shown in full in a tooltip. Its cell is `max-w-0` with a share
- *  of the width, so the table fits the page and the name takes what the other columns leave.
- *  While the name is cut it is a button, so the keyboard reaches it and opens the tooltip too. */
-function Cut({ text }: { text: string }): ReactNode {
-  const [cut, setCut] = useState(false);
-  // Each element drawn is measured, and again whenever its width changes.
-  const measure = useCallback((element: HTMLElement | null) => {
-    if (element === null) return;
-    const check = () => setCut(element.scrollWidth > element.clientWidth);
-    check();
-    const observer = new ResizeObserver(check);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  const name = "block w-full truncate text-left";
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        // A new name is a new element, so it is measured anew.
-        key={text}
-        ref={measure}
-        render={
-          cut ? (
-            <button
-              className={`${name} rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
-              type="button"
-            />
-          ) : (
-            <span className={name} />
-          )
-        }
-      >
-        {text}
-      </TooltipTrigger>
-      <TooltipContent className="max-w-(--available-width) wrap-anywhere">{text}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 // A pod login (`person` set) and a service's token login have no approver.
 function approvedBy(login: LauncherCredentialResp): string {
@@ -140,6 +94,7 @@ function RevokeButton({
       render={
         <Button
           aria-label={`Revoke ${loginName(login)}`}
+          data-row-revoke
           disabled={revoke.pending !== undefined && !pending}
           loading={pending}
           size="sm"
@@ -212,7 +167,7 @@ function LoginRows({
     <Fragment key={login.credential_id}>
       <TableRow>
         <TableCell className={textVariants({ className: CUT_CELL, weight: "medium" })}>
-          <Cut text={machineName(login)} />
+          <TruncatedText text={machineName(login)} />
           {login.expired ? (
             <span
               className={textVariants({
@@ -236,7 +191,7 @@ function LoginRows({
           ) : null}
         </TableCell>
         <TableCell className={textVariants({ className: CUT_CELL, tone: "muted" })}>
-          <Cut text={approvedBy(login)} />
+          <TruncatedText text={approvedBy(login)} />
         </TableCell>
         <TableCell className={MUTED}>
           <Timestamp at={login.issued_at} className="whitespace-nowrap tabular-nums" />
@@ -264,19 +219,30 @@ function LoginRows({
   ));
 }
 
+/** Where the focus goes once a revoked row takes its Revoke away: a listed Revoke, else `above`. */
+const afterRevoke = (root: HTMLElement | null, above: HTMLElement | null) =>
+  firstUsable(...(root?.querySelectorAll<HTMLElement>("[data-row-revoke]") ?? []), above);
+
 /** The machine logins the viewer may revoke that can still reach a secret; `newCredential` is the
- *  one this page just approved, marked New. */
-export function MachineLogins({ newCredential }: { newCredential?: string }): ReactNode {
+ *  one this page just approved, marked New. Memoized, so a keystroke in the page's code field
+ *  does not draw every row again. */
+export const MachineLogins = memo(function MachineLogins({
+  newCredential,
+}: {
+  newCredential?: string;
+}): ReactNode {
   const logins = useQuery({ ...machineLoginsQuery(), select: (data) => data.credentials ?? [] });
   // The refusal follows the rows shown, which come from the same query.
   const revoke = useRevoke(logins.data);
   const [question] = useState(createAlertDialogHandle<LauncherCredentialResp>);
   const [howOpen, setHowOpen] = useState(false);
   const section = useRef<HTMLElement>(null);
-  useFocusKeeper(section, FOCUS_FALLBACKS);
+  const howTrigger = useRef<HTMLButtonElement>(null);
+  const fallbacks: readonly FocusFallback[] = [({ root }) => afterRevoke(root, howTrigger.current)];
+  useFocusKeeper(section, fallbacks);
   // Back to its row's Revoke, or, once a revoke took the row, where the keeper would put it.
   const finalFocus = (login: LauncherCredentialResp) =>
-    isListed(logins.data, login) || afterRevoke({ root: section.current });
+    isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
   const fault = readFailureOf(logins);
   const refreshFault = refreshFailureOf(logins);
   return (
@@ -286,7 +252,7 @@ export function MachineLogins({ newCredential }: { newCredential?: string }): Re
           Machine logins
         </Heading>
         <Collapsible onOpenChange={setHowOpen} open={howOpen}>
-          <CollapsibleTrigger render={<Button size="sm" variant="link" />}>
+          <CollapsibleTrigger ref={howTrigger} render={<Button size="sm" variant="link" />}>
             How machine logins work
             {howOpen ? (
               <ChevronDownIcon aria-hidden data-icon="inline-end" />
@@ -342,4 +308,4 @@ export function MachineLogins({ newCredential }: { newCredential?: string }): Re
       <RevokeQuestionDialog finalFocus={finalFocus} question={question} revoke={revoke} />
     </section>
   );
-}
+});

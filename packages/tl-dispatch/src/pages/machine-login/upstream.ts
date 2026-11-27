@@ -1,7 +1,7 @@
 // Every upstream module the machine login page uses, so an upstream rename breaks here alone.
-import { useKeyedWrite } from "@upstream-dispatch/features/writes/useKeyedWrite";
+import type { KeyedWriteResult } from "@upstream-dispatch/features/writes/useKeyedWrite";
 
-export { api, apiErrorMessage, type WriteBounds } from "@upstream-dispatch/api/client";
+export { api, apiErrorMessage } from "@upstream-dispatch/api/client";
 export type {
   DecisionResponse,
   LauncherCredentialResp,
@@ -25,12 +25,10 @@ export { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentT
 export { stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
 export {
   refusedNote,
+  useKeyedWrite,
   useRefusalOfSubject,
 } from "@upstream-dispatch/features/writes/useKeyedWrite";
 export { type SubmitGuard, useSubmitGuard } from "@upstream-dispatch/hooks/useSubmitGuard";
-export { useKeyedWrite };
 
 /** A keyed write as `useKeyedWrite` returns it. */
-export type KeyedWrite<TData, TVariables = void> = ReturnType<
-  typeof useKeyedWrite<TData, TVariables>
->;
+export type KeyedWrite<TData, TVariables = void> = KeyedWriteResult<TData, TVariables, unknown>;

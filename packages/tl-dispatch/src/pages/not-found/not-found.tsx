@@ -1,10 +1,10 @@
 import { Button } from "@legion/ui/components/button";
 import { SurfaceTitle } from "@legion/ui/components/heading";
 import { textVariants } from "@legion/ui/lib/typography";
+import { useDocumentTitle } from "@upstream-dispatch/features/shell/useDocumentTitle";
 import type { ReactNode } from "react";
 import { PageLink } from "@/navigation/page-link";
 import { inbox } from "../inbox";
-import { useDocumentTitle } from "./upstream";
 
 /** Shown at an address that opens no page, and at a page this Dispatch does not serve. */
 export function NotFound(): ReactNode {

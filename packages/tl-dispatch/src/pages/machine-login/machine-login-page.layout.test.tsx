@@ -1,30 +1,18 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "@upstream-dispatch/api/client";
 
-import { MemoryNavigationProvider } from "../../../tests/navigation";
+import {
+  lookUpCode,
+  machineLogin,
+  pendingRecord,
+  renderMachineLoginPage as renderPage,
+} from "../../../tests/machine-logins";
 import { formatMachineCode } from "./format-machine-code";
-import { MachineLoginPage } from "./machine-login-page";
 import { api, type RecordResponse } from "./upstream";
 
-const record: RecordResponse = {
-  approver: "ada",
-  decided: null,
-  enrollment: null,
-  expires_at: "2026-09-27T01:00:00Z",
-  identifiers: ["worker-7.example.com"],
-  kind: "launcher_credential",
-  lifetime_seconds: 900,
-  reason: "",
-  record_id: "req-2",
-  requested_at: "2026-09-27T00:00:00Z",
-  rules_version: "v3",
-  service: null,
-  session: { enrollment: null, request: null },
-  state: "pending",
-};
+const record = pendingRecord();
 
 const restores: (() => void)[] = [];
 afterEach(() => {
@@ -32,39 +20,15 @@ afterEach(() => {
   for (const restore of restores.splice(0)) restore();
 });
 
-const login = (credential_id: string, host: string) => ({
-  approved_by: "ada@example.com",
-  credential_id,
-  expired: false,
-  expires_at: "2026-10-10T12:00:00Z",
-  host,
-  issued_at: "2026-10-03T12:00:00Z",
-  person: null,
-  service: null,
-  subject: null,
-});
-
 function stub(
   looked: RecordResponse = record,
-  credentials = [login("cred-devbox", "devbox.example.com")]
+  credentials = [machineLogin("cred-devbox", "devbox.example.com")]
 ) {
   const lookup = spyOn(api, "lookupMachineCredential").mockResolvedValue(looked);
   const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials });
   restores.push(
     () => lookup.mockRestore(),
     () => logins.mockRestore()
-  );
-}
-
-function renderPage() {
-  return render(
-    <MemoryNavigationProvider path="/credentials/machine">
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <MachineLoginPage />
-      </QueryClientProvider>
-    </MemoryNavigationProvider>
   );
 }
 
@@ -75,10 +39,7 @@ const primaries = () =>
     .map((button) => button.textContent);
 
 async function lookUp(headline = "worker-7.example.com asks to start agent sessions as you") {
-  const user = userEvent.setup();
-  await user.click(screen.getByLabelText("Code shown on the machine"));
-  await user.paste("abcd1234");
-  await user.click(screen.getByRole("button", { name: "Look up" }));
+  await lookUpCode(userEvent.setup());
   return screen.findByRole("heading", { name: headline });
 }
 
@@ -100,8 +61,8 @@ test("the code field has the focus when the page opens, so typing goes to it", a
 
 test("an approval takes the focus to what it did, empties the field, and marks the new login", async () => {
   stub(record, [
-    login("cred-devbox", "devbox.example.com"),
-    login("cred-9", "worker-7.example.com"),
+    machineLogin("cred-devbox", "devbox.example.com"),
+    machineLogin("cred-9", "worker-7.example.com"),
   ]);
   const approve = spyOn(api, "approveCredentialRecord").mockResolvedValue({
     credential_id: "cred-9",
@@ -143,11 +104,10 @@ test("a code typed while an approval is out stays in the field, with the focus",
   expect(field).toHaveFocus();
 });
 
-const decidedFirst: RecordResponse = {
-  ...record,
+const decidedFirst = pendingRecord({
   decided: { at: "2026-09-27T00:05:00Z", credential_id: "cred-9", event: "approved" },
   state: "approved",
-};
+});
 
 test("a decision someone made first empties the field once the lookup after it shows it", async () => {
   const lookups = spyOn(api, "lookupMachineCredential")

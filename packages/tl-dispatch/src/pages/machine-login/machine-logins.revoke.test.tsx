@@ -232,6 +232,38 @@ test("RVL-08 a revoked row leaves the list and hands the focus to a listed Revok
   }
 });
 
+test("RVL-10 a revoked row hands the focus to a listed Revoke, not to a cut name drawn before it", async () => {
+  const user = userEvent.setup();
+  // happy-dom lays nothing out; every name reads as cut, so each is a button, while these stand.
+  const prototypes = [HTMLSpanElement.prototype, HTMLButtonElement.prototype];
+  for (const proto of prototypes) {
+    Object.defineProperty(proto, "scrollWidth", { configurable: true, get: () => 200 });
+    Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => 100 });
+  }
+  const out = Promise.withResolvers<void>();
+  const stubs = stub(async (id) => {
+    stubs.dropRow(id);
+    await out.promise;
+  });
+  try {
+    const button = await renderSection();
+    expect(screen.getByRole("button", { name: "laptop.example.com" })).toBeDefined();
+    await user.click(button);
+    await confirmRevoke(user);
+    await waitFor(() => expect(button).toHaveFocus());
+    out.resolve();
+    await waitFor(() => expect(button).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", other)).toHaveFocus());
+  } finally {
+    cleanup();
+    stubs.restore();
+    for (const proto of prototypes) {
+      Reflect.deleteProperty(proto, "scrollWidth");
+      Reflect.deleteProperty(proto, "clientWidth");
+    }
+  }
+});
+
 test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with a Retry", async () => {
   const user = userEvent.setup();
   const stubs = stub(async () => stubs.failList());
