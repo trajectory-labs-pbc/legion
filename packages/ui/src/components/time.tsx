@@ -37,14 +37,15 @@ function Time({
   }
   return (
     <time
-      aria-label={formatAgeWords(value, now)}
       data-slot="time"
       dateTime={value.toISOString()}
       title={formatInstant(value)}
       className={classes}
       {...props}
     >
-      {formatAge(value, now)}
+      {/* The time role takes no aria-label, so the words are hidden text. */}
+      <span aria-hidden>{formatAge(value, now)}</span>
+      <span className="sr-only">{formatAgeWords(value, now)}</span>
     </time>
   );
 }
