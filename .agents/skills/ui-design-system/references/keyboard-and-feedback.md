@@ -10,7 +10,7 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **KB3** On a list, a peek or a record, one-key commands act on the selection, else the highlighted row, else the record in view: `s` status, `p` priority, `l` labels, `x` select, `$mod+Backspace` archive or delete (with a confirm when it cannot be undone). Upstream's keys stay where it has them: `a` approves on the issue page, and on the board `h` and `l` move between columns, so there labels open from the menu or the palette. Linear: issue keys (Linear's `a` assigns). Pages: project issues, Inbox, agents, priorities, the issue page. Check: (new) a test per key and subject.
 
-**KB4** `g` then a letter goes to a page (`NAV_DESTINATIONS`); `o` then a letter opens a picker of records; `c` creates the page's main record; `/` focuses search. Linear: `G` and `O` chords, `C` create, `/` search. Pages: the shell. Check: the navigation command tests.
+**KB4** `g` then a letter goes to a page (`NAV_DESTINATIONS`); `o` opens the highlighted row's page (no key sequence starts with `o`); `c` creates the page's main record; `/` focuses search. Linear: `G` chords, `C` create, `/` search. Pages: the shell. Check: the navigation command tests.
 
 **KB5** Copy commands: `$mod+.` copies the record's key, with upstream's `Shift+Y` as a second key; `$mod+Shift+,` copies its link, with upstream's `y`. One command holds both keys. A toast confirms the copy. Linear: `$mod+.` and `$mod+Shift+,`. Pages: lists, peek, records. Check: (new) a test for each key.
 

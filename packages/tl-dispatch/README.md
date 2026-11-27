@@ -58,7 +58,8 @@ binds, and adds the pages with no letter as palette commands. Those keys run as 
 with one difference: an open overlay of this app (a dialog, or a menu or popover that holds the
 focus) stops them, unless the overlay lets them through. The catalog refuses, when it loads, two
 keys live together that one press matches or where one starts the other, as upstream's key engine
-matches them. `CommandId` is typed from it, so a misspelt id fails `tsc`.
+matches them. A chord starts with G or N, and `o` alone opens a row's page, so the catalog also
+refuses any other first step. `CommandId` is typed from it, so a misspelt id fails `tsc`.
 
 A feature gives each command of a context its live state with `defineActions`, whose type check
 refuses a missing or unknown command name, and `useRegisterCommands` registers them with the key

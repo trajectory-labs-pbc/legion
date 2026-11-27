@@ -213,13 +213,13 @@ describe("the catalog refuses, when it loads", () => {
 
   test("a chord that starts with a key other than G or N", () => {
     expect(problemsOf([global([go("a", ["t s"])])])).toEqual([
-      `"global.a": the chord "t s" starts with neither G nor N`,
+      `"global.a": the chord "t s" starts with neither G nor N (O alone opens a row's page)`,
     ]);
   });
 
   test("a chord that starts with O, which alone opens a row's page", () => {
     expect(problemsOf([global([go("a", ["o p"])])])).toEqual([
-      `"global.a": the chord "o p" starts with neither G nor N`,
+      `"global.a": the chord "o p" starts with neither G nor N (O alone opens a row's page)`,
     ]);
   });
 

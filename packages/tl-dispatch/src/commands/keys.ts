@@ -106,10 +106,14 @@ export function clashChecker(): (held: string, keys: string, startsOnly?: boolea
   };
 }
 
-/** Whether a sequence of more than one press starts with a plain G or N. */
-export function chordStartsRight(keys: string): boolean {
+/** Why a sequence of more than one press may not start as `keys` does, or undefined when it may. */
+export function wrongChordStart(keys: string): string | undefined {
   const [first, ...rest] = keySteps(keys);
-  return rest.length === 0 || CHORD_PREFIXES.some((prefix) => prefix === first?.toLowerCase());
+  if (rest.length === 0 || CHORD_PREFIXES.some((prefix) => prefix === first?.toLowerCase())) {
+    return undefined;
+  }
+  const allowed = CHORD_PREFIXES.map((prefix) => prefix.toUpperCase()).join(" nor ");
+  return `the chord "${keys}" starts with neither ${allowed} (O alone opens a row's page)`;
 }
 
 const BROWSER = keyChecker(BROWSER_KEYS);

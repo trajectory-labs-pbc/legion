@@ -9,7 +9,7 @@ import {
 import { UPSTREAM_WEB } from "../../tests/source";
 import { APP_CONTEXTS, appCatalog } from "./app-catalog";
 import { clashes, keyChecker, refuses } from "./keys";
-import { CatalogError, type CommandContext, createCatalog } from "./schema";
+import type { CommandContext } from "./schema";
 import { UPSTREAM_LABELS } from "./upstream-labels";
 
 const upstream = upstreamKeyRegistrations();
@@ -60,8 +60,8 @@ describe("upstream's key registrations", () => {
     expect(clashesWithUpstream(APP_CONTEXTS)).toEqual([]);
   });
 
-  test("the catalog refuses an O chord, which clashes with the pages that bind O alone", () => {
-    const withPicker: CommandContext[] = [
+  test("an O chord in the catalog clashes with the pages that bind O alone", () => {
+    const withOChord: CommandContext[] = [
       {
         name: "global",
         parent: null,
@@ -69,7 +69,7 @@ describe("upstream's key registrations", () => {
         commands: [{ name: "pick", label: "Pick", keys: ["o p"] }],
       },
     ];
-    const files = clashesWithUpstream(withPicker).map(
+    const files = clashesWithUpstream(withOChord).map(
       (clash) => clash.split(" and ")[1]?.split(":")[0]
     );
     expect(files).toEqual(
@@ -78,7 +78,6 @@ describe("upstream's key registrations", () => {
         "../dispatch/web/src/features/architecture/ArchitecturePage.tsx",
       ])
     );
-    expect(() => createCatalog(withPicker)).toThrow(CatalogError);
   });
 
   test("a key equal to one an upstream page binds in the same scope clashes; in another scope it does not", () => {
