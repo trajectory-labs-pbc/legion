@@ -18,7 +18,19 @@ const OWNED_SKILLS = ownedSkills(
   readFileSync(join(REPO_ROOT, ".github/fork-allowlist.txt"), "utf8")
 );
 /** The first segment of a path the documents write, when its last segment is not a file name. */
-const FIRST_SEGMENTS = new Set([".agents", ".github", "packages", "references", "src", "tests"]);
+const FIRST_SEGMENTS = new Set([
+  ".agents",
+  ".github",
+  "docs",
+  "features",
+  "packages",
+  "references",
+  "scripts",
+  "src",
+  "tests",
+  "web",
+  ...OWNED_SKILLS,
+]);
 const FILE_NAME = /^[\w.-]+\.(tsx?|json|md|css|sh|ya?ml|txt|html|toml)$/;
 const PATH = /^[\w.@-]+(\/[\w.@-]+)+\/?$/;
 const UPSTREAM_ALIAS = "@upstream-dispatch/";
@@ -76,6 +88,12 @@ function namedIn(span: string): string[] {
   return words.flatMap((word) => named(word) ?? []);
 }
 
+/** The skill folder a document is in, or the document's own folder when it is in none. */
+function skillFolder(document: string): string {
+  const [skill] = relative(SKILLS, document).split("/");
+  return skill && skill !== ".." ? join(SKILLS, skill) : dirname(document);
+}
+
 /**
  * Whether a path a document names exists, read as this package's `AGENTS.md` says, and an
  * `@upstream-dispatch/` module as the build resolves it.
@@ -99,7 +117,7 @@ function exists(path: string, document: string, own: ReadonlySet<string>): boole
     first === "src" || first === "tests"
       ? PACKAGE_ROOT
       : first === "references"
-        ? dirname(document)
+        ? skillFolder(document)
         : REPO_ROOT;
   return existsSync(join(root, path));
 }

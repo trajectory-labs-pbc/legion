@@ -18,7 +18,7 @@ Every address of the app is declared in a page file. Links and moves are typed f
 
 ## Why only one folder imports the router
 
-The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change one folder, not every page. `packages/tl-dispatch/README.md` ("Changing the router") lists every file a move changes and the files that stay. Tests wrap a page in `MemoryNavigationProvider` from `tests/navigation.tsx`.
+The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change `src/navigation` and the few files the README lists, not every page. `packages/tl-dispatch/README.md` ("Changing the router") lists every file a move changes and the files that stay. Tests wrap a page in `MemoryNavigationProvider` from `tests/navigation.tsx`.
 
 ## Page files
 

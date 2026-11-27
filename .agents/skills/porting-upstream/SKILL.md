@@ -5,7 +5,7 @@ description: "Use when a view map, copy or link check in packages/tl-dispatch/te
 
 # Port an upstream commit
 
-tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no longer gets upstream's view changes for free: each one is a port. Logic files (`api/`, hooks, queries, the write store) are imported as they are and arrive with each sync, so they need no port.
+tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no longer gets upstream's view changes for free: each one is a port. Logic files (`packages/dispatch/web/src/api/`, hooks, queries, the write store) are imported as they are and arrive with each sync, so they need no port.
 
 ## What to port
 
@@ -14,7 +14,7 @@ tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no lon
 - Do every port before the sync pull request merges. A red gate is never a flake: read its message.
 - Port every fix, new action, new key, new URL form, new view state (empty, loading, error), new live update and copy change.
 - Do not port an upstream restyle of a view this app owns: this app's design replaces it. Update the map only.
-- A change to upstream's shared controls (`components/`) needs no port: `packages/ui` replaces them.
+- A change to upstream's shared controls (`packages/dispatch/web/src/components/`) needs no port: `packages/ui` replaces them.
 - A change to a widget (the document editor, conversation, margin, activity, artifacts, agent view) needs no port while the widget stays upstream's.
 
 ## Steps

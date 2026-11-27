@@ -21,7 +21,7 @@ describe("the skills and AGENTS.md", () => {
       "`@upstream-dispatch/features/shell/no-such-module` and `.agents/skills/none/SKILL.md`.",
       "A command: `bun tests/map/no-such.ts --update`, `bun run test src/commands tests/map`.",
       "Read from another root than the convention's: `references/tokens.md`, `commands/SKILL.md`,",
-      "`features/refs/routes.ts`, and the folder `@upstream-dispatch/features/shell`.",
+      "`features/refs/routes.ts`, the folder `features/shell`, and the folder `@upstream-dispatch/features/shell`.",
       "These exist: `src/pages`, `page-link.tsx`, `packages/ui`, `registry.json`,",
       "`@upstream-dispatch/features/shell/keymap`, `packages/dispatch/web/src/app.tsx`.",
       "These name no path: `g d`, `$mod+k`, `max-w-1/2`, `@legion/ui`, `<context>.<name>`, `3 / 84`,",
@@ -39,8 +39,21 @@ describe("the skills and AGENTS.md", () => {
         "references/tokens.md",
         "commands/SKILL.md",
         "features/refs/routes.ts",
+        "features/shell",
         "@upstream-dispatch/features/shell",
       ].map((path) => ({ document: "packages/tl-dispatch/AGENTS.md", path }))
+    );
+  });
+
+  test("reads `references/...` from the skill's own folder, in a reference file too", () => {
+    const skill = join(REPO_ROOT, ".agents/skills/ui-design-system");
+    const text = "`references/tokens.md` and `references/no-such.md`.";
+    const documents = [join(skill, "SKILL.md"), join(skill, "references/surfaces-and-type.md")];
+    expect(missingPaths(documents.map((file) => ({ file, text })))).toEqual(
+      documents.map((file) => ({
+        document: relative(REPO_ROOT, file),
+        path: "references/no-such.md",
+      }))
     );
   });
 
