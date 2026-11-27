@@ -15,18 +15,18 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 
 | Token | Use |
 | --- | --- |
-| `background` | The frame: the window behind the content panel, the sidebar and its header. Also the panel of a dialog, an alert dialog, a sheet and a drawer. |
+| `background` | The frame: the window behind the content panel, the sidebar and its header. Also the panel of a sheet. |
 | `sidebar` | The same colour as `background`, in light and in dark: the sidebar is part of the frame (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
 | `accent` | Hover inside a menu or a popover. Do not use it on the content panel. |
 | `sidebar-accent` | The hovered and the current row in the sidebar. |
-| `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast. |
+| `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast, and the panel of a dialog, an alert dialog or a drawer (SU5). |
 | `field` | The inside of an input. |
-| `scrim` | The backdrop of a modal overlay, drawn as `bg-scrim/50`: 50 % black in light. In dark `scrim` is already 60 % black, so the backdrop is 30 %. |
+| `scrim` | The backdrop of a modal overlay (`scrimClass`), and the cover over a modal while a nested modal is open (`coveredClass`); both in `packages/ui/src/lib/overlay-styles.ts`. |
 
-Measured on the content panel (`card`), light / dark: `secondary` 1.08 / 1.10, `muted` 1.13 / 1.15, `background` 1.11 / 1.07 (WCAG 2 contrast ratio against `card`). The steps are small on purpose: a step separates, a border outlines.
+The steps from `card` to `secondary`, `muted` and `background` are small on purpose: a step separates, a border outlines.
 
 ## Lines
 
