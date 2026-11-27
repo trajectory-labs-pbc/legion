@@ -2,11 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/destinations";
-import type { AuthenticatedUser } from "@/upstream/contract";
+import type { AuthenticatedUser, InboxRow } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
-import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
+import { INBOX_TWO_FOR_READER, inboxReads, type ReadAnswer, unasked } from "../../tests/inbox";
+import { answerShellReads, holdShellReads, json, readFailed, waitFor } from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { Sidebar, SidebarView } from "./sidebar";
@@ -191,7 +191,7 @@ describe("the sidebar", () => {
 
   test("the Inbox counts the asks waiting on the reader, not the unread threads", async () => {
     const container = mount("/agents", {
-      answer: inboxReads(() => json(INBOX_TWO_FOR_READER), 3),
+      answer: inboxReads({ inbox: () => INBOX_TWO_FOR_READER, unread: 3 }),
     });
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     await waitFor(() => mark() !== null);
@@ -335,7 +335,7 @@ describe("the sidebar", () => {
       answer: (url) => {
         if (!url.endsWith("/api/v1/projects")) return undefined;
         projectReads += 1;
-        return projectReads === 1 ? json({ error: { code: "INTERNAL" } }, 500) : undefined;
+        return projectReads === 1 ? readFailed() : undefined;
       },
     });
     const retry = () =>
@@ -355,7 +355,7 @@ describe("the sidebar", () => {
         if (!url.endsWith("/api/v1/projects")) return undefined;
         projectReads += 1;
         return projectReads === 1
-          ? json({ error: { code: "INTERNAL" } }, 500)
+          ? readFailed()
           : json([{ key: "CORE", name: "Core", open_asks: 0 }]);
       },
     });
@@ -384,12 +384,12 @@ describe("the sidebar", () => {
   });
 
   /** Mounts the sidebar on the inbox `inbox` answers and `unread` unread threads, once both are asked. */
-  async function mountInbox(inbox: () => Response | undefined, unread: number, peek = false) {
+  async function mountInbox(inbox: ReadAnswer<InboxRow[]>, unread: number, peek = false) {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       onPeek: () => {},
       peek,
-      answer: inboxReads(inbox, unread),
+      answer: inboxReads({ inbox, unread }),
     });
     const counted = () =>
       new Set(
@@ -406,7 +406,7 @@ describe("the sidebar", () => {
     row?.querySelector('[data-slot="attention-mark"], [data-slot="count"]') ?? null;
 
   test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
-    const inboxRow = await mountInbox(() => json(INBOX_TWO_FOR_READER.slice(2)), 3);
+    const inboxRow = await mountInbox(() => INBOX_TWO_FOR_READER.slice(2), 3);
     expect(inboxRow?.querySelector('[data-slot="attention-mark"]')).toBeNull();
     const count = inboxRow?.querySelector('[data-slot="count"]');
     expect(count?.textContent).toBe("3");
@@ -415,7 +415,7 @@ describe("the sidebar", () => {
   });
 
   test("under Peek the Inbox count fades, so the link's name keeps it, and a touch screen shows it", async () => {
-    const inboxRow = await mountInbox(() => json(INBOX_TWO_FOR_READER), 3, true);
+    const inboxRow = await mountInbox(() => INBOX_TWO_FOR_READER, 3, true);
     expect(inboxRow).toBe(screen.getByRole("link", { name: "Inbox Needs you: 2" }));
     const mark = inboxRow?.querySelector('[data-slot="attention-mark"]');
     const underPeek = mark?.className.split(" ").filter((name) => name.includes("/peek:")) ?? [];
@@ -428,7 +428,7 @@ describe("the sidebar", () => {
   });
 
   test("with nothing waiting and nothing unread, the Inbox shows no number", async () => {
-    const inboxRow = await mountInbox(() => json([]), 0);
+    const inboxRow = await mountInbox(() => [], 0);
     expect(inboxRow?.textContent).toBe("Inbox");
     expect(numberOf(inboxRow)).toBeNull();
   });
@@ -438,7 +438,7 @@ describe("the sidebar", () => {
   });
 
   test("a failed inbox read shows no unread count in its place", async () => {
-    const inboxRow = await mountInbox(() => json({ error: { code: "INTERNAL" } }, 500), 3);
+    const inboxRow = await mountInbox(readFailed, 3);
     expect(numberOf(inboxRow)).toBeNull();
     expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
   });
@@ -461,10 +461,7 @@ describe("the sidebar", () => {
   test("the Inbox count's Retry asks every read the count needs again", async () => {
     let failing = true;
     const { container, retry } = await mountFailedInbox(
-      inboxReads(
-        () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
-        3
-      )
+      inboxReads({ inbox: () => (failing ? readFailed() : INBOX_TWO_FOR_READER), unread: 3 })
     );
     const mark = () => container.querySelector('[data-slot="attention-mark"]');
     answered.length = 0;
@@ -477,10 +474,10 @@ describe("the sidebar", () => {
 
   test("with no secrets broker, the Inbox count's Retry leaves the credential list unasked", async () => {
     let failing = true;
-    const reads = inboxReads(
-      () => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json(INBOX_TWO_FOR_READER)),
-      3
-    );
+    const reads = inboxReads({
+      inbox: () => (failing ? readFailed() : INBOX_TWO_FOR_READER),
+      unread: 3,
+    });
     // A deployment with no broker answers the list with null, which upstream never asks again.
     const { container, retry } = await mountFailedInbox((url) =>
       url.includes("/api/v1/credential-requests") ? json(null) : reads(url)
