@@ -56,17 +56,22 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<div className="z-50">', "a layer names its theme token"],
   ["css", ".x { z-index: 50; }", "a layer names its theme token"],
   ["tsx", "<p style={{ zIndex: 50 }} />", "a layer set in a style"],
+  ["tsx", '<div className="z-(--layer-bogus)">', "a layer names its theme token"],
+  ["tsx", '<div className="motion-safe:duration-(--duration-slow)">', "a fade's length"],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-bogus); } }",
+    "a fade's length names its theme token",
+  ],
+  ["tsx", '<div className="[--layer-overlay:9999] z-overlay">', "declared in the theme alone"],
+  ["css", ":root { --layer-overlay: 9999; }", "declared in the theme alone"],
+  ["css", ":root { --duration-popup: 2s; }", "declared in the theme alone"],
   [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
     "a fade's length names its theme token",
   ],
   ["tsx", '<div className="motion-safe:[transition:opacity_1s]">', "a fade's length"],
-  [
-    "css",
-    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }",
-    "a fade's length names its theme token",
-  ],
   [
     "css",
     "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity var(--duration-popup); } }",
@@ -328,13 +333,15 @@ describe("design rules", () => {
     ]);
   });
 
-  test("takes corners from the theme alone: a corner token the app declares is none", () => {
+  test("takes corners, layers and fades from the theme alone: one the app declares is none", () => {
     const tokens = themeTokens(
-      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); }",
-      ":root { --radius-card: 3px; --brand: var(--primary); }"
+      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); --layer-top: 10; --duration-quick: 150ms; }",
+      ":root { --radius-card: 3px; --brand: var(--primary); --layer-app: 20; --duration-app: 1s; }"
     );
     expect([...tokens.radii]).toEqual(["--radius", "--radius-sm"]);
     expect([...tokens.radiusValues]).toEqual(["var(--radius)", "calc(var(--radius) * 0.5)"]);
+    expect([...tokens.layers]).toEqual(["--layer-top"]);
+    expect([...tokens.durations]).toEqual(["--duration-quick"]);
     expect(tokens.colours.has("--brand")).toBe(true);
   });
 

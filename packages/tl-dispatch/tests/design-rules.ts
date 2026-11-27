@@ -40,6 +40,8 @@ export const RULES = {
     "a layer names its theme token (`z-raised`, `z-overlay`, or `var(--layer-*)` in a stylesheet), never a number",
   duration:
     "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var(--duration-*)` in a stylesheet), never a number or the `transition` shorthand",
+  themeOnly:
+    "a layer, a fade's length and the disabled opacity are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -69,18 +71,25 @@ export interface ThemeTokens {
   radii: ReadonlySet<string>;
   /** Each corner token's value: the theme's `rounded-*` classes compile to these. */
   radiusValues: ReadonlySet<string>;
+  /** Each layer token's name (`--layer-*`) and each fade length's (`--duration-*`). */
+  layers: ReadonlySet<string>;
+  durations: ReadonlySet<string>;
 }
 
 /** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
  *  package's own test holds each of the theme's corner tokens to a step of `--radius`, so this
- *  check takes them as they are; a corner token the app declares is no corner. */
+ *  check takes them as they are; a corner, a layer or a fade's length the app declares is none. */
 export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
+  const layers = new Set<string>();
+  const durations = new Set<string>();
   for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
-      if (/^--radius(-|$)/.test(property)) {
+      if (/^--(layer|duration)-/.test(property)) {
+        if (css === theme) (property.startsWith("--layer-") ? layers : durations).add(property);
+      } else if (/^--radius(-|$)/.test(property)) {
         if (css === theme) {
           radii.add(property);
           radiusValues.add(property === "--radius" ? "var(--radius)" : value);
@@ -93,7 +102,7 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
         colours.add(property);
     }
   }
-  return { colours, radii, radiusValues };
+  return { colours, radii, radiusValues, layers, durations };
 }
 
 const NAMED_COLOURS = new Set(
@@ -149,12 +158,13 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
-/** A layer names a theme token, whose value lives on :root. */
-const LAYER = /^var\(--layer-[\w-]+\)$/;
-/** A fade's length names a theme token, or is what a `transition-*` class compiles its length to:
- *  the `duration-*` class's, or the default. */
-const DURATION =
-  /^var\(--duration-[\w-]+\)$|^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
+/** What a `transition-*` class compiles its length to: the `duration-*` class's, or the default. */
+const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
+/** The variables the theme alone declares. */
+const THEME_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
+/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
+const namesOne = (value: string, names: ReadonlySet<string>) =>
+  names.has(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "");
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -235,13 +245,16 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  if (property === "z-index" && !LAYER.test(value)) problems.push(RULES.layer);
+  if (property === "z-index" && !namesOne(value, tokens.layers)) problems.push(RULES.layer);
   if (
     property === "transition" ||
-    (/^(transition-duration|--tw-duration)$/.test(property) && !DURATION.test(value))
+    (/^(transition-duration|--tw-duration)$/.test(property) &&
+      !DEFAULT_DURATION.test(value) &&
+      !namesOne(value, tokens.durations))
   ) {
     problems.push(RULES.duration);
   }
+  if (THEME_ONLY.test(property)) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }

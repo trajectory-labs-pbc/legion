@@ -6,7 +6,7 @@ import { Scanner } from "@tailwindcss/oxide";
 import { Glob } from "bun";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
-import { type ButtonVariants, buttonVariants } from "../components/button";
+import { buttonVariants } from "../components/button";
 
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 
@@ -69,11 +69,11 @@ const NO_SHADOW = new Set(["none", "initial", "0 0 #0000"]);
 const SHADOW_STACK =
   "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
 const INSET_EDGE = "inset 0 0 0 1px var(--tw-inset-ring-color, currentcolor)";
-// A fade's length and a layer name a theme token, whose value lives on :root; a `transition-*`
+// A fade's length and a layer name a token the theme declares on :root; a `transition-*`
 // class's own length is the duration class's, or the default.
 const DURATIONS = new Set(["initial", "var(--tw-duration, var(--default-transition-duration))"]);
-const DURATION_TOKEN = /^var\(--duration-[\w-]+\)$/;
-const LAYER_TOKEN = /^var\(--layer-[\w-]+\)$/;
+// The variables the theme's :root alone declares.
+const ROOT_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
@@ -93,6 +93,15 @@ function designProblems(css: Root): string[] {
   const problems: string[] = [];
   const say = (node: Node, text: string, why: string) => {
     problems.push(`${where(node)} { ${text} }: ${why}`);
+  };
+  const rootTokens = new Set<string>();
+  css.walkDecls(/^--/, (decl) => {
+    if (where(decl) === ":root") rootTokens.add(decl.prop);
+  });
+  /** Whether `value` is `var(...)` of a :root token whose name starts with `prefix`. */
+  const namesRoot = (value: string, prefix: string) => {
+    const name = value.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "";
+    return name.startsWith(prefix) && rootTokens.has(name);
   };
 
   css.walkDecls((decl) => {
@@ -120,15 +129,18 @@ function designProblems(css: Root): string[] {
     if (prop === "transition-duration" || prop === "--tw-duration") {
       // A swipe moves with the finger, so nothing fades while it lasts.
       const swipe = value === "0ms" && where(decl).includes("[data-swiping]");
-      if (!DURATIONS.has(value) && !DURATION_TOKEN.test(value) && !swipe) {
+      if (!DURATIONS.has(value) && !namesRoot(value, "--duration-") && !swipe) {
         say(decl, text, "a duration that names no theme token");
       }
     }
     if (/^--duration-/.test(prop) && value !== "150ms" && value !== "200ms") {
       say(decl, text, "a duration outside 150 to 200 ms");
     }
-    if (prop === "z-index" && !LAYER_TOKEN.test(value)) {
+    if (prop === "z-index" && !namesRoot(value, "--layer-")) {
       say(decl, text, "a layer that names no theme token");
+    }
+    if (ROOT_ONLY.test(prop) && where(decl) !== ":root") {
+      say(decl, text, "a theme token declared outside the theme's :root");
     }
     if (prop === "--default-transition-duration" && value !== "150ms") {
       say(decl, text, "a duration outside 150 to 200 ms");
@@ -321,7 +333,6 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   ["a transform transition", { extra: ["motion-safe:transition-transform"] }, "other than opacity"],
   ["the default transition", { extra: ["motion-safe:transition"] }, "other than opacity"],
   ["a transition in CSS", { css: `${globalsText}\n.x { transition: opacity 1s; }` }, "shorthand"],
-  ["a long fade", { extra: ["duration-300"] }, "a duration that names no theme token"],
   ["a fade by number", { extra: ["motion-safe:duration-150"] }, "a duration that names no theme"],
   [
     "a fade's length in CSS",
@@ -335,6 +346,21 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   ],
   ["a delay", { extra: ["delay-75"] }, "a delay"],
   ["a layer by number", { extra: ["z-50"] }, "a layer that names no theme token"],
+  [
+    "a layer declared again",
+    { css: `${globalsText}\n.x { --layer-overlay: 9999; }` },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
+    "a layer the theme lacks",
+    { extra: ["z-(--layer-bogus)"] },
+    "a layer that names no theme token",
+  ],
+  [
+    "a fade the theme lacks",
+    { extra: ["motion-safe:duration-(--duration-slow)"] },
+    "a duration that names no theme token",
+  ],
   ["a fade that ignores reduced motion", { extra: ["transition-opacity"] }, "reduced-motion"],
   ["an animation", { extra: ["motion-safe:animate-pulse"] }, "an animation"],
   ["a corner from the default theme", { extra: ["rounded-2xl"] }, "a corner outside the theme"],
@@ -404,15 +430,6 @@ const INSET_FOCUS_PATHS = ["blocks/list-row.tsx"];
 // the muted pair: at half opacity alone its fill reads brighter than the button beside it in dark.
 const DISABLED_LOOK = ["opacity-disabled", "pointer-events-none", "cursor-not-allowed"];
 const PRIMARY_DISABLED = ["disabled:bg-muted", "disabled:text-muted-foreground"];
-const BUTTON_VARIANTS: readonly NonNullable<ButtonVariants["variant"]>[] = [
-  "default",
-  "destructive",
-  "outline",
-  "secondary",
-  "ghost",
-  "link",
-  "quiet-danger",
-];
 
 // The list parts that take the highlight from the shared class strings.
 const HIGHLIGHTED = [
@@ -463,12 +480,11 @@ describe("the components", () => {
           !(path === "components/button.tsx" && PRIMARY_DISABLED.includes(token))
       )
     ).toEqual([]);
-    for (const variant of BUTTON_VARIANTS) {
-      const classes = buttonVariants({ variant }).split(" ");
-      expect(
-        PRIMARY_DISABLED.every((each) => classes.includes(each)),
-        variant
-      ).toBe(variant === "default");
+    const primary = buttonVariants({ variant: "default" }).split(" ");
+    const button = tokensOf("components/button.tsx");
+    for (const each of PRIMARY_DISABLED) {
+      expect(primary, each).toContain(each);
+      expect(button.filter((token) => token === each).length, each).toBe(1);
     }
   });
 
