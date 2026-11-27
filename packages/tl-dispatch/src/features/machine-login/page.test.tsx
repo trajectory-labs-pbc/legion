@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { focusManager, onlineManager, QueryClient } from "@tanstack/react-query";
+import { focusManager, notifyManager, onlineManager, QueryClient } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, Suspense } from "react";
@@ -18,6 +18,8 @@ afterEach(() => {
   mock.restore();
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
+  // Back to the synchronous scheduler the shared test setup sets.
+  notifyManager.setScheduler((callback) => callback());
 });
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -75,7 +77,7 @@ async function bothFail() {
   answers(true);
   const code = failingCode();
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  spyOn(api, "getCredentialCapabilities")
+  const capabilities = spyOn(api, "getCredentialCapabilities")
     .mockReturnValueOnce(answer.promise)
     .mockResolvedValue({ machine_code_page: true });
   render(inBoundary(routeTree()));
@@ -84,7 +86,7 @@ async function bothFail() {
   answer.reject(new Error("broker down"));
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("Could not load the machine login page.");
-  return { code, alert };
+  return { code, alert, capabilities };
 }
 
 test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {
@@ -266,13 +268,22 @@ test("MLR-08 a Dispatch without the device grant shows the not-found page, thoug
   expect(screen.queryByRole("alert")).toBeNull();
 });
 
+test("MLR-08 a failed capabilities read shows its failure, though the page's code failed to load", async () => {
+  await bothFail();
+});
+
 test("MLR-09 a failed capabilities read's Retry also loads the page's code that failed", async () => {
-  const { code, alert } = await bothFail();
+  const { code, alert, capabilities } = await bothFail();
+  const again = Promise.withResolvers<{ machine_code_page: boolean }>();
+  capabilities.mockReturnValueOnce(again.promise);
   // The code comes only after the served answer, so the old failure must not stand meanwhile.
   const gate = Promise.withResolvers<void>();
   code.state.loads = true;
   code.state.gate = gate.promise;
   await userEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+  // The code is asked for as the read starts, before its answer.
+  expect(code.loads).toHaveBeenCalledTimes(2);
+  again.resolve({ machine_code_page: true });
   await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   gate.resolve();
   expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
@@ -298,6 +309,9 @@ test.each([
 ])("MLR-09 a failed capabilities read asked again on %s also loads the page's code that failed", async (_, askAgain) => {
   const { code } = await bothFail();
   code.state.loads = true;
+  // TanStack Query's own scheduler, so the read's start and its answer can reach React in one
+  // batch, as they can in the app.
+  notifyManager.setScheduler((callback) => setTimeout(callback, 0));
   act(askAgain);
   expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
   expect(screen.queryByRole("alert")).toBeNull();
@@ -315,10 +329,13 @@ test("MLR-09 a refresh that turns the page served loads the page's code that fai
 
   code.state.loads = true;
   spyOn(api, "getCredentialCapabilities").mockResolvedValue({ machine_code_page: true });
-  await act(() =>
-    queryClient.invalidateQueries({ queryKey: credentialCapabilitiesQuery().queryKey })
-  );
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: credentialCapabilitiesQuery().queryKey });
+  await act(refresh);
   expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  // A loaded code is not asked for again.
+  await act(refresh);
+  expect(code.loads).toHaveBeenCalledTimes(2);
 });
 
 test("MLR-09 a visit after the page's code failed to load loads the code again", async () => {

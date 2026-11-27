@@ -33,7 +33,6 @@ export function MachineLoginRoute(): ReactNode {
   useEffect(() => {
     void queryClient.prefetchQuery(machineLoginsQuery());
   }, [queryClient]);
-  const refetchCode = code.refetch;
   // Each new capabilities read (Retry, the tab's return, a reconnect, a refresh) also asks again for
   // a failed page code, as the read starts, so no render sees the old failure.
   useEffect(
@@ -42,9 +41,9 @@ export function MachineLoginRoute(): ReactNode {
         if (event.type !== "updated" || event.action.type !== "fetch") return;
         if (event.query.queryHash !== capabilitiesHash) return;
         if (queryClient.getQueryState(pageCodeQuery.queryKey)?.status === "error")
-          void refetchCode();
+          void code.refetch();
       }),
-    [queryClient, refetchCode]
+    [queryClient, code.refetch]
   );
   const fault = readFailureOf(capabilities);
   const served = capabilities.data?.machine_code_page === true;
