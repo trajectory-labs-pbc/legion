@@ -16,41 +16,41 @@ describe("FilterChip", () => {
       "Web",
       "",
     ]);
-    expect(chip?.className).toContain("rounded-badge");
   });
 
-  it("removes its filter through its caller", async () => {
+  it("removes its filter through its caller, named apart from another filter on its field", async () => {
     const onRemove = jest.fn();
-    render(<FilterChip field="Project" onRemove={onRemove} operator="is" value="Web" />);
-    await userEvent.click(screen.getByRole("button", { name: "Remove the Project filter" }));
+    render(
+      <>
+        <FilterChip field="Project" onRemove={onRemove} operator="is" value="Web" />
+        <FilterChip field="Project" onRemove={() => {}} operator="is not" value="Web" />
+      </>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Remove the filter Project is Web" }));
     expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: "Remove the filter Project is not Web" })
+    ).toBeDefined();
   });
 });
 
 describe("FilterChips", () => {
-  it("draws the start, the chips with what follows them, then the end at the right", () => {
+  it("draws its children in order, then the end at the right", () => {
     const { container } = render(
-      <FilterChips
-        end={<button type="button">Mark all read</button>}
-        start={<input aria-label="Search" />}
-      >
+      <FilterChips end={<button type="button">Mark all read</button>}>
+        <input aria-label="Search" />
         <FilterChip field="Type" onRemove={() => {}} operator="is" value="Reply" />
-        <button type="button">Clear filters</button>
       </FilterChips>
     );
     const row = container.querySelector("[data-slot=filter-chips]");
     expect(row?.firstElementChild).toBe(screen.getByRole("textbox", { name: "Search" }));
-    const chips = row?.children[1];
-    expect(chips?.lastElementChild).toBe(screen.getByRole("button", { name: "Clear filters" }));
-    expect(
-      screen.getByRole("button", { name: "Mark all read" }).parentElement?.className
-    ).toContain("ml-auto");
+    expect(row?.lastElementChild?.textContent).toBe("Mark all read");
   });
 
-  it("draws no wrapper when no filter is set and nothing is at the end", () => {
+  it("draws no wrapper when nothing is at the end", () => {
     const { container } = render(
-      <FilterChips end={null} start={<input aria-label="Search" />}>
-        {false}
+      <FilterChips end={null}>
+        <input aria-label="Search" />
       </FilterChips>
     );
     expect(container.querySelector("[data-slot=filter-chips]")?.children).toHaveLength(1);

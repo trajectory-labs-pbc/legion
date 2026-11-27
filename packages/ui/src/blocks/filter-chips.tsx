@@ -14,7 +14,7 @@ function FilterChip({
 }: {
   field: string;
   operator: string;
-  value: ReactNode;
+  value: string;
   onRemove: () => void;
 }) {
   return (
@@ -31,7 +31,7 @@ function FilterChip({
         {value}
       </span>
       <button
-        aria-label={`Remove the ${field} filter`}
+        aria-label={`Remove the filter ${field} ${operator} ${value}`}
         className="flex h-full items-center rounded-r-badge px-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         onClick={onRemove}
         type="button"
@@ -42,26 +42,15 @@ function FilterChip({
   );
 }
 
-/** The filter row under a view's header: `start` (the search box, the Filter button), then the
- *  chips and what follows them (Clear filters), then `end` at the right. */
-function FilterChips({
-  start,
-  children,
-  end,
-}: {
-  start?: ReactNode;
-  children?: ReactNode;
-  end?: ReactNode;
-}) {
+/** The filter row under a view's header: its children (the search box, the Filter button, the
+ *  chips, Clear filters), then `end` at the right. */
+function FilterChips({ children, end }: { children?: ReactNode; end?: ReactNode }) {
   return (
     <div
       className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2"
       data-slot="filter-chips"
     >
-      {start}
-      {isDrawn(children) ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>
-      ) : null}
+      {children}
       {isDrawn(end) ? <div className="ml-auto flex shrink-0 items-center gap-2">{end}</div> : null}
     </div>
   );
