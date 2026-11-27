@@ -10,7 +10,7 @@ import { userPreferenceStorageKey } from "@upstream-dispatch/features/shell/user
 import { http } from "msw";
 
 import { commandStore } from "@/commands/command-store";
-import { MemoryNavigationProvider, type TakeMove } from "../../tests/navigation";
+import { MemoryNavigationProvider, type Move } from "../../tests/navigation";
 import { holdReads, holdShellReads, waitFor } from "../../tests/network";
 import { render, settle, sleep } from "../../tests/react";
 import { chunksArrive, shellChunksArrive } from "../../tests/shell-chunks";
@@ -37,10 +37,10 @@ afterEach(() => {
 });
 
 // An address whose page has no chunk, so none arrives while a test waits or after it.
-async function mount(path = "/no-such-page", client = signedInClient(), takeMove?: TakeMove) {
+async function mount(path = "/no-such-page", client = signedInClient(), move?: Move) {
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path={path} takeMove={takeMove}>
+      <MemoryNavigationProvider path={path} move={move}>
         <SignedInParts>
           <AppShell user={reader} />
         </SignedInParts>
@@ -54,17 +54,26 @@ async function mount(path = "/no-such-page", client = signedInClient(), takeMove
 
 /** Mounts the shell at `path`, and gives back the move to another address, as a followed link. */
 async function mountMovable(path: string) {
-  let move: ((to: string) => void) | undefined;
-  const view = await mount(path, signedInClient(), (next) => {
-    move = next;
-  });
+  const move: Move = {};
+  const view = await mount(path, signedInClient(), move);
   const moveTo = (to: string) =>
     settle(() => {
-      if (move === undefined) throw new Error("the router has not handed over its move");
-      move(to);
+      if (move.to === undefined) throw new Error("the router has not handed over its move");
+      move.to(to);
     });
   return { view, moveTo };
 }
+
+/** Presses a key on `target`, by default where the focus is, as a person does. */
+const press = (
+  init: KeyboardEventInit,
+  target: Element = document.activeElement ?? document.body
+) =>
+  settle(() => {
+    target.dispatchEvent(
+      new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
+    );
+  });
 
 const issuePageArrives = () =>
   chunksArrive(() => import("@upstream-dispatch/features/issue-page/IssuePage"));
@@ -100,9 +109,7 @@ describe("AppShell", () => {
     );
     const alert = () => document.body.querySelector('[role="alert"]')?.textContent ?? "";
     // The sign-out first waits for the other tabs' answers.
-    for (let tries = 0; tries < 40 && alert() === ""; tries += 1) {
-      await sleep(50);
-    }
+    await waitFor(() => alert() !== "");
     expect(alert()).toContain("did not go through");
     click("Close navigation");
     await waitFor(() => button(account) === undefined);
@@ -126,15 +133,9 @@ describe("AppShell", () => {
 
   test("? anywhere on the shell opens the shortcuts sheet, whose code loads then", async () => {
     await mount();
-    settle(() => {
-      document.body.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true, cancelable: true })
-      );
-    });
+    press({ key: "?", shiftKey: true }, document.body);
     const sheet = () => document.body.querySelector('[data-slot="sheet-content"]');
-    for (let tries = 0; tries < 20 && sheet() === null; tries += 1) {
-      await sleep(10);
-    }
+    await waitFor(() => sheet() !== null);
     expect(sheet()?.querySelector("h2")?.textContent).toBe("Keyboard shortcuts");
     // The sheet takes the focus a moment after it opens.
     await sleep(50);
@@ -144,14 +145,6 @@ describe("AppShell", () => {
     ["Shift+S", { key: "S", shiftKey: true }],
     ["[", { key: "[" }],
   ] as const;
-
-  /** Presses a key where the focus is, as a person does. */
-  const pressOnFocus = (init: KeyboardEventInit) =>
-    settle(() => {
-      (document.activeElement ?? document.body).dispatchEvent(
-        new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })
-      );
-    });
 
   /** The shell's parts that a fold changes, on a viewport where the sidebar is a column. */
   async function foldable() {
@@ -172,7 +165,7 @@ describe("AppShell", () => {
     expect(part("panel-header")).toBeNull();
     expect(part("sidebar")?.className).toContain("w-(--sidebar-width)");
     expect(part("content-panel")?.className).not.toContain("md:ml-(--panel-inset)");
-    pressOnFocus(init);
+    press(init);
     expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("full-width");
     expect(part("sidebar")).toBeNull();
     // Inset 8 px on all four sides, with a 44 px row on top that holds only Show sidebar and
@@ -196,7 +189,7 @@ describe("AppShell", () => {
     expect(
       [...(row?.querySelectorAll("button") ?? [])].map((b) => b.getAttribute("aria-label"))
     ).toEqual(["Show sidebar"]);
-    pressOnFocus(init);
+    press(init);
     expect(part("main-content")?.getAttribute("data-shell-layout")).toBe("standard");
     expect(part("panel-header")).toBeNull();
     expect(button("Show sidebar")).toBeNull();
@@ -210,10 +203,10 @@ describe("AppShell", () => {
     expect(part("sidebar")?.contains(document.activeElement)).toBe(true);
     // The focused button shows its tooltip, which places itself a moment later.
     const placed = () => sleep(50);
-    pressOnFocus(init);
+    press(init);
     expect(document.activeElement).toBe(button("Show sidebar"));
     await placed();
-    pressOnFocus(init);
+    press(init);
     expect(document.activeElement).toBe(button("Hide sidebar"));
     await placed();
   });
@@ -222,10 +215,10 @@ describe("AppShell", () => {
     const { part } = await foldable();
     const main = part("main-content");
     settle(() => main?.focus());
-    pressOnFocus(init);
+    press(init);
     expect(part("sidebar")).toBeNull();
     expect(document.activeElement).toBe(main);
-    pressOnFocus(init);
+    press(init);
     expect(part("sidebar")).not.toBeNull();
     expect(document.activeElement).toBe(main);
   });
@@ -401,14 +394,8 @@ describe("AppShell", () => {
 
   test("$mod+k opens the search palette at once: a key typed next is the palette's", async () => {
     await mount();
-    const press = (init: KeyboardEventInit) =>
-      settle(() => {
-        document.body.dispatchEvent(
-          new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init })
-        );
-      });
-    press({ key: "k", code: "KeyK", ctrlKey: true });
-    press({ key: "i", code: "KeyI" });
+    press({ key: "k", code: "KeyK", ctrlKey: true }, document.body);
+    press({ key: "i", code: "KeyI" }, document.body);
     expect(document.body.querySelector('input[placeholder="Search Dispatch"]')).not.toBeNull();
     expect(document.body.querySelector('[data-testid="inbox-drawer"]')).toBeNull();
   });
@@ -422,13 +409,6 @@ describe("AppShell", () => {
       // The menu takes the focus a moment after it opens.
       await waitFor(() => menu()?.contains(document.activeElement) === true);
     };
-    const press = (init: KeyboardEventInit) =>
-      settle(() => {
-        document.activeElement?.dispatchEvent(
-          new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init })
-        );
-      });
-
     test("$mod+k opens the search palette and closes the menu", async () => {
       await openMenu();
       press({ key: "k", code: "KeyK", ctrlKey: true });

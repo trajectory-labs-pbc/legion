@@ -24,20 +24,14 @@ afterEach(() => {
 
 /** Runs the inline script on this window, and takes its listeners away after the test. */
 function runInlineScript(): void {
-  // The window, and the Navigation API's object where the browser has one.
-  const targets: EventTarget[] = [window];
-  const navigation: unknown = Reflect.get(window, "navigation");
-  if (navigation instanceof EventTarget) targets.push(navigation);
-  const spies = targets.map((target) => ({ target, added: spyOn(target, "addEventListener") }));
+  const added = spyOn(window, "addEventListener");
   try {
     new Function(inlineScript())();
   } finally {
-    for (const { added } of spies) added.mockRestore();
+    added.mockRestore();
   }
-  for (const { target, added } of spies) {
-    for (const [type, listener, options] of added.mock.calls) {
-      cleanups.push(() => target.removeEventListener(type, listener, options));
-    }
+  for (const [type, listener, options] of added.mock.calls) {
+    cleanups.push(() => window.removeEventListener(type, listener, options));
   }
 }
 
