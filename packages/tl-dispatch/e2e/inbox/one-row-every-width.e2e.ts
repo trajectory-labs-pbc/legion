@@ -21,27 +21,27 @@ test("INB-23 from 1280 px the list scrolls under a header that stays; below, the
   const [last, first] = [asks[0], asks.at(-1)];
   if (last === undefined || first === undefined) throw new Error("the asks were seeded");
   await page.goto(await inbox.address());
-  await expect(row(main(page), first.text)).toBeVisible();
-  await row(main(page), first.text).hover();
+  await row(main(page), first).hover();
   await page.mouse.wheel(0, 4000);
-  await expect(row(main(page), last.text)).toBeInViewport();
+  await expect(row(main(page), last)).toBeInViewport();
   await expect(inboxHeading(page)).toBeInViewport();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
   await page.setViewportSize({ height: 720, width: 1024 });
   await page.goto(await inbox.address());
-  await row(main(page), first.text).hover();
+  await row(main(page), first).hover();
   await page.mouse.wheel(0, 1000);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
 test("INB-130 j past the fold keeps the selected row in view", async ({ inbox, page }) => {
   const asks = await inbox.asks(24, "Which lease expires");
+  const [newest, walked] = [asks.at(-1), asks.at(-21)];
+  if (newest === undefined || walked === undefined) throw new Error("the asks were seeded");
   await page.goto(await inbox.address());
-  await expectOpen(page, asks.at(-1)?.text ?? "");
+  await expectOpen(page, newest);
   await focusPage(page);
   for (let step = 0; step < 20; step += 1) await page.keyboard.press("j");
-  const walked = asks.at(-21)?.text ?? "";
   await expectOpen(page, walked);
   await expect(row(main(page), walked)).toBeInViewport();
 });
@@ -53,9 +53,10 @@ test("INB-139 the pane's Question body is a focus stop that Page Down scrolls", 
   const lines = Array.from({ length: 60 }, (_, index) => `Window ${index + 1} replays the ledger.`);
   const ask = await inbox.ask("noOptions", `Which window comes first?\n\n${lines.join("\n\n")}`);
   await page.goto(await inbox.address({ item: ask.id }));
-  await expectOpen(page, "Which window comes first?");
+  await expectOpen(page, ask);
   const body = questionBody(page);
-  await body.focus();
+  await expect(body).toHaveAttribute("tabindex", "0");
+  await body.click({ position: { x: 8, y: 8 } });
   await expect(body).toBeFocused();
   expect(await body.evaluate((element) => element.scrollTop)).toBe(0);
   await page.keyboard.press("PageDown");
@@ -71,12 +72,12 @@ test("INB-185 under Oldest first, the pane opens a long thread at its first unre
     ...Array.from({ length: 50 }, (_, index) => `Replay note ${index + 1}.`),
   ].join("\n\n");
   const replies = ["One hour.", "Then a day.", "Unread: the whole ledger, window by window."];
-  await inbox.unreadThread(root, replies, 1);
+  const thread = await inbox.unreadThread(root, replies);
   await page.goto(await inbox.address());
   await chooseView(page, "Thread order", "Oldest first");
   await closeView(page);
-  await row(main(page), "How far back does a cold start replay?").getByRole("time").first().click();
-  await expectOpen(page, "How far back does a cold start replay?");
+  await row(main(page), thread).getByRole("time").first().click();
+  await expectOpen(page, thread);
   const unread = questionBody(page).getByText(replies[2] ?? "");
   await expect(unread).toBeInViewport();
   // The root's own lines are above it, out of the scroller's view.
