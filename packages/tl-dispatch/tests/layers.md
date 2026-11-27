@@ -64,7 +64,7 @@ A test imports upstream through the seam, or through `tests/upstream.ts`, the on
 A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`.
 A page with more than one view gets the folder, with one file for each view: an `import()` of a file loads every view it gives, so each lazy chunk has its own file.
 `src/app` also reads the data seam files that a provider needs, and `write-kinds.ts`, which registers upstream's kinds of writes.
-`mark.tsx` is read by the seam files, and for `ForkView` by the layers that pass fork elements into a marked component.
+`mark.tsx` is read by the seam files, and for `ForkView` and its attribute by the layers that pass fork elements into a marked component or draw fork DOM inside one.
 The `editor/` files give the document editor's engine and its parts to the reading aids alone (`src/parts/reading-aids`), one file for each chunk: the compare worker's bundle, and the aids that load with the page or behind the aided editor's `import()`.
 A seam file may read another, and a test may read each seam file.
 The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` only by `tests/main.test.tsx`, which loads the entry once to see the order of its first two steps.
@@ -113,6 +113,7 @@ The test follows each import of the app through upstream's code, and names the c
 Each component that a `views/` or `widgets/` file of the seam gives draws inside the upstream mark: `upstreamView(Component)` of `src/upstream/mark.tsx` wraps it in one `<span data-upstream-view>` that gives no box.
 The axe run and the one-primary check skip what is inside the mark, because upstream's own tests read it.
 Fork elements that a fork part passes into a marked component go inside `ForkView`, the `data-fork-view` span of the same file, so the checks read them again.
+Fork DOM that is not drawn by React, inside a marked view, carries the same attribute, `FORK_VIEW_ATTRIBUTE` of that file.
 The rule reads the file, not the component: each export is a `const` set to the mark's `upstreamView(...)` of a component imported from upstream, a hook (`use…`), a provider (`…Provider`), a type, or a name that `UNMARKED` in the table lists with its reason.
 `UNMARKED` is for a context, a component that renders nothing, and a component that draws a table row, an option, SVG, a list item or a term, which a `<span>` around it would break.
 Any other export fails, a class such as `ErrorBoundary` included, and so do `export *` and `export * as`, which name nothing the rule can read.

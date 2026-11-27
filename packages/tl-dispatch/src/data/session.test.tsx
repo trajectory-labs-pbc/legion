@@ -7,7 +7,7 @@ import { json } from "../../tests/network";
 import { answerRequests } from "../../tests/upstream";
 import { until } from "../../tests/wait";
 import { reader } from "../../tests/writes";
-import { useSession } from "./session";
+import { onAnotherPerson, sessionKey, useSession } from "./session";
 
 /** Draws `useSession`; `session` is its newest state. */
 function mountSession() {
@@ -37,5 +37,35 @@ describe("useSession", () => {
     const session = mountSession();
     await until(() => session().state === "error");
     expect(session()).toMatchObject({ state: "error", error: { status: 401 } });
+  });
+});
+
+describe("onAnotherPerson", () => {
+  test("calls back when the session names another person, not the same one again", () => {
+    const client = new QueryClient();
+    client.setQueryData(sessionKey, { ...reader, login: "alice" });
+    let calls = 0;
+    const stop = onAnotherPerson(client, () => {
+      calls += 1;
+    });
+    client.setQueryData(sessionKey, { ...reader, login: "alice" });
+    expect(calls).toBe(0);
+    client.setQueryData(sessionKey, { ...reader, login: "bob" });
+    expect(calls).toBe(1);
+    stop();
+    client.setQueryData(sessionKey, { ...reader, login: "carol" });
+    expect(calls).toBe(1);
+  });
+
+  test("the first person named after none is no change of person", () => {
+    const client = new QueryClient();
+    let calls = 0;
+    onAnotherPerson(client, () => {
+      calls += 1;
+    });
+    client.setQueryData(sessionKey, { ...reader, login: "alice" });
+    expect(calls).toBe(0);
+    client.setQueryData(sessionKey, { ...reader, login: "bob" });
+    expect(calls).toBe(1);
   });
 });

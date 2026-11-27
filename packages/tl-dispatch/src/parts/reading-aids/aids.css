@@ -1,0 +1,14 @@
+/* The parts above the document's text: out of the text's flow of words, and no height while empty. */
+.reading-aids-parts {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+  white-space: normal;
+  /* The caret's keys (Ctrl+Home, ArrowUp) pass over the parts' text to the document's. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.reading-aids-parts:not(:empty) {
+  margin-block-end: calc(var(--spacing) * 6);
+}

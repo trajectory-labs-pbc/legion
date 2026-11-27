@@ -11,6 +11,9 @@ export function chunksArrive(...loads: (() => Promise<unknown>)[]): Promise<void
   });
 }
 
+/** The issue page's chunk: upstream's issue page inside the reading aids' host. */
+export const issuePageArrives = () => chunksArrive(() => import("@/features/issue/page"));
+
 /** The chunks the shell itself draws lazily: upstream's margin and the account's menu. */
 export const shellChunksArrive = () =>
   chunksArrive(
