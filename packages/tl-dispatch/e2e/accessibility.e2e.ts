@@ -466,7 +466,7 @@ const HOLDERS = [
   "[role=link]",
   "[role=treeitem]",
   `[tabindex]:not(${NATIVE_CONTROLS}, [role])`,
-  "[tabindex]:is([role=region], [role=group], [role=tabpanel])",
+  ":is([role=region], [role=group], [role=tabpanel])",
 ].join(", ");
 
 /** A live machine login whose machine name is too long for its cell, so the row cuts it. */
@@ -666,19 +666,21 @@ test("a region, a group, a tab panel, a link or a tree row holds a small control
   page,
 }) => {
   const checkbox = '<span data-slot="checkbox" role="checkbox" aria-checked="false"></span>';
-  // The button and the summary sit at tabindex 0, so only the native-control guard in HOLDERS
-  // keeps them from holding.
+  // The button, the summary and the select sit at tabindex 0, so only the native-control guard
+  // in HOLDERS keeps them from holding.
   await page.setContent(`
     <style>[data-slot="checkbox"] { display: block; width: 16px; height: 16px; margin: 20px; }</style>
     <section aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
     <section role="region" aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
     <div role="tabpanel" tabindex="0">${checkbox}</div>
     <div role="group" tabindex="0">${checkbox}</div>
+    <a href="#g" role="group" style="display: block">${checkbox}</a>
     <div role="treeitem" aria-selected="false" tabindex="0">${checkbox}</div>
     <a href="#row" style="display: block">${checkbox}</a>
-    <div role="link" tabindex="0" style="display: block">${checkbox}</div>
-    <button type="button" tabindex="0" style="display: block; padding: 0">${checkbox}</button>
-    <details open><summary tabindex="0" style="display: block">${checkbox}</summary></details>
+    <div role="link" tabindex="0">${checkbox}</div>
+    <button type="button" tabindex="0">${checkbox}</button>
+    <details open><summary tabindex="0">${checkbox}</summary></details>
+    <select tabindex="0" size="4">${checkbox}</select>
     <div role="button" tabindex="0">${checkbox}</div>
     <a href="#menu" role="menuitem" style="display: block">${checkbox}</a>
   `);
@@ -693,8 +695,10 @@ test("a region, a group, a tab panel, a link or a tree row holds a small control
     [],
     [],
     [],
+    [],
     [expect.stringMatching(/^<button/)],
     [expect.stringMatching(/^<summary/)],
+    [expect.stringMatching(/^<select/)],
     [expect.stringMatching(/^<div role="button"/)],
     [expect.stringMatching(/^<a href="#menu" role="menuitem"/)],
   ]);
