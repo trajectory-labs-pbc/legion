@@ -105,6 +105,33 @@ test("MLP-02 a NO_SUCH_CODE lookup failure renders inline under the input", asyn
   }
 });
 
+test("MLP-02 the code field names the lookup failure and is marked invalid", async () => {
+  const user = userEvent.setup();
+  const lookupMachineCredential = spyOn(api, "lookupMachineCredential").mockRejectedValue(
+    new ApiError(404, { code: "NO_SUCH_CODE", error: "No pending request matches that code." })
+  );
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+
+  try {
+    renderPage();
+    const field = screen.getByLabelText("Code shown on the machine");
+    expect(field).not.toHaveAttribute("aria-describedby");
+    expect(field).not.toHaveAttribute("aria-invalid");
+    await user.click(field);
+    await user.paste("zzzz9999");
+    await user.click(screen.getByRole("button", { name: "Look up" }));
+
+    const failure = await screen.findByRole("alert");
+    expect(field).toHaveAttribute("aria-describedby", failure.id);
+    expect(field).toHaveAccessibleDescription("No pending request matches that code.");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+  } finally {
+    cleanup();
+    lookupMachineCredential.mockRestore();
+    getMachineLogins.mockRestore();
+  }
+});
+
 test("MLP-03 code -> lookup -> Deny posts the looked-up code too", async () => {
   const user = userEvent.setup();
   const lookupMachineCredential = spyOn(api, "lookupMachineCredential").mockResolvedValue(
@@ -219,6 +246,10 @@ test("MLP-05 a lookup the reader stopped says it may have been made", async () =
         })
       )
     ).toBeDefined();
+    // The note says nothing of the code, so the field names it but is not invalid.
+    const field = screen.getByLabelText("Code shown on the machine");
+    expect(field).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+    expect(field).not.toHaveAttribute("aria-invalid");
   } finally {
     realClock();
     cleanup();

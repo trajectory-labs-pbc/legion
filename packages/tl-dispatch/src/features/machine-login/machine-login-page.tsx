@@ -6,7 +6,7 @@ import { Label } from "@legion/ui/components/label";
 import { textVariants } from "@legion/ui/lib/typography";
 import { type ReactNode, useEffect, useRef } from "react";
 import { WriteFailure } from "@/data/write-failure";
-import { apiErrorMessage } from "@/upstream/api";
+import { ApiError, apiErrorMessage } from "@/upstream/api";
 import { machineName } from "@/upstream/logic/machine-login";
 import { useDocumentTitle } from "@/upstream/shell";
 import { DecisionButtons } from "./decision-buttons";
@@ -49,6 +49,9 @@ function Decision({
   );
 }
 
+/** The code form's failure line, which the code field names as its description. */
+const CODE_ERROR = "machine-code-error";
+
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
   const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
@@ -72,6 +75,8 @@ export function MachineLoginPage(): ReactNode {
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
   const lookUpLeads = !approvable && (view === undefined || code !== "");
+  // A 4xx refused the code itself; a stopped or failed send says nothing of it.
+  const codeRefused = lookup.error instanceof ApiError && lookup.error.status < 500;
 
   return (
     <section className="max-w-180 space-y-8">
@@ -88,6 +93,8 @@ export function MachineLoginPage(): ReactNode {
         <div className="flex flex-col gap-1">
           <Label htmlFor="machine-code">Code shown on the machine</Label>
           <Input
+            aria-describedby={lookup.isError ? CODE_ERROR : undefined}
+            aria-invalid={codeRefused || undefined}
             autoComplete="off"
             className="font-mono"
             id="machine-code"
@@ -110,6 +117,7 @@ export function MachineLoginPage(): ReactNode {
         <WriteFailure
           anew="Look up sends the code in the field as a new lookup."
           error={lookup.error}
+          id={CODE_ERROR}
           refused={(error) => apiErrorMessage(error, "Could not look up that code.")}
           what="the lookup of that code"
         />
