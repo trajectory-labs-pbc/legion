@@ -1452,6 +1452,24 @@ describe("the repaint of upstream's pages", async () => {
     }
   });
 
+  test("types 16 px under a finger in a field upstream draws at 14 px, and leaves a box or a slider", () => {
+    const coarse = "@media (pointer: coarse)";
+    const fields = [
+      withClasses(upstreamClasses("features/artifacts/TitleForm.tsx", "py-2 text-sm"), "input"),
+      withClasses("text-sm", "textarea"),
+      withClasses("text-sm", "select"),
+    ];
+    for (const field of fields) {
+      expect(computed(declarations, field, "font-size")).toBe("var(--text-sm)");
+      expect(computed(declarations, field, "font-size", coarse)).toBe("var(--text-base)");
+    }
+    for (const type of ["checkbox", "radio", "range", "file"]) {
+      const control = withClasses("text-sm", "input");
+      control.setAttribute("type", type);
+      expect(computed(declarations, control, "font-size", coarse)).toBe("var(--text-sm)");
+    }
+  });
+
   test("keeps a disabled pager button's edge, and a refused primary button quieter than its neighbour", () => {
     const pager = document.createElement("button");
     pager.className = `rounded-lg border px-3 py-1 text-sm disabled:opacity-40 ${borderDefault}`;

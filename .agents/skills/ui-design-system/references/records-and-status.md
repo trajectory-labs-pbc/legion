@@ -52,4 +52,4 @@ A record is an issue, a document, an agent, a priority, a machine or a broadcast
 
 **FM3** During a submit the fields stay enabled. The pressed button shows that it is busy and keeps the focus. Another button that would write the same record waits until the write ends. Pages: machine login, every form. Check: MLP-08, MLP-09 and MLP-10.
 
-**FM4** A field's text is 14 px, and 16 px on a coarse pointer (`pointer-coarse:text-base`), so a phone does not zoom in on it. The pointer sets the size, never the width. Pages: every page with a field. Check: the `Input`, `Textarea` and `Combobox` tests in `packages/ui`.
+**FM4** A field's text is 14 px, and 16 px on a coarse pointer, so a phone does not zoom in on it. A `packages/ui` field sets it itself (`pointer-coarse:text-base`), since a registry consumer has no app stylesheet; in the app, one rule in `packages/tl-dispatch/src/frame.css` sets it for upstream's fields too. The pointer sets the size, never the width. Pages: every page with a field. Check: the `Input`, `Textarea` and `Combobox` tests in `packages/ui`; the coarse-pointer field test in `packages/tl-dispatch/tests/repaint.test.ts`.
