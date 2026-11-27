@@ -60,18 +60,16 @@ export const sharedViews: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
- * Upstream view files the fork replaced, each to the file of this app that draws its region. Each
- * needs a whole-file pin in tests/map/copies.json, so an upstream change to it stops the sync
- * until it is ported or closed.
+ * Upstream view files the fork replaced. Each needs a whole-file pin in tests/map/copies.json, so an
+ * upstream change to it stops the sync until it is ported or closed.
  */
-export const replacedViews: Readonly<Record<string, string>> = {
-  "features/credentials/CredentialDecisionButtons.tsx":
-    "src/pages/machine-login/decision-buttons.tsx",
-  "features/credentials/CredentialRecordFacts.tsx": "src/pages/machine-login/record-facts.tsx",
-  "features/credentials/MachineLoginPage.tsx": "src/pages/machine-login/machine-login-page.tsx",
-  "features/credentials/MachineLoginRoute.tsx": "src/pages/machine-login/machine-login-route.tsx",
-  "features/credentials/MachineLoginsSection.tsx": "src/pages/machine-login/machine-logins.tsx",
-  "features/credentials/RevocableList.tsx": "src/pages/machine-login/machine-logins.tsx",
-  "features/shell/NotFoundPage.tsx": "src/pages/not-found/not-found.tsx",
-  "features/sidebar/Sidebar.tsx": "src/shell/sidebar.tsx",
-};
+export const replacedViews: readonly string[] = [
+  "features/credentials/CredentialDecisionButtons.tsx",
+  "features/credentials/CredentialRecordFacts.tsx",
+  "features/credentials/MachineLoginPage.tsx",
+  "features/credentials/MachineLoginRoute.tsx",
+  "features/credentials/MachineLoginsSection.tsx",
+  "features/credentials/RevocableList.tsx",
+  "features/shell/NotFoundPage.tsx",
+  "features/sidebar/Sidebar.tsx",
+];

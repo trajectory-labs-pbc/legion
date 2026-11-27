@@ -116,7 +116,8 @@ function declarationText(source: ts.SourceFile, part: string): string | undefine
 
 /** One part of a file with its formatting removed, or undefined when the file no longer has it. */
 export function partText(file: string, part: string, given?: string): string | undefined {
-  const text = given ?? readIfThere(join(REPO_ROOT, file));
+  const path = join(REPO_ROOT, file);
+  const text = given ?? (existsSync(path) ? readFileSync(path, "utf8") : undefined);
   if (text === undefined) return undefined;
   if (part === "script") {
     const scripts = [...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
@@ -133,15 +134,6 @@ export function partText(file: string, part: string, given?: string): string | u
 }
 
 export const hash = (text: string) => createHash("sha256").update(text).digest("hex");
-
-function readIfThere(path: string): string | undefined {
-  try {
-    return readFileSync(path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw error;
-  }
-}
 
 export function readPins(text = readFileSync(pinsFile, "utf8")): Copy[] {
   return JSON.parse(text) as Copy[];
@@ -181,23 +173,16 @@ export function unpinnedRouteTargets(
 /** Each upstream view file of `replaced` that copies.json does not pin whole. */
 export function unpinnedReplacedViews(
   pins: readonly Copy[] = readPins(),
-  replaced: Readonly<Record<string, string>> = replacedViews
+  replaced: readonly string[] = replacedViews
 ): string[] {
-  const whole = new Map(pins.filter((pin) => pin.part === "*").map((pin) => [pin.file, pin]));
-  return Object.entries(replaced).flatMap(([view, copy]) => {
-    const file = `${upstreamWeb}/${view}`;
-    const pin = whole.get(file);
-    if (pin === undefined) {
-      return [
-        `${file} is in src/views.ts replacedViews, and copies.json does not pin it whole: add {"file": "${file}", "part": "*", "copy": "${copy}", "commit": "", "sha256": ""} and run \`bun tests/map/copies.ts --update ${file} '*'\``,
-      ];
-    }
-    return pin.copy === copy
-      ? []
-      : [
-          `${file}: src/views.ts replacedViews gives it to ${copy}, and its pin in copies.json to ${pin.copy}: make them agree`,
-        ];
-  });
+  const whole = new Set(pins.filter((pin) => pin.part === "*").map((pin) => pin.file));
+  return replaced
+    .map((view) => `${upstreamWeb}/${view}`)
+    .filter((file) => !whole.has(file))
+    .map(
+      (file) =>
+        `${file} is in src/views.ts replacedViews, and copies.json does not pin it whole: add {"file": "${file}", "part": "*", "copy": "<this app's file>", "commit": "", "sha256": ""} and run \`bun tests/map/copies.ts --update ${file} '*'\``
+    );
 }
 
 const keyOf = (pin: Copy) => `${pin.file}\0${pin.part}`;
@@ -265,12 +250,11 @@ function git(args: readonly string[]): { ok: boolean; out: string; err: string }
   return { ok: run.exitCode === 0, out: run.stdout.toString(), err: run.stderr.toString().trim() };
 }
 
-/** The pins at the merge base of HEAD and `target`; none when the base has no copies.json. */
+/** The pins at the merge base of HEAD and `target`. */
 export function basePins(target: string): Copy[] {
   const base = git(["merge-base", "HEAD", target]);
   if (!base.ok) throw new Error(`git merge-base HEAD ${target} failed: ${base.err}`);
   const at = `${base.out.trim()}:${pinsPath}`;
-  if (!git(["cat-file", "-e", at]).ok) return [];
   const shown = git(["show", at]);
   if (!shown.ok) throw new Error(`git show ${at} failed: ${shown.err}`);
   return readPins(shown.out);

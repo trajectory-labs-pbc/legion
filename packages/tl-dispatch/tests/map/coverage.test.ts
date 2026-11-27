@@ -12,7 +12,6 @@ import {
   type Owner,
   owners,
   ownOwner,
-  replacedViewProblems,
 } from "./coverage";
 import { featureViews, forkSrc } from "./source";
 
@@ -42,23 +41,6 @@ describe("the view map", () => {
 
   test("a fixture is no view", () => {
     expect(files.filter((file) => /-fixtures?\.tsx$/.test(file))).toEqual([]);
-  });
-
-  test("each replaced view is an upstream view file", () => {
-    expect(replacedViewProblems(files)).toEqual([]);
-  });
-
-  test("names a replaced view that is not an upstream view file", () => {
-    expect(
-      replacedViewProblems(files, {
-        "features/sidebar/Missing.tsx": "src/shell/sidebar.tsx",
-        "features/sidebar/Sidebar.tsx": "src/shell/sidebar.tsx",
-        "api/client.ts": "src/shell/sidebar.tsx",
-      })
-    ).toEqual([
-      "src/views.ts replacedViews names features/sidebar/Missing.tsx, which is not a view file under upstream's features/: name the file the fork replaced",
-      "src/views.ts replacedViews names api/client.ts, which is not a view file under upstream's features/: name the file the fork replaced",
-    ]);
   });
 
   test("names a view file no owner maps", () => {

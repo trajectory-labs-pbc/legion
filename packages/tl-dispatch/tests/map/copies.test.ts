@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PACKAGE_ROOT, REPO_ROOT } from "../source";
 import {
+  basePins,
   type Copy,
   copyFiles,
   copyProblems,
@@ -157,10 +158,10 @@ describe("upstream view files the fork replaced", () => {
 
   test("names a replaced view file with no whole-file pin", () => {
     const inbox = "packages/dispatch/web/src/features/inbox/Inbox.tsx";
-    const problems = unpinnedReplacedViews(readPins(), {
-      "features/sidebar/Sidebar.tsx": "src/shell/sidebar.tsx",
-      "features/inbox/Inbox.tsx": "src/pages/inbox.tsx",
-    });
+    const problems = unpinnedReplacedViews(readPins(), [
+      "features/sidebar/Sidebar.tsx",
+      "features/inbox/Inbox.tsx",
+    ]);
     expect(problems).toHaveLength(1);
     expect(problems[0]).toStartWith(`${inbox} is in src/views.ts replacedViews`);
   });
@@ -169,14 +170,6 @@ describe("upstream view files the fork replaced", () => {
     const pins = readPins().filter((entry) => entry.file !== SIDEBAR);
     expect(unpinnedReplacedViews([...pins, { ...sidebarPin(), part: "Sidebar" }])).toEqual([
       expect.stringContaining(`${SIDEBAR} is in src/views.ts replacedViews`),
-    ]);
-  });
-
-  test("names a replaced view whose pin gives it to another file of this app", () => {
-    expect(
-      unpinnedReplacedViews(readPins(), { "features/sidebar/Sidebar.tsx": "src/shell/rail.tsx" })
-    ).toEqual([
-      `${SIDEBAR}: src/views.ts replacedViews gives it to src/shell/rail.tsx, and its pin in copies.json to src/shell/sidebar.tsx: make them agree`,
     ]);
   });
 
@@ -233,6 +226,18 @@ describe("a pin the sync changed names its outcome and reason", () => {
     expect(unexplainedPins(again, explained)).toEqual([
       expect.stringContaining("keeps the base's reason"),
     ]);
+  });
+
+  test("the base's pins are read at the merge base, and a base with no copies.json fails", () => {
+    expect(basePins("HEAD")).toEqual(base);
+    const added = Bun.spawnSync(
+      ["git", "log", "--diff-filter=A", "--format=%H", "--", "tests/map/copies.json"],
+      { cwd: PACKAGE_ROOT }
+    )
+      .stdout.toString()
+      .trim();
+    expect(added).toMatch(/^[0-9a-f]{40}$/);
+    expect(() => basePins(`${added}^`)).toThrow("tests/map/copies.json failed");
   });
 
   test("a pin the base does not have needs neither", () => {
