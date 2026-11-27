@@ -678,16 +678,17 @@ describe("the theme", () => {
 });
 
 describe("the type recipes", () => {
-  it.each([
-    ["a heading", headingVariants({ size: "page", tone: "muted" }), "balance"],
-    ["body text", textVariants({ tone: "muted" }), "pretty"],
-  ])("wrap %s by style alone, so a `truncate` beside it holds", async (_name, recipe, style) => {
-    const classes = cn(recipe, "truncate").split(" ");
-    const css = postcss.parse((await tailwind(globalsText)).build(classes));
-    const wraps: string[] = [];
-    css.walkDecls(/^(text-wrap|white-space)/, (decl) => {
-      if (where(decl).startsWith("@layer utilities")) wraps.push(`${decl.prop}: ${decl.value}`);
+  it("and every component set the wrap style alone, so a `truncate` beside it holds", () => {
+    const wraps = new Set<string>();
+    generated.walkDecls(/^text-wrap/, (decl) => {
+      wraps.add(`${decl.prop}: ${decl.value}`);
     });
-    expect(wraps.sort()).toEqual([`text-wrap-style: ${style}`, "white-space: nowrap"]);
+    expect([...wraps].sort()).toEqual(["text-wrap-style: balance", "text-wrap-style: pretty"]);
+    for (const [recipe, wrap] of [
+      [headingVariants({ size: "page", tone: "muted" }), "wrap-balance"],
+      [textVariants({ tone: "muted" }), "wrap-pretty"],
+    ]) {
+      expect(cn(recipe, "truncate").split(" ")).toEqual(expect.arrayContaining([wrap, "truncate"]));
+    }
   });
 });
