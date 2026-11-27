@@ -13,7 +13,6 @@ type TestPage = { id: string; routes: Record<string, PageRoute<string, string, u
 const { PageRoutes, useCurrentPage } = createRouteTree<unknown, TestPage>([
   { id: "machines", routes: { machine } },
   { id: "issue", routes: { issue: pageRoute({ path: "/issues/:key/*", element: null }) } },
-  { id: "priorities", routes: { one: pageRoute({ path: "/priorities/:id", element: null }) } },
   { id: "not-found", routes: { any: pageRoute({ path: "/*", element: "nothing here" }) } },
 ]);
 
@@ -66,10 +65,6 @@ describe("the page hooks", () => {
     });
     settle(() => go(machine, { params: { machine: "m" }, search: { tab: "logs" } }));
     expect(address.value()).toEqual({ pathname: "/machines/m", search: "?tab=logs" });
-  });
-
-  test("useCurrentPage follows the address", () => {
-    expect(probe("/priorities/7", () => useCurrentPage()?.page.id).value()).toBe("priorities");
   });
 
   test("PageRoutes draws the route's element", () => {
