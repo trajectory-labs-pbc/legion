@@ -1,5 +1,4 @@
 // Upstream's document still works on each host with the aids on; upstream's build is the baseline.
-import type { Locator } from "@playwright/test";
 import {
   barAction,
   composer,
@@ -22,7 +21,19 @@ import { blockNodeId } from "../../../dispatch/web/src/features/issue-page/tree-
 import type { App } from "../dists";
 import { personOf } from "../flows";
 import { test as appTest, expect, type Page } from "../test";
-import { FIRST, HOST, openHost, PARTS, partsRoot, SECOND, seedHost, TEXT, THIRD } from "./hosts";
+import {
+  counterOffset,
+  FIRST,
+  HOST,
+  openHost,
+  PARTS,
+  partsRoot,
+  SECOND,
+  seedHost,
+  TEXT,
+  THIRD,
+  topsApart,
+} from "./hosts";
 import {
   decisionCard,
   focusParts,
@@ -69,12 +80,6 @@ const blockTexts = (page: Page) =>
           return copy.textContent;
         })
     );
-
-/** How far apart the tops of two elements are, once both are drawn. */
-async function topsApart(first: Locator, second: Locator): Promise<number | null> {
-  const [a, b] = await Promise.all([first.boundingBox(), second.boundingBox()]);
-  return a === null || b === null ? null : Math.abs(a.y - b.y);
-}
 
 const FAR = "A block far below the others.";
 const SPACER = Array.from({ length: 12 }, (_, at) => `A paragraph between, number ${at + 1}.`).join(
@@ -123,7 +128,7 @@ for (const kind of HOST_KINDS) {
     const blockId = await counter.getAttribute("data-block-references");
     const block = editor.locator(`[data-block-id="${blockId}"]`).first();
     await expect(block).toContainText(SECOND);
-    const counterBeside = () => expect.poll(() => topsApart(counter, block)).toBeLessThanOrEqual(1);
+    const counterBeside = () => expect.poll(() => counterOffset(page)).toBeLessThanOrEqual(1);
     await counterBeside();
     for (const height of app === "tl-dispatch" ? [200, 100] : []) {
       await partsStay(app, page);

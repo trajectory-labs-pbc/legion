@@ -143,6 +143,11 @@
   --icon-stroke: 1.75;
   /* The reading aids' gutter at the left of a document's text, which holds the change labels. */
   --reading-gutter-width: 64px;
+
+  /* The reading aids' outline beside a document, its gap, and the text's measure it leaves room for. */
+  --reading-outline-width: 200px;
+  --reading-outline-gap: 24px;
+  --reading-measure: 504px;
 }
 
 .dark {

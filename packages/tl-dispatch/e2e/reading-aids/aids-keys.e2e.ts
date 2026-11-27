@@ -17,6 +17,15 @@ import {
   shownParts,
 } from "./hosts";
 import {
+  ENTRIES,
+  expectMovedTo,
+  expectNoMove,
+  OUTLINE_TEXT,
+  pulsed,
+  scrollHeadingTo,
+  scrollSettled,
+} from "./outline-fixture";
+import {
   type Decision,
   decisionBlock,
   focusOnHost,
@@ -228,3 +237,67 @@ test("aids-keys: the palette lists the fold action, and picking it folds as z do
   await option.click();
   await expect.poll(() => opened(page)).toEqual(["true", "true"]);
 });
+
+for (const kind of HOST_KINDS) {
+  test(`aids-keys: on the ${kind} host, j and k move by outline entry, twice in a row, and stop at the ends`, async ({
+    page,
+  }) => {
+    const { path } = await seedHost(page, kind, OUTLINE_TEXT);
+    await openHost(page, path);
+    const address = page.url();
+    await page.locator(HOST).focus();
+
+    for (const entry of ENTRIES) {
+      await page.keyboard.press("j");
+      await expectMovedTo(page, entry);
+      await expect.poll(() => focusOnHost(page)).toBe(true);
+    }
+    await expectNoMove(page, "j");
+
+    for (const entry of [...ENTRIES].reverse().slice(1)) {
+      await page.keyboard.press("k");
+      await expectMovedTo(page, entry);
+    }
+    await expectNoMove(page, "k");
+    expect(page.url()).toBe(address);
+  });
+
+  test(`aids-keys: on the ${kind} host, after a scroll, j moves on from the marked entry, and below the last heading it moves nothing`, async ({
+    page,
+  }) => {
+    const { path } = await seedHost(page, kind, OUTLINE_TEXT);
+    await openHost(page, path);
+    // The document scrolls the host's article: the outline follows the window's scroll.
+    await expect(page.locator('[data-document-scroll] article[aria-label="Document"]')).toHaveCount(
+      1
+    );
+    await page.locator(HOST).focus();
+    await page.keyboard.press("j");
+    await expectMovedTo(page, "Title");
+    await page.keyboard.press("End");
+    await expect(documentEditor(page).getByText("The later part, paragraph 20")).toBeInViewport();
+    await expectNoMove(page, "j");
+
+    // Inside Parts, below its heading: j goes on to Order.
+    await scrollHeadingTo(page, "Parts", 40);
+    await scrollSettled(page);
+    await page.keyboard.press("j");
+    await expectMovedTo(page, "Order");
+  });
+
+  test(`aids-keys: on the ${kind} host, j in the text types its letter and moves nothing`, async ({
+    page,
+  }) => {
+    const { path } = await seedHost(page, kind, OUTLINE_TEXT);
+    await openHost(page, path);
+    const block = documentEditor(page).locator("p", { hasText: "The design part, paragraph 1:" });
+    const before = await block.textContent();
+    await block.click();
+    await page.keyboard.press("j");
+    await expect
+      .poll(async () => (await block.textContent())?.length)
+      .toBe((before?.length ?? 0) + 1);
+    await expect(block).toContainText("j");
+    await expect(pulsed(page)).toHaveCount(0);
+  });
+}

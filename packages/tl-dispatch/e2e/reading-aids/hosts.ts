@@ -1,5 +1,6 @@
 // The seed and the locators the reading aids' browser tests share.
 import { randomUUID } from "node:crypto";
+import type { Locator } from "@playwright/test";
 
 import {
   createArtifactComment,
@@ -34,6 +35,19 @@ export const shownParts = (page: Page) =>
     .evaluateAll(
       (roots) => roots.filter((root) => root.checkVisibility({ visibilityProperty: true })).length
     );
+
+/** How far apart the tops of two elements are, once both are drawn. */
+export async function topsApart(first: Locator, second: Locator): Promise<number | null> {
+  const [a, b] = await Promise.all([first.boundingBox(), second.boundingBox()]);
+  return a === null || b === null ? null : Math.abs(a.y - b.y);
+}
+
+/** How far the page's one block reference counter is from its block's top, once both are drawn. */
+export async function counterOffset(page: Page): Promise<number | null> {
+  const counter = page.locator("[data-block-references]");
+  const blockId = await counter.getAttribute("data-block-references");
+  return topsApart(counter, documentEditor(page).locator(`[data-block-id="${blockId}"]`).first());
+}
 
 export const FIRST = "The first block of the document.";
 export const SECOND = "The second block, which a comment names.";

@@ -124,7 +124,10 @@
           "radius": "8px",
           "border-width": "1px",
           "icon-stroke": "1.75",
-          "reading-gutter-width": "64px"
+          "reading-gutter-width": "64px",
+          "reading-outline-width": "200px",
+          "reading-outline-gap": "24px",
+          "reading-measure": "504px"
         },
         "dark": {
           "background": "#141311",

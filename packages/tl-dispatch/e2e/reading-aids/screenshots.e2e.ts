@@ -5,6 +5,7 @@ import { documentEditor, selectEditorText, typeAtEnd } from "../../../dispatch/e
 import { expect, test } from "../test";
 import { compareWith, revisitSpec, seedReadThenRevised, sinceText } from "./baseline-seed";
 import { head, openHost, SECOND, seedHost } from "./hosts";
+import { openCounted, outline } from "./outline-fixture";
 import { readFirst, readFirstListed, seedDecided } from "./read-first-seed";
 
 const SCREENSHOTS = fileURLToPath(new URL("../screenshots/", import.meta.url));
@@ -149,6 +150,18 @@ for (const colorScheme of ["light", "dark"] as const) {
       });
       await expect(head(page, "r1")).toBeFocused();
       expect(await original.evaluate((button) => button.isConnected)).toBe(true);
+    });
+
+    test(`screenshots: the outline with each entry's changes and open decisions, ${colorScheme}`, async ({
+      page,
+    }) => {
+      await openCounted(page);
+      await expect(outline(page).locator("[data-reading-aids-outline-counts]")).toHaveCount(4);
+      await page.mouse.move(0, 0);
+      await page.screenshot({
+        animations: "disabled",
+        path: `${SCREENSHOTS}outline-counts-${colorScheme}.png`,
+      });
     });
   });
 }
