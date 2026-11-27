@@ -659,10 +659,10 @@ function checkEach(list: readonly Region[]): void {
 
 /** Resizes the page to `viewport`, and waits for the layout drawn for that width before anything
  *  reads it. The shell draws the sidebar, or the issue frame's icon rail, only from 768 px, from
- *  React state that follows the width, and the sidebar then fetches what it lists; the marker
- *  proves that redraw. From 1280 px the frame's fill and the Inbox's reading pane also follow React
- *  state, with no marker: the two frames and the quiet window cover that redraw. A page with no
- *  shell lays out by CSS alone. */
+ *  React state that follows the width, and the sidebar then fetches what it lists; the sidebar or
+ *  icon-rail count below proves that redraw. From 1280 px the frame's fill and the Inbox's reading
+ *  pane also follow React state, with nothing to count: the two frames and the quiet window cover
+ *  that redraw. A page with no shell lays out by CSS alone. */
 async function resize(
   page: Page,
   region: Region,
