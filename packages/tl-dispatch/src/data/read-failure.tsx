@@ -1,6 +1,6 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
-import { hashKey, type QueryKey, type UseQueryResult } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { type ReadFault, type Refusal, refusalOf } from "@/data/read";
@@ -11,45 +11,31 @@ export function readRetry(failureCount: number, error: unknown): boolean {
   return refusalOf(error) === undefined && queryRetry(failureCount, error);
 }
 
-/** A read, and the key of the query it reads. */
-export type KeyedRead = { read: UseQueryResult<unknown>; key: QueryKey };
-
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
-
-/** A failure seen, and the hash of the query it came from. */
-type Seen = { query: string | undefined; failure: Failure | undefined };
 
 /**
  * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
  * A refetch clears the error of a read with no data until it answers, so a read keeps the failure
- * this component saw while the same query is out again, however often it failed meanwhile. A read
- * this component never saw fail is loading while it is out, so a failure from before it mounted,
- * or another query's, shows only once the read answers again. Every render passes the same reads
- * in the same places, `undefined` for a read left out: what was seen is kept by place.
+ * this component saw while it is out again, however often it failed meanwhile. A read this
+ * component never saw fail is loading while it is out, so a failure from before it mounted shows
+ * only once the read answers again. Every render passes the same reads in the same places, each
+ * place always the same query, `undefined` for a read left out: what was seen is kept by place.
  */
 export function useReadFailure(
-  ...reads: readonly (KeyedRead | undefined)[]
+  ...reads: readonly (UseQueryResult<unknown> | undefined)[]
 ): ReadFault | undefined {
-  const [seen, setSeen] = useState<readonly Seen[]>([]);
-  const now = reads.map((slot, index): Seen => {
-    if (slot === undefined) return { query: undefined, failure: undefined };
-    const { read } = slot;
-    const query = hashKey(slot.key);
-    if (read.data !== undefined) return { query, failure: undefined };
-    if (read.error !== null) return { query, failure: refusalOf(read.error) ?? "retryable" };
-    const last = seen[index];
-    const again = read.fetchStatus !== "idle" && last?.query === query;
-    return { query, failure: again ? last.failure : undefined };
+  const [seen, setSeen] = useState<readonly (Failure | undefined)[]>([]);
+  const failures = reads.map((read, index): Failure | undefined => {
+    if (read === undefined || read.data !== undefined) return undefined;
+    if (read.error !== null) return refusalOf(read.error) ?? "retryable";
+    return read.fetchStatus === "idle" ? undefined : seen[index];
   });
-  const changed = now.some(
-    (each, index) => each.query !== seen[index]?.query || each.failure !== seen[index]?.failure
-  );
-  if (now.length !== seen.length || changed) setSeen(now);
-  const failures = now.map((each) => each.failure);
+  const changed = failures.some((failure, index) => failure !== seen[index]);
+  if (failures.length !== seen.length || changed) setSeen(failures);
   if (failures.every((failure) => failure === undefined)) return undefined;
   const retrying = reads.some(
-    (slot, index) => failures[index] !== undefined && slot?.read.fetchStatus !== "idle"
+    (read, index) => failures[index] !== undefined && read?.fetchStatus !== "idle"
   );
   if (!failures.includes("retryable")) {
     return { refusal: failures.includes("forbidden") ? "forbidden" : "not-found", retrying };
@@ -59,7 +45,7 @@ export function useReadFailure(
     retrying,
     // Every read is asked again, so what they make together comes from one round.
     retry: () => {
-      for (const slot of reads) void slot?.read.refetch();
+      for (const read of reads) void read?.refetch();
     },
   };
 }

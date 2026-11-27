@@ -236,8 +236,7 @@ export const MachineLogins = memo(function MachineLogins({
 }: {
   newCredential?: string;
 }): ReactNode {
-  const loginsQuery = machineLoginsQuery();
-  const logins = useQuery({ ...loginsQuery, select: (data) => data.credentials ?? [] });
+  const logins = useQuery({ ...machineLoginsQuery(), select: (data) => data.credentials ?? [] });
   // The refusal follows the rows shown, which come from the same query.
   const revoke = useRevoke(logins.data);
   const [question] = useState(createAlertDialogHandle<LauncherCredentialResp>);
@@ -256,7 +255,7 @@ export const MachineLogins = memo(function MachineLogins({
   // question knows its login, not the row the login stood in.
   const finalFocus = (login: LauncherCredentialResp) =>
     isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
-  const fault = useReadFailure({ read: logins, key: loginsQuery.queryKey });
+  const fault = useReadFailure(logins);
   const refreshFault = refreshFailureOf(logins);
   return (
     <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>

@@ -2,6 +2,7 @@
 // tests read. A module that the seam gives is read through the seam, its test-only names included.
 export { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 export { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
+export { holdNotifications } from "@upstream-dispatch/__tests__/commits";
 export { onFakeClock, realClock, settle, tick } from "@upstream-dispatch/__tests__/fake-clock";
 export { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 export { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";

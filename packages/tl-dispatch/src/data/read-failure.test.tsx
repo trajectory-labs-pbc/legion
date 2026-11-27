@@ -1,6 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
 import {
-  notifyManager,
   onlineManager,
   QueryClient,
   QueryClientProvider,
@@ -17,6 +16,7 @@ import {
   RequestTimeoutError,
 } from "@/upstream/api";
 
+import { holdNotifications } from "../../tests/upstream";
 import { ReadFailure, readRetry, refreshFailureOf, useReadFailure } from "./read-failure";
 
 afterEach(() => {
@@ -33,7 +33,7 @@ function Failure({ answers }: { answers: readonly (() => Promise<unknown>)[] }) 
   const reads = useQueries({
     queries: answers.map((answer, index) => ({ queryKey: ["read", index], queryFn: answer })),
   });
-  const fault = useReadFailure(...reads.map((read, index) => ({ read, key: ["read", index] })));
+  const fault = useReadFailure(...reads);
   return (
     <>
       <p data-testid="fetching">{reads.map((read) => read.fetchStatus).join(" ")}</p>
@@ -128,57 +128,6 @@ test("read-failure: a read refused before it mounts is loading until it answers 
   expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
 });
 
-/** What each render of `Picked` drew: its failure, or `none`. */
-const drawn: string[] = [];
-
-/** One read of the version the reader picked, and its failure. */
-function Picked({
-  version,
-  answer,
-}: {
-  version: string;
-  answer: (version: string) => Promise<unknown>;
-}) {
-  const read = useQuery({ queryKey: ["version", version], queryFn: () => answer(version) });
-  const fault = useReadFailure({ read, key: ["version", version] });
-  drawn.push(fault === undefined ? "none" : (fault.refusal ?? "retryable"));
-  return (
-    <>
-      <p data-testid="fetching">{read.fetchStatus}</p>
-      {fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />}
-    </>
-  );
-}
-
-test("read-failure: a read picked again never shows the refusal of the read picked before it", async () => {
-  const again = Promise.withResolvers<never>();
-  const answers: Record<string, () => Promise<unknown>> = {
-    v8: () => Promise.reject(answered(500)),
-    v12: () => Promise.reject(answered(403)),
-  };
-  const answer = (version: string) => answers[version]?.() ?? Promise.reject(answered(500));
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const pick = (version: string) => (
-    <QueryClientProvider client={client}>
-      <Picked answer={answer} version={version} />
-    </QueryClientProvider>
-  );
-  const view = render(pick("v8"));
-  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
-  view.rerender(pick("v12"));
-  await waitFor(() =>
-    expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.")
-  );
-
-  answers.v8 = () => again.promise;
-  view.rerender(pick("v8"));
-  await waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe("fetching"));
-  expect(screen.queryByRole("alert")).toBeNull();
-
-  await act(async () => again.reject(answered(500)));
-  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
-});
-
 test("read-failure: Retry on a 500 beside a 403 asks both reads again", async () => {
   const asked: [number, number] = [0, 0];
   mount([
@@ -208,12 +157,28 @@ test("read-failure: a refusal that answers a Retry takes the focus the Retry had
   expect(document.activeElement).toBe(screen.getByRole("alert"));
 });
 
+/** What each render of `Single` drew: its failure, or `none`. */
+const drawn: string[] = [];
+
+/** One read through `useQuery`, and its failure. */
+function Single({ answer }: { answer: () => Promise<unknown> }) {
+  const read = useQuery({ queryKey: ["single"], queryFn: answer });
+  const fault = useReadFailure(read);
+  drawn.push(fault === undefined ? "none" : (fault.refusal ?? "retryable"));
+  return (
+    <>
+      <p data-testid="fetching">{read.fetchStatus}</p>
+      {fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />}
+    </>
+  );
+}
+
 test("read-failure: a failed read asked again keeps its line while a second ask waits behind the first", async () => {
   let answer = () => Promise.reject(answered(500));
   const client = new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <Picked answer={() => answer()} version="v1" />
+      <Single answer={() => answer()} />
     </QueryClientProvider>
   );
   expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
@@ -233,16 +198,14 @@ test("read-failure: a failed read asked again keeps its line while a second ask 
   });
 
   const mark = drawn.length;
-  // In a browser the client tells its readers on a timer, so they hear of the failure only once
-  // the queued fetch has started and cleared it; the test setup tells them at once.
-  notifyManager.setScheduler((callback) => setTimeout(callback, 0));
+  // A browser tells the readers on a timer, so they hear of the failure only once the queued
+  // fetch has started and cleared it.
+  const held = holdNotifications();
   try {
-    await act(async () => {
-      asked.reject(answered(500));
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    await act(async () => asked.reject(answered(500)));
+    expect(held.held()).toBeGreaterThan(0);
   } finally {
-    notifyManager.setScheduler((callback) => callback());
+    held.tell();
   }
   expect(drawn.length).toBeGreaterThan(mark);
   expect(drawn.slice(mark)).not.toContain("none");
@@ -252,44 +215,6 @@ test("read-failure: a failed read asked again keeps its line while a second ask 
   await waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe("idle"));
   expect(drawn.slice(mark)).not.toContain("none");
   expect(screen.getByRole("alert").textContent).toBe(`${LOAD}Retry`);
-});
-
-test("read-failure: a read picked again never shows a refusal another read made in the same millisecond", async () => {
-  const pending: (() => void)[] = [];
-  const answer = (version: string) =>
-    new Promise<never>((_, reject) => {
-      pending.push(() => reject(answered(version === "v12" ? 403 : 500)));
-    });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const pick = (version: string) => (
-    <QueryClientProvider client={client}>
-      <Picked answer={answer} version={version} />
-    </QueryClientProvider>
-  );
-  const view = render(pick("v12"));
-  void client.prefetchQuery({ queryKey: ["version", "v8"], queryFn: () => answer("v8") });
-  await waitFor(() => expect(pending).toHaveLength(2));
-  const now = Date.now;
-  const at = now();
-  Date.now = () => at;
-  try {
-    await act(async () => {
-      for (const fail of pending.splice(0)) fail();
-    });
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.")
-    );
-  } finally {
-    Date.now = now;
-  }
-  expect(client.getQueryState(["version", "v8"])?.errorUpdatedAt).toBe(at);
-
-  view.rerender(pick("v8"));
-  await waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe("fetching"));
-  expect(screen.queryByRole("alert")).toBeNull();
-
-  await act(async () => pending.splice(0)[0]?.());
-  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
 });
 
 test("read-failure: a Retry held while the browser is offline shows it is busy", async () => {
