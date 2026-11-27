@@ -5,13 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { Checkbox } from "#registry/legion/ui/checkbox";
 
 // The 24 px square on the control's centre that takes the pointer (PT2).
-const BAND = [
-  "after:absolute",
-  "after:top-1/2",
-  "after:left-1/2",
-  "after:size-6",
-  "after:-translate-1/2",
-];
+const SQUARE = "after:absolute after:top-1/2 after:left-1/2 after:size-6 after:-translate-1/2";
 
 describe("Checkbox", () => {
   it("toggles on Space", async () => {
@@ -40,8 +34,9 @@ describe("Checkbox", () => {
   it("takes the pointer across a 24 px square around its 16 px box", () => {
     render(<Checkbox aria-label="Done" />);
     const box = screen.getByRole("checkbox", { name: "Done" });
+    expect(box.className).toContain(SQUARE);
     expect(box.className.split(" ")).toEqual(
-      expect.arrayContaining([...BAND, "inline-flex", "size-4", "items-center", "justify-center"])
+      expect.arrayContaining(["inline-flex", "size-4", "items-center", "justify-center"])
     );
   });
 });

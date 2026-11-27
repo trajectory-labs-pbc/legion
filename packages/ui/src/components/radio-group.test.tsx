@@ -6,13 +6,7 @@ import { Label } from "#registry/legion/ui/label";
 import { RadioGroup, RadioGroupItem } from "#registry/legion/ui/radio-group";
 
 // The 24 px square on the control's centre that takes the pointer (PT2).
-const BAND = [
-  "after:absolute",
-  "after:top-1/2",
-  "after:left-1/2",
-  "after:size-6",
-  "after:-translate-1/2",
-];
+const SQUARE = "after:absolute after:top-1/2 after:left-1/2 after:size-6 after:-translate-1/2";
 
 describe("RadioGroup", () => {
   it("takes one tab stop and moves the choice with the arrows", async () => {
@@ -53,6 +47,6 @@ describe("RadioGroup", () => {
       </RadioGroup>
     );
     const item = screen.getByRole("radio", { name: "Small" });
-    expect(item.className.split(" ")).toEqual(expect.arrayContaining(BAND));
+    expect(item.className).toContain(SQUARE);
   });
 });

@@ -6,13 +6,7 @@ import { useState } from "react";
 import { Slider } from "#registry/legion/ui/slider";
 
 // The 24 px square on the control's centre that takes the pointer (PT2).
-const BAND = [
-  "after:absolute",
-  "after:top-1/2",
-  "after:left-1/2",
-  "after:size-6",
-  "after:-translate-1/2",
-];
+const SQUARE = "after:absolute after:top-1/2 after:left-1/2 after:size-6 after:-translate-1/2";
 
 describe("Slider", () => {
   // jsdom measures nothing, so Base UI keeps the thumbs hidden: Tab skips them and queries see no
@@ -75,9 +69,7 @@ describe("Slider", () => {
   it("takes the pointer across a 24 px square around each 16 px thumb", () => {
     const { container } = render(<Slider defaultValue={[20, 80]} />);
     const thumbs = [...container.querySelectorAll('[data-slot="slider-thumb"]')];
-    expect(thumbs.map((thumb) => thumb.className.split(" "))).toEqual([
-      expect.arrayContaining(BAND),
-      expect.arrayContaining(BAND),
-    ]);
+    expect(thumbs).toHaveLength(2);
+    for (const thumb of thumbs) expect(thumb.className).toContain(SQUARE);
   });
 });
