@@ -1,6 +1,6 @@
 # The frame and lists
 
-Each rule names the Linear surface it comes from, the pages it applies to, and its check. A check marked (new) is a test to write with the first page that needs it; until then a reviewer holds the rule. Linear publishes no pixel sizes for its app; a size here is this app's choice, and a Linear size is a screenshot estimate.
+Linear publishes no pixel sizes for its app; a size here is this app's choice, and a Linear size is a screenshot estimate.
 
 ## The frame (FR)
 

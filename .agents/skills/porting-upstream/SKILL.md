@@ -35,9 +35,9 @@ Never edit an upstream file to make a port easier. Every file this repository ch
 
 ## The gates in tests/map
 
-`bun run test` runs them. Each failure message says what to change.
+`bun run test` runs them. Each failure message says what to change. `packages/tl-dispatch/README.md` ("Route map, view map and copied code") says what each gate checks, and gives the command that pins a copied part again after you port its change. This section says what a failure asks of you.
 
-**The view map** (`coverage.ts`, `coverage.test.ts`). Every `.tsx` view file under upstream's `features/` has exactly one owner: a page's `views`, or a list in `src/views.ts` (`shellViews`, `widgetViews`, `sharedViews`). For a page this app draws (`server: "fork"`), these fail:
+**The view map** (`coverage.ts`, `coverage.test.ts`). The lists in `src/views.ts` are `shellViews`, `widgetViews` and `sharedViews`. For a page this app draws (`server: "fork"`), these fail:
 
 - A new upstream file that only that page loads: port what it adds, then name the file in the page's `views`.
 - A file that two lists name: keep it in one.
@@ -47,6 +47,6 @@ Never edit an upstream file to make a port easier. Every file this repository ch
 
 For a page upstream still draws, the same findings print as notes and do not fail, except a file that two lists name, which fails for every page.
 
-**The copies** (`copies.ts`, `copies.json`). Each part of upstream code this app copied (a shell function, a route's lazy import, an inline script) is pinned by a hash of its tokens, so a reformat does not trip it. When upstream changes or removes a pinned part, the test names the part and the command that shows upstream's diff since the copy. Port the change, then run `bun tests/map/copies.ts --update <upstream file> <part>`, which pins that part and no other. Every name a `<Route>` element of upstream's `app.tsx` refers to must have a pin.
+**The copies** (`copies.ts`, `copies.json`). A copied part (a shell function, a route's lazy import, an inline script) is pinned by a hash of its tokens, so a reformat does not trip it. When upstream changes or removes a pinned part, the test names the part and the command that shows upstream's diff since the copy. Every name a `<Route>` element of `packages/dispatch/web/src/app.tsx` refers to must have a pin.
 
-**The links** (`links.ts`, `links.test.ts`). This app serves every upstream route. A page upstream draws renders exactly upstream's element, props included. A page this app draws keeps the path. A page this app draws lists in `linkForms` each query key and fragment form (`b-` block anchors) that the server or a reference writes to it; an unread one fails.
+**The links** (`links.ts`, `links.test.ts`). A page upstream draws renders exactly upstream's element, props included. A page this app draws keeps the path, and lists in `linkForms` each query key and fragment form (`b-` block anchors) that the server or a reference writes to it; an unread one fails.

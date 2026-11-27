@@ -61,16 +61,18 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 
 ## Size scales
 
-- Control heights: `h-6` (24 px), `h-7` (28 px), `h-8` (32 px, the default), `h-9` (36 px). On a coarse pointer every control reaches 44 px. A test refuses any other control height.
+- Control heights: the steps of `CONTROL_HEIGHTS` in `packages/tl-dispatch/tests/control-scale.ts`, with `h-8` (32 px) the default; on a coarse pointer every control reaches `TOUCH_MIN_HEIGHT`. The design-rule tests read that file and refuse any other control height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
-- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. `SurfaceTitle` is the page's `h1`. `Heading` starts at `h2` and takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`.
+- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. `SurfaceTitle` is the page's `h1`. `Heading` starts at `h2` and takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
 
-| Recipe | Classes | Use |
-| --- | --- | --- |
-| Heading `page` | `text-xl font-semibold tracking-tight` | A record's title on its own page. |
-| Heading `section` | `text-base font-semibold tracking-tight` | A section of a record or a settings page. |
-| Heading `group` | `text-sm font-semibold tracking-tight` | A list's title in the header, a group header row. |
-| Heading `label` | `text-xs font-medium` | A property's label, a menu section label. |
-| `textVariants` `body` | `text-sm` | Rows, body text, controls. |
-| `textVariants` `caption` | `text-xs` | Metadata in a row, a hint under a field. |
+| Recipe | Use |
+| --- | --- |
+| Heading `page` | A record's title on its own page. |
+| Heading `section` | A section of a record or a settings page. |
+| Heading `group` | A list's title in the header, a group header row. |
+| Heading `label` | A property's label, a menu section label. |
+| `textVariants` `body` | Rows, body text, controls. |
+| `textVariants` `caption` | Metadata in a row, a hint under a field. |
+
+`textVariants` has more sizes than the two above (`display`, `title`); `packages/ui/src/lib/typography.ts` holds them all.

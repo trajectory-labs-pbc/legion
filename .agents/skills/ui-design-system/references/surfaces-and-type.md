@@ -1,6 +1,6 @@
 # Surfaces, density and type
 
-Each rule names the Linear surface it comes from, the pages it applies to, and its check. A check marked (new) is a test to write with the first page that needs it; until then a reviewer holds the rule. The tokens are in `tokens.md`.
+The tokens are in `tokens.md`.
 
 ## Surfaces (SU)
 

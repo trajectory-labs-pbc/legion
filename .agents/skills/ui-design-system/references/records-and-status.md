@@ -1,6 +1,6 @@
 # Records, status and inline editing
 
-A record is an issue, a document, an agent, a priority, a machine or a broadcast. Each rule names the Linear surface it comes from, the pages it applies to, and its check. A check marked (new) is a test to write with the first page that needs it.
+A record is an issue, a document, an agent, a priority, a machine or a broadcast.
 
 ## Record view and peek (IV)
 

@@ -18,15 +18,7 @@ Every address of the app is declared in a page file. Links and moves are typed f
 
 ## Why only one folder imports the router
 
-The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change one folder, not every page. The files a move changes:
-
-- `router-path.ts`: the path grammar written in the router's syntax.
-- `provider.tsx`: the router provider for the app. Tests use `MemoryNavigationProvider` from `tests/navigation.tsx`.
-- `route-tree.tsx`: `createRouteTree`, which builds the outlet, `pageAt` and `useCurrentPage` from the pages it is handed.
-- `page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
-- `hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
-
-Outside the folder, `tests/navigation.tsx` imports the router for the tests, and changes too. The page files, `page-route.ts` and `path.ts` do not change.
+The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change one folder, not every page. `packages/tl-dispatch/README.md` ("Changing the router") lists every file a move changes and the files that stay. Tests wrap a page in `MemoryNavigationProvider` from `tests/navigation.tsx`.
 
 ## Page files
 
@@ -37,7 +29,7 @@ Each page has one file in `src/pages/`. It exports a `Page`:
 | `id` | The page's name. |
 | `server` | `"upstream"` while the app draws upstream's page; `"fork"` once this app draws its own. |
 | `routes` | Named routes, each written with `pageRoute`. A link names the route it opens. |
-| `views` | The upstream view files the page replaces, as paths under upstream's `web/src`. See `.agents/skills/porting-upstream/SKILL.md`. |
+| `views` | The upstream view files the page replaces, as paths under `packages/dispatch/web/src`. See `.agents/skills/porting-upstream/SKILL.md`. |
 
 A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
 
@@ -73,7 +65,7 @@ A wrong route, a wrong param name or an unknown search key fails the type check.
 
 ## Prefetch on intent
 
-`PageLink` starts the route's `prefetch` reads when the pointer rests on it for `PREFETCH_INTENT_MS` (100 ms) or at once when the link takes focus. The pointer leaving before then starts nothing. A read that started runs to its answer: upstream's reads ignore the abort signal, and the page that opens uses the answer. Give each route whose page reads data on open a `prefetch`.
+`packages/tl-dispatch/README.md` ("Navigation") says when `PageLink` starts the route's `prefetch` reads; the delay is `PREFETCH_INTENT_MS`. Give each route whose page reads data on open a `prefetch`.
 
 ## Checks
 

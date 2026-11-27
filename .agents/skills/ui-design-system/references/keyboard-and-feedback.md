@@ -1,6 +1,6 @@
 # Keyboard, menus and feedback
 
-Each rule names the Linear surface it comes from, the pages it applies to, and its check. A check marked (new) is a test to write with the first page that needs it; until then a reviewer holds the rule. Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this file says which keys and surfaces a page owes.
+Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this file says which keys and surfaces a page owes.
 
 ## Keyboard and the command menu (KB)
 

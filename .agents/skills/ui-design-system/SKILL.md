@@ -5,7 +5,9 @@ description: "Use when you build or review a page, a layout, a list, a menu, an 
 
 # The design system
 
-tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ: monochrome, corners that are steps of one `--radius`, Geist, colour for meaning only, a shadow only under a floating layer or a dialog, and a 2 px focus outline. Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`; a page names the token and never writes a literal. Each rule has an ID. A reviewer cites the ID of each rule a change breaks. Where another written rule disagrees with these, these hold. Where a test disagrees with a rule here, never weaken the test: say so in the pull request. A check marked (new) in a reference is a test that does not exist yet; write it with the first change that needs it.
+tl-dispatch follows Linear's layout and interaction as closely as the theme allows. The theme wins where the two differ; its fixed choices are in `references/tokens.md`. Where another written rule disagrees with these, these hold. Where a test disagrees with a rule here, never weaken the test: say so in the pull request.
+
+Each rule in the references has an ID, and a reviewer cites the ID of each rule a change breaks. A rule names the Linear surface it comes from, the pages it applies to, and its check. A check marked (new) is a test that does not exist yet: write it with the first change that needs it, and until then a reviewer holds the rule.
 
 ## Read first
 
@@ -16,20 +18,15 @@ tl-dispatch follows Linear's layout and interaction as closely as the theme allo
 - `references/keyboard-and-feedback.md` when you add a key, a menu, a cursor, an empty state, a toast, motion or focus (KB, CX, PT, ES, TO, MO, FO).
 - `.agents/skills/commands/SKILL.md` for how keys, buttons and menu rows read the command catalog.
 
-## The rules that matter most
+## The rules a change breaks most often
 
-1. **FR2** The frame is an inverted L: the sidebar and the window behind the content share `bg-background`; the content panel is `bg-card` with a 1 px `border-border` edge. No shadow.
-2. **LR1** A list row is one line, 36 px high, with no border between rows. The title truncates; nothing wraps.
-3. **LR3** The pointer and the keyboard share one highlight per list. `j`/`k` and the arrows move it; the pointer moves it on hover.
-4. **LR5** `x` selects the highlighted row; Shift+click and Shift+arrow extend; `$mod+a` selects all. A selected row shows a checked box. A bar at the bottom names the count and the actions; Escape clears.
-5. **IV3** Space opens the highlighted record in a peek at the right. The list stays usable; `j`/`k` move the peek; Enter opens the page; Escape or Space closes it.
-6. **SU1, SU2** Surfaces at rest separate by a background step or a 1 px border, never by a shadow; only a floating layer (`shadow-popover`) or a dialog (`shadow-dialog`) casts one. No coloured stripe on the left of a card or a row.
-7. **SP1** A status shows as a 14 px icon whose shape follows the lifecycle; a priority as bars. Neither uses colour; colour marks only a failed, a waiting or a passed state.
-8. **KB2, KB3** Every action has one command, and every surface shows its key: tooltip, menu row, palette row. `s`, `p` and `l` open the status, priority and label pickers for the selection, else the highlighted row, else the record in view.
-9. **IE1** A property changes where it is shown: a click on it opens its picker in place. The write shows at once and rolls back with a toast if the server refuses it.
-10. **CX1** Right-click on a row opens the same menu as its `⋯` button, with the same sections and key hints. On a selected row it acts on the selection.
-11. **ES1** An empty view shows an icon, one line of title, one sentence, and at most one action with its key. A view filtered to nothing says so and offers Clear filters.
-12. **TO1** A toast is one line at the bottom right, with an Undo for a reversible write.
+Read each in its reference before you build what it names.
+
+- **FR2** the inverted-L frame (`references/frame-and-lists.md`).
+- **LR1** one-line list rows; **LR3** one highlight for pointer and keys; **LR5** selection and its bar (`references/frame-and-lists.md`).
+- **IV3** the peek; **SP1** status and priority glyphs; **IE1** editing a property in place (`references/records-and-status.md`).
+- **SU1, SU2** no shadow at rest and no coloured stripe (`references/surfaces-and-type.md`).
+- **KB2, KB3** one command per action, and one-key commands on the subject; **CX1** the context menu; **ES1** empty views; **TO1** toasts (`references/keyboard-and-feedback.md`).
 
 ## Components: use, change or add
 
@@ -46,6 +43,6 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 ## Checks
 
 - `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, and a control height outside the scale.
-- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts` checks the contrast of each text colour on each surface the components draw it on, and of the focus outline and the field and state edges. In the components it also refuses a shadow other than the 1 px inset edge, a transition of anything but opacity, and a pointer cursor. Run it after a token change.
+- `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts`, whose checks `packages/ui/README.md` lists. Run it after a token change.
 - A reviewer checks each rule in the references that no test holds. Each rule there says how it is checked.
 - A change to a visible surface comes with a light and a dark screenshot of each page it changes.

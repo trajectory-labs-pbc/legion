@@ -15,7 +15,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 4. Register one command for the record in view or the highlighted row. Never one command per record (`delete-${id}`).
 5. Put all the keys of one action in one command: `keys: ["j", "ArrowDown"]`. A tooltip shows the first key; the sheet shows all.
 6. A chord starts with `g` (go to a page), `o` (open a picker) or `n` (open a create form). The catalog refuses any other first step.
-7. Do not bind a key the browser keeps (`$mod+r`, `$mod+t`, `$mod+w`, `$mod+n`, `$mod+l`, `$mod+d`, `$mod+Shift+r`, `$mod+Shift+c`). The catalog refuses them.
+7. Do not bind a key the browser keeps. The catalog refuses each key in `BROWSER_KEYS` (`src/commands/keys.ts`).
 8. An action with no safe key has no key. It is a palette command: `keys` empty or absent.
 9. A label follows TY8 in `.agents/skills/ui-design-system/references/surfaces-and-type.md`. The same label shows on every surface.
 
@@ -50,11 +50,12 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 ## Show a command
 
-- `CommandButton commandId="global.create"`: label, icon, key, style and gate come from the catalog. A click runs what the key runs. A disabled command hides its button unless `showIfDisabled`: a greyed primary button looks broken. A destructive command draws as destructive. An icon-only button is ghost and gets its `aria-label` from the label.
-- `HotkeyTooltip commandId=...`: wraps any control. It shows the label and the key chips on hover and focus, and sets `aria-keyshortcuts`. Its popup code loads after the first paint; until then the control carries `aria-keyshortcuts` alone.
-- `useCommand(id)`: the mounted command (`label`, `enabled`), or `undefined` before its context mounts.
-- `useCommandShortcut(id)`: the chips of the first key: `⌘K` on a Mac, `Ctrl+K` elsewhere. It returns no chips while the command is off or an open overlay stops its key. A chip for a dead key misleads.
-- `commandStore.run(id)`: runs a mounted command through its gate, as its key does.
+`packages/tl-dispatch/README.md` ("Commands") describes `useCommand`, `useCommandShortcut`, `commandStore.run`, `CommandButton` and `HotkeyTooltip`. What it leaves out:
+
+- Leave `showIfDisabled` off on a primary `CommandButton`: a greyed primary button looks broken. A destructive command draws as destructive. An icon-only button is ghost and takes its `aria-label` from the label.
+- `HotkeyTooltip` wraps any control and sets its `aria-keyshortcuts`.
+- `useCommand(id)` returns `undefined` before the command's context mounts.
+- `useCommandShortcut(id)` gives the chips of the first key only, and none for a dead key, which would mislead.
 
 ## Scopes and overlays
 
@@ -68,7 +69,7 @@ The app compiles the catalog to upstream's key engine (`@upstream-dispatch/featu
 
 ## The shortcuts sheet
 
-`?` opens `ShortcutsSheet` anywhere but under an alert dialog or one of upstream's own dialogs. It lists the keys that run where `?` was pressed: the catalog's commands by group, each once with all its keys, and upstream's bindings by scope. It hides `Escape` and disabled commands. While it is open, only `?` and Escape act: they close it. Its code loads on the first `?`.
+`packages/tl-dispatch/README.md` ("Commands") says where `?` opens `ShortcutsSheet`, what it lists and hides, and which keys act while it is open. Beside the catalog's commands, it lists upstream's bindings by scope.
 
 `UPSTREAM_LABELS` in `upstream-labels.ts` relabels an upstream binding whose own label does not fit the sheet, by `scope:id`.
 

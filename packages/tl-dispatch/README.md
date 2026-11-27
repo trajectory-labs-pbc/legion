@@ -205,9 +205,9 @@ load no page module:
   Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
   checked in `packages/ui`.
   `tests/skill-paths.test.ts` fails on a path that one of the fork's skills under `.agents/skills`
-  or this package's `AGENTS.md` names in an inline code span and that does not exist: a path, a
-  file name, or a path among the words of a command. It reads no fenced block, no glob and no
-  path with a placeholder such as `<page>`.
+  or this package's `AGENTS.md` names in an inline code span and that does not exist, read from
+  the roots `AGENTS.md` ("Paths") gives: a path, a file name, or a path among the words of a
+  command. It reads no fenced block, no glob and no path with a placeholder such as `<page>`.
   The tests run under upstream's own preloads (`bunfig.toml`), so a test that updates React
   outside `act`, or sends a request nothing answers, fails.
   `tests/design-config.ts` lists the only files they leave out.
