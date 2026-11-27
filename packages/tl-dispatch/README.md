@@ -190,8 +190,8 @@ refuses to start it on a folder with no build.
 
 ## Route map, view map and copied code
 
-`tests/map` holds three checks on what upstream changes. They read the sources as text and
-load no page module:
+`tests/map` holds three checks on what upstream changes. They read upstream's sources as text;
+`links.ts` and `coverage.ts` also load this app's route map:
 
 - `links.ts`: the app serves every route of upstream's `app.tsx`, drawing upstream's element as
   written. `OWN_ELEMENTS` names each route written with this app's own part and upstream's
@@ -209,6 +209,8 @@ load no page module:
 
 - `bun run test`: the layers, the design rules, the catalog and its components, navigation, the shell's hooks, the key
   engine's behaviour the catalog relies on, and the route map, the view map and the copied code.
+  `e2e/route-marks.test.ts` fails on a route of the route map with no mark in `e2e/route-marks.ts`,
+  and on a mark with no route.
   The design rules compile the app's own classes with Tailwind and check the CSS they emit.
   Among them: nothing scales and no class sets the pointer cursor. The contrast of the tokens is
   checked in `packages/ui`.
@@ -245,9 +247,10 @@ load no page module:
   upstream's default run does.
   `e2e/routes.e2e.ts` opens each route of the route map in both modes, and fails on a route
   whose mark, a heading, a labelled region or a text only that route's page shows, does not
-  show, and on a console error. `e2e/route-marks.test.ts`, a unit test, fails on a route with
-  no mark in `e2e/route-marks.ts`, the file whose header names what each mode seeds for each route, and the mark the deployed mode expects where
-  it seeds nothing.
+  show, on a route that lands on another address or misses a read its row names, and on a
+  console error. `e2e/route-marks.ts` names the mark of each route; its header
+  names what each mode seeds for each route, and the mark the deployed mode expects where it
+  seeds nothing.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.

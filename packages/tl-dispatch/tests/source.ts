@@ -7,7 +7,7 @@ export interface SourceFile {
   text: string;
 }
 
-export const PACKAGE_ROOT = join(import.meta.dirname, "..");
+export const PACKAGE_ROOT = join(import.meta.dir, "..");
 export const REPO_ROOT = join(PACKAGE_ROOT, "../..");
 /** The UI package's theme, which holds every token the app's classes may name. */
 export const UI_STYLESHEET = join(PACKAGE_ROOT, "../ui/src/styles/theme.css");

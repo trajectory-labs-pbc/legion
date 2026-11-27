@@ -1,5 +1,6 @@
 // Opens each route of the route map (src/pages/index.ts) against records this run seeds, and
-// fails on a route whose mark (route-marks.ts) does not show or that logs a console error.
+// fails on a route whose mark (route-marks.ts) does not show, that lands on another address or
+// misses a read its row names, or that logs a console error.
 import { randomUUID } from "node:crypto";
 
 import { setLiveSessions } from "../../dispatch/e2e/agents";
@@ -163,9 +164,6 @@ interface Logged {
 }
 
 async function openEachRoute(page: Page, marks: ReturnType<typeof routeMarks>): Promise<void> {
-  // route-marks.test.ts holds these paths to the route map's.
-  const paths = Object.keys(marks);
-
   // The errors of the route open now.
   let errors: Logged[] = [];
   page.on("console", (message) => {
@@ -181,8 +179,8 @@ async function openEachRoute(page: Page, marks: ReturnType<typeof routeMarks>): 
   });
   const traffic = watchTraffic(page);
 
-  for (const path of paths) {
-    const entry = marks[path];
+  // route-marks.test.ts holds these paths to the route map's.
+  for (const [path, entry] of Object.entries(marks)) {
     await test.step(path, async () => {
       errors = [];
       read = [];

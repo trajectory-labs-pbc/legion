@@ -1,7 +1,7 @@
 // Under Bun, not Playwright: the route map loads upstream modules that Node cannot load.
 import { expect, test } from "bun:test";
 
-import { forkRoutes } from "../tests/map/links";
+import { pages } from "@/pages/index";
 import { routeMarks, type Seeded } from "./route-marks";
 
 // The keys of routeMarks do not depend on what the run seeds.
@@ -24,8 +24,10 @@ const SEEDED: Seeded = {
 };
 
 test("each route of the route map has one mark, and each mark a route", () => {
-  const paths = forkRoutes().map((route) => route.path);
+  const paths = pages.flatMap((page) => Object.values(page.routes).map((route) => route.path));
   const marks = Object.keys(routeMarks(SEEDED));
-  expect(paths.filter((path) => !marks.includes(path))).toEqual([]);
-  expect(marks.filter((path) => !paths.includes(path))).toEqual([]);
+  const unmarked = paths.filter((path) => !marks.includes(path));
+  expect(unmarked, "routes with no mark in e2e/route-marks.ts").toEqual([]);
+  const extra = marks.filter((path) => !paths.includes(path));
+  expect(extra, "marks of routes the route map does not have").toEqual([]);
 });
