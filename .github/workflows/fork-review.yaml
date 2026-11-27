@@ -1,0 +1,147 @@
+name: Fork review
+
+# This repository is a fork, and this file, which upstream does not have, reviews each pull request
+# to main with upstream's own reviewer rules (packages/daemon/internal/prompts/roles/ and the
+# thermonuclear pair under skills/), so a change that is to go upstream meets upstream's review
+# first. It posts one review for each head and reports the verdict as the `review` check: a Medium
+# or High finding fails it.
+#
+# Why pull_request_target. GitHub runs main's copy of this file, with main's prompt and reviewer
+# text, so a pull request cannot change the review that judges it, and every run's OIDC ref is
+# refs/heads/main: the Anthropic federation rule admits this file at that ref and on this event
+# alone, so no model key is stored here and a branch's copy gets no token. Nothing of the pull
+# request is built or run: its tree is read as files, and the model has no shell.
+#
+# Two jobs. `model` decides whether to review (.github/scripts/fork-review.sh gate: a member's pull
+# request is reviewed, an outside author's fails with no model call, the upstream sync passes) and
+# runs Claude with a read-only token and an OIDC token. It checks the review's text against the
+# private-name rules before anything leaves the job, because a posted review cannot be deleted.
+# `review` posts the review with the event COMMENT, sets the check and holds the only write scope.
+# It runs whatever `model` did, since a skipped required job reads as a pass.
+#
+# `opened` and `synchronize` make a new head. `reopened` keeps it, and is the way to start a
+# review on a pull request opened before this file reached main, or retargeted to main. A draft
+# marked ready keeps its head and its `review` check run, so it starts nothing; drafts are
+# reviewed too. Main has no merge queue; adding one needs a `merge_group` trigger here.
+#
+# No `workflow_call` trigger: the federation rule cannot tell a caller's run from this file's own.
+#
+# Do not re-run a job with debug logging: the action then prints the model's whole session,
+# before the scan, in this public log.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+# A push replaces the head a review in flight covers.
+concurrency:
+  group: fork-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    outputs:
+      decision: ${{ steps.gate.outputs.decision }}
+      reason: ${{ steps.gate.outputs.reason }}
+      review: ${{ steps.scan.outputs.review }}
+    steps:
+      # Main at the event's commit. The full history of commits gives the merge base with the
+      # head; file contents are fetched only where they are read.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Decide whether to review
+        id: gate
+        run: .github/scripts/fork-review.sh gate
+
+      - name: Put the pull request's files beside the checkout and write the prompt
+        id: prepare
+        if: steps.gate.outputs.decision == 'review'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/fork-review.sh prepare
+
+      # The model reads main's tree (its working directory) and the pull request's files, and
+      # nothing else: reads are allowed in those two directories alone, and denied in the runner's
+      # temp directory (the OIDC and Anthropic tokens), /proc (the job's environment) and .git
+      # (the checkout's configuration). It writes nothing, runs no command and loads no skill.
+      # `show_full_output` and `display_report` stay false: the job log and summary are public,
+      # and the review's text is checked only after this step.
+      - name: Review with Claude
+        id: claude
+        if: steps.gate.outputs.decision == 'review'
+        uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1.0.245
+        env:
+          # Anthropic retries a refused request on the model it recommends for that category.
+          CLAUDE_CODE_EXTRA_BODY: '{"fallbacks":"default"}'
+          ANTHROPIC_BETAS: server-side-fallback-2026-07-01
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1'
+        with:
+          anthropic_federation_rule_id: ${{ vars.REVIEW_ANTHROPIC_RULE_ID }}
+          anthropic_organization_id: ${{ vars.REVIEW_ANTHROPIC_ORGANIZATION_ID }}
+          anthropic_service_account_id: ${{ vars.REVIEW_ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          github_token: ${{ github.token }}
+          # The gate above decides who is reviewed; these let the action run for a push by a bot
+          # or by a member without write access, whose pull request comes from a fork.
+          allowed_bots: '*'
+          allowed_non_write_users: '*'
+          show_full_output: 'false'
+          display_report: 'false'
+          prompt: ${{ steps.prepare.outputs.prompt }}
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 100
+            --add-dir ${{ steps.prepare.outputs.dir }}
+            --allowedTools "Agent,Read(/${{ github.workspace }}/**),Read(/${{ steps.prepare.outputs.dir }}/**)"
+            --disallowedTools "Bash,Skill,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch,Monitor,PushNotification,ScheduleWakeup,CronCreate,CronDelete,CronList,Workflow,Read(/${{ runner.temp }}/**),Read(//proc/**),Read(//sys/**),Read(/${{ github.workspace }}/.git/**),Read(/${{ steps.prepare.outputs.dir }}/head/.git)"
+            --json-schema '${{ steps.prepare.outputs.schema }}'
+
+      # PRIVATE_NAME_TERMS reaches this step alone, never the model's. The review is read from
+      # the execution file, not passed in `env`, which the log prints before the scan runs.
+      - name: Check the review's text and pass it on
+        id: scan
+        if: steps.gate.outputs.decision == 'review'
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+          PRIVATE_NAME_TERMS: ${{ secrets.PRIVATE_NAME_TERMS }}
+        run: .github/scripts/fork-review.sh scan
+
+  review:
+    needs: model
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Post the review and set the check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DECISION: ${{ needs.model.outputs.decision }}
+          REASON: ${{ needs.model.outputs.reason }}
+          MODEL_RESULT: ${{ needs.model.result }}
+          REVIEW: ${{ needs.model.outputs.review }}
+        run: .github/scripts/fork-review.sh post
