@@ -125,8 +125,6 @@ const NAME_VALUES = new Set([
   "list-style-type",
 ]);
 const SKIPPED = /^@(keyframes|property)\b/;
-/** Where compiled CSS gives `--tw-*` their initial values; a stylesheet's is checked like any. */
-const PROPERTIES_LAYER = "@layer properties";
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
   /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end)|column-rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
@@ -222,7 +220,8 @@ function radiusAllowed(
 /**
  * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
  * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
- * is set for a class's CSS, which may not set type; a stylesheet may.
+ * is set for compiled CSS: a class may not set type, and Tailwind's own `@layer properties` block
+ * (the `--tw-*` initial values on `*, ::before, ::after, ::backdrop`) is skipped.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
@@ -237,10 +236,15 @@ export function declarationProblems(
   const themeOnly =
     isThemeOnly(property) ||
     context.some((prelude) => isThemeOnly(/^@property (.+)$/.exec(prelude)?.[1] ?? ""));
-  const skipped = context.some(
-    (prelude) => SKIPPED.test(prelude) || (fromClass && prelude === PROPERTIES_LAYER)
-  );
-  if (skipped) return themeOnly ? [RULES.themeOnly] : [];
+  // A class under `[@layer_properties]:` lands in the same layer, so only Tailwind's block skips.
+  const tailwindInitial =
+    fromClass &&
+    context[0] === "@layer properties" &&
+    context.at(-1) === "*, ::before, ::after, ::backdrop" &&
+    property.startsWith("--tw-");
+  if (tailwindInitial || context.some((prelude) => SKIPPED.test(prelude))) {
+    return themeOnly ? [RULES.themeOnly] : [];
+  }
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
   if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {

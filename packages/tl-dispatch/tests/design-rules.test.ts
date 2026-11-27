@@ -77,6 +77,8 @@ const REFUSED: readonly [string, string, string][] = [
     "declared in the theme alone",
   ],
   ["css", "@layer properties { .x { z-index: 9999; } }", "a layer names its theme token"],
+  ["tsx", '<div className="[@layer_properties]:z-50">', "a layer names its theme token"],
+  ["tsx", '<div className="[@layer_properties]:bg-[red]">', "raw colour"],
   ["css", "@theme inline { --opacity-disabled: 1; }", "declared in the theme alone"],
   ["css", "@theme inline { --z-index-top: 9999; }", "declared in the theme alone"],
   ["css", "@theme inline { --transition-duration-slow: 2s; }", "declared in the theme alone"],
@@ -91,12 +93,7 @@ const REFUSED: readonly [string, string, string][] = [
   ],
   [
     "css",
-    "@PROPERTY --layer-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
-    "declared in the theme alone",
-  ],
-  [
-    "css",
-    "@layer properties { :root { --layer-overlay: 9999 !important; } }",
+    "@PROPERTY --LAYER-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
     "declared in the theme alone",
   ],
   ["css", "@keyframes k { to { --layer-overlay: 9999; } }", "declared in the theme alone"],
