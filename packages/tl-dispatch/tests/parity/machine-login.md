@@ -16,9 +16,10 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLR-01 | Route | A Dispatch without the device grant shows the fork's not-found page | | |
 | MLR-02 | Route | A Dispatch with the device grant shows the machine login page | | |
 | MLR-03 | Route | A page skeleton after 200 ms while the capabilities answer is out | | |
-| MLR-04 | Route | A failed capabilities read says so, and Retry asks again | | |
+| MLR-04 | Route | A failed capabilities read says so; Retry asks again where asking again can work | changed | Retry once showed for every failed read. A 403 or a 404 cannot change on a second ask, so it shows no Retry (MLR-06, MLR-07); a 500 keeps it |
 | MLR-05 | Route | The logins list is read beside the capabilities read, not after the page mounts | | |
 | MLR-06 | Route | A refused capabilities read says so, with no Retry | | |
+| MLR-07 | Route | A capabilities read the server cannot find says the page is not found, with no Retry | | |
 | MLP-01 | Code form | Look up, then Approve, posts the looked-up code | | |
 | MLP-02 | Code form | A lookup failure shows under the code field | | |
 | MLP-03 | Code form | Look up, then Deny, posts the looked-up code | | |
@@ -47,15 +48,17 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLS-09 | Machine logins | A login approved on the page joins the list | | |
 | MLS-10 | Machine logins | A cut name or approver is a button that shows it in full in its tooltip | | |
 | MLS-11 | Machine logins | A machine logins read the server cannot find says so, with no Retry | | |
+| MLS-12 | Machine logins | A machine logins read the server refuses says so, with no Retry | | |
 | RVL-01 | Revoke | The pressed Revoke shows that its revoke is out and keeps the focus | | |
 | RVL-02 | Revoke | A double press on the question's Revoke sends one revoke | | |
 | RVL-03 | Revoke | A refused revoke shows the broker's refusal under its row | | |
 | RVL-04 | Revoke | A refused revoke's line goes once its row leaves the list | | |
 | RVL-05 | Revoke | A revoke refreshes the list | | |
 | RVL-06 | Revoke | A revoke the reader stopped says it may have been made | | |
-| RVL-07 | Revoke | A list that fails to load says so, with a Retry | | |
+| RVL-07 | Revoke | A list that fails to load says so, with a Retry where asking again can work | changed | Upstream's list offers Retry for every failure; a 403 or a 404 shows none here (MLS-11, MLS-12) |
 | RVL-08 | Revoke | A revoked row hands the focus to a listed Revoke, or above the list | | |
 | RVL-09 | Revoke | A loaded list whose refresh fails keeps its rows and says so | | |
 | RVL-10 | Revoke | A revoked row hands the focus to a listed Revoke, not to a cut name drawn before it | | |
 | RVL-11 | Revoke | A revoked row hands the focus to the next row's Revoke | | |
 | RVL-12 | Revoke | The last row, once revoked, hands the focus to the row before it | | |
+| RVL-13 | Revoke | A loaded list whose refresh is refused keeps its rows and says so, with no Retry | changed | Upstream's list offers Retry for every failed refresh; a 403 or a 404 cannot change on a second ask |

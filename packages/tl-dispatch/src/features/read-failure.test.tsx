@@ -3,7 +3,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { ApiError } from "@upstream-dispatch/api/client";
 
-import { ReadFailure, readFailureOf } from "./read-failure";
+import { ReadFailure, readFailureOf, refreshFailureOf } from "./read-failure";
 
 afterEach(cleanup);
 
@@ -49,3 +49,26 @@ test("read-failure: a 500 beside a 404 keeps Retry, as trying again can clear th
   expect(screen.getByText("Could not load the rows.")).toBeDefined();
   expect(screen.getByRole("button", { name: "Retry" })).toBeDefined();
 });
+
+/** A read whose refresh failed with `error` under the rows it shows. */
+const refreshFailed = (error: Error) =>
+  ({
+    data: [],
+    error,
+    isFetching: false,
+    isRefetchError: true,
+    refetch: () => Promise.resolve(),
+  }) as unknown as UseQueryResult<unknown>;
+
+for (const [status, line, retry] of [
+  [500, "Could not load the rows.", true],
+  [403, "You cannot see the rows.", false],
+  [404, "Could not find the rows.", false],
+] as const) {
+  test(`read-failure: a refresh that fails with a ${status} keeps Retry only if asking again can work`, () => {
+    const fault = refreshFailureOf(refreshFailed(new ApiError(status, { code: "X", error: "x" })));
+    if (fault === undefined) throw new Error("no failure");
+    render(<ReadFailure fault={fault} noun="the rows" />);
+    expect(screen.getByRole("alert").textContent).toBe(retry ? `${line}Retry` : line);
+  });
+}

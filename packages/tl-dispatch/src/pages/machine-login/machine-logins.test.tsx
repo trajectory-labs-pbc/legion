@@ -567,3 +567,19 @@ test("MLS-11 a machine logins read the server cannot find says so with no Retry"
     getMachineLogins.mockRestore();
   }
 });
+
+test("MLS-12 a machine logins read the server refuses says so with no Retry", async () => {
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
+    new ApiError(403, { code: "FORBIDDEN", error: "no" })
+  );
+  try {
+    renderPage();
+    const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+    const alert = await section.findByRole("alert");
+    expect(alert.textContent).toBe("You cannot see machine logins.");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+  } finally {
+    cleanup();
+    getMachineLogins.mockRestore();
+  }
+});
