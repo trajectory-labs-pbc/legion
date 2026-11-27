@@ -1,5 +1,6 @@
 import { cn } from "cn";
 import type { ComponentProps, ReactNode } from "react";
+import { isDrawn } from "#registry/legion/lib/utils";
 import { Heading } from "#registry/legion/ui/heading";
 import { Text } from "#registry/legion/ui/text";
 
@@ -31,18 +32,18 @@ function StateMessage({
       )}
       {...props}
     >
-      {icon === undefined ? null : (
+      {isDrawn(icon) ? (
         <div aria-hidden className="mb-2 text-muted-foreground [&>svg]:size-8">
           {icon}
         </div>
-      )}
+      ) : null}
       <Heading className="max-w-full truncate" size="section">
         {title}
       </Heading>
       <Text render={<p />} tone="muted">
         {description}
       </Text>
-      {action === undefined ? null : <div className="mt-2">{action}</div>}
+      {isDrawn(action) ? <div className="mt-2">{action}</div> : null}
     </div>
   );
 }
@@ -58,11 +59,11 @@ function ErrorState(props: StateMessageProps) {
 }
 
 /** A view whose read is under way: still, with no spinner and no shimmer. `children` is the
- *  view's own placeholder, such as its rows or its frame; `label` is what a reader hears. */
+ *  view's own placeholder, such as its rows or its frame; `label` is what a reader hears. The
+ *  caller waits about 200 ms before it draws this (ES4), so a quick read draws none. */
 function LoadingState({ label, children }: { label: string; children?: ReactNode }) {
   return (
-    <div aria-busy="true" className="w-full" data-slot="loading-state" role="status">
-      <span className="sr-only">{label}</span>
+    <div aria-label={label} className="w-full" data-slot="loading-state" role="status">
       {children}
     </div>
   );
