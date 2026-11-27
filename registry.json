@@ -19,6 +19,8 @@
           "shadow-dialog": "0 24px 64px -16px var(--shadow-tint)",
           "spacing-row": "calc(var(--spacing) * 8)",
           "spacing-control-sm": "calc(var(--spacing) * 7)",
+          "spacing-list-row-1": "calc(var(--spacing) * 9)",
+          "spacing-list-row-2": "calc(var(--spacing) * 14)",
           "default-border-width": "var(--border-width)",
           "color-background": "var(--background)",
           "color-foreground": "var(--foreground)",
