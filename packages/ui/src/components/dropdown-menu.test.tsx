@@ -169,17 +169,22 @@ function loadDrawnCss(): void {
   document.head.append(style);
 }
 
-/** Whether a row's text starts after an icon's room: 8 + 16 + 8 px, which `pl-8` gives. A row
- *  without it has the row's own `px-2`, which happy-dom does not report as a left padding. */
-const keepsIconRoom = (node: Element) => getComputedStyle(node).paddingLeft === "calc(4px * 8)";
+/** Whether a row's text starts after an icon's room: 8 + 16 + 8 px, which `ps-8` gives. */
+const keepsIconRoom = (node: Element) =>
+  getComputedStyle(node).paddingInlineStart === "calc(4px * 8)";
 
+// happy-dom keeps only the first compound of a `:has()` argument, so it reads the menu's "a row
+// leads with an icon" as "the menu has a row". These tests check what it can tell apart: which
+// rows keep the room once a menu has one. Which menus have it is checked in Chromium, in
+// packages/tl-dispatch/e2e/menus.e2e.ts.
 describe("DropdownMenu's drawn rows", () => {
   it("draws a separator only between rows: none first, none last, one where two meet", async () => {
     render(
       <DropdownMenu defaultOpen>
         <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuSeparator data-testid="first" />
+          <DropdownMenuGroup />
+          <DropdownMenuSeparator data-testid="after-empty-group" />
           <DropdownMenuItem>Rename</DropdownMenuItem>
           <DropdownMenuSeparator data-testid="pair-1" />
           <DropdownMenuSeparator data-testid="pair-2" />
@@ -189,8 +194,9 @@ describe("DropdownMenu's drawn rows", () => {
             <DropdownMenuLabel>Copy</DropdownMenuLabel>
             <DropdownMenuItem>Link</DropdownMenuItem>
           </DropdownMenuGroup>
-          <DropdownMenuSeparator data-testid="trailing-1" />
-          <DropdownMenuSeparator data-testid="trailing-2" />
+          <DropdownMenuSeparator data-testid="before-empty-group" />
+          <DropdownMenuGroup />
+          <DropdownMenuSeparator data-testid="last" />
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -203,7 +209,7 @@ describe("DropdownMenu's drawn rows", () => {
     expect(drawn).toEqual(["pair-2", "before-group"]);
   });
 
-  it("keeps an icon's room on every row and label when one row has an icon", async () => {
+  it("keeps the room on a row without a leading icon, a trailing chevron included, and on a label", async () => {
     render(
       <DropdownMenu defaultOpen>
         <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
@@ -211,6 +217,10 @@ describe("DropdownMenu's drawn rows", () => {
           <DropdownMenuItem>
             <CopyIcon aria-hidden />
             Copy link
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <span data-icon="inline-start" />
+            Assign to me
           </DropdownMenuItem>
           <DropdownMenuItem>Rename</DropdownMenuItem>
           <DropdownMenuGroup>
@@ -222,60 +232,20 @@ describe("DropdownMenu's drawn rows", () => {
               <DropdownMenuItem>Backlog</DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
     const withIcon = await screen.findByRole("menuitem", { name: "Copy link" });
     loadDrawnCss();
     expect(keepsIconRoom(withIcon)).toBe(false);
+    expect(keepsIconRoom(screen.getByRole("menuitem", { name: "Assign to me" }))).toBe(false);
     for (const row of [
       screen.getByRole("menuitem", { name: "Rename" }),
       screen.getByRole("menuitem", { name: "Move to" }),
+      screen.getByRole("menuitemcheckbox", { name: "Show done" }),
       screen.getByText("Move"),
     ])
       expect(keepsIconRoom(row)).toBe(true);
-  });
-
-  it("keeps the room for a checkbox row's check", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>View</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
-          <DropdownMenuItem>Reset</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-    const reset = await screen.findByRole("menuitem", { name: "Reset" });
-    loadDrawnCss();
-    expect(keepsIconRoom(reset)).toBe(true);
-  });
-
-  it("keeps no room when no row leads with an icon: a chevron or a radio check trails", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>Rename</DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem>Backlog</DropdownMenuItem>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuRadioGroup defaultValue="list">
-            <DropdownMenuRadioItem value="list">List</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-    const rename = await screen.findByRole("menuitem", { name: "Rename" });
-    loadDrawnCss();
-    for (const row of [
-      rename,
-      screen.getByRole("menuitem", { name: "Move to" }),
-      screen.getByRole("menuitemradio", { name: "List" }),
-    ])
-      expect(keepsIconRoom(row)).toBe(false);
   });
 });
