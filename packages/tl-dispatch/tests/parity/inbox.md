@@ -1,11 +1,12 @@
 # Inbox
 
 The behaviours of upstream's Inbox page (`/`), its Reply rows (`/?type=reply`), its drawer and Answered by you (`/answers`) that the fork's Inbox keeps, each copied or rebuilt.
-A row's region is one of the page's 19 groups of behaviour, and each region has its own heading below.
+A row's region is one of the page's groups of behaviour, and each region has its own heading below.
 A region is marked rebuilt when the fork's view draws all of it; from then each of its rows needs a test whose name starts with its ID.
 A row that the fork changes on purpose is marked `changed`, with its reason as a rule of the page's design.
 A row that upstream's document widget does is marked `inside`, with the full name of upstream's test that covers it.
-A row of upstream's behaviour from a commit that the fork has not synced yet is marked `After next sync`, with that commit; where the fork changes that behaviour, its item says how, and the row takes the mark `changed` when the sync brings the commit.
+A row of upstream's behaviour from a commit that the fork has not synced yet is marked `After next sync`, with that commit.
+Where the fork changes such a row, its item gives the reason after "Changed when the sync brings it", and the sync moves the reason to the note with the mark `changed`.
 An older row that such a commit makes false ends with "From" and that commit, saying what the sync changes in it.
 The section "Keys" after the regions gives each key and each key conflict.
 The package's README, "Checks", has the rules.
@@ -37,7 +38,7 @@ Pinned by name: none.
 | INB-6 | Routes and URL | An `?item=` the list does not hold selects the first row and rewrites the address to it. | | |
 | INB-7 | Routes and URL | An `?item=` that names a row in the folded Later band opens that band and selects the row. | | |
 | INB-8 | Routes and URL | `?item=` is read only once the list has rows; a list that is loading, failed or empty leaves it unread. | | |
-| INB-9 | Routes and URL | Every selection change writes `?item=` with replace, never push, so Back leaves the page in one step; selecting nothing removes `?item=`. **From `d4b15962736`:** Opening a row below 1280 px pushes a history entry. | | |
+| INB-9 | Routes and URL | Every selection change writes `?item=` with replace, never push, so Back leaves the page in one step; selecting nothing removes `?item=`. **From `d4b15962736`:** see INB-304. | | |
 | INB-10 | Routes and URL | `?agent=<session id>` narrows the list to that agent's asks and hides every thread row. | | |
 | INB-11 | Routes and URL | `?section=needs-you` keeps only asks waiting on a person, not snoozed, and hides thread rows. | | |
 | INB-12 | Routes and URL | `?q=<text>` is the search box's text; the list filters by the first 1000 characters, while the box shows the address as it is. | | |
@@ -104,10 +105,10 @@ Pinned by name: none.
 | ID | Region | Item | Mark | Note |
 | --- | --- | --- | --- | --- |
 | INB-38 | List rows | The list holds two kinds of row: open asks (question, decision, approval) and the reader's own threads (Reply, Agent message). | | |
-| INB-39 | List rows | From 1280 px each row is short: a mark box, a kind icon, the title (an ask's first question line with Markdown removed, or a thread's subject), the age at the right; under it the priority tag, the urgency mark and the owner link. **From `d4b15962736`:** The rows are short at every width. | changed | R2 and R3 (rules LR7 and TY5): one two-line row, 56 px high, at every width, with a 36 px avatar, the title at weight 500 and the time at the right of line two. The priority is in the row's tooltip and in the reading pane's head, and an ask's urgency shows as bars. |
-| INB-40 | List rows | Below 1280 px (and always in the drawer) an ask row is its whole card under a control line: mark box, kind icon, owner link, the "<agent> replied" chip, urgency, priority, Assign to me, Snooze. **From `d4b15962736`:** Only the drawer's rows are cards. | changed | R2: one row at every width. Below 1280 px and in the drawer, an ask's row is the two-line row with no card, and it opens in the 480 px peek, or in the drawer's item view. |
-| INB-41 | List rows | Below 1280 px a thread row is its mark box over the thread's card. **From `d4b15962736`:** Only the drawer's rows are cards. | changed | R2: one row at every width. Below 1280 px and in the drawer, a thread's row is the two-line row with no card, and it opens in the 480 px peek, or in the drawer's item view. |
-| INB-42 | List rows | The "<agent> replied" chip shows on an ask waiting on a person whose last reply is an agent's. **From `d4b15962736`:** Only the drawer's rows show the chip. | | |
+| INB-39 | List rows | From 1280 px each row is short: a mark box, a kind icon, the title (an ask's first question line with Markdown removed, or a thread's subject), the age at the right; under it the priority tag, the urgency mark and the owner link. **From `d4b15962736`:** see INB-302. | changed | R2 and R3 (rules LR7 and TY5): one two-line row, 56 px high, at every width, with a 36 px avatar, the title at weight 500 and the time at the right of line two. The priority is in the row's tooltip and in the reading pane's head, and an ask's urgency shows as bars. |
+| INB-40 | List rows | Below 1280 px (and always in the drawer) an ask row is its whole card under a control line: mark box, kind icon, owner link, the "<agent> replied" chip, urgency, priority, Assign to me, Snooze. **From `d4b15962736`:** see INB-327. | changed | R2: one row at every width. Below 1280 px and in the drawer, an ask's row is the two-line row with no card, and it opens in the 480 px peek, or in the drawer's item view. |
+| INB-41 | List rows | Below 1280 px a thread row is its mark box over the thread's card. **From `d4b15962736`:** see INB-327. | changed | R2: one row at every width. Below 1280 px and in the drawer, a thread's row is the two-line row with no card, and it opens in the 480 px peek, or in the drawer's item view. |
+| INB-42 | List rows | The "<agent> replied" chip shows on an ask waiting on a person whose last reply is an agent's. **From `d4b15962736`:** see INB-327. | | |
 | INB-43 | List rows | The kind icon is a glyph with a text name: `?` Question, `◆` Decision, `✓` Approval, `↩` Reply, `✦` Agent message. | changed | R2: the row's kind is a badge on its 36 px avatar. |
 | INB-44 | List rows | The priority tag shows `P0`–`P3` from the owning issue; a row with no issue or no priority shows none. | changed | R3: the issue's priority is in the row's tooltip and in the reading pane's head, not on the row. |
 | INB-45 | List rows | The urgency mark shows Blocking, High, Medium or Low for an ask; a thread row shows none. | changed | R3 (rule LR7): an ask's urgency shows as bars, and a row in an urgency group shows none. |
@@ -126,7 +127,7 @@ Pinned by name: none.
 | INB-303 | List rows | At each width, an issue owner's link opens the issue's hover card, has no title, and cuts only the issue's title, never its key; a document owner's link opens the document's hover card and has no title; an Agent row's owner opens no hover card and carries its whole session name as a title. | After next sync | d4b15962736 |
 | INB-334 | List rows | A click on a short row's owner link opens the ask inside its issue, and the row leaves `?item=` as it is. | | |
 | INB-335 | List rows | A thread row's title draws the stored references in its subject as their targets' names. | | |
-| INB-336 | List rows | A row control's name is the row's owner (the issue key, the document, or neither), then ", ask i of n" when the owner has more than one row, in list order, then ": " and the question's plain-text reading with its line breaks and runs of spaces collapsed, cut to 48 characters with no trailing space and an ellipsis. | | |
+| INB-336 | List rows | A row control's name is "<owner>: <question>", with ", ask i of n" after the owner when it has an ordinal; the question's line breaks and runs of spaces collapse to single spaces, and a question past 48 characters is cut with no trailing space and ends in an ellipsis. | | |
 | INB-337 | List rows | A deleted root's line ends in an ellipsis inside the row's title, however long the deleting name. | After next sync | d4b15962736 |
 
 ## 5. Bands, sort and paging
@@ -171,8 +172,7 @@ Pinned by name: none.
 | INB-71 | Search | A keypress that does not change the capped text writes nothing to the address. | | |
 | INB-72 | Search | A row held under the reader's hand stays while the server changes its text out of the typed search, keeps its half-typed answer and focus, and goes once the reader types more words. | | |
 | INB-73 | Search | The search applies to Mark all read and Select all: under typed text neither sends the list's narrowing to the server. | | |
-| INB-338 | Search | The reader's own typing does not hold a row: a row that a server edit took out of the typed search stays under the reader's hand, and goes once the reader types more words. | | |
-| INB-339 | Search | The search narrows only the rows: the credential requests and the banner do not change with the search text. | | |
+| INB-338 | Search | The search narrows only the rows: the credential requests and the banner do not change with the search text. | | |
 
 ## 7. Filter bar and View menu
 
@@ -205,7 +205,7 @@ Pinned by name: none.
 | INB-91 | Filter bar and View menu | Mark all read sends the list's filters and its read mark, zeroes the count and draws the rows read at once without removing any; it asks nothing first. | | |
 | INB-92 | Filter bar and View menu | A refused Mark all read brings the rows and counts back and says "Nothing was marked read."; a stopped one reads the list again and says the mark may have been saved; the word goes when the reader narrows the list another way. | | |
 | INB-93 | Filter bar and View menu | A read of the list or the count asked while Mark all read is out waits for its answer and never puts back what the press drew read; a thread somebody starts meanwhile shows once the press's event arrives. | | |
-| INB-340 | Filter bar and View menu | A row's assignee is the ask's `asked_of`, else the issue's assignee, else the project's default assignee. | | |
+| INB-339 | Filter bar and View menu | A row's assignee is the ask's `asked_of`, else the issue's assignee, else the project's default assignee. | | |
 
 ## 8. Banner and credential requests
 
@@ -221,8 +221,8 @@ Pinned by name: none.
 | INB-94 | Banner and credential requests | Above the list, "Blocked on you: N item(s), oldest <age>" counts the reader's own waiting asks that are not snoozed and the pending credential requests; it hides at zero, under an agent filter and in the Dismissed view; it links to `/`. | changed | R3: the banner's duties move into the list. "Needs you" holds the pending credential requests and the asks whose turn is a person's, and its header mark alone says that a row needs the reader. |
 | INB-95 | Banner and credential requests | A request whose time cannot be read still counts but is never the oldest; an expired request is neither counted nor the oldest. | | |
 | INB-96 | Banner and credential requests | Credential requests are listed above the search box. A pending secret request links to its broker page, a pending machine request links to `/credentials/machine`, and a secret request with no usable approve link shows its summary with no link. An expired one is marked Expired, says when its deadline passed, links nowhere and offers Dismiss. The section draws nothing while it loads or with no request, and shows "Couldn't load credential requests." only when no list ever loaded. | changed | R3: the pending credential requests are the first rows of "Needs you", and the list's keys reach them. |
-| INB-341 | Banner and credential requests | A credential request's line names its session. A running session's title links to its live conversation, an id that the agents list does not carry reads as not running, and the session reads as unknown while the agents list cannot be read. When both ids show, only the enrollment line carries the "came from" preamble, and a request-only session id has no preamble. | | |
-| INB-342 | Banner and credential requests | A credential request that the broker records after the page loaded is listed and counted with no reload, and one that leaves the broker leaves the list and the count the same way. | | |
+| INB-340 | Banner and credential requests | A credential request's line names its session. A running session's title links to its live conversation, an id that the agents list does not carry reads as not running, and the session reads as unknown while the agents list cannot be read. When both ids show, only the enrollment line carries the "came from" preamble, and a request-only session id has no preamble. | | |
+| INB-341 | Banner and credential requests | A credential request that the broker records after the page loaded is listed and counted with no reload, and one that leaves the broker leaves the list and the count the same way. | | |
 
 ## 9. Selection and the bulk bar
 
@@ -249,8 +249,8 @@ Pinned by name: none.
 | INB-331 | Selection and the bulk bar | A bulk Dismiss or Move to Inbox that Dispatch takes, in whole or in part, shows one toast with Undo that counts the threads that it changed ("Dismissed 12", "Moved 4 to the Inbox"). Undo, by its button or `Shift+Z`, sends the same rows back and does not select them again. | changed | R6 and R14: upstream has no Undo after a bulk write. |
 | INB-332 | Selection and the bulk bar | A bulk Snooze that Dispatch takes, in whole or in part, shows one toast with Undo that counts the asks that it took ("Snoozed 3"). Undo gives each of those asks back its earlier snooze time, or un-snoozes it when it had none or its time has passed. | changed | R6 and R14: upstream has no Undo after a bulk write. |
 | INB-333 | Selection and the bulk bar | After Select all in the Dismissed view, a Move to Inbox shows no Undo, and a press that Dispatch took for no row shows no toast. A refused or unconfirmed Undo shows one toast with Retry or Try again, and Retry sends only the writes that failed. | changed | R6 and R14: upstream has no Undo after a bulk write. |
-| INB-343 | Selection and the bulk bar | A marked row that the search hides leaves the bar's count, and comes back marked when the search shows it again. | | |
-| INB-344 | Selection and the bulk bar | A late bulk-snooze refusal marks again only the row that it refused, also after Clear or Escape cleared the marks. | | |
+| INB-342 | Selection and the bulk bar | A marked row that the search hides leaves the bar's count, and comes back marked when the search shows it again. | | |
+| INB-343 | Selection and the bulk bar | A late bulk-snooze refusal marks again only the row that it refused, also after Clear or Escape cleared the marks. | | |
 
 ## 10. Keys on the list
 
@@ -266,20 +266,20 @@ Pinned by name: none.
 | INB-107 | Keys on the list | `j` moves to the next row and `k` to the previous; with the pane on they move the selection (and the address), else the focus. From inside the pane they first return focus to the selected row. Not in the palette. | | |
 | INB-108 | Keys on the list | `j` enters a band at its first row and `k` at its last, never on a heading. | | |
 | INB-109 | Keys on the list | ArrowDown and ArrowUp move like `j`/`k`, but with the pane on only while the focus is in the list (in the pane they scroll or move options). | | |
-| INB-110 | Keys on the list | Enter moves the focus into the answer box of the row in hand; in the pane, on a compact decision card, it opens "Add a note or answer in your own words" first. It fires from a row or from nothing focused; a focused link or button keeps Enter. **From `d4b15962736`:** Below 1280 px, Enter on a focused row opens it in place of the list. | changed | R4 and R8 (rule LR4): on an open ask, Enter moves the focus to the first option, picks an option, or sends. On each other row, it opens the row in the pane from 1280 px, in the peek below, and in the drawer's item view in the drawer. Below 1280 px, Enter on an open ask opens the peek with the focus on the first option. An ask that upstream's document in the pane still draws keeps upstream's Enter, and below 1280 px it opens the peek with the focus in the card's answer box (R12). |
+| INB-110 | Keys on the list | Enter moves the focus into the answer box of the row in hand; in the pane, on a compact decision card, it opens "Add a note or answer in your own words" first. It fires from a row or from nothing focused; a focused link or button keeps Enter. **From `d4b15962736`:** see INB-305. | changed | R4 and R8 (rule LR4): on an open ask, Enter moves the focus to the first option, picks an option, or sends. On each other row, it opens the row in the pane from 1280 px, in the peek below, and in the drawer's item view in the drawer. Below 1280 px, Enter on an open ask opens the peek with the focus on the first option. An ask that upstream's document in the pane still draws keeps upstream's Enter, and below 1280 px it opens the peek with the focus in the card's answer box (R12). |
 | INB-111 | Keys on the list | `1`–`9` pick option 1–9 of the row in hand's own card (not the first block of the document). | | |
 | INB-112 | Keys on the list | `o` opens the row in hand's issue, document or thread (its owner link, or the pane head's Open page). | | |
 | INB-113 | Keys on the list | `y` copies the row in hand's reference; it does nothing on an Agent row. | | |
 | INB-114 | Keys on the list | `x` marks or unmarks the row in hand (ask or thread). Not in the palette. | | |
 | INB-115 | Keys on the list | `e` dismisses the thread row in hand (or moves it back to the Inbox in the Dismissed view); it does nothing on an ask, and nothing from inside an ask card in the pane. | | |
 | INB-116 | Keys on the list | `h` with marks focuses the bulk Snooze picker; without marks it focuses the row's (or the pane head's) Snooze. It stands down inside an ask card. | | |
-| INB-117 | Keys on the list | `l` moves the focus into the reading pane's scroller and remembers the row it came from (only if nothing is remembered); it works only with the pane on and a row selected. **From `d4b15962736`:** `l` also works below 1280 px with a row open. | | |
+| INB-117 | Keys on the list | `l` moves the focus into the reading pane's scroller and remembers the row it came from (only if nothing is remembered); it works only with the pane on and a row selected. **From `d4b15962736`:** see INB-307. | | |
 | INB-118 | Keys on the list | Escape from inside the pane returns the focus to the row `l` remembered, else to the selected row. | | |
 | INB-119 | Keys on the list | The remembered row is dropped when the pane shows another question, when the pane closes, or when the focus lands outside the pane (search box, a row, a click in the list, a dialog); a window blur or an unmount inside the pane keeps it. | | |
 | INB-120 | Keys on the list | Escape on a focused row blurs it; from a control inside a row it focuses the row first. | | |
-| INB-121 | Keys on the list | Escape in the bulk Snooze picker returns to the row `h` was pressed on, else the first row, else the bar. **From `d4b15962736`:** In an open reading view below 1280 px, Escape in the picker moves the focus to the view's scroller, else to the bar. | | |
+| INB-121 | Keys on the list | Escape in the bulk Snooze picker returns to the row `h` was pressed on, else the first row, else the bar. **From `d4b15962736`:** see INB-347. | | |
 | INB-122 | Keys on the list | Escape with no row focused clears the selection exactly while the bar's Clear is offered, a bulk snooze still out and a standing refusal included. It stands down while a bar popover is open (that Escape closes the popover only). Not in the palette. | | |
-| INB-123 | Keys on the list | `f` focuses the search box from anywhere on the page; typed in the box, `f` is a letter. **From `d4b15962736`:** `f` does nothing while a reading view is open below 1280 px, because the box is hidden with the list. | changed | Key conflict KC1, R9 and R10 (rules KB4 and LR9): `/` moves the focus to the search box, and `f` opens the Filter picker. No command registers `$mod+f`, so it stays the browser's find. |
+| INB-123 | Keys on the list | `f` focuses the search box from anywhere on the page; typed in the box, `f` is a letter. **From `d4b15962736`:** see INB-346. | changed | Key conflict KC1, R9 and R10 (rules KB4 and LR9): `/` moves the focus to the search box, and `f` opens the Filter picker. No command registers `$mod+f`, so it stays the browser's find. |
 | INB-124 | Keys on the list | Escape in the search box returns to the selected row, or the first row. | changed | Key conflict KC2 and R9: in the search box, Escape clears the text when the box has text. In an empty box, it moves the focus back to the row. |
 | INB-125 | Keys on the list | `i` (shell) opens or closes the inbox drawer on every page but the Inbox; `g i` (shell) goes to the Inbox. | | |
 | INB-126 | Keys on the list | The shortcut sheet and the palette name each key by its label with the row word "selected" while the reading column shows and "focused" otherwise, as in "Answer the selected ask", "Select option 1–9 of the focused ask", "Copy the selected row's reference" and "Select or deselect the focused row". | | |
@@ -291,11 +291,11 @@ Pinned by name: none.
 | INB-317 | Keys on the list | Below 1280 px, `1` to `9` on a focused ask row that has options and is not an approval open the row and press that option there. When the ask has no such option, the view opens with the focus on its scroller. On other rows the keys do nothing. | After next sync | d4b15962736 |
 | INB-323 | Keys on the list | Below 1280 px, with rows marked, `h` reaches the selection bar while a row is open. | After next sync | d4b15962736 |
 | INB-325 | Keys on the list | Below 1280 px, `o` on a focused thread row goes to the thread's own page, not to the row's view. | After next sync | d4b15962736 |
-| INB-345 | Keys on the list | The list's keys work while a checkbox that the pointer ticked holds the focus. | | |
-| INB-346 | Keys on the list | The shortcut sheet (`?`) lists `l` and `f` under Inbox only. | | |
-| INB-347 | Keys on the list | Below 1280 px, `f` does nothing while a row's reading view is open, because the search box is hidden with the list. | After next sync | d4b15962736 |
-| INB-348 | Keys on the list | Below 1280 px, in an open reading view, Escape in the bulk Snooze picker moves the focus to the view's scroller, else to the bar. | After next sync | d4b15962736 |
-| INB-349 | Keys on the list | Below 1280 px, `j` and `k` step the row that the open reading view shows. | After next sync | d4b15962736 |
+| INB-344 | Keys on the list | The list's keys work while a checkbox that the pointer ticked holds the focus. | | |
+| INB-345 | Keys on the list | The shortcut sheet (`?`) lists `l` and `f` under Inbox only. | | |
+| INB-346 | Keys on the list | Below 1280 px, `f` does nothing while a row's reading view is open, because the search box is hidden with the list. | After next sync | d4b15962736 |
+| INB-347 | Keys on the list | Below 1280 px, in an open reading view, Escape in the bulk Snooze picker moves the focus to the view's scroller, else to the bar. | After next sync | d4b15962736 |
+| INB-348 | Keys on the list | Below 1280 px, `j` and `k` step the row that the open reading view shows. | After next sync | d4b15962736 |
 
 ## 11. Reading pane: selection and divider
 
@@ -308,7 +308,7 @@ Pinned by name: none.
 
 | ID | Region | Item | Mark | Note |
 | --- | --- | --- | --- | --- |
-| INB-127 | Reading pane: selection and divider | From 1280 px (`min-width: 80rem`) the page is a list and a reading pane side by side; below it, and in the drawer, there is no pane, no selection and no `?item=`. **From `d4b15962736`:** Below 1280 px, a row that the reader opens is read in place of the list, and `?item=` names it. | changed | R2 gives one row at every width: below 1280 px, the open row shows in the peek and `?item=` names it, and in the drawer the item view writes no address. |
+| INB-127 | Reading pane: selection and divider | From 1280 px (`min-width: 80rem`) the page is a list and a reading pane side by side; below it, and in the drawer, there is no pane, no selection and no `?item=`. **From `d4b15962736`:** see INB-304. | changed | R2 gives one row at every width: below 1280 px, the open row shows in the peek and `?item=` names it, and in the drawer the item view writes no address. |
 | INB-128 | Reading pane: selection and divider | The Inbox selects the first row when it opens with the pane on. | | |
 | INB-129 | Reading pane: selection and divider | A click on a short row selects it and the pane shows it. | | |
 | INB-130 | Reading pane: selection and divider | The selected row is scrolled into view (nearest) as the reader walks the list. | | |
@@ -367,7 +367,7 @@ Pinned by name: `handOffFocus` in `features/inbox/AskCard.tsx`, `PaneFrame` in `
 | INB-159 | Reading pane: frame and question kinds | While the version opens, the question shows at once, with "Opening <document name>" under it. | | |
 | INB-160 | Reading pane: frame and question kinds | An anchored question, or a question in no document, shows the full ask card. No document opens. | | |
 | INB-161 | Reading pane: frame and question kinds | The card and the head are keyed by ask, so no write of the previous question (a snooze still saving, a refusal) shows on the next one. | | |
-| INB-350 | Reading pane: frame and question kinds | An approved document shows the approval that it follows in place of the actions, and its version. | | |
+| INB-349 | Reading pane: frame and question kinds | An approved document shows the approval that it follows in place of the actions, and its version. | | |
 
 ## 13. Reading pane heads and row controls
 
@@ -397,8 +397,8 @@ Pinned by name: none.
 | INB-176 | Reading pane heads and row controls | Dismiss (named "Dismiss: <line>") shows on thread rows only and reads "Dismissing…"; in the Dismissed view it is "Move to Inbox" ("Moving…"). It is optimistic. A refusal puts the row back where it was and says so; a stopped write says it may have been made. Outside an Inbox no Dismiss is drawn. | changed | R14: a refused or unconfirmed row dismiss reports in its toast, not in upstream's line above the list (`dismissWrite`). A row write reports in one place, and that line shows only a bulk dismiss's failure. |
 | INB-314 | Reading pane heads and row controls | Below 1280 px, Escape on the view head's Snooze or Priority goes back to the list, at the row. | After next sync | d4b15962736 |
 | INB-324 | Reading pane heads and row controls | Below 1280 px, a dismiss refused from the reading view's head is said where the reader is. **Changed when the sync brings it:** R14: a refused row write shows a toast with Retry. | After next sync | d4b15962736 |
-| INB-351 | Reading pane heads and row controls | A priority pick stays drawn from the press until its save lands, over the reads that land meanwhile, and of two picks the last one wins. | | |
-| INB-352 | Reading pane heads and row controls | A refused snooze's note wraps beside its control and never widens the page. | | |
+| INB-350 | Reading pane heads and row controls | A priority pick stays drawn from the press until its save lands, over the reads that land meanwhile, and of two picks the last one wins. | | |
+| INB-351 | Reading pane heads and row controls | A refused snooze's note wraps beside its control and never widens the page. | | |
 
 ## 14. Threads: bodies, reply boxes, cards and read marks
 
@@ -435,16 +435,16 @@ Pinned by name: none.
 | INB-198 | Threads: bodies, reply boxes, cards and read marks | A Reply row is marked read through its newest reply once its newest message has stood at least 75 % in view for 1 s; a message taller than the box it is read in counts once it fills 75 % of that box. Only threads in the owner's unread set are watched, or every thread when that set holds over 200 rows. The row stays listed, drawn as read. It is silent and not optimistic. | | |
 | INB-199 | Threads: bodies, reply boxes, cards and read marks | For an ask thread the read check watches the whole card. With no issue and no document id, nothing is marked. | | |
 | INB-200 | Threads: bodies, reply boxes, cards and read marks | An Agent row is read by reply id and never moves the session's read mark. A reply that arrives while the thread shows must dwell again. | | |
-| INB-201 | Threads: bodies, reply boxes, cards and read marks | A thread card (below 1280 px and in the drawer) shows the kind icon, the title and the time of the last write; then the priority tag and owner line; then the thread and its quote; then "Open", "Mark read" and Dismiss. In the card the title is plain text, not a link. **From `d4b15962736`:** Only the drawer's rows are cards. | changed | R2: no thread card at any width. A thread's row is the two-line row, and it opens in the pane, the peek or the drawer's item view. |
+| INB-201 | Threads: bodies, reply boxes, cards and read marks | A thread card (below 1280 px and in the drawer) shows the kind icon, the title and the time of the last write; then the priority tag and owner line; then the thread and its quote; then "Open", "Mark read" and Dismiss. In the card the title is plain text, not a link. **From `d4b15962736`:** see INB-327. | changed | R2: no thread card at any width. A thread's row is the two-line row, and it opens in the pane, the peek or the drawer's item view. |
 | INB-202 | Threads: bodies, reply boxes, cards and read marks | "Mark read" on a thread card marks the thread through its newest reply (an Agent row: its unread ids) and reads "Marking read…". It is not optimistic. A refusal shows the error with Retry. A stopped mark says it may have been saved, and Retry marks what the stopped press marked. | changed | R14: a refused Mark read shows a one-line toast with Retry, and an unconfirmed one shows "It may have been made" with Try again. The fork's mark read is `inline: true`, which upstream's write is not. |
 | INB-203 | Threads: bodies, reply boxes, cards and read marks | An edited message or ask-thread reply shows "edited" on its byline; a deleted one reads as deleted and gives no part of its body. | | |
 | INB-204 | Threads: bodies, reply boxes, cards and read marks | A thread's subject line in the pane reads as deleted for a deleted root and marks an edited one. | | |
 | INB-205 | Threads: bodies, reply boxes, cards and read marks | A comment or message thread whose root was deleted draws no reply box. A reply the reader typed for it stays on screen, with Discard my draft. | | |
 | INB-326 | Threads: bodies, reply boxes, cards and read marks | The open row keeps a thread's chosen order over a reload. | After next sync | d4b15962736 |
-| INB-353 | Threads: bodies, reply boxes, cards and read marks | A reply sent from the pane reaches the thread, and a reply to an Agent row is sent in the mode that the Agents page uses. | | |
-| INB-354 | Threads: bodies, reply boxes, cards and read marks | A long reply shows whole. | | |
-| INB-355 | Threads: bodies, reply boxes, cards and read marks | A reply sent from the Dismissed view leaves the thread in the Dismissed view. | | |
-| INB-356 | Threads: bodies, reply boxes, cards and read marks | A Reply thread's subject draws stored references as their targets' names. | | |
+| INB-352 | Threads: bodies, reply boxes, cards and read marks | A reply sent from the pane reaches the thread, and a reply to an Agent row is sent in the mode that the Agents page uses. | | |
+| INB-353 | Threads: bodies, reply boxes, cards and read marks | A long reply shows whole. | | |
+| INB-354 | Threads: bodies, reply boxes, cards and read marks | A reply sent from the Dismissed view leaves the thread in the Dismissed view. | | |
+| INB-355 | Threads: bodies, reply boxes, cards and read marks | A Reply thread's subject draws stored references as their targets' names. | | |
 
 ## 15. Ask card
 
@@ -501,20 +501,20 @@ Pinned by name: none.
 | INB-298 | Ask card | The line of each write on an ask in the pending-writes indicator (an answer, a question back, a reply, a decline) holds the question's plain-text reading, never its Markdown. | | |
 | INB-299 | Ask card | An earlier answer draws each option that it chose from the server's reading of the option's label, an option that the ask no longer holds included. | | |
 | INB-300 | Ask card | A decline note past the bound of an event body shows a negative count ("-5 characters left"), and neither "Decline to answer" nor Ctrl+Enter or Cmd+Enter sends it. | | |
-| INB-357 | Ask card | A backlink list that cannot be read shows "Referenced by unavailable." beside the ask card, with Retry and no alert. | | |
-| INB-358 | Ask card | Ctrl+Enter or Cmd+Enter sends an ask's reply, but not while an upload into it is out. | | |
-| INB-359 | Ask card | Stored references in an ask's replies and on the ask's other surfaces draw as their targets' names. | | |
-| INB-360 | Ask card | A reply that holds only a reference shows that reference's card. | | |
-| INB-361 | Ask card | A reply that the reader stopped says that Retry asks again under its key. | | |
-| INB-362 | Ask card | Who the ask reaches names each follower by its registry title, else by its shortened id, with the registry's running state and a live link. | | |
-| INB-363 | Ask card | While the agents list refills, who the ask reaches says so, and claims no count and no offline follower. | | |
-| INB-364 | Ask card | For an ask that a project document owns, who the ask reaches reads that document's subscribers. | | |
-| INB-365 | Ask card | Who the ask reaches lists each session once, in one order: a session that is a route and the claimant is listed once, via its claim, and a subscribed claimant or route session once, as a subscriber that keeps Unsubscribe. | | |
-| INB-366 | Ask card | "Reaches N" counts each recipient once, and counts a session route's session whose reach is unknown without calling it offline. | | |
-| INB-367 | Ask card | An unfollow that the reader stopped says that it may have been made, and its Retry unfollows on the ask it was pressed on, also after the card moves to another ask. | | |
-| INB-368 | Ask card | An Inbox reply's `#q2` names the question of the document that its comment is anchored to. | | |
-| INB-369 | Ask card | An option's label draws as inline Markdown. | | |
-| INB-370 | Ask card | On a phone, an ask card's time stays beside its author. | | |
+| INB-356 | Ask card | A backlink list that cannot be read shows "Referenced by unavailable." beside the ask card, with Retry and no alert. | | |
+| INB-357 | Ask card | Ctrl+Enter or Cmd+Enter sends an ask's reply, but not while an upload into it is out. | | |
+| INB-358 | Ask card | Stored references in an ask's replies and on the ask's other surfaces draw as their targets' names. | | |
+| INB-359 | Ask card | A reply that holds only a reference shows that reference's card. | | |
+| INB-360 | Ask card | A reply that the reader stopped says that Retry asks again under its key. | | |
+| INB-361 | Ask card | Who the ask reaches names each follower by its registry title, else by its shortened id, with the registry's running state and a live link. | | |
+| INB-362 | Ask card | While the agents list refills, who the ask reaches says so, and claims no count and no offline follower. | | |
+| INB-363 | Ask card | For an ask that a project document owns, who the ask reaches reads that document's subscribers. | | |
+| INB-364 | Ask card | Who the ask reaches lists each session once, in one order: a session that is a route and the claimant is listed once, via its claim, and a subscribed claimant or route session once, as a subscriber that keeps Unsubscribe. | | |
+| INB-365 | Ask card | "Reaches N" counts each recipient once, and counts a session route's session whose reach is unknown without calling it offline. | | |
+| INB-366 | Ask card | An unfollow that the reader stopped says that it may have been made, and its Retry unfollows on the ask it was pressed on, also after the card moves to another ask. | | |
+| INB-367 | Ask card | An Inbox reply's `#q2` names the question of the document that its comment is anchored to. | | |
+| INB-368 | Ask card | An option's label draws as inline Markdown. | | |
+| INB-369 | Ask card | On a phone, an ask card's time stays beside its author. | | |
 
 ## 16. Live updates and held rows
 
@@ -544,15 +544,14 @@ Pinned by name: none.
 | INB-261 | Live updates and held rows | If an ask event arrives while the Inbox is loading, that ask's card reads its own endpoint until a newer list lands. Claim, release and route events do the same for the issue's asks. | | |
 | INB-262 | Live updates and held rows | After an answer, an Ask back or a hand-on, the Inbox, the issue's asks, the issue and the issues list are read again (for a document ask: the document and the projects). | | |
 | INB-263 | Live updates and held rows | An edit or a delete of a thread's post reaches the thread rows from the live feed, even when the refetch fails: the row reads as edited, then deleted. | | |
-| INB-371 | Live updates and held rows | Reads of the Inbox asked while a dismiss is out wait for its answer. | | |
-| INB-372 | Live updates and held rows | A thread started while a dismiss is out shows after its event. | | |
-| INB-373 | Live updates and held rows | A reply by someone else brings a dismissed thread back to the Inbox, unread. | | |
-| INB-374 | Live updates and held rows | A list of 120 threads sorted by priority keeps that order and follows a priority change live. | | |
-| INB-375 | Live updates and held rows | A band header stays with the row that the pointer holds. | | |
-| INB-376 | Live updates and held rows | A thread read that started before a write does not overwrite that write. | | |
-| INB-377 | Live updates and held rows | An Inbox read held behind an ask write is let go by that write's event. | | |
-| INB-378 | Live updates and held rows | A hand-on reads the ask's thread again, so a card that reads that thread follows the write. | | |
-| INB-379 | Live updates and held rows | A thread whose refetch fails after a reply's edit and delete reads the reply as edited, then deleted. | | |
+| INB-370 | Live updates and held rows | Reads of the Inbox asked while a dismiss is out wait for its answer. | | |
+| INB-371 | Live updates and held rows | A thread started while a dismiss is out shows after its event. | | |
+| INB-372 | Live updates and held rows | A reply by someone else brings a dismissed thread back to the Inbox, unread. | | |
+| INB-373 | Live updates and held rows | A list of 120 threads sorted by priority keeps that order and follows a priority change live. | | |
+| INB-374 | Live updates and held rows | A band header stays with the row that the pointer holds. | | |
+| INB-375 | Live updates and held rows | A thread read that started before a write does not overwrite that write. | | |
+| INB-376 | Live updates and held rows | An Inbox read held behind an ask write is let go by that write's event. | | |
+| INB-377 | Live updates and held rows | A hand-on reads the ask's thread again, so a card that reads that thread follows the write. | | |
 
 ## 17. Drafts
 
@@ -577,7 +576,7 @@ Pinned by name: none.
 | INB-273 | Drafts | Before the store knows who is signed in, drafts stay in the page only. On the first load, entries of stores the app no longer has are dropped. | | |
 | INB-274 | Drafts | A draft over 65,536 characters, or one that would take its store over 262,144, is not kept in the tab but stays in the page. A waiting draft is kept as soon as there is room. | | |
 | INB-275 | Drafts | A notice in the shell's status corner gives one line per reason, in this order: too long, store full, browser refused. It goes when every draft is kept. The three texts are upstream's, word for word. | | |
-| INB-380 | Drafts | A reply box's refused or stopped note comes back after a reload. | | |
+| INB-378 | Drafts | A reply box's refused or stopped note comes back after a reload. | | |
 
 ## 18. Inbox drawer
 
@@ -601,9 +600,9 @@ Pinned by name: none.
 | INB-284 | Inbox drawer | Escape with a row focused leaves the row first; a second Escape closes the drawer. | changed | R8: in the drawer, Escape first closes the item view, then blurs the row, then clears the selection, and then closes the drawer. |
 | INB-285 | Inbox drawer | The drawer's rows scroll in the drawer, and the viewport anchor moves the drawer's scroll, not the window's. | | |
 | INB-327 | Inbox drawer | The drawer keeps each row's card at every width, and only the drawer's rows show the "<agent> replied" chip. **Changed when the sync brings it:** R2: the drawer draws the one row and opens it in its item view. | After next sync | d4b15962736 |
-| INB-381 | Inbox drawer | The drawer's keys act on the drawer's rows, never on the page behind it. | | |
-| INB-382 | Inbox drawer | A message half-typed on the page under the drawer survives the drawer. | | |
-| INB-383 | Inbox drawer | On a phone, the drawer opens from the compact top bar and covers the screen. | | |
+| INB-379 | Inbox drawer | The drawer's keys act on the drawer's rows, never on the page behind it. | | |
+| INB-380 | Inbox drawer | A message half-typed on the page under the drawer survives the drawer. | | |
+| INB-381 | Inbox drawer | On a phone, the drawer opens from the compact top bar and covers the screen. | | |
 
 ## 19. Answered by you
 
@@ -628,12 +627,12 @@ Pinned by name: none.
 | INB-295 | Answered by you | A reply row whose comment was deleted reads as deleted and gives no part of its body; an edited one shows "edited" on its "Replied" label. | | |
 | INB-301 | Answered by you | A row's chosen options draw each label from the server's reading of it, not from a parse in the page. | | |
 | INB-328 | Answered by you | A current answer that cannot be changed says why in place of Change answer. | After next sync | d4b15962736 |
-| INB-384 | Answered by you | An Answers row's question, answer and reply draw stored references as their targets' names. | | |
+| INB-382 | Answered by you | An Answers row's question, answer and reply draw stored references as their targets' names. | | |
 
 ## Keys
 
 The key map below gives each key of the Inbox, with the rows that it serves, and the key conflicts give the choice that the fork takes where two key rules disagree.
-These tables are not parity tables: the parity script reads only the tables whose header starts `Region | Rebuilt` or `ID | Region | Item | Mark | Note`.
+These are not parity tables, so the parity script does not read them (README, "Checks").
 Each command is one catalog command that holds all of its keys, and it is also a palette row with the row in hand as its subject.
 One-key commands act on the marked rows, else on the row in hand.
 
