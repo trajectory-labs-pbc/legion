@@ -6,17 +6,9 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **KB1** `$mod+k` opens the command menu on every page: a modal list about 640 px wide, near the top of the window, with a search field, grouped rows, and each row's key at its right. With a highlighted row, a selection or a record in view, the menu names that subject above the field and lists its commands first. Linear: the command menu, scoped to the selection and grouped by what has focus. Pages: all. Check: (new) the palette tests.
 
-**KB9** In the command menu, Right arrow on a record's row opens that record's actions as the menu's next list. Check: (new) the palette tests, written with the Search rebuild.
-
-**KB10** Backspace in the command menu's empty field goes back one list, and the search typed there before is in the field again. Upstream's palette widens the search's scope on that key instead; the Search rebuild's parity list decides which one holds (SRC-28, SRC-122). Check: (new) the palette tests, written with the Search rebuild.
-
-**KB11** The command menu's search finds values as well as commands: "done" finds "Status > Done", which sets the subject's status. Check: (new) the palette tests, written with the Search rebuild.
-
 **KB2** Every action is one command in the catalog. Each surface that offers it shows its key: the tooltip, the menu row, the palette row. A page never binds a key outside the catalog. Linear: keys in tooltips and context menus. Check: the catalog's load-time checks; reviewer for a key bound outside the catalog.
 
 **KB3** On a list, a peek or a record, one-key commands act on the selection, else the highlighted row, else the record in view: `s` status, `p` priority, `l` labels, `x` select, `$mod+Backspace` archive or delete (with a confirm when it cannot be undone). Upstream's keys stay where it has them: `a` approves on the issue page, and on the board `h` and `l` move between columns, so there labels open from the menu or the palette. Linear: issue keys (Linear's `a` assigns). Pages: project issues, Inbox, agents, priorities, the issue page. Check: (new) a test per key and subject.
-
-**KB12** Picking a property's current value in a picker closes the picker and changes nothing: no write, no toast and no Undo. Pages: every property picker. Check: (new) a test per picker, written with the property pickers.
 
 **KB4** `g` then a letter goes to a page (`NAV_DESTINATIONS`); `o` opens the highlighted row's page (no key sequence starts with `o`); `c` creates the page's main record; `/` focuses search. Linear: `G` chords, `C` create, `/` search. Pages: the shell. Check: the navigation command tests.
 
@@ -28,6 +20,12 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **KB8** A toast's Undo is the only undo. `$mod+z` stays the browser's in a field and has no app command; a global undo is later work. Linear: `$mod+z` undoes almost every write and returns to its page. Check: reviewer.
 
+**KB9** In the command menu, Right arrow on a record's row opens that record's actions as the menu's next list. Linear: the command menu's nested lists. Pages: all. Check: (new) the palette tests.
+
+**KB10** Backspace in the command menu's empty field widens what the menu acts on, from the block or record in view to its project, as upstream's palette does. With words in the field it erases a letter. Linear: Backspace in an empty command menu steps back out of a nested list; this app keeps upstream's key. Pages: all. Check: (new) the palette tests.
+
+**KB11** The command menu's search finds values as well as commands: "done" finds "Status > Done", which sets the subject's status. Linear: the command menu finds a status by its name. Pages: all. Check: (new) the palette tests.
+
 ## Context menus (CX)
 
 **CX1** Right-click on a row, a board card, a link to a record or a record's header opens the record's menu: the same rows, sections and key hints as the record header's `⋯` button. Sections, in order: open, change (the property pickers first, as submenus), create, other, copy (one submenu), destructive. Linear: the issue context menu. Pages: every list, board and record. Check: (new) a test compares the two menus.
@@ -38,9 +36,9 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **CX4** A phone has no context menu. The `⋯` button opens the menu as a bottom sheet titled with the record's name. Check: reviewer on a phone.
 
-**CX5** A menu draws a separator only between two rows: never first, never last, and one where two meet. The separator does this in CSS, so a row a caller leaves out leaves no stray line, and the caller changes nothing. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx`.
+**CX5** A separator is a direct child of the menu's content, between two rows or groups, never at a group's edge. It draws only between two rows: never first, never last, and once where two meet; an empty group is no row. The separator does this in CSS, so a row or a group's rows a caller leaves out leave no stray line. Linear: menu sections divided by one line. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx`.
 
-**CX6** When one row of a menu leads with an icon or a check, every row and group label keeps that room, so the labels line up. The menu does this: a caller never pads a row. A trailing icon, such as a submenu's chevron, carries `data-icon="inline-end"` and keeps no room. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx`.
+**CX6** When one row of a menu leads with an icon, or is a checkbox, every other row and each group label keeps the icon's room, so the labels line up. The menu does this: a caller never pads a row. A leading icon is the row's own first `svg`, with nothing wrapped around it, or a child marked `data-icon="inline-start"` (an avatar, a dot, an image, a wrapped icon). A trailing icon, such as a submenu's chevron, carries `data-icon="inline-end"`. Linear: menu labels line up whether a row has an icon or not. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx` for the rows that keep the room; `packages/tl-dispatch/e2e/menus.e2e.ts` in Chromium for which rows lead; reviewer for a trailing icon without `data-icon="inline-end"`.
 
 ## The pointer (PT)
 

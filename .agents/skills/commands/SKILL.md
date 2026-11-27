@@ -18,7 +18,6 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 7. Do not bind a key the browser keeps. The catalog refuses each key in `BROWSER_KEYS` (`src/commands/keys.ts`).
 8. An action with no safe key has no key. It is a palette command: `keys` empty or absent.
 9. A label follows TY8 in `.agents/skills/ui-design-system/references/surfaces-and-type.md`. The same label shows on every surface.
-10. A menu with no enabled rows hides its trigger: each row reads its command's gate (rule 3), and a trigger never opens an empty or all-disabled menu. (new): the check comes with the command-menu rows a later phase builds.
 
 ## The catalog
 
