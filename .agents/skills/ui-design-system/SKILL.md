@@ -42,7 +42,7 @@ The components live in `packages/ui` (`@legion/ui`): shadcn components on Base U
 
 ## Checks
 
-- `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, a control height outside the scale, type a class sets (a raw size, weight, leading, tracking, uppercase or lowercase), and a `text-wrap*` property or font smoothing in a class or a stylesheet (set the wrap mode with `whitespace-*` or `truncate`).
+- `bun run test` in `packages/tl-dispatch`: the design-rule tests refuse a raw colour, a colour outside the tokens, focus drawn in another colour, text at lower opacity, a radius outside the theme, a round element that is not a dot or an avatar, motion outside `motion-safe:`, a scale, a pointer cursor, a control height outside the scale, type a class sets (a raw size, weight, leading, tracking, uppercase or lowercase), and a `text-wrap*` property or font smoothing in a class, a style or a stylesheet (set the wrap mode with `whitespace-*` or `truncate`).
 - `bun run test` in `packages/ui`: `packages/ui/src/styles/styles.test.ts`, whose checks `packages/ui/README.md` lists. Run it after a token change.
 - A reviewer checks each rule in the references that no test holds. Each rule there says how it is checked.
 - A change to a visible surface comes with a light and a dark screenshot of each page it changes.

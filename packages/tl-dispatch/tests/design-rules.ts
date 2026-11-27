@@ -44,7 +44,7 @@ export const RULES = {
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
   type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking, uppercase or lowercase class",
-  wrap: "the recipes set the wrap and the root the smoothing: no `text-wrap*` property or font smoothing in a class or a stylesheet; set the wrap mode with `whitespace-*` or `truncate`",
+  wrap: "the recipes set the wrap and the root the smoothing: no `text-wrap*` property or font smoothing in a class, a style or a stylesheet; set the wrap mode with `whitespace-*` or `truncate`",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -389,7 +389,6 @@ function styleKeyKind(key: string): string | undefined {
   if (/^(animation|transition)/i.test(camel)) return "motion";
   if (camel === "scale") return "a scale";
   if (camel === "cursor") return "a cursor";
-  if (/^textWrap|fontSmooth/i.test(camel)) return "a wrap or font smoothing";
   return undefined;
 }
 
@@ -487,8 +486,10 @@ function scriptViolations(
   }));
   const refuse = refuserOf(file, source, violations);
   const styleKey = (node: ts.Node, key: string) => {
+    const property = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
     const what = styleKeyKind(key);
-    if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
+    if (WRAP_OR_SMOOTHING.test(property)) refuse(node, key, RULES.wrap);
+    else if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
   };
 
   const visit = (node: ts.Node) => {

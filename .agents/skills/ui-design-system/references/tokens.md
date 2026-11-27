@@ -9,7 +9,7 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 - Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
 - Geist for text (`font-sans`), Geist Mono for code values (`font-mono`).
 - Text is antialiased once, on the root (`html` in the base layer of `packages/ui/src/styles/theme.css`). This also draws upstream's pages in the shell that way. No element sets its own smoothing.
-- The type recipes set the wrap with `wrap-balance` (a heading) and `wrap-pretty` (body text), which set only `text-wrap-style`, so a `truncate` beside them still holds. A page sets no `text-wrap*` property and no font smoothing, in a class or a stylesheet (the design-rule tests refuse each), and sets the wrap mode with `whitespace-*` or `truncate`.
+- The type recipes set the wrap with `wrap-balance` (a heading) and `wrap-pretty` (body text), which set only `text-wrap-style`, so a `truncate` beside them still holds. A page sets no `text-wrap*` property and no font smoothing, in a class, a style or a stylesheet (the design-rule tests refuse each), and sets the wrap mode with `whitespace-*` or `truncate`.
 - Focus is a 2 px outline, offset 2 px, in `--focus` (`outline-focus`). Nothing else draws focus.
 - Dark follows the operating system.
 
