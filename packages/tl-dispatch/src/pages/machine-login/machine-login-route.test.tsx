@@ -2,6 +2,7 @@ import { expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ApiError } from "@upstream-dispatch/api/client";
 
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginRoute } from "./machine-login-route";
@@ -106,6 +107,23 @@ test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the 
     again.resolve({ machine_code_page: true });
     expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
     expect(capabilities).toHaveBeenCalledTimes(2);
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+test("MLR-06 a capabilities read the server refuses says so with no Retry, as trying again cannot change it", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(
+    new ApiError(403, { code: "FORBIDDEN", error: "no" })
+  );
+  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  try {
+    renderRoute();
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("You cannot see the machine login page.");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
   } finally {
     cleanup();
     capabilities.mockRestore();

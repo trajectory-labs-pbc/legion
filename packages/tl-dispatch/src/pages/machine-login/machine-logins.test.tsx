@@ -8,6 +8,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
+import { ApiError } from "@upstream-dispatch/api/client";
 import type { ApproverGrantResp } from "@upstream-dispatch/api/types";
 import { GrantsSection } from "@upstream-dispatch/features/credentials/GrantsSection";
 import { confirmRevoke } from "../../../tests/machine-logins";
@@ -547,6 +548,22 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
       Reflect.deleteProperty(proto, "scrollWidth");
       Reflect.deleteProperty(proto, "clientWidth");
     }
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLS-11 a machine logins read the server cannot find says so with no Retry", async () => {
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
+    new ApiError(404, { code: "NOT_FOUND", error: "gone" })
+  );
+  try {
+    renderPage();
+    const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+    const alert = await section.findByRole("alert");
+    expect(alert.textContent).toBe("Could not find machine logins.");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+  } finally {
+    cleanup();
     getMachineLogins.mockRestore();
   }
 });
