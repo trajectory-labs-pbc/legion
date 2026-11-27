@@ -361,27 +361,9 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
 
 // ---- Scripts: style props and objects, inline stylesheets, control heights, upstream's theme ----
 
-const STYLE_COLOUR_KEYS = new Set([
-  "background",
-  "background-image",
-  "fill",
-  "stroke",
-  "outline",
-  "border",
-  "border-top",
-  "border-right",
-  "border-bottom",
-  "border-left",
-  "border-block",
-  "border-inline",
-  "box-shadow",
-  "text-shadow",
-  "filter",
-]);
-
 /** What a CSS property sets that the style rule governs, or undefined. */
 function styleKind(property: string): string | undefined {
-  if (/colou?r$/.test(property) || STYLE_COLOUR_KEYS.has(property)) return "a colour";
+  if (COLOUR_PROPERTY.test(property)) return "a colour";
   if (/radius$/.test(property)) return "a radius";
   if (/^(min-|max-)?(height|block-size)$/.test(property)) return "a height";
   if (/^(animation|transition)/.test(property)) return "motion";
@@ -390,17 +372,13 @@ function styleKind(property: string): string | undefined {
   return undefined;
 }
 
-/** The rule a style key breaks, or undefined. */
-function styleKeyRule(key: string): string | undefined {
-  if (key.startsWith("--")) {
+/** The rule a style breaks that sets this CSS property, or undefined. */
+function styleRule(property: string): string | undefined {
+  if (property.startsWith("--")) {
     return `a custom property, which can override a theme token ${RULES.style}`;
   }
-  // The CSS property: a dashed key is one already, which `setProperty` reads in any case.
-  const property = key.includes("-")
-    ? key.toLowerCase()
-    : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
   if (WRAP_OR_SMOOTHING.test(property)) return RULES.wrap;
-  const what = styleKind(property);
+  const what = styleKind(property.replace(/^-?(webkit|moz|ms)-/, ""));
   return what === undefined ? undefined : `${what} ${RULES.style}`;
 }
 
@@ -497,8 +475,14 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  const styleKey = (node: ts.Node, key: string) => {
-    const rule = styleKeyRule(key);
+  // React and the DOM read a camelCase key, or a dashed one as written; `setProperty` lower-cases
+  // any name but a custom property's.
+  const styleKey = (
+    node: ts.Node,
+    key: string,
+    property = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+  ) => {
+    const rule = styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
   };
 
@@ -558,8 +542,9 @@ function scriptViolations(
       /\.style$/.test(node.expression.expression.getText())
     ) {
       const key = node.arguments[0];
-      if (key !== undefined && ts.isStringLiteralLike(key)) styleKey(node, key.text);
-      else refuse(node, node.getText(), RULES.styleProp);
+      if (key !== undefined && ts.isStringLiteralLike(key)) {
+        styleKey(node, key.text, key.text.toLowerCase());
+      } else refuse(node, node.getText(), RULES.styleProp);
     }
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText();
