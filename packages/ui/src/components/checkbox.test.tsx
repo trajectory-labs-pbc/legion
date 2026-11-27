@@ -35,19 +35,13 @@ describe("Checkbox", () => {
   });
 
   // happy-dom lays nothing out, so the classes stand for the target: a 24 px square on the
-  // centre, which the 1 px border does not shrink.
+  // centre, which the 1 px border does not shrink. Base UI renders a span with no display of its
+  // own: inline, it would draw 2 px wide, so the box is an inline flex with its mark centred.
   it("takes the pointer across a 24 px square around its 16 px box", () => {
     render(<Checkbox aria-label="Done" />);
     const box = screen.getByRole("checkbox", { name: "Done" });
-    expect(box.className.split(" ")).toEqual(expect.arrayContaining(BAND));
-  });
-
-  // Base UI renders a span with no display of its own: inline, it would draw 2 px wide.
-  it("draws a 16 px box with its mark centred", () => {
-    render(<Checkbox aria-label="Done" />);
-    const box = screen.getByRole("checkbox", { name: "Done" });
     expect(box.className.split(" ")).toEqual(
-      expect.arrayContaining(["inline-flex", "size-4", "items-center", "justify-center"])
+      expect.arrayContaining([...BAND, "inline-flex", "size-4", "items-center", "justify-center"])
     );
   });
 });

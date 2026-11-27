@@ -435,23 +435,36 @@ const SMALL_CONTROLS = [
   '[data-slot="slider-thumb"]',
   'button[data-slot="truncated-text"]',
 ].join(", ");
-/** Controls that never hold another control: one inside them still meets them. */
-const NOT_HOLDERS = [
+/** Every control a pointer can use: a native control, a control role, or an element Tab reaches.
+ *  A `tabindex="-1"` element with no control role (the main region, a popup) is a focus target,
+ *  not a control; a roving item at `tabindex="-1"` counts by its role. */
+const CONTROLS = [
+  "a[href]",
   "button",
   "input",
   "select",
   "textarea",
+  "summary",
+  "[role=button]",
+  "[role=link]",
   "[role=checkbox]",
   "[role=radio]",
+  "[role=switch]",
   "[role=slider]",
+  "[role=combobox]",
   "[role=menuitem]",
+  "[role=menuitemcheckbox]",
+  "[role=menuitemradio]",
   "[role=option]",
   "[role=tab]",
+  "[role=treeitem]",
+  '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
-/** Every control a pointer can use. A link, a tree row or a focusable region may hold a small
- *  control (a row link, a scroll section); next to one, it is a control like any other. Roving
- *  items (a menu item, an option) are controls at `tabindex="-1"` too. */
-const CONTROLS = `${NOT_HOLDERS}, a[href], [role=treeitem], [tabindex]`;
+/** What may hold a small control without meeting it: a link (a row link), a tree row, or a
+ *  focusable element with no control tag and no role (a region that scrolls). Any other control
+ *  that holds one meets it. */
+const HOLDERS =
+  "a[href], [role=treeitem], [tabindex]:not(button, input, select, textarea, summary, [role])";
 
 /** A live machine login whose machine name is too long for its cell, so the row cuts it. */
 function cutLogin(credentialId: string): FakeLauncherCredential {
@@ -482,18 +495,19 @@ async function cutRows(page: Page): Promise<Locator> {
 
 /** What breaks PT2 at `control`. `misses`: each probe of its centre square that the pointer does
  *  not reach it at. `meets`: each other control whose target meets its target. Left out: what the
- *  control holds, a holder that is not a control (NOT_HOLDERS), an element not drawn, Base UI's
- *  hidden input beside a checkbox or radio (`aria-hidden`, `tabindex="-1"`), and the other thumbs
- *  of the same slider. */
+ *  control holds, a holder in HOLDERS, an element not drawn (1 px or less on a side, or not
+ *  visible), Base UI's hidden input beside a checkbox or radio (`aria-hidden`, `tabindex="-1"`)
+ *  and its focus guards, and the other thumbs of the same slider. */
 async function targetFaults(control: Locator): Promise<{ misses: string[]; meets: string[] }> {
   await control.scrollIntoViewIfNeeded();
   return control.evaluate(
-    (element, { controls, notHolders, small }) => {
+    (element, { controls, holders, small }) => {
       // A small control's target is its 24 px square, or for cut text a 24 px band as wide as the
-      // text; any other control's target, and a control not laid out, is its box.
+      // text; any other control's target, and a control not drawn, is its box.
+      const drawn = (box: DOMRect) => box.width > 1 && box.height > 1;
       const targetOf = (at: Element) => {
         const box = at.getBoundingClientRect();
-        if (!at.matches(small) || box.width === 0 || box.height === 0) return box;
+        if (!at.matches(small) || !drawn(box)) return box;
         const width = at.matches('[data-slot="truncated-text"]')
           ? box.width
           : Math.max(box.width, 24);
@@ -524,15 +538,16 @@ async function targetFaults(control: Locator): Promise<{ misses: string[]; meets
       const slider = element.closest('[data-slot="slider"]');
       const meets = [...document.querySelectorAll(`${controls}, ${small}`)].flatMap((other) => {
         if (element.contains(other)) return [];
-        if (other.contains(element) && !other.matches(notHolders)) return [];
-        if (other.matches('input[aria-hidden="true"][tabindex="-1"]')) return [];
+        if (other.contains(element) && other.matches(holders)) return [];
+        if (other.matches('input[aria-hidden="true"][tabindex="-1"], [data-base-ui-focus-guard]')) {
+          return [];
+        }
         if (getComputedStyle(other).visibility !== "visible") return [];
         const thumb = other.closest('[data-slot="slider-thumb"]');
         if (slider !== null && thumb !== null && slider.contains(thumb)) return [];
         const at = targetOf(other);
         const meet =
-          at.width > 0 &&
-          at.height > 0 &&
+          drawn(at) &&
           at.left < target.right &&
           at.right > target.left &&
           at.top < target.bottom &&
@@ -541,7 +556,7 @@ async function targetFaults(control: Locator): Promise<{ misses: string[]; meets
       });
       return { misses, meets };
     },
-    { controls: CONTROLS, notHolders: NOT_HOLDERS, small: SMALL_CONTROLS }
+    { controls: CONTROLS, holders: HOLDERS, small: SMALL_CONTROLS }
   );
 }
 
@@ -554,15 +569,6 @@ test("each small control takes the pointer across its 24 px square, and its targ
       meets: [],
     });
   }
-});
-
-// The check's own failures: a cut text button with no band is one line of text tall; a control
-// whose box sits in the target meets it even where the pointer passes through it; and a small
-// control whose box stays clear of the band meets it by its own 24 px square.
-test("a small control with no band misses the pointer at its square's edges", async ({ page }) => {
-  const control = (await cutRows(page)).first();
-  await page.addStyleTag({ content: '[data-slot="truncated-text"]::after { display: none; }' });
-  expect((await targetFaults(control)).misses.length).toBeGreaterThan(0);
 });
 
 /** Draws `html` fixed at `dy` px below the middle of `control`, at its centre line. */
@@ -580,10 +586,27 @@ async function drawBelow(control: Locator, dy: number, html: string): Promise<vo
   );
 }
 
-test("a control whose box sits in a small control's target meets it", async ({ page }) => {
+// The check's own failures: a cut text button with no band is one line of text tall; a control
+// whose box sits in the target meets it even where the pointer passes through it, and even
+// hidden from assistive tech; and a small control whose box stays clear of the band meets it by
+// its own 24 px square.
+test("a small control with no band misses the pointer at its square's edges", async ({ page }) => {
   const control = (await cutRows(page)).first();
-  await drawBelow(control, -11, '<button style="width: 2px; height: 2px; padding: 0"></button>');
-  expect(await targetFaults(control)).toEqual({ misses: [], meets: [expect.any(String)] });
+  await page.addStyleTag({ content: '[data-slot="truncated-text"]::after { display: none; }' });
+  expect((await targetFaults(control)).misses.length).toBeGreaterThan(0);
+});
+
+test("a control whose box sits in a small control's target meets it, unless it is not visible", async ({
+  page,
+}) => {
+  const control = (await cutRows(page)).first();
+  const tiny = "display: block; width: 2px; height: 2px; padding: 0";
+  await drawBelow(control, -11, `<button aria-hidden="true" style="${tiny}"></button>`);
+  await drawBelow(control, -7, `<button style="${tiny}; visibility: hidden"></button>`);
+  expect(await targetFaults(control)).toEqual({
+    misses: [],
+    meets: [expect.stringMatching(/^<button aria-hidden="true"/)],
+  });
 });
 
 test("a small control whose square meets a small control's band meets it", async ({ page }) => {
@@ -598,20 +621,24 @@ test("a small control whose square meets a small control's band meets it", async
   expect(await targetFaults(control)).toEqual({ misses: [], meets: [expect.any(String)] });
 });
 
-// Who holds a small control: a focusable region or a tree row holds it, and a button that holds
-// one meets it.
-test("a region or a tree row holds a small control, and a button that holds one meets it", async ({
+test("a region or a tree row holds a small control, and a control that holds one meets it", async ({
   page,
 }) => {
-  const box = '<span data-slot="checkbox" role="checkbox" aria-checked="false"></span>';
+  const checkbox = '<span data-slot="checkbox" role="checkbox" aria-checked="false"></span>';
   await page.setContent(`
     <style>[data-slot="checkbox"] { display: block; width: 16px; height: 16px; margin: 20px; }</style>
-    <section aria-label="Scroll" tabindex="0" style="overflow: auto">${box}</section>
-    <div role="treeitem" aria-selected="false" tabindex="0">${box}</div>
-    <button type="button" style="display: block; padding: 0">${box}</button>
+    <section aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
+    <div role="treeitem" aria-selected="false" tabindex="0">${checkbox}</div>
+    <button type="button" style="display: block; padding: 0">${checkbox}</button>
+    <div role="button" tabindex="0">${checkbox}</div>
   `);
-  const holders = page.locator('[data-slot="checkbox"]');
-  const meets: number[] = [];
-  for (const control of await holders.all()) meets.push((await targetFaults(control)).meets.length);
-  expect(meets).toEqual([0, 0, 1]);
+  const controls = page.locator('[data-slot="checkbox"]');
+  const meets: string[][] = [];
+  for (const control of await controls.all()) meets.push((await targetFaults(control)).meets);
+  expect(meets).toEqual([
+    [],
+    [],
+    [expect.stringMatching(/^<button/)],
+    [expect.stringMatching(/^<div role="button"/)],
+  ]);
 });
