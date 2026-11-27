@@ -45,6 +45,9 @@ export const OWN_ELEMENTS: Readonly<Record<string, { own: string; upstream: stri
     own: '<Redirect page={home}search={{type:"reply"}}/>',
     upstream: '<Navigate replace to={buildInboxPath({filters:{type:["reply"]}})}/>',
   },
+  // The reading aids' hosts: upstream's page inside the element that holds the aids.
+  "/issues/:key/*": { own: "<AidedIssuePage/>", upstream: "<IssuePage/>" },
+  "/projects/:key/documents/:slug": { own: "<AidedDocumentPage/>", upstream: "<DocumentPage/>" },
 };
 
 /** A path from the root: upstream writes its last route `*`, and navigation's grammar `/*`. */

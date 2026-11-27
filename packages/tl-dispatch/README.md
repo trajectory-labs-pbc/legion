@@ -13,7 +13,7 @@ replaces them one page at a time.
 | `src/writes` | What a surface says of a failed write, and the alert that says it | upstream's write modules, and the UI package |
 | `src/shell` | The frame every page renders in | anything that does not reach upstream's `app.tsx` or `main.tsx` |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name | the same as `src/shell` |
-| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry | the same as `src/shell`; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
+| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, `read-failure`, a failed read's alert with its Retry, and `reading-aids`, the aids a host page draws above each document (`tests/reading-aids-source.test.ts` holds their own rules) | the same as `src/shell`; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
 `tests/layering.test.ts` holds the router rules of `src/navigation` and the rules of
 `src/commands`; what `src/loading` imports is a convention. The test resolves every import as the build does (the tsconfig paths and the `@upstream-dispatch` alias), follows them through upstream's code, and

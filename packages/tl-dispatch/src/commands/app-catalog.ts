@@ -1,10 +1,16 @@
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CheckCheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   EyeIcon,
   FileTextIcon,
   FolderIcon,
+  FoldVerticalIcon,
   KeyboardIcon,
   KeyRoundIcon,
+  ListFilterIcon,
   LogOutIcon,
   PanelLeftIcon,
   PanelRightIcon,
@@ -20,7 +26,8 @@ import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
  * Every command of the app, declared once. The global context holds every key upstream's shell
  * binds, and the frame's own: `[` for the sidebar and a `G` chord for each page upstream gives
  * none. The keys run as upstream's do, except that an open overlay of this app stops them unless
- * it lets them through. Page contexts join as their pages are rebuilt.
+ * it lets them through. Page contexts join as their pages are rebuilt. The reading aids' keys are
+ * in upstream's `document` scope, which a document's own page pushes.
  */
 export const APP_CONTEXTS = [
   {
@@ -99,6 +106,55 @@ export const APP_CONTEXTS = [
         group: COMMAND_GROUPS.layout,
       },
       { name: "sign-out", label: "Sign out", icon: LogOutIcon },
+    ],
+  },
+  {
+    name: "reading-aids",
+    parent: "global",
+    scope: "document",
+    commands: [
+      {
+        name: "next-decision",
+        label: "Next decision",
+        keys: ["d"],
+        icon: ChevronDownIcon,
+        group: COMMAND_GROUPS.document,
+      },
+      {
+        name: "previous-decision",
+        label: "Previous decision",
+        keys: ["Shift+D"],
+        icon: ChevronUpIcon,
+        group: COMMAND_GROUPS.document,
+      },
+      {
+        name: "toggle-only-changes",
+        label: "Toggle only changes",
+        keys: ["u"],
+        icon: ListFilterIcon,
+        group: COMMAND_GROUPS.document,
+      },
+      {
+        name: "next-heading",
+        label: "Next heading",
+        keys: ["j"],
+        icon: ArrowDownIcon,
+        group: COMMAND_GROUPS.document,
+      },
+      {
+        name: "previous-heading",
+        label: "Previous heading",
+        keys: ["k"],
+        icon: ArrowUpIcon,
+        group: COMMAND_GROUPS.document,
+      },
+      {
+        name: "toggle-folds",
+        label: "Fold or open blocks",
+        keys: ["z"],
+        icon: FoldVerticalIcon,
+        group: COMMAND_GROUPS.document,
+      },
     ],
   },
 ] as const satisfies readonly CommandContext[];

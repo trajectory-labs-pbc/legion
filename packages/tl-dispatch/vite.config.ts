@@ -11,6 +11,7 @@ import {
   viteBundleInputs,
   viteRuntimeGeneratedCode,
 } from "../../scripts/third-party-notices";
+import { aidsChunks } from "./scripts/aids-chunks";
 import { oneCopyEach } from "./scripts/one-copy-each";
 
 const at = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -81,6 +82,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    aidsChunks(at("./src/features/reading-aids/")),
     notices.page,
     oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`),
   ],
@@ -99,6 +101,7 @@ export default defineConfig({
       "@tanstack/react-query",
       "yjs",
       "prosemirror-model",
+      "@milkdown/kit",
       ...uiPackages,
     ],
     alias: {

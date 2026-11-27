@@ -5,6 +5,7 @@ export const COMMAND_GROUPS = {
   general: { id: "general", label: "General" },
   navigation: { id: "navigation", label: "Navigation" },
   layout: { id: "layout", label: "Layout" },
+  document: { id: "document", label: "Document" },
   help: { id: "help", label: "Help" },
 } as const satisfies Record<string, CommandGroup>;
 

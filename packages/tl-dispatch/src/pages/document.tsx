@@ -5,9 +5,9 @@ import { pageRoute } from "@/navigation/page-route";
 
 import type { Page, PageLayout } from "./page";
 
-const DocumentPage = lazyNamed(
-  () => import("@upstream-dispatch/features/document/DocumentPage"),
-  "DocumentPage"
+const AidedDocumentPage = lazyNamed(
+  () => import("@/features/reading-aids/document-host"),
+  "AidedDocumentPage"
 );
 
 export const projectDocument = {
@@ -16,7 +16,7 @@ export const projectDocument = {
   routes: {
     document: pageRoute({
       path: "/projects/:key/documents/:slug",
-      element: <DocumentPage />,
+      element: <AidedDocumentPage />,
       layout: ({ pathname, search }): PageLayout => ({
         margin: routeHasMargin(pathname, search),
         project: routeProjectOf(pathname),

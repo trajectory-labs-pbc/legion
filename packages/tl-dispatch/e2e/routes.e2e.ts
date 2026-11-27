@@ -21,6 +21,7 @@ import {
 import { seedFakeGithub } from "../../dispatch/e2e/fake-github-helpers";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
 import { forkRoutes } from "../tests/map/links";
+import { readAsPerson, signedInLogin } from "./read-as-person";
 import { type Mark, routeMarks, type Seeded } from "./route-marks";
 import { deployed, expect, type Page, runName, test } from "./test";
 
@@ -35,17 +36,6 @@ const NOT_FOUND_LOAD = "Failed to load resource: the server responded with a sta
 
 /** Undoes one record a seed made. */
 type Cleanup = () => Promise<unknown>;
-
-/** A read as the signed-in person, through this worker's fetch, which the deployed mode guards
- *  (test.ts). */
-async function readAsPerson<T>(page: Page, path: string): Promise<T> {
-  const cookies = await page.context().cookies(baseUrl);
-  const Cookie = cookies.map(({ name, value }) => `${name}=${value}`).join("; ");
-  const response = await fetch(new URL(path, baseUrl), { headers: { Cookie } });
-  if (!response.ok)
-    throw new Error(`${path} answered ${response.status}: ${await response.text()}`);
-  return (await response.json()) as T;
-}
 
 /** A file in a session's conversation; the API's helpers have no upload as an agent. */
 async function uploadSessionFile(session: string, name: string): Promise<string> {
@@ -68,7 +58,7 @@ async function uploadSessionFile(session: string, name: string): Promise<string>
 /** The records the routes open, each named after the run. Each record a run must undo is
  *  undone by a cleanup `seed` adds as soon as the record exists. */
 async function seed(page: Page, cleanups: Cleanup[]): Promise<Seeded> {
-  const { login } = await readAsPerson<{ login: string }>(page, "/auth/whoami");
+  const login = await signedInLogin(page);
   const { machine_code_page: machineLogin } = await readAsPerson<{ machine_code_page: boolean }>(
     page,
     "/api/v1/credentials/capabilities"
