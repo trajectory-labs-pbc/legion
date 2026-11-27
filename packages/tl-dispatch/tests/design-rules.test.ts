@@ -82,14 +82,20 @@ const REFUSED: readonly [string, string, string][] = [
     "declared in the theme alone",
   ],
   ["css", "@theme inline { --opacity-disabled: 1; }", "declared in the theme alone"],
-  ["css", "@theme inline { --z-index-overlay: 9999; }", "declared in the theme alone"],
-  ["css", "@theme { --transition-duration-popup: 2s; }", "declared in the theme alone"],
   ["css", "@theme inline { --z-index-top: 9999; }", "declared in the theme alone"],
   ["css", "@theme inline { --transition-duration-slow: 2s; }", "declared in the theme alone"],
   ["css", "@theme { --z-index-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --opacity-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --z-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --*: initial; }", "declared in the theme alone"],
   [
     "css",
-    "@property --z-index-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
+    "@property --\\6c ayer-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
+    "declared in the theme alone",
+  ],
+  [
+    "css",
+    "@PROPERTY --layer-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
     "declared in the theme alone",
   ],
   [
@@ -202,6 +208,7 @@ const ALLOWED: readonly [string, string][] = [
     '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',
   ],
   ["css", ".x { z-index: var(--layer-overlay); }"],
+  ["css", "@theme { --color-brand-*: initial; }"],
   [
     "css",
     "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-modal); } }",
@@ -376,8 +383,8 @@ describe("design rules", () => {
 
   test("takes corners, layers and fades from the theme alone: one the app declares is none", () => {
     const tokens = themeTokens(
-      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); --layer-top: 10; --duration-quick: 150ms; } @theme inline { --z-index-top: var(--layer-top); --color-x: var(--brand); }",
-      ":root { --radius-card: 3px; --brand: var(--primary); --layer-app: 20; --duration-app: 1s; } @theme inline { --z-index-app: var(--layer-top); }"
+      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); --layer-top: 10; --duration-quick: 150ms; }",
+      ":root { --radius-card: 3px; --brand: var(--primary); --layer-app: 20; --duration-app: 1s; }"
     );
     expect([...tokens.radii]).toEqual(["--radius", "--radius-sm"]);
     expect([...tokens.radiusValues]).toEqual(["var(--radius)", "calc(var(--radius) * 0.5)"]);

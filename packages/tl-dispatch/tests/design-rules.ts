@@ -1,19 +1,17 @@
 import { readFileSync } from "node:fs";
-import { extname, join, resolve, sep } from "node:path";
+import { extname, join, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
-import postcss, { AtRule } from "postcss";
 import ts from "typescript";
 
 import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale";
-import { type CssDeclaration, importedPath, parseCss, unescapeCss } from "./css";
+import { type CssDeclaration, parseCss, unescapeCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
 import {
   APP_STYLESHEET,
   PACKAGE_ROOT,
   type SourceFile,
-  SRC_DIR,
   UI_STYLESHEET,
   UPSTREAM_WEB,
 } from "./source";
@@ -42,7 +40,7 @@ export const RULES = {
   duration:
     "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
   themeOnly:
-    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
+    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`), and no reset (`--z-*: initial`) clears one",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -161,9 +159,28 @@ const typeSet = (property: string, value: string) =>
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
 /** What a `transition-*` class compiles its length to: the `duration-*` class's, or the default. */
 const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
-/** The variables the theme alone declares, and the theme keys the classes resolve through. */
-const THEME_ONLY =
-  /^--(layer|duration|z-index|transition-duration)-|^--(disabled-opacity|default-transition-duration|opacity-disabled|opacity-\*)$/;
+/** The variables the theme alone declares, and the theme keys their classes resolve through: a
+ *  name ending in `-` is a namespace, any other one name. */
+const THEME_ONLY = [
+  "--layer-",
+  "--duration-",
+  "--z-index-",
+  "--transition-duration-",
+  "--disabled-opacity",
+  "--default-transition-duration",
+  "--opacity-disabled",
+];
+/** Whether `name` is the theme's alone, or is a reset (`--z-*: initial`) that clears one: Tailwind
+ *  clears every key that starts with the reset's stem, and `--*` clears them all. */
+function themeOnly(name: string): boolean {
+  if (name.endsWith("-*") || name === "--*") {
+    const stem = name.slice(0, name === "--*" ? -1 : -2);
+    return THEME_ONLY.some(
+      (key) => key.startsWith(stem) || (key.endsWith("-") && stem.startsWith(key))
+    );
+  }
+  return THEME_ONLY.some((key) => (key.endsWith("-") ? name.startsWith(key) : name === key));
+}
 /** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
 const namesOne = (value: string, names: ReadonlySet<string>) =>
   names.has(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "");
@@ -216,10 +233,14 @@ export function declarationProblems(
   const value = declaration.value.replace(/\s*!important$/, "");
   // `@property` gives a variable its initial value, so a theme token's is the theme's alone, and
   // a skipped block declares one no more freely than any other.
-  const themeOnly =
-    THEME_ONLY.test(property) ||
-    context.some((prelude) => THEME_ONLY.test(/^@property\s+(\S+)/.exec(prelude)?.[1] ?? ""));
-  if (context.some((prelude) => SKIPPED.test(prelude))) return themeOnly ? [RULES.themeOnly] : [];
+  const declaresThemeOnly =
+    themeOnly(property) ||
+    context.some((prelude) =>
+      themeOnly(unescapeCss(/^@property\s+(.+)$/.exec(prelude)?.[1] ?? "").toLowerCase())
+    );
+  if (context.some((prelude) => SKIPPED.test(prelude))) {
+    return declaresThemeOnly ? [RULES.themeOnly] : [];
+  }
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
   if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
@@ -262,38 +283,22 @@ export function declarationProblems(
   ) {
     problems.push(RULES.duration);
   }
-  if (themeOnly) problems.push(RULES.themeOnly);
+  if (declaresThemeOnly) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
 
 /**
- * What the app's entry stylesheet loads, as references: Tailwind, upstream's theme and plugins,
- * and ours, so a class compiles here exactly as in the build, with nothing else emitted.
+ * The app's entry stylesheet, as a reference: Tailwind, upstream's theme and plugins, and ours,
+ * with the entry's own theme, utilities and variants, so a class compiles here to the value it has
+ * in the build, with nothing else emitted. A reference emits no theme variables, so a plain
+ * `@theme` key's `var()` carries its value as a fallback.
  */
-function compilerInput(): string {
-  const entry = readFileSync(APP_STYLESHEET, "utf8");
-  const imports = parseCss(entry)
-    .statements.filter((statement) => statement.name === "import")
-    .map((statement) => resolve(SRC_DIR, importedPath(statement.prelude) ?? ""));
-  // The entry's own theme blocks, so a class built on one of its keys compiles here too.
-  const themes = postcss
-    .parse(entry)
-    .nodes.flatMap((node) =>
-      node instanceof AtRule && node.name === "theme"
-        ? [String(node.clone({ params: `${node.params} reference`.trim() }))]
-        : []
-    );
-  return [
-    ...imports.map((path) => `@import ${JSON.stringify(path)} reference;`),
-    ...themes,
-    "@tailwind utilities;",
-  ].join("\n");
-}
+const COMPILER_INPUT = `@import ${JSON.stringify(APP_STYLESHEET)} reference;\n@tailwind utilities;`;
 
 /** The declarations `classes` compile to, with Tailwind and the app's theme, as the build does. */
 export async function compiledDeclarations(classes: readonly string[]): Promise<CssDeclaration[]> {
-  const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
+  const compiler = await compile(COMPILER_INPUT, { base: PACKAGE_ROOT, onDependency: () => {} });
   return parseCss(compiler.build([...classes])).declarations;
 }
 

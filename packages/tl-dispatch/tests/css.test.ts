@@ -27,6 +27,11 @@ describe("css reader", () => {
     ]);
   });
 
+  test("reads an escape that names no character as U+FFFD", () => {
+    const { declarations } = parseCss(":root { --\\110000 x: 1; --\\0 y: 2; --\\d800 z: 3; }");
+    expect(declarations.map((d) => d.property)).toEqual(["--\ufffdx", "--\ufffdy", "--\ufffdz"]);
+  });
+
   test("reads an at-rule without a block as a statement, with its line", () => {
     const { statements } = parseCss('.a { color: red; }\n@import url("./b.css");\n@apply x;');
     expect(statements).toEqual([

@@ -28,19 +28,22 @@ function contextOf(node: Node): string[] {
       at instanceof Rule
         ? at.selector
         : at instanceof AtRule
-          ? `@${at.name} ${at.params}`.trim()
+          ? `@${at.name.toLowerCase()} ${at.params}`.trim()
           : undefined;
     if (prelude !== undefined) context.unshift(prelude.replace(/\s+/g, " "));
   }
   return context;
 }
 
-/** A CSS identifier with its escapes read: `\6c ayer` gives `layer`. */
+/** A CSS identifier with its escapes read: `\6c ayer` gives `layer`. An escape that names no
+ *  character (0, a surrogate, past U+10FFFF) gives U+FFFD, as CSS reads it. */
 export function unescapeCss(name: string): string {
   return name
-    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16))
-    )
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) => {
+      const code = Number.parseInt(hex, 16);
+      const none = code === 0 || (code >= 0xd800 && code <= 0xdfff) || code > 0x10ffff;
+      return String.fromCodePoint(none ? 0xfffd : code);
+    })
     .replace(/\\(.)/g, "$1");
 }
 
