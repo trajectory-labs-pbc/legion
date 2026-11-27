@@ -1,0 +1,70 @@
+import { cn } from "cn";
+import type { ComponentProps } from "react";
+
+/** 0: no level, as three dashes; 1 to 3: that many of three bars; 4: the top level, as a filled
+ *  square with an exclamation mark. */
+type BarsLevel = 0 | 1 | 2 | 3 | 4;
+
+const BARS = [
+  { x: 2, y: 9, height: 5 },
+  { x: 6.5, y: 6, height: 8 },
+  { x: 11, y: 3, height: 11 },
+] as const;
+
+// A square with an exclamation mark cut out of it.
+const TOP_LEVEL =
+  "M4 1h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3ZM7.25 4v5h1.5V4ZM7.25 10.5V12h1.5v-1.5Z";
+
+/** A level as bars: monochrome, its filled part in the foreground and the rest muted. The caller
+ *  gives the name a reader hears. */
+function BarsGlyph({
+  className,
+  level,
+  label,
+  ...props
+}: Omit<ComponentProps<"svg">, "aria-label" | "children" | "role"> & {
+  level: BarsLevel;
+  label: string;
+}) {
+  return (
+    <svg
+      aria-label={label}
+      data-level={level}
+      data-slot="bars-glyph"
+      role="img"
+      viewBox="0 0 16 16"
+      className={cn("size-3.5 shrink-0", className)}
+      {...props}
+    >
+      {level === 4 ? (
+        <path className="fill-foreground" d={TOP_LEVEL} fillRule="evenodd" />
+      ) : (
+        BARS.map((bar, index) =>
+          level === 0 ? (
+            <rect
+              className="fill-muted-foreground"
+              height={1.5}
+              key={bar.x}
+              rx={0.75}
+              width={3}
+              x={bar.x}
+              y={7.25}
+            />
+          ) : (
+            <rect
+              className={index < level ? "fill-foreground" : "fill-muted-foreground"}
+              height={bar.height}
+              key={bar.x}
+              rx={1}
+              width={3}
+              x={bar.x}
+              y={bar.y}
+            />
+          )
+        )
+      )}
+    </svg>
+  );
+}
+
+export { BarsGlyph, type BarsLevel };
