@@ -47,6 +47,27 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<button className="motion-safe:transition-[color,scale]">', "nothing scales"],
   ["tsx", '<button className="motion-safe:transition">', "nothing scales"],
   ["tsx", '<a className="motion-safe:transition-colors">', "opacity alone"],
+  ["tsx", '<div className="z-50">', "a layer names its theme token"],
+  ["tsx", '<div className="focus:z-10">', "a layer names its theme token"],
+  ["tsx", '<div className="z-[60]">', "a layer names its theme token"],
+  ["tsx", '<div className="[z-index:5]">', "a layer names its theme token"],
+  ["css", ".x { z-index: 50; }", "a layer names its theme token"],
+  ["tsx", "<p style={{ zIndex: 50 }} />", "a layer set in a style"],
+  [
+    "tsx",
+    '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
+    "a fade's length names its theme token",
+  ],
+  [
+    "tsx",
+    '<div className="motion-safe:duration-[180ms]">',
+    "a fade's length names its theme token",
+  ],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-duration: 150ms; } }",
+    "a fade's length names its theme token",
+  ],
   ["tsx", '<a className="transition-colors">', "opacity alone"],
   ["tsx", '<a className="motion-safe:transition-[background-color]">', "opacity alone"],
   [
@@ -120,6 +141,11 @@ const ALLOWED: readonly [string, string][] = [
   ],
   ["tsx", '<div className="motion-safe:animate-spin motion-safe:transition-opacity">'],
   ["tsx", '<div className="motion-safe:transition-[opacity] motion-safe:transition-none">'],
+  ["tsx", '<div className="z-raised focus:z-overlay">'],
+  [
+    "tsx",
+    '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',
+  ],
   ["css", "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }"],
   [
     "css",

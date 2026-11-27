@@ -11,7 +11,7 @@ function Input({ className, type, ...props }: ComponentProps<"input">) {
         "selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground",
         "file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-        "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+        "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-disabled",
         "aria-invalid:border-danger",
         className
       )}

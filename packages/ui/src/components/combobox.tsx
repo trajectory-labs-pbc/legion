@@ -113,14 +113,14 @@ function ComboboxContent({
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
   return (
-    <ComboboxPrimitive.Portal className="relative z-50">
+    <ComboboxPrimitive.Portal className="relative z-overlay">
       <ComboboxPrimitive.Positioner
         side={side}
         sideOffset={sideOffset}
         align={align}
         alignOffset={alignOffset}
         {...(anchor === undefined ? {} : { anchor })}
-        className="isolate z-50"
+        className="isolate z-overlay"
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
@@ -240,7 +240,7 @@ function ComboboxChip({
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
       className={cn(
-        "flex h-6 w-fit items-center justify-center gap-1 rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0",
+        "flex h-6 w-fit items-center justify-center gap-1 rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:opacity-disabled has-data-[slot=combobox-chip-remove]:pr-0",
         className
       )}
       {...props}

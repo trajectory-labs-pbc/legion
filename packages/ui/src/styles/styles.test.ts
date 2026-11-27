@@ -64,6 +64,17 @@ function utilityStart(name: string): number {
 const utilityOf = (name: string): string => name.slice(utilityStart(name));
 const variantsOf = (name: string): string => name.slice(0, utilityStart(name));
 
+/** Whether the class around a node names a theme token, such as `z-overlay` for --z-index-overlay. */
+function namesToken(node: Node, utility: string, token: string): boolean {
+  let outermost: Rule | undefined;
+  for (let at: Node | undefined = node; at !== undefined; at = at.parent) {
+    if (at instanceof Rule) outermost = at;
+  }
+  const escaped = outermost?.selector.match(/\.((?:\\[0-9a-f]{1,6} ?|\\.|[\w-])+)/i)?.[1];
+  const name = utilityOf(unescapeClass(escaped ?? "")).match(`^${utility}-([\\w-]+)$`)?.[1];
+  return name !== undefined && globalsText.includes(`${token}${name}:`);
+}
+
 const NO_SHADOW = new Set(["none", "initial", "0 0 #0000"]);
 const SHADOW_STACK =
   "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
@@ -121,6 +132,17 @@ function designProblems(css: Root): string[] {
       // A swipe moves with the finger, so nothing fades while it lasts.
       const swipe = value === "0ms" && where(decl).includes("[data-swiping]");
       if (!DURATIONS.has(value) && !swipe) say(decl, text, "a duration outside 150 to 200 ms");
+      if (
+        prop === "--tw-duration" &&
+        value !== "initial" &&
+        !swipe &&
+        !namesToken(decl, "duration", "--transition-duration-")
+      ) {
+        say(decl, text, "a duration that names no theme token");
+      }
+    }
+    if (prop === "z-index" && !namesToken(decl, "z", "--z-index-")) {
+      say(decl, text, "a layer that names no theme token");
     }
     if (prop === "--default-transition-duration" && value !== "150ms") {
       say(decl, text, "a duration outside 150 to 200 ms");
@@ -251,7 +273,7 @@ describe("the generated CSS", () => {
       "styles/globals.css",
       "styles/theme.css",
     ]);
-    expect(generated.toString()).toContain(".motion-safe\\:duration-150");
+    expect(generated.toString()).toContain(".motion-safe\\:duration-popup");
     expect(generated.toString()).toContain(".data-highlighted\\:inset-ring");
   });
 
@@ -291,6 +313,10 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   ["a long fade", { extra: ["duration-300"] }, "a duration outside 150 to 200 ms"],
   ["a short fade", { extra: ["duration-100"] }, "a duration outside 150 to 200 ms"],
   ["a delay", { extra: ["delay-75"] }, "a delay"],
+  ["a fade by number", { extra: ["motion-safe:duration-150"] }, "names no theme token"],
+  ["a layer by number", { extra: ["z-50"] }, "a layer that names no theme token"],
+  ["a layer by number on focus", { extra: ["focus:z-10"] }, "a layer that names no theme token"],
+  ["an arbitrary layer", { extra: ["z-[60]"] }, "a layer that names no theme token"],
   ["a fade that ignores reduced motion", { extra: ["transition-opacity"] }, "reduced-motion"],
   ["an animation", { extra: ["motion-safe:animate-pulse"] }, "an animation"],
   ["a corner from the default theme", { extra: ["rounded-2xl"] }, "a corner outside the theme"],
@@ -386,6 +412,21 @@ describe("the components", () => {
       ).toBe(true);
       expect(tokensOf(path), `${path}: ${token}`).toContain(`${variantsOf(token)}outline-focus`);
     }
+  });
+
+  it("dim a disabled part with the disabled token, and change nothing else about its look", () => {
+    const disabled = everyToken.filter(({ token }) => variantsOf(token).includes("disabled"));
+    expect(
+      disabled.filter(({ token }) => utilityOf(token) === "opacity-disabled").length
+    ).toBeGreaterThan(10);
+    expect(
+      disabled.filter(
+        ({ token }) =>
+          !["opacity-disabled", "pointer-events-none", "cursor-not-allowed"].includes(
+            utilityOf(token)
+          )
+      )
+    ).toEqual([]);
   });
 
   it("round only dots and avatars", () => {

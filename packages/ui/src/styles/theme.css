@@ -2,8 +2,9 @@
    reads the components' classes from. An app that has its own Tailwind entry and base rules
    imports this file alone; dark then follows the OS setting, or a .dark class.
 
-   Every colour, corner, shadow, row height and icon stroke is a token here, and the components
-   and stylesheets name the token: one edit here restyles every place that draws it. */
+   Every colour, corner, shadow, row height, icon stroke, layer, fade and the disabled look is a
+   token here, and the components and stylesheets name the token: one edit here restyles every
+   place that draws it. */
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
@@ -33,6 +34,16 @@
   --spacing-list-row-2: calc(var(--spacing) * 14);
   /* Every edge Tailwind draws (`border`, `border-t`, `divide-y`) is the one --border-width. */
   --default-border-width: var(--border-width);
+  /* The layers (`z-raised`, `z-overlay`): over the content beside it, such as a sticky header,
+     and over the page, such as a popover, a dialog or a toast. */
+  --z-index-raised: 10;
+  --z-index-overlay: 50;
+  /* The fades (`duration-popup`, `duration-modal`): a popover, menu or tooltip, and a dialog,
+     sheet or drawer. */
+  --transition-duration-popup: 150ms;
+  --transition-duration-modal: 200ms;
+  /* A disabled control (`opacity-disabled`). */
+  --opacity-disabled: 50%;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
