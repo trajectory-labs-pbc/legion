@@ -1,90 +1,94 @@
+import { Toast as ToastPrimitive } from "@base-ui/react/toast";
 import { cn } from "cn";
 import type { ReactNode } from "react";
 
+import { popupMotion } from "#registry/legion/lib/overlay-styles";
 import { textVariants } from "#registry/legion/lib/typography";
 import { isDrawn } from "#registry/legion/lib/utils";
 import { Button } from "#registry/legion/ui/button";
 import { KbdSequence } from "#registry/legion/ui/kbd";
 
-interface ToastAction {
-  label: string;
-  onPress: () => void;
-  /** The key that also presses it, as caps by step (`[["⇧", "Z"]]`). */
-  shortcut?: readonly (readonly string[])[];
-}
-
-interface ToastProps {
-  /** One line. */
-  text: string;
-  /** The rest of the message, in the text's tooltip. */
-  detail?: string;
+/** A toast's own fields beside Base UI's. The caller binds the shortcut's key; the toast only
+ *  shows its caps and names it in `aria-keyshortcuts`. */
+interface ToastData {
   icon?: ReactNode;
-  /** A failure is announced at once (`alert`); any other toast politely (`status`). */
-  tone?: "default" | "failure";
-  action?: ToastAction;
+  /** The caps by step (`[["⇧", "Z"]]`) and the `aria-keyshortcuts` value (`"Shift+Z"`). */
+  shortcut?: { caps: readonly (readonly string[])[]; keys: string };
 }
 
-/** A one-line notice: an icon, the text and at most one action (TO1, TO3). It takes no focus. */
-function Toast({ text, detail, icon, tone = "default", action }: ToastProps) {
+type ToastObject = ToastPrimitive.Root.ToastObject<ToastData>;
+
+/** One toast: an icon, its `title` on one line and at most one action, with no focus
+ *  taken (TO1, TO3). Its `description` is its tooltip. `type: "danger"` is a failure, which the
+ *  caller adds with `priority: "high"` so that it is announced at once. */
+function Toast({ toast }: { toast: ToastObject }) {
+  const { icon, shortcut } = toast.data ?? {};
   return (
-    <div
-      aria-description={detail}
-      className="flex min-w-0 max-w-sm items-center gap-2 rounded-lg border border-border bg-popover py-1.5 pr-1.5 pl-3 text-popover-foreground"
+    <ToastPrimitive.Root
+      className={cn(
+        "group/toast flex min-w-0 max-w-sm items-center gap-2 rounded-lg border border-border bg-popover py-1.5 pr-1.5 pl-3 text-popover-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus data-limited:hidden",
+        popupMotion
+      )}
       data-slot="toast"
-      data-tone={tone}
-      role={tone === "failure" ? "alert" : "status"}
+      // Escape belongs to the page under the toast (TO2).
+      onKeyDown={(event) => {
+        if (event.key === "Escape") event.preventBaseUIHandler();
+      }}
+      swipeDirection={[]}
+      title={typeof toast.description === "string" ? toast.description : undefined}
+      toast={toast}
     >
       {isDrawn(icon) ? (
         <span
           aria-hidden
-          className={cn(
-            "flex shrink-0 [&>svg]:size-4",
-            tone === "failure" ? "text-danger" : "text-muted-foreground"
-          )}
+          className="flex shrink-0 text-muted-foreground group-data-[type=danger]/toast:text-danger [&>svg]:size-4"
         >
           {icon}
         </span>
       ) : null}
-      <span className={cn(textVariants(), "min-w-0 flex-1 truncate")} title={detail}>
-        {text}
-      </span>
-      {action === undefined ? null : (
-        <Button className="shrink-0" onClick={action.onPress} size="xs" variant="ghost">
-          {action.label}
-          {action.shortcut === undefined ? null : <KbdSequence steps={action.shortcut} />}
-        </Button>
-      )}
-    </div>
+      <ToastPrimitive.Title className={cn(textVariants(), "min-w-0 flex-1 truncate")} />
+      <ToastPrimitive.Action
+        aria-keyshortcuts={shortcut?.keys}
+        render={(props) => (
+          <Button {...props} className={cn(props.className, "shrink-0")} size="xs" variant="ghost">
+            {props.children}
+            {shortcut === undefined ? null : (
+              <span aria-hidden>
+                <KbdSequence steps={shortcut.caps} />
+              </span>
+            )}
+          </Button>
+        )}
+      />
+    </ToastPrimitive.Root>
   );
 }
 
-interface ToastEntry extends ToastProps {
-  id: string;
-}
-
-/** The toasts its caller holds, oldest first. It reports the pointer on each, so its caller keeps
- *  that toast while the pointer stays (TO2). */
-function ToastHost({
-  toasts,
-  onHoverChange,
-}: {
-  toasts: readonly ToastEntry[];
-  onHoverChange: (id: string, hovered: boolean) => void;
-}) {
+/** The store's toasts, oldest first, in one always-mounted polite region for the status corner to
+ *  place. Base UI's provider holds the store: its timer pauses while the pointer or the focus is on
+ *  the toasts, and a toast past its `limit` is hidden. */
+function ToastViewport({ className }: { className?: string }) {
+  const { toasts } = ToastPrimitive.useToastManager<ToastData>();
   return (
-    <ol className="flex flex-col items-end gap-2" data-slot="toast-host">
-      {toasts.map(({ id, ...toast }) => (
-        <li
-          className="flex max-w-full"
-          key={id}
-          onPointerEnter={() => onHoverChange(id, true)}
-          onPointerLeave={() => onHoverChange(id, false)}
-        >
-          <Toast {...toast} />
-        </li>
+    <ToastPrimitive.Viewport
+      className={cn("flex flex-col items-end gap-2", className)}
+      data-slot="toast-viewport"
+    >
+      {[...toasts].reverse().map((toast) => (
+        <Toast key={toast.id} toast={toast} />
       ))}
-    </ol>
+    </ToastPrimitive.Viewport>
   );
 }
 
-export { Toast, type ToastAction, type ToastEntry, ToastHost, type ToastProps };
+const { Provider: ToastProvider, createToastManager, useToastManager } = ToastPrimitive;
+
+export {
+  createToastManager,
+  Toast,
+  type ToastData,
+  type ToastObject,
+  ToastProvider,
+  ToastViewport,
+  useToastManager,
+};

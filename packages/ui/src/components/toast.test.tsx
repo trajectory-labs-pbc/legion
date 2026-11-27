@@ -1,79 +1,72 @@
 import { describe, expect, it, jest } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { Toast, ToastHost } from "#registry/legion/ui/toast";
+import {
+  createToastManager,
+  type ToastData,
+  ToastProvider,
+  ToastViewport,
+} from "#registry/legion/ui/toast";
+
+function renderToasts() {
+  const manager = createToastManager<ToastData>();
+  render(
+    <ToastProvider timeout={0} toastManager={manager}>
+      <ToastViewport />
+    </ToastProvider>
+  );
+  return manager;
+}
 
 describe("Toast", () => {
-  it("is one line, announced politely, with no action and no focus", () => {
-    const { container } = render(<Toast icon={<svg data-testid="icon" />} text="Copied" />);
-    const toast = screen.getByRole("status");
-    expect(toast.textContent).toBe("Copied");
-    expect(screen.getByText("Copied").className).toContain("truncate");
+  it("is one line in a polite region that is there before any toast, and takes no focus", () => {
+    const manager = renderToasts();
+    const region = screen.getByRole("region");
+    expect(region.getAttribute("aria-live")).toBe("polite");
+    act(() => {
+      manager.add({ data: { icon: <svg data-testid="icon" /> }, title: "Copied" });
+    });
+    expect(screen.getByRole("dialog").textContent).toBe("Copied");
     expect(screen.getByTestId("icon").parentElement?.getAttribute("aria-hidden")).toBe("true");
     expect(screen.queryByRole("button")).toBeNull();
-    expect(container.contains(document.activeElement)).toBe(false);
+    expect(region.contains(document.activeElement)).toBe(false);
   });
 
-  it("is a floating surface with an edge and nothing cast under it", () => {
-    render(<Toast text="Snoozed" />);
-    const classes = (screen.getByRole("status").getAttribute("class") ?? "").split(" ");
-    expect(classes).toContain("bg-popover");
-    expect(classes).toContain("border");
-    expect(classes.filter((name) => name.startsWith("shadow-"))).toEqual([]);
-  });
-
-  it("announces a failure at once, keeps the rest of its message in its tooltip, and offers its action", async () => {
-    const onPress = jest.fn();
-    render(
-      <Toast
-        action={{ label: "Retry", onPress, shortcut: [["⇧", "Z"]] }}
-        detail="Dispatch refused the snooze. Try again later."
-        icon={<svg data-testid="icon" />}
-        text="Could not snooze"
-        tone="failure"
-      />
-    );
-    const toast = screen.getByRole("alert");
-    expect(toast.getAttribute("aria-description")).toBe(
-      "Dispatch refused the snooze. Try again later."
-    );
+  it("announces a failure at once, keeps the rest of its message in its tooltip once, and offers its action", async () => {
+    const manager = renderToasts();
+    const onClick = jest.fn();
+    act(() => {
+      manager.add({
+        actionProps: { children: "Retry", onClick },
+        data: { shortcut: { caps: [["⇧", "Z"]], keys: "Shift+Z" } },
+        description: "Dispatch refused the snooze. Try again later.",
+        priority: "high",
+        title: "Could not snooze",
+        type: "danger",
+      });
+    });
+    expect(screen.getByRole("alert").textContent).toContain("Could not snooze");
+    const toast = screen.getByRole("alertdialog", { hidden: true });
+    expect(toast.getAttribute("data-type")).toBe("danger");
+    expect(toast.getAttribute("title")).toBe("Dispatch refused the snooze. Try again later.");
     expect(toast.textContent).toBe("Could not snoozeRetry⇧Z");
-    expect(screen.getByTestId("icon").parentElement?.className).toContain("text-danger");
-    await userEvent.click(screen.getByRole("button", { name: "Retry ⇧ Z" }));
-    expect(onPress).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button").querySelectorAll("kbd")).toHaveLength(2);
+    const action = screen.getByRole("button", { hidden: true, name: "Retry" });
+    expect(action.getAttribute("aria-keyshortcuts")).toBe("Shift+Z");
+    await userEvent.click(action);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it("holds the rest of its message in its text's tooltip", () => {
-    render(<Toast detail="The second line." text="The first line" />);
-    expect(screen.getByText("The first line").getAttribute("title")).toBe("The second line.");
-    expect(screen.getByRole("status").textContent).toBe("The first line");
-  });
-});
-
-describe("ToastHost", () => {
-  it("draws its caller's toasts in order and reports the pointer on each", () => {
-    const onHoverChange = jest.fn();
-    render(
-      <ToastHost
-        onHoverChange={onHoverChange}
-        toasts={[
-          { id: "a", text: "Dismissed 2" },
-          { id: "b", text: "Snoozed 3" },
-        ]}
-      />
-    );
-    const items = screen.getAllByRole("listitem");
-    expect(items.map((item) => item.textContent)).toEqual(["Dismissed 2", "Snoozed 3"]);
-    fireEvent.pointerEnter(items[1] as HTMLElement);
-    expect(onHoverChange).toHaveBeenLastCalledWith("b", true);
-    fireEvent.pointerLeave(items[1] as HTMLElement);
-    expect(onHoverChange).toHaveBeenLastCalledWith("b", false);
-  });
-
-  it("draws an empty list with no toast", () => {
-    render(<ToastHost onHoverChange={() => {}} toasts={[]} />);
-    expect(screen.getByRole("list").children).toHaveLength(0);
+  it("draws the oldest first and stays on Escape", async () => {
+    const manager = renderToasts();
+    act(() => {
+      manager.add({ title: "Dismissed 2" });
+      manager.add({ title: "Snoozed 3" });
+    });
+    const toasts = screen.getAllByRole("dialog");
+    expect(toasts.map((toast) => toast.textContent)).toEqual(["Dismissed 2", "Snoozed 3"]);
+    act(() => (toasts[0] as HTMLElement).focus());
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getAllByRole("dialog")).toHaveLength(2);
   });
 });

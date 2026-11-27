@@ -1155,6 +1155,11 @@
           "target": "@ui/spinner.tsx"
         },
         {
+          "path": "packages/ui/src/lib/overlay-styles.ts",
+          "type": "registry:lib",
+          "target": "@lib/overlay-styles.ts"
+        },
+        {
           "path": "packages/ui/src/lib/typography.ts",
           "type": "registry:lib",
           "target": "@lib/typography.ts"
