@@ -1,3 +1,5 @@
+import { PERSON_PATH } from "@upstream-dispatch/features/refs/routes";
+
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
 
@@ -12,7 +14,7 @@ export const people = {
   id: "people",
   server: "upstream",
   routes: {
-    person: pageRoute({ path: "/people/:login", element: <PersonPage /> }),
+    person: pageRoute({ path: PERSON_PATH, element: <PersonPage /> }),
   },
   views: ["features/people/**"],
 } satisfies Page;

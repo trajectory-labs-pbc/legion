@@ -6,7 +6,7 @@ import ts from "typescript";
 
 import { REPO_ROOT } from "../source";
 import { parseScript } from "../typescript";
-import { routeTargets, upstreamAppFile } from "./source";
+import { namedImports, routeTargets, topLevelNames, upstreamAppFile } from "./source";
 
 const pinsFile = join(import.meta.dir, "copies.json");
 const appFile = relative(REPO_ROOT, upstreamAppFile);
@@ -76,41 +76,24 @@ function importBinding(source: ts.SourceFile, name: string): string | undefined 
     if (bindings && ts.isNamespaceImport(bindings) && bindings.name.text === name) {
       return `import * from ${from}`;
     }
-    if (bindings && ts.isNamedImports(bindings)) {
-      const element = bindings.elements.find((entry) => entry.name.text === name);
-      if (element) return `import ${(element.propertyName ?? element.name).text} from ${from}`;
-    }
   }
-  return undefined;
+  const named = namedImports(source).find((entry) => entry.name === name);
+  return named && `import ${named.imported} from ${JSON.stringify(named.from)}`;
 }
 
 function declarationText(source: ts.SourceFile, part: string): string | undefined {
-  for (const statement of source.statements) {
-    if (part.startsWith("default.") && ts.isExportAssignment(statement)) {
-      let value = statement.expression;
-      if (ts.isCallExpression(value) && value.arguments[0]) value = value.arguments[0];
-      if (!ts.isObjectLiteralExpression(value)) return undefined;
-      const entry = value.properties.find(
-        (property) => property.name?.getText(source) === part.slice("default.".length)
-      );
-      return entry && canonical(entry, source);
-    }
-    if (
-      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
-      statement.name?.text === part
-    ) {
-      return canonical(statement, source);
-    }
-    if (
-      ts.isVariableStatement(statement) &&
-      statement.declarationList.declarations.some(
-        (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === part
-      )
-    ) {
-      return canonical(statement, source);
-    }
+  if (part.startsWith("default.")) {
+    const statement = source.statements.find(ts.isExportAssignment);
+    let value = statement?.expression;
+    if (value && ts.isCallExpression(value) && value.arguments[0]) value = value.arguments[0];
+    if (!value || !ts.isObjectLiteralExpression(value)) return undefined;
+    const entry = value.properties.find(
+      (property) => property.name?.getText(source) === part.slice("default.".length)
+    );
+    return entry && canonical(entry, source);
   }
-  return importBinding(source, part);
+  const statement = topLevelNames(source).get(part);
+  return statement ? canonical(statement, source) : importBinding(source, part);
 }
 
 /** One part of a file with its formatting removed, or undefined when the file no longer has it. */

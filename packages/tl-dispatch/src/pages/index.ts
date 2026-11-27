@@ -8,7 +8,7 @@ import { inbox } from "./inbox";
 import { issue } from "./issue";
 import { machines } from "./machines";
 import { notFound } from "./not-found";
-import type { Page, PageLayout } from "./page";
+import { type Page, type PageLayout, upstreamLayout } from "./page";
 import { people } from "./people";
 import { priorities } from "./priorities";
 import { project } from "./project";
@@ -30,5 +30,20 @@ export const pages = [
   notFound,
 ] as const satisfies readonly Page[];
 
+/** Each route of a page upstream draws takes upstream's frame, unless it declares its own. */
+const framed = pages.map((page) =>
+  page.server === "fork"
+    ? page
+    : {
+        ...page,
+        routes: Object.fromEntries(
+          Object.entries(page.routes).map(([name, route]) => [
+            name,
+            route.layout === undefined ? { ...route, layout: upstreamLayout } : route,
+          ])
+        ),
+      }
+);
+
 /** The pages' route tree: the outlet, and the page an address opens with its layout. */
-export const { PageRoutes, pageAt, useCurrentPage } = createRouteTree<PageLayout, Page>(pages);
+export const { PageRoutes, pageAt, useCurrentPage } = createRouteTree<PageLayout, Page>(framed);

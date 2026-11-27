@@ -114,6 +114,7 @@ const ADDRESSES = [
   "/projects/AB/documents/spec",
   "/projects/AB/documents/spec?ask=a1",
   "/projects/AB/documents/spec?comment=c1",
+  "/people/someone",
   "/priorities",
   "/priorities/p1",
   "/settings",

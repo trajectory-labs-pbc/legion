@@ -1,18 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 import ts from "typescript";
 
-import { forkRoutes, linkFormProblems, OWN_ELEMENTS, routeParity, SERVER_HREFS } from "./links";
+import { pages } from "@/pages/index";
+import { parseScript } from "../typescript";
 import {
-  type PageEntry,
-  pageFiles,
-  readPages,
-  routeMapFiles,
+  forkRoutes,
+  linkFormProblems,
+  OWN_ELEMENTS,
+  routeParity,
   routingProblems,
-  upstreamAppFile,
+  SERVER_HREFS,
   upstreamRoutes,
-} from "./source";
+} from "./links";
+import { forkSrc, tagName, upstreamAppFile } from "./source";
 
 const upstream = upstreamRoutes();
 const fork = forkRoutes();
@@ -21,10 +24,10 @@ const hrefs = [...DISPATCH_HREF_REFERENCES.map((row) => row.href), ...SERVER_HRE
 
 /** Upstream's app.tsx with `jsx` added as the last child of its `<Routes>`. */
 function withRoutesChild(jsx: string): string {
-  const source = ts.createSourceFile("app.tsx", appText, ts.ScriptTarget.Latest, true);
+  const source = parseScript(upstreamAppFile, appText);
   let end: number | undefined;
   const visit = (node: ts.Node): void => {
-    if (ts.isJsxElement(node) && node.openingElement.tagName.getText(source) === "Routes") {
+    if (ts.isJsxElement(node) && tagName(source, node) === "Routes") {
       end = node.closingElement.getStart(source);
     }
     ts.forEachChild(node, visit);
@@ -34,10 +37,12 @@ function withRoutesChild(jsx: string): string {
   return `${appText.slice(0, end)}${jsx}\n${appText.slice(end)}`;
 }
 
-/** A copy of the page that serves `path`, served by this app with the given link forms. */
-function servedHere(path: string, linkForms: PageEntry["linkForms"]): PageEntry[] {
-  return readPages().map((page) =>
-    page.routes.some((route) => route.path === path) ? { ...page, server: "fork", linkForms } : page
+/** The route map with the page that serves `path` served by this app. */
+function servedHere(path: string) {
+  return pages.map((page) =>
+    Object.values(page.routes).some((route) => route.path === path)
+      ? { ...page, server: "fork" as const }
+      : page
   );
 }
 
@@ -47,8 +52,11 @@ describe("links", () => {
     expect(routingProblems()).toEqual([]);
   });
 
-  test("the route map lists every page file", () => {
-    expect(routeMapFiles()).toEqual(pageFiles());
+  test("each page file is in the route map, named by its page's id", () => {
+    const files = readdirSync(join(forkSrc, "pages"))
+      .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
+      .filter((name) => name !== "index.ts" && name !== "page.ts");
+    expect(pages.map((page) => `${page.id}.tsx`).sort()).toEqual(files.sort());
   });
 
   test("the fork serves each upstream route, drawing upstream's element as written", () => {
@@ -62,14 +70,15 @@ describe("links", () => {
   test("names an upstream route the fork does not serve", () => {
     const text = withRoutesChild('<Route element={<NewPage />} path="/new-page" />');
     expect(routeParity(upstreamRoutes(upstreamAppFile, text), fork).missing).toContain(
-      "/new-page -> <NewPage/>"
+      "/new-page -> < NewPage / >"
     );
   });
 
   test("names a route whose element's props upstream changed", () => {
     const [first] = upstream;
     if (!first) throw new Error("no upstream route");
-    const changed = [{ ...first, element: first.element.replace("/>", " changed/>") }];
+    const changed = [{ ...first, element: first.element.replace("/ >", "changed / >") }];
+    expect(changed[0]?.element).not.toBe(first.element);
     expect(routeParity(changed, fork).missing).toEqual([`${first.path} -> ${changed[0]?.element}`]);
   });
 
@@ -98,13 +107,15 @@ describe("links", () => {
     ).toThrow("index");
   });
 
-  test("names a link form a page this app serves does not read", () => {
-    const path = "/projects/:key/documents/:slug";
-    const served = forkRoutes(servedHere(path, { query: ["ask"], fragments: ["b-"] }));
+  test("names a query key and a fragment Dispatch writes to a page this app serves", () => {
+    const served = forkRoutes(servedHere("/projects/:key/documents/:slug"));
     const problems = linkFormProblems(served, hrefs);
     expect(problems).toContain(
-      "/projects/CORE/documents/handbook-md?comment=88888888-8888-4888-8888-888888888888: page document does not read ?comment= (its linkForms.query)"
+      "/projects/CORE/documents/handbook-md?comment=88888888-8888-4888-8888-888888888888: page document, which this app serves, does not read ?comment="
     );
-    expect(problems.some((line) => line.includes("?ask="))).toBe(false);
+    expect(problems).toContain(
+      "/projects/CORE/documents/handbook-md?q=ship#b-ship-it: page document, which this app serves, does not read #b-"
+    );
+    expect(linkFormProblems(fork, hrefs)).toEqual([]);
   });
 });

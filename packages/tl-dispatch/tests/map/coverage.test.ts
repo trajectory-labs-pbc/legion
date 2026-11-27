@@ -1,17 +1,19 @@
 import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
 
+import { filesWith } from "../imports";
 import {
   coverage,
   effectiveOwners,
   importGraph,
+  loadedFiles,
   messages,
   notes,
   type Owner,
   owners,
   ownOwner,
-  viewMap,
 } from "./coverage";
-import { featureViews, runtimeImports } from "./source";
+import { featureViews, forkSrc } from "./source";
 
 const files = featureViews();
 const all = owners();
@@ -29,14 +31,17 @@ function pageFileAndOtherPage(): { file: string; owner: string; other: string } 
 }
 
 describe("the view map", () => {
-  // It reads every upstream file: about 2.4 s, and past bun's 5 s default on a loaded machine.
   test("leaves nothing to port on a page this app serves", () => {
     expect(files.length).toBeGreaterThan(200);
-    const map = viewMap();
+    const map = coverage(files, all, graph);
     const tidy = notes(map);
     if (tidy.length > 0) console.info(`view map notes, nothing to port:\n${tidy.join("\n")}`);
     expect(messages(map)).toEqual([]);
-  }, 30_000);
+  });
+
+  test("a fixture is no view", () => {
+    expect(files.filter((file) => /-fixtures?\.tsx$/.test(file))).toEqual([]);
+  });
 
   test("names a view file no owner maps", () => {
     expect(coverage([...files, "features/new-folder/NewView.tsx"], all).unmapped).toContain(
@@ -134,15 +139,31 @@ describe("the view map", () => {
   });
 
   test("a type-only import loads nothing", () => {
+    const at = (name: string) => join(forkSrc, "probe", name);
     const text = [
       'import type { A } from "./a";',
-      'import { type B } from "./b";',
       'import { type C, D } from "./c";',
       'export type { E } from "./e";',
       'export { F } from "./f";',
       'const G = lazy(() => import("./g"));',
     ].join("\n");
-    expect(runtimeImports("x.tsx", text)).toEqual(["./c", "./f", "./g"]);
+    const modules = ["a", "c", "e", "f", "g"].map((name) => [at(`${name}.ts`), ""] as const);
+    const files = filesWith(new Map([[at("x.tsx"), text], ...modules]));
+    expect(loadedFiles(at("x.tsx"), files)).toEqual([at("c.ts"), at("f.ts"), at("g.ts")]);
+  });
+
+  test("an import that resolves to nothing stops the map", () => {
+    const file = join(forkSrc, "probe", "x.tsx");
+    const files = filesWith(new Map([[file, 'import { Gone } from "./gone";']]));
+    expect(() => loadedFiles(file, files)).toThrow("./gone resolves to no file and no package");
+  });
+
+  test("an upstream file nothing maps does not count as an owner that loads a page's view", () => {
+    const synthetic: Owner[] = [
+      { name: "page:b", globs: ["features/b/B.tsx"], list: "b", server: "fork" },
+    ];
+    const loaded = new Map([["features/b/B.tsx", ["page:b", "api/orphan.ts"]]]);
+    expect(coverage(["features/b/B.tsx"], synthetic, loaded).crossed).toEqual([]);
   });
 });
 
@@ -215,6 +236,24 @@ describe("the view map on ordinary upstream churn", () => {
       "features/b/Panel.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
       "features/b/Row.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
     ]);
+  });
+
+  test("a file upstream adds behind a module of another folder that only that page loads is named", () => {
+    const graph: [string, string[]][] = [
+      ["features/a/useA.ts", ["features/b/B.tsx"]],
+      ["features/a/Added.tsx", ["features/a/useA.ts"]],
+    ];
+    const unlisted: Owner[] = map.map((entry) =>
+      entry.name === "page:a" ? { ...entry, globs: ["features/a/A.tsx", "features/a/*.ts"] } : entry
+    );
+    expect(failing(["features/a/Added.tsx"], graph, unlisted)).toEqual([
+      "features/a/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+    ]);
+    const added = [...views, "features/a/Added.tsx"];
+    const loaded = new Map([...loads, ...graph]);
+    expect(effectiveOwners(added, unlisted, loaded).owner.get("features/a/Added.tsx")).toBe(
+      "page:b"
+    );
   });
 
   test("a new file a page this app serves and another owner both load is not that page's", () => {

@@ -27,16 +27,11 @@ describe("copied upstream code", () => {
   test("upstream has not changed a part this app copies", () => {
     const pins = readPins();
     expect(pins.length).toBeGreaterThan(20);
-    const problems = copyProblems(pins);
-    for (const entry of pins) {
-      if (
-        problems.some(
-          (line) => line.startsWith(`${entry.file} `) && line.includes(` ${entry.part} `)
-        )
-      ) {
-        console.error(upstreamDiff(entry));
-      }
-    }
+    const problems = pins.flatMap((entry) => {
+      const found = copyProblems([entry]);
+      if (found.length > 0) console.error(upstreamDiff(entry));
+      return found;
+    });
     expect(problems).toEqual([]);
   });
 

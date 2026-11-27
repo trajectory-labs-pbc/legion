@@ -1,8 +1,11 @@
-import { basename, relative } from "node:path";
+import { join, relative } from "node:path";
 
+import { pages } from "@/pages/index";
+import type { Page } from "@/pages/page";
 import { sharedViews, shellViews, widgetViews } from "@/views";
-import { UPSTREAM_WEB } from "../source";
-import { featureViews, forkSrc, type PageEntry, readPages, viewImporters } from "./source";
+import { type Files, filesWith, importsOf, resolutionCache } from "../imports";
+import { PACKAGE_ROOT, sourceFiles, UPSTREAM_WEB } from "../source";
+import { forkSrc, pageFile, upstreamScripts } from "./source";
 
 export interface Owner {
   name: string;
@@ -10,7 +13,7 @@ export interface Owner {
   /** Where the list is written, for a message that says what to update. */
   list: string;
   /** Set for a page: which app's code draws it. */
-  server?: "upstream" | "fork";
+  server?: Page["server"];
 }
 
 export interface Coverage {
@@ -32,12 +35,15 @@ export interface Coverage {
 /** Each page, the shell, each widget and each shared list, with the view files it owns. */
 export function owners(): Owner[] {
   return [
-    ...readPages().map((page) => ({
-      name: `page:${page.id}`,
-      globs: page.views,
-      list: `src/pages/${basename(page.file)} views`,
-      server: page.server,
-    })),
+    // By id, as the page files sort: the first owner of a file decides where it is shared.
+    ...[...pages]
+      .sort((a, b) => (a.id < b.id ? -1 : 1))
+      .map((page) => ({
+        name: `page:${page.id}`,
+        globs: page.views,
+        list: `src/pages/${page.id}.tsx views`,
+        server: page.server,
+      })),
     { name: "shell", globs: shellViews, list: "src/views.ts shellViews" },
     ...Object.entries(widgetViews).map(([name, globs]) => ({
       name: `widget:${name}`,
@@ -83,27 +89,54 @@ function ownersOf(
 }
 
 /** The owner of a file of this app: its page, for a page file and the folder of its name, else the shell. */
-export function ownOwner(file: string, pages: readonly Pick<PageEntry, "file" | "id">[]): string {
-  const page = pages.find(
+export function ownOwner(file: string, pageFiles: readonly { file: string; id: string }[]): string {
+  const page = pageFiles.find(
     (entry) => file === entry.file || file.startsWith(`${entry.file.replace(/\.tsx?$/, "")}/`)
   );
   return page ? `page:${page.id}` : "shell";
 }
 
 /**
- * For each view file, what loads it at run time: an upstream file by its path under `web/src`, a
- * file of this app by its owner.
+ * The files `file` loads at run time, type-only imports aside. An import that resolves to no file
+ * and no package throws, so the map never drops an edge the build follows.
+ */
+export function loadedFiles(
+  file: string,
+  files: Files = filesWith(),
+  cache = resolutionCache()
+): string[] {
+  return importsOf(file, files, cache).flatMap((entry) => {
+    if (entry.kind === "type") return [];
+    if (!entry.resolved) {
+      throw new Error(
+        `${file}:${entry.line}: ${entry.specifier ?? "an import"} resolves to no file and no package, so the view map cannot follow it`
+      );
+    }
+    return entry.file === undefined ? [] : [entry.file];
+  });
+}
+
+/**
+ * For each script under upstream's `features/`, what loads it at run time: an upstream file by its
+ * path under `web/src`, a file of this app by its owner.
  */
 export function importGraph(): Map<string, string[]> {
-  const pages = readPages();
+  const files = filesWith();
+  const cache = resolutionCache();
+  const own = pages.map((page) => ({ file: pageFile(page.id), id: page.id }));
+  const scripts = [
+    ...upstreamScripts(join(UPSTREAM_WEB, "features")),
+    ...sourceFiles()
+      .filter((file) => /\.tsx?$/.test(file.path))
+      .map((file) => join(PACKAGE_ROOT, file.path)),
+  ];
   const graph = new Map<string, string[]>();
-  for (const [view, files] of viewImporters()) {
-    graph.set(
-      view,
-      files.map((file) =>
-        file.startsWith(forkSrc) ? ownOwner(file, pages) : relative(UPSTREAM_WEB, file)
-      )
-    );
+  for (const file of scripts) {
+    const ref = file.startsWith(forkSrc) ? ownOwner(file, own) : relative(UPSTREAM_WEB, file);
+    for (const target of loadedFiles(file, files, cache)) {
+      const loaded = relative(UPSTREAM_WEB, target);
+      if (loaded.startsWith("features/")) graph.set(loaded, [...(graph.get(loaded) ?? []), ref]);
+    }
   }
   return graph;
 }
@@ -115,6 +148,7 @@ const spreads = (owner: string) => owner.startsWith("shared:") || owner.startsWi
  * Each file's owner once the import graph is applied. A file no list names takes the owner of what
  * loads it, or is shared when two owners do. A page's view that only its own page and shared or
  * widget files load is shared too, so a shared list names only the files two owners load directly.
+ * A module that is not a view, such as a hook, is followed to what loads it.
  */
 export function effectiveOwners(
   files: readonly string[],
@@ -125,16 +159,22 @@ export function effectiveOwners(
   loaders: (file: string) => string[];
   inferred: Set<string>;
   roots: (file: string) => string[];
+  matchers: Matcher[];
+  /** Each file's owners by the lists alone, and the entries that match it. */
+  matched: Map<string, { owners: string[]; hits: Matcher[] }>;
 } {
   const matchers = matchersOf(all);
+  const matched = new Map(files.map((file) => [file, ownersOf(file, matchers)]));
   const owner = new Map<string, string>();
   const unlisted: string[] = [];
-  for (const file of files) {
-    const found = ownersOf(file, matchers).owners;
+  for (const [file, { owners: found }] of matched) {
     if (found.length === 1 && found[0]) owner.set(file, found[0]);
     if (found.length === 0) unlisted.push(file);
   }
   const listed = new Map(owner);
+  const views = new Set(files);
+  /** A script under `features/` that is not a view and that something loads. */
+  const isModule = (ref: string) => !isOwnerName(ref) && !views.has(ref) && graph.has(ref);
   /**
    * The listed owners a file no list names hangs from: those of what loads it, followed through
    * other unlisted files. A page's view that became shared still counts as its page's here.
@@ -144,6 +184,7 @@ export function effectiveOwners(
     seen.add(file);
     const found = (graph.get(file) ?? []).flatMap((ref) => {
       if (isOwnerName(ref)) return [ref];
+      if (isModule(ref)) return roots(ref, seen);
       const name = listed.get(ref) ?? ownersOf(ref, matchers).owners[0];
       return name === undefined ? roots(ref, seen) : [name];
     });
@@ -152,8 +193,17 @@ export function effectiveOwners(
   const inferred = new Set<string>();
   const ownerOfRef = (ref: string): string =>
     isOwnerName(ref) ? ref : (owner.get(ref) ?? ownersOf(ref, matchers).owners[0] ?? "unmapped");
-  const loaders = (file: string): string[] =>
-    [...new Set((graph.get(file) ?? []).map(ownerOfRef))].sort();
+  const loaders = (file: string, seen = new Set([file])): string[] =>
+    [
+      ...new Set(
+        (graph.get(file) ?? []).flatMap((ref) => {
+          if (!isModule(ref)) return [ownerOfRef(ref)];
+          if (seen.has(ref)) return [];
+          seen.add(ref);
+          return loaders(ref, seen);
+        })
+      ),
+    ].sort();
   for (let changed = true; changed; ) {
     changed = false;
     for (const file of unlisted) {
@@ -174,7 +224,7 @@ export function effectiveOwners(
       }
     }
   }
-  return { owner, loaders, inferred, roots };
+  return { owner, loaders, inferred, roots, matchers, matched };
 }
 
 export function coverage(
@@ -182,9 +232,9 @@ export function coverage(
   all: readonly Owner[],
   graph: ReadonlyMap<string, readonly string[]> = new Map()
 ): Coverage {
-  const matchers = matchersOf(all);
   const used = new Set<string>();
-  const forkPages = all.filter((entry) => entry.server === "fork").map((entry) => entry.name);
+  const served = all.filter((entry) => entry.server === "fork");
+  const forkPages = served.map((entry) => entry.name);
   const result: Coverage = {
     unmapped: [],
     shared: [],
@@ -194,9 +244,8 @@ export function coverage(
     added: [],
     forkPages,
   };
-  const { owner, loaders, inferred, roots } = effectiveOwners(files, all, graph);
-  for (const file of files) {
-    const { owners: names, hits } = ownersOf(file, matchers);
+  const { owner, loaders, inferred, roots, matchers, matched } = effectiveOwners(files, all, graph);
+  for (const [file, { owners: names, hits }] of matched) {
     for (const hit of hits) used.add(`${hit.owner}\0${hit.glob}`);
     const name = owner.get(file);
     if (names.length === 0 && name === undefined) result.unmapped.push(file);
@@ -207,20 +256,18 @@ export function coverage(
       result.added.push({ file, owner: root, list });
     }
     if (name?.startsWith("page:")) {
-      const others = loaders(file).filter((other) => other !== name);
+      const others = loaders(file).filter((other) => other !== name && other !== "unmapped");
       if (others.length > 0) result.crossed.push({ file, owner: name, importers: others });
     }
   }
   result.unused = matchers
     .filter((entry) => !used.has(`${entry.owner}\0${entry.glob}`))
     .map(({ owner: name, glob, list }) => ({ owner: name, glob, list }));
-  result.globbed = all
-    .filter((entry) => entry.server === "fork")
-    .flatMap((entry) =>
-      entry.globs
-        .filter((glob) => !isExact(glob))
-        .map((glob) => ({ owner: entry.name, glob, list: entry.list }))
-    );
+  result.globbed = served.flatMap((entry) =>
+    entry.globs
+      .filter((glob) => !isExact(glob))
+      .map((glob) => ({ owner: entry.name, glob, list: entry.list }))
+  );
   return result;
 }
 
@@ -267,9 +314,4 @@ export function notes(result: Coverage): string[] {
     ...result.unused.filter((entry) => upstream(entry.owner)).map(unusedLine),
     ...result.crossed.filter((entry) => upstream(entry.owner)).map(crossedLine),
   ];
-}
-
-/** The view map for the current trees. */
-export function viewMap(): Coverage {
-  return coverage(featureViews(), owners(), importGraph());
 }
