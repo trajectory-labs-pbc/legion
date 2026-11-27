@@ -17,7 +17,7 @@ export const coveredClass =
 
 /** The close button in a dialog's or a sheet's corner, a 24px target. */
 export const closeButtonClass =
-  "absolute top-3 right-3 inline-flex size-6 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
+  "absolute top-3 right-3 inline-flex size-6 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:pointer-events-none disabled:opacity-disabled [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
 
 /** A modal's viewport: it centres the popup and scrolls a tall one. */
 export const modalViewportClass =

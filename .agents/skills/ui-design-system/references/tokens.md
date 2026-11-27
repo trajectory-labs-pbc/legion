@@ -38,15 +38,21 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 
 ## Layers, fades and the disabled look
 
+Each value is a variable on `:root`; the class names it.
+
 | Token | Class | Use |
 | --- | --- | --- |
-| `--z-index-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow. |
-| `--z-index-overlay` (50) | `z-overlay` | Over the page: a popover, a menu, a tooltip, a dialog, a sheet, a toast, the skip link. |
-| `--transition-duration-popup` (150 ms) | `duration-popup` | The fade of a popover, a menu or a tooltip (`popupMotion`). |
-| `--transition-duration-modal` (200 ms) | `duration-modal` | The fade of a dialog, a sheet, a drawer or a scrim (`modalPopupMotion`). |
-| `--opacity-disabled` (50%) | `opacity-disabled` | A disabled control, under its disabled variant (`disabled:`, `data-disabled:`, ...). |
+| `--layer-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow. |
+| `--layer-overlay` (50) | `z-overlay` | Over the page: a popover, a menu, a tooltip, a dialog, a sheet, a toast, the skip link. |
+| `--duration-popup` (150 ms) | `duration-popup` | The fade of a popover, a menu or a tooltip (`popupMotion`). |
+| `--duration-modal` (200 ms) | `duration-modal` | The fade of a dialog, a sheet, a drawer or a scrim (`modalPopupMotion`). |
+| `--disabled-opacity` (50%) | `opacity-disabled` | A disabled control, under its disabled variant (`disabled:`, `data-disabled:`, ...). |
 
-Never write a number for a layer or a fade (`z-50`, `duration-150`): the design-rule tests refuse it. The fade's curve is Tailwind's default. A disabled control dims to `opacity-disabled` and keeps its colours; its variant may also set `pointer-events-none` or `cursor-not-allowed`, and nothing else.
+- A layer or a fade's length is never a number (`z-50`, `duration-150`) and never the `transition` shorthand. A stylesheet names the variable: `z-index: var(--layer-overlay)`. `packages/ui`'s style test and tl-dispatch's design-rule test both refuse a number and the shorthand.
+- The one exception is the drawer: while a finger drags it, `data-swiping:duration-0` stops its fade.
+- The fade's curve is Tailwind's default.
+- A disabled control dims to `opacity-disabled`. Its variant may also set `pointer-events-none` or `cursor-not-allowed`, and nothing else. The primary button also takes `bg-muted` and `text-muted-foreground` when disabled: at half opacity alone its fill reads brighter than the button beside it in dark. Only `packages/ui`'s style test checks the disabled look. tl-dispatch's `repaint.css` gives upstream's disabled primary button the same muted pair.
+- `cn` does not know these classes, so it does not merge them: a `className` of `z-*`, `duration-*` or `opacity-*` on a part that sets one of them adds a second class and does not replace it.
 
 ## Text
 

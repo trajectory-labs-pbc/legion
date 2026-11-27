@@ -1,6 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
+import {
+  compiledDeclarations,
+  type DesignViolation,
+  designViolations,
+  RULES,
+  themeTokens,
+} from "./design-rules";
 import { sourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -48,9 +54,6 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<button className="motion-safe:transition">', "nothing scales"],
   ["tsx", '<a className="motion-safe:transition-colors">', "opacity alone"],
   ["tsx", '<div className="z-50">', "a layer names its theme token"],
-  ["tsx", '<div className="focus:z-10">', "a layer names its theme token"],
-  ["tsx", '<div className="z-[60]">', "a layer names its theme token"],
-  ["tsx", '<div className="[z-index:5]">', "a layer names its theme token"],
   ["css", ".x { z-index: 50; }", "a layer names its theme token"],
   ["tsx", "<p style={{ zIndex: 50 }} />", "a layer set in a style"],
   [
@@ -58,9 +61,15 @@ const REFUSED: readonly [string, string, string][] = [
     '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
     "a fade's length names its theme token",
   ],
+  ["tsx", '<div className="motion-safe:[transition:opacity_1s]">', "a fade's length"],
   [
-    "tsx",
-    '<div className="motion-safe:duration-[180ms]">',
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }",
+    "a fade's length names its theme token",
+  ],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity var(--duration-popup); } }",
     "a fade's length names its theme token",
   ],
   [
@@ -146,10 +155,10 @@ const ALLOWED: readonly [string, string][] = [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',
   ],
-  ["css", "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }"],
+  ["css", ".x { z-index: var(--layer-overlay); }"],
   [
     "css",
-    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms var(--ease, ease-in); } }",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-modal); } }",
   ],
   ["tsx", '<a href="#b-r1">'],
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
@@ -297,6 +306,26 @@ describe("design rules", () => {
         clean.push(path);
     }
     expect(clean).toEqual([]);
+  });
+
+  test("compiles each layer, fade and the disabled look to its theme token", async () => {
+    const classes = [
+      "z-raised",
+      "z-overlay",
+      "duration-popup",
+      "duration-modal",
+      "opacity-disabled",
+    ];
+    const compiled = (await compiledDeclarations(classes))
+      .filter(({ property }) => ["z-index", "transition-duration", "opacity"].includes(property))
+      .map(({ property, value }) => `${property}: ${value}`);
+    expect(compiled.sort()).toEqual([
+      "opacity: var(--disabled-opacity)",
+      "transition-duration: var(--duration-modal)",
+      "transition-duration: var(--duration-popup)",
+      "z-index: var(--layer-overlay)",
+      "z-index: var(--layer-raised)",
+    ]);
   });
 
   test("takes corners from the theme alone: a corner token the app declares is none", () => {

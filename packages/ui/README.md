@@ -44,7 +44,8 @@ shadcn asks before a theme item replaces CSS variables; `--yes` answers it.
 
 Each component item lists every file it imports and has no `registryDependencies`. shadcn does
 not pass an item's `#<ref>` on to its dependencies: a dependency with no tag or commit of its own
-installs from the default branch, not from the ref you asked for.
+installs from the default branch, not from the ref you asked for. When you update the components,
+add the theme again at the same ref: a component can name a token that an older theme lacks.
 
 ## Change it
 
@@ -66,7 +67,7 @@ installs from the default branch, not from the ref you asked for.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, layers and fade lengths named by their tokens, a disabled look of
-  `opacity-disabled` alone, no pointer cursor, no arbitrary properties, one set of dark values, and
+  `opacity-disabled` (and the primary button's muted pair), no pointer cursor, no arbitrary properties, one set of dark values, and
   corners from the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and
   the only other radius is `rounded-full`, which a source check allows on seven parts only: the
   radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar

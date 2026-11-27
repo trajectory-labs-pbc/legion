@@ -36,9 +36,10 @@ export const RULES = {
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
   fade: "a transition moves opacity alone: a row's hover and highlight change at once",
-  layer: "a layer names its theme token (`z-raised`, `z-overlay`), never a number",
+  layer:
+    "a layer names its theme token (`z-raised`, `z-overlay`, or `var(--layer-*)` in a stylesheet), never a number",
   duration:
-    "a fade's length names its theme token (`duration-popup`, `duration-modal`), never a number",
+    "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var(--duration-*)` in a stylesheet), never a number or the `transition` shorthand",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -68,8 +69,6 @@ export interface ThemeTokens {
   radii: ReadonlySet<string>;
   /** Each corner token's value: the theme's `rounded-*` classes compile to these. */
   radiusValues: ReadonlySet<string>;
-  /** Each layer and fade class the theme names: `z-overlay` for --z-index-overlay. */
-  classes: ReadonlySet<string>;
 }
 
 /** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
@@ -79,13 +78,9 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
-  const classes = new Set<string>();
   for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
-      const named = /^--(z-index|transition-duration)-([\w-]+)$/.exec(property);
-      if (named !== null) {
-        if (css === theme) classes.add(`${named[1] === "z-index" ? "z" : "duration"}-${named[2]}`);
-      } else if (/^--radius(-|$)/.test(property)) {
+      if (/^--radius(-|$)/.test(property)) {
         if (css === theme) {
           radii.add(property);
           radiusValues.add(property === "--radius" ? "var(--radius)" : value);
@@ -98,7 +93,7 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
         colours.add(property);
     }
   }
-  return { colours, radii, radiusValues, classes };
+  return { colours, radii, radiusValues };
 }
 
 const NAMED_COLOURS = new Set(
@@ -154,8 +149,12 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
-/** The length every `transition-*` class compiles to: the `duration-*` class's, or the default. */
-const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
+/** A layer names a theme token, whose value lives on :root. */
+const LAYER = /^var\(--layer-[\w-]+\)$/;
+/** A fade's length names a theme token, or is what a `transition-*` class compiles its length to:
+ *  the `duration-*` class's, or the default. */
+const DURATION =
+  /^var\(--duration-[\w-]+\)$|^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -192,18 +191,16 @@ function radiusAllowed(
 }
 
 /**
- * The rules one declaration breaks. `utility` is the class the CSS came from, without its
- * variants, and is unset for a stylesheet. Only `rounded-full` sets an infinite radius, whose size
- * the script rule checks. A class may not set type; a stylesheet may. A layer or a fade's length
- * comes from a theme class alone.
+ * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
+ * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
+ * is set for a class's CSS, which may not set type; a stylesheet may.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
   tokens: ThemeTokens,
-  { utility, fromClass = false }: { utility?: string; fromClass?: boolean } = {}
+  { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
   const { property, value, context } = declaration;
-  const circle = utility === "rounded-full";
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
@@ -238,12 +235,10 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  const themeClass = utility !== undefined && tokens.classes.has(utility);
-  if (property === "z-index" && !themeClass) problems.push(RULES.layer);
+  if (property === "z-index" && !LAYER.test(value)) problems.push(RULES.layer);
   if (
-    /^(transition-duration|--tw-duration)$/.test(property) &&
-    !DEFAULT_DURATION.test(value) &&
-    !themeClass
+    property === "transition" ||
+    (/^(transition-duration|--tw-duration)$/.test(property) && !DURATION.test(value))
   ) {
     problems.push(RULES.duration);
   }
@@ -334,10 +329,8 @@ async function classViolations(
   const violations: DesignViolation[] = [];
   for (const declaration of await compiledDeclarations([...classes.keys()])) {
     const name = sourceClass(declaration.context, classes);
-    const problems = declarationProblems(declaration, tokens, {
-      utility: name === undefined ? undefined : utilityOf(name),
-      fromClass: true,
-    });
+    const circle = name !== undefined && utilityOf(name) === "rounded-full";
+    const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
     if (problems.length === 0) continue;
     const where =
       name === undefined ? [{ file: "(compiled CSS)", line: 0 }] : (classes.get(name) ?? []);
