@@ -16,6 +16,8 @@
       "@legion/ui/lib/*": ["../ui/src/lib/*.ts"],
       "@upstream-dispatch/*": ["../dispatch/web/src/*"],
       "@legion/contracts": ["../contracts/src/index.ts"],
+      "@legion/proof-editor/document-json": ["../proof-editor/src/document-json.ts"],
+      "@legion/proof-editor/headless": ["../proof-editor/src/lib-headless.ts"],
       "proof-sdk-upstream/src/*": ["../proof-editor/upstream/*"]
     }
   },
