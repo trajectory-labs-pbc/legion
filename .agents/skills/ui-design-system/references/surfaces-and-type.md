@@ -10,7 +10,7 @@ The tokens are in `tokens.md`.
 
 **SU3** A list item is a row, never a card. A card (a `border-border` box on `bg-card`) holds only a group of settings, a summary block or a board card. Never a card in a card. Linear: lists, settings. Pages: agents, priorities, settings. Check: reviewer.
 
-**SU4** No divider between rows of a list. A 1 px `border-border` line separates the header from the content, the properties panel from the main column, and one section from the next. Linear: the 2026 refresh's fewer separators. Check: reviewer.
+**SU4** No divider between rows of a list or a table. A 1 px `border-border` line separates the header from the content, the properties panel from the main column, and one section from the next. Linear: the 2026 refresh's fewer separators. Check: reviewer.
 
 **SU5** A floating surface (menu, popover, combobox, tooltip, hover card, command menu, toast) is `bg-popover` with a 1 px `border-border` edge. A modal (dialog, alert dialog, drawer) is `bg-popover` with `bg-scrim/50` behind it. Check: the components' tests in `packages/ui`; reviewer.
 
