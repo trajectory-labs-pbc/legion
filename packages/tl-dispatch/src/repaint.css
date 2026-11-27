@@ -713,7 +713,11 @@ button[class~="disabled:opacity-40"]:disabled {
   --tw-shadow: var(--shadow-dialog);
 }
 
-:is(.shadow-sm, [class~="shadow-[0_2px_12px_rgba(28,25,23,0.07)]"]):not([class*=":shadow-"]),
+/* The composer that answers a waiting ask also carries the resting card's shadow: its ring wins. */
+:is(.shadow-sm, [class~="shadow-[0_2px_12px_rgba(28,25,23,0.07)]"]):not(
+    [class*=":shadow-"],
+    [class~="shadow-[0_0_0_1px_var(--color-page-waiting),0_2px_12px_rgba(28,25,23,0.07)]"]
+  ),
 [role="switch"] .shadow-lg {
   --tw-shadow: initial;
 }

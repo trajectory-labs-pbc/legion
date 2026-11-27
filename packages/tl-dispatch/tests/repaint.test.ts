@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
@@ -55,6 +55,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 
 import { type CssDeclaration, parseCss } from "./css";
+import { upstreamScripts } from "./map/source";
 import { PACKAGE_ROOT, UPSTREAM_WEB } from "./source";
 import { parseScript } from "./typescript";
 
@@ -434,17 +435,6 @@ function sample(html: string, selector: string): Element {
   const host = document.createElement("div");
   host.innerHTML = html;
   return host.querySelector(selector) as Element;
-}
-
-/** Upstream's scripts under `dir`, tests and fixtures aside. */
-function upstreamScripts(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return /^__(tests|fixtures)__$/.test(entry.name) ? [] : upstreamScripts(path);
-    }
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
-  });
 }
 
 /** The words of each string and template in `source`. A template's are those outside its `${}`;
@@ -857,7 +847,7 @@ const SHADOWS: readonly (readonly [
   ],
   [
     "the composer while it answers a waiting ask",
-    () => withClasses(pageComposer.answering, "div"),
+    () => withClasses(`${pageComposer.box} ${pageComposer.answering}`, "div"),
     "0 0 0 var(--border-width) var(--warning)",
   ],
   [
@@ -1437,6 +1427,14 @@ describe("the repaint of upstream's pages", async () => {
     expect(documentPage.filter(own)).toHaveLength(1);
     const without = documentPage.filter((declaration) => !own(declaration));
     expect(underline(without, sample(DOCUMENT_LINK, "a"))["text-decoration-line"]).toBe("none");
+  });
+
+  test("puts prose-invert only beside prose, whose plain names here win over its dark greys", () => {
+    const inverted = upstreamLists.filter((classes) =>
+      classes.split(" ").some((word) => word.endsWith("prose-invert"))
+    );
+    expect(inverted.length).toBeGreaterThan(0);
+    expect(inverted.filter((classes) => !classes.split(" ").includes("prose"))).toEqual([]);
   });
 
   test("replaces every blue literal a rule of the compiled stylesheet holds", () => {
