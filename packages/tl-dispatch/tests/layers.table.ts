@@ -89,6 +89,8 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   // `upstreamView` for the seam files, and `ForkView` for fork code inside a marked component.
   "src/upstream/mark.tsx": ["shell", "loading", "app", "parts", "features"],
   "src/upstream/widgets/*.tsx": ["parts", "features", "shell"],
+  // The document editor's engine and its parts, for the reading aids: one file for each chunk.
+  "src/upstream/editor/*.ts": ["src/parts/reading-aids"],
   "src/upstream/views/<page>.tsx": PAGE_VIEW_READERS,
   "src/upstream/views/<page>": PAGE_VIEW_READERS,
   "src/views.ts": ["tests/map"],
