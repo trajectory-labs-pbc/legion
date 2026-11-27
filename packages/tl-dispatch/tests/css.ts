@@ -20,16 +20,19 @@ export interface ParsedCss {
   statements: CssStatement[];
 }
 
+/** An at-rule's prelude, its name in lower case; an `@property` name is read as a declaration's. */
+function atRulePrelude(at: AtRule): string {
+  const name = at.name.toLowerCase();
+  const params = name === "property" ? unescapeCss(at.params).toLowerCase() : at.params;
+  return `@${name} ${params}`.trim();
+}
+
 /** The preludes of the blocks around a node, outermost first, with whitespace collapsed. */
 function contextOf(node: Node): string[] {
   const context: string[] = [];
   for (let at = node.parent; at !== undefined; at = at.parent) {
     const prelude =
-      at instanceof Rule
-        ? at.selector
-        : at instanceof AtRule
-          ? `@${at.name.toLowerCase()} ${at.params}`.trim()
-          : undefined;
+      at instanceof Rule ? at.selector : at instanceof AtRule ? atRulePrelude(at) : undefined;
     if (prelude !== undefined) context.unshift(prelude.replace(/\s+/g, " "));
   }
   return context;

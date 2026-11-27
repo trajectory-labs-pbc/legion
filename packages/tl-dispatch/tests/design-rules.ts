@@ -40,7 +40,7 @@ export const RULES = {
   duration:
     "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
   themeOnly:
-    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`), and no reset (`--z-*: initial`) clears one",
+    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`), and no reset clears one (`--z-*: initial`, or `--z-index-overlay-*` inside a namespace)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -124,7 +124,9 @@ const NAME_VALUES = new Set([
   "counter-increment",
   "list-style-type",
 ]);
-const SKIPPED = /^@(keyframes|property)\b|^@layer properties$/;
+const SKIPPED = /^@(keyframes|property)\b/;
+/** Where compiled CSS gives `--tw-*` their initial values; a stylesheet's is checked like any. */
+const PROPERTIES_LAYER = "@layer properties";
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
   /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end)|column-rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
@@ -171,15 +173,14 @@ const THEME_ONLY = [
   "--opacity-disabled",
 ];
 /** Whether `name` is the theme's alone, or is a reset (`--z-*: initial`) that clears one: Tailwind
- *  clears every key that starts with the reset's stem, and `--*` clears them all. */
-function themeOnly(name: string): boolean {
-  if (name.endsWith("-*") || name === "--*") {
-    const stem = name.slice(0, name === "--*" ? -1 : -2);
-    return THEME_ONLY.some(
-      (key) => key.startsWith(stem) || (key.endsWith("-") && stem.startsWith(key))
-    );
-  }
-  return THEME_ONLY.some((key) => (key.endsWith("-") ? name.startsWith(key) : name === key));
+ *  clears every key that starts with the reset's stem. */
+function isThemeOnly(name: string): boolean {
+  const reset = name.endsWith("-*") ? name.slice(0, -2) : undefined;
+  return THEME_ONLY.some(
+    (key) =>
+      (key.endsWith("-") ? name.startsWith(key) : name === key) ||
+      (reset !== undefined && key.startsWith(reset))
+  );
 }
 /** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
 const namesOne = (value: string, names: ReadonlySet<string>) =>
@@ -233,14 +234,13 @@ export function declarationProblems(
   const value = declaration.value.replace(/\s*!important$/, "");
   // `@property` gives a variable its initial value, so a theme token's is the theme's alone, and
   // a skipped block declares one no more freely than any other.
-  const declaresThemeOnly =
-    themeOnly(property) ||
-    context.some((prelude) =>
-      themeOnly(unescapeCss(/^@property\s+(.+)$/.exec(prelude)?.[1] ?? "").toLowerCase())
-    );
-  if (context.some((prelude) => SKIPPED.test(prelude))) {
-    return declaresThemeOnly ? [RULES.themeOnly] : [];
-  }
+  const themeOnly =
+    isThemeOnly(property) ||
+    context.some((prelude) => isThemeOnly(/^@property (.+)$/.exec(prelude)?.[1] ?? ""));
+  const skipped = context.some(
+    (prelude) => SKIPPED.test(prelude) || (fromClass && prelude === PROPERTIES_LAYER)
+  );
+  if (skipped) return themeOnly ? [RULES.themeOnly] : [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
   if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
@@ -283,17 +283,13 @@ export function declarationProblems(
   ) {
     problems.push(RULES.duration);
   }
-  if (declaresThemeOnly) problems.push(RULES.themeOnly);
+  if (themeOnly) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
 
-/**
- * The app's entry stylesheet, as a reference: Tailwind, upstream's theme and plugins, and ours,
- * with the entry's own theme, utilities and variants, so a class compiles here to the value it has
- * in the build, with nothing else emitted. A reference emits no theme variables, so a plain
- * `@theme` key's `var()` carries its value as a fallback.
- */
+/** The app's entry stylesheet as a reference, so a class compiles to its value in the build; a
+ *  plain `@theme` key's `var()` carries that value as a fallback, as a reference emits no theme. */
 const COMPILER_INPUT = `@import ${JSON.stringify(APP_STYLESHEET)} reference;\n@tailwind utilities;`;
 
 /** The declarations `classes` compile to, with Tailwind and the app's theme, as the build does. */
