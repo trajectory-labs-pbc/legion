@@ -375,6 +375,18 @@
       ]
     },
     {
+      "name": "bars-glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/bars-glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/bars-glyph.tsx"
+        }
+      ]
+    },
+    {
       "name": "breadcrumb",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6", "lucide-react@1.70.0"],
@@ -977,6 +989,18 @@
           "path": "packages/ui/src/components/spinner.tsx",
           "type": "registry:ui",
           "target": "@ui/spinner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "state-glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/state-glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/state-glyph.tsx"
         }
       ]
     },
