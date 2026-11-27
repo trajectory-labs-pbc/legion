@@ -10,17 +10,13 @@ type StateShape =
   | { kind: "arrows" | "dashed" | "dashed-dot" | "empty" | "check" | "cross" }
   | { kind: "pie"; level: PieLevel };
 
-const PIE_SHARE: Record<PieLevel, number> = { 1: 0.25, 2: 0.5, 3: 0.75, 4: 0.9 };
-
-const round = (value: number) => Math.round(value * 1000) / 1000;
-
-/** A wedge of the disc of radius 3.5 at the centre, from twelve o'clock clockwise. */
-function wedge(share: number): string {
-  const angle = share * 2 * Math.PI;
-  const x = round(8 + 3.5 * Math.sin(angle));
-  const y = round(8 - 3.5 * Math.cos(angle));
-  return `M8 8V4.5A3.5 3.5 0 ${share > 0.5 ? 1 : 0} 1 ${x} ${y}Z`;
-}
+// Each pie: a wedge of radius 3.5 from twelve o'clock, clockwise, over 0.25, 0.5, 0.75 and 0.9.
+const PIE: Record<PieLevel, string> = {
+  1: "M8 8V4.5A3.5 3.5 0 0 1 11.5 8Z",
+  2: "M8 8V4.5A3.5 3.5 0 0 1 8 11.5Z",
+  3: "M8 8V4.5A3.5 3.5 0 1 1 4.5 8Z",
+  4: "M8 8V4.5A3.5 3.5 0 1 1 5.943 5.168Z",
+};
 
 // What each disc has cut out of it, drawn as strokes in the mask.
 const CUTS: Record<"arrows" | "check" | "cross", string> = {
@@ -74,7 +70,7 @@ function shapeOf(shape: StateShape): ReactNode {
       return (
         <>
           <Ring className="stroke-foreground" />
-          <path className="fill-foreground" d={wedge(PIE_SHARE[shape.level])} />
+          <path className="fill-foreground" d={PIE[shape.level]} />
         </>
       );
   }
