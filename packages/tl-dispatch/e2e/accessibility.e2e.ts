@@ -511,10 +511,11 @@ async function focusColour(page: Page): Promise<string> {
 }
 
 /** The element that has the focus, read in the page, and marked as a stop of this walk: as its
- *  first stop on the walk's first press. The body stands for nothing having the focus. It is
- *  marked only as a first stop, so a page with no stop comes round, and the focus can leave the
- *  page more than once before Tab comes back. It reads once the focus settles: a dialog's focus
- *  guard takes the focus from Tab and moves it on in the next animation frame. */
+ *  first stop on the walk's first press. The body stands for nothing having the focus. The body
+ *  is marked only as a first stop, so a page with no stop comes round, and the focus can leave
+ *  the page more than once before Tab comes back. The read waits two animation frames: a modal
+ *  dialog's focus guard takes the focus from Tab and moves it on in the next frame, and the
+ *  second frame is spare. */
 async function readStop({
   first,
   focus,
@@ -526,16 +527,12 @@ async function readStop({
   left: readonly string[];
   region: string;
 }): Promise<Stop> {
-  await new Promise<void>((settled) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => settled()))
-  );
+  await new Promise((settled) => requestAnimationFrame(() => requestAnimationFrame(settled)));
   const element = document.activeElement ?? document.body;
   const nothing = element === document.body;
   const mark = element.getAttribute("data-tab-walk");
-  if (mark === null && (first || !nothing)) {
-    element.setAttribute("data-tab-walk", first ? "first" : "");
-  }
-  const passed = mark === "first" ? "first" : mark === null || nothing ? null : "again";
+  if (first || !nothing) element.setAttribute("data-tab-walk", first ? "first" : "");
+  const passed = mark === "first" ? "first" : mark === null ? null : "again";
   if (nothing) {
     return { passed, inRegion: false, name: "nothing", outline: "", outlined: false };
   }
@@ -744,17 +741,19 @@ test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
 test("a Tab loop that never comes back to the first stop fails the Tab walk", async ({ page }) => {
   await openRegion(page, machineLogin);
   await page.locator(MAIN).evaluate((at) => {
-    const [one, two] = ["Loop one", "Loop two"].map((name) => {
-      const button = document.createElement("button");
-      button.textContent = name;
-      button.style.outline = "2px solid var(--focus)";
-      at.append(button);
-      return button;
-    });
-    two?.addEventListener("keydown", (event) => {
+    const button = (name: string) => {
+      const made = document.createElement("button");
+      made.textContent = name;
+      made.style.outline = "2px solid var(--focus)";
+      at.append(made);
+      return made;
+    };
+    const one = button("Loop one");
+    const two = button("Loop two");
+    two.addEventListener("keydown", (event) => {
       if (event.key !== "Tab" || event.shiftKey) return;
       event.preventDefault();
-      one?.focus();
+      one.focus();
     });
   });
   await expect(walk(page, machineLogin)).rejects.toThrow(
@@ -785,8 +784,6 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
   ]);
 });
 
-// The check's limit: from 768 px the content panel clips what is wider than it, so the page does
-// not scroll and the check finds nothing.
 test("content wider than a phone widens the page and fails the width check at 390 px only", async ({
   page,
 }) => {
