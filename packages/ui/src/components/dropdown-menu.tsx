@@ -177,7 +177,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
 
 /** A menu row's key at its right, drawn as the app draws every key. */
 function DropdownMenuShortcut({ className, steps }: { className?: string; steps: KeySteps }) {
-  return <KbdSequence className={cn("ml-auto", className)} steps={steps} />;
+  return <KbdSequence className={cn("ms-auto", className)} steps={steps} />;
 }
 
 function DropdownMenuSub(props: MenuPrimitive.SubmenuRoot.Props) {
@@ -200,7 +200,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon aria-hidden="true" className="ml-auto size-4" data-icon="inline-end" />
+      <ChevronRightIcon aria-hidden="true" className="ms-auto size-4" data-icon="inline-end" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }

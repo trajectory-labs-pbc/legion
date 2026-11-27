@@ -12,11 +12,7 @@ const WRAPPED: Row = { html: `<span>${svg}</span>Wrapped` };
 const TRAILING: Row = { html: `Trailing<svg data-icon="inline-end" viewBox="0 0 16 16"></svg>` };
 const BADGE: Row = { html: `Badge<span class="ml-auto">${svg}</span>` };
 const CHECKBOX: Row = { role: "menuitemcheckbox", html: "Checkbox" };
-// As DropdownMenuRadioItem draws it: the check's span comes after the row's own content.
-const RADIO: Row = {
-  role: "menuitemradio",
-  html: `${svg}Radio<span class="absolute end-2"></span>`,
-};
+const RADIO: Row = { role: "menuitemradio", html: `${svg}Radio` };
 
 /** Opens the account menu, only a host for the rows, puts copies of its first row holding `rows`
  *  in place of its rows, and says which keep an icon's room: a start padding wider than the end. */
