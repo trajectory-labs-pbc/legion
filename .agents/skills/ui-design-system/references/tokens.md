@@ -74,5 +74,3 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 | Heading `label` | A property's label, a menu section label. |
 | `textVariants` `body` | Rows, body text, controls. |
 | `textVariants` `caption` | Metadata in a row, a hint under a field. |
-
-`textVariants` has more sizes than the two above (`display`, `title`); `packages/ui/src/lib/typography.ts` holds them all.
