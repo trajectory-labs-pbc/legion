@@ -243,17 +243,28 @@ refuses to start it on a folder with no build.
   `bunx playwright install chromium`, and a Postgres: `DISPATCH_E2E_PG_IMAGE` (an image with
   `vector`, run by Docker) or `DISPATCH_E2E_PG_BIN`. It refuses to start while `DATABASE_URL` is
   set, because upstream's harness would empty that database, unless `DISPATCH_E2E_REUSE_SERVERS=1`
-  reuses a stack upstream's `harness-up.ts` started. It leaves out `*.multiprocess.e2e.ts`, as
-  upstream's default run does.
+  reuses a stack upstream's `harness-up.ts` started, or `E2E_LOCAL_DATABASE=throwaway` says the
+  database may be emptied (a Postgres you started with its CPU and memory capped, for example).
+  It leaves out `*.multiprocess.e2e.ts`, as upstream's default run does.
   `e2e/routes.e2e.ts` opens each route of the route map in both modes, and fails on a route
   whose mark, a heading, a labelled region or a text only that route's page shows, does not
   show, on a route that lands on another address or misses a read its row names, and on a
   console error. `e2e/route-marks.ts` names the mark of each route; its header
   names what each mode seeds for each route, and the mark the deployed mode expects where it
   seeds nothing.
+  The exit flows, one file each and in both modes: a sign-in reaches a tab on the sign-in page
+  (`sign-in-tab`), a change through the API shows on an open page (`live-event`), a write held in
+  the browser stays after a reload (`unsent-write`), and a sign-out with an unsent change asks
+  first (`sign-out-asks`; only the local mode confirms it). The first two pages change with no
+  reload by the test.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.
+- `bun run test:browser:switch`: `e2e/switch.multiprocess.e2e.ts` alone, in upstream's two-process
+  mode: Dispatch A serves this app and Dispatch B upstream's build under one origin. The file's
+  header says what it checks. It runs on the builds `bun run test:browser` made, and needs
+  upstream's web dist (`bun run build:web` in `packages/dispatch`). Its results go to
+  `e2e/test-results/switch`.
 
 The `tl-dispatch` job of `.github/workflows/fork-checks.yaml` runs all of them.
 
@@ -268,13 +279,22 @@ start while `DATABASE_URL` or `DISPATCH_E2E_STACKS` is set, and refuses a test t
 the signed-in person, so two paths refuse them: the worker's `fetch`, which upstream's seed
 helpers call, refuses dev sign-in (a seed `as: "user"`) and `/auth/logout`, and each context the
 `test` gives aborts the browser's `/auth/logout` (`e2e/deployed-guards.e2e.ts`). Neither reaches
-`page.request`, `context.request` or a context made with `browser.newContext()`, so a
-deployed-mode test sends nothing through them. A seed goes `as: "agent"`.
+`page.request` or `context.request`, so a deployed-mode test sends nothing through them, and a
+test that needs a context of its own takes the `emptyContext` fixture, which aborts it too.
+Each context starts from the storage state's cookies alone, so a test reads each app's default
+preferences, whatever the person's browser keeps, and nothing it sets reaches that browser. A
+seed goes `as: "agent"`.
 
 `E2E_PHASE` chooses the files: `routes-and-flows`, the default, runs every file but
-`*.multiprocess.e2e.ts` and `accessibility.e2e.ts`; `switch-write` and `switch-read` run
-`switch.multiprocess.e2e.ts` alone, a file the switch test adds; until then they match no file.
+`*.multiprocess.e2e.ts` and `accessibility.e2e.ts`; `switch-to-upstream` and `switch-to-new`
+run `switch.multiprocess.e2e.ts` alone, across a deploy to the app the phase names, and wait for
+the file `E2E_SWITCH_SIGNAL` names, which the operator writes once the deploy has finished; a
+switch phase refuses to start without it. The file's header gives the procedure. The deployed
+config takes no trace, which would hold the session cookie.
 Each record a run makes carries the run's name,
 `E2E_RUN_NAME` (a project key; the run picks one when it is not set), and a test reads only
 records it made. `e2e/modes.ts` holds these rules. The route test ends the priority it made and
 retracts its open ask, in both modes, and leaves its project, issue, document and session file.
+The flow tests leave an issue each in the run's project: the live-event test's has its title
+changed, the unsent-write test's has its status set to todo, and the sign-out and switch tests'
+are as they were made, since their write never reaches Dispatch.

@@ -1,5 +1,6 @@
-// What the two configs share: one Chromium project over every `*.e2e.ts` of this folder but the
-// multiprocess ones, with upstream's timeouts.
+// What the two configs share: one Chromium project over the `*.e2e.ts` files of this folder, with
+// upstream's timeouts. Each config picks which of them run (`localFiles` and `PHASES` in
+// modes.ts).
 import { devices, type PlaywrightTestConfig } from "@playwright/test";
 
 import { expectTimeout } from "../../dispatch/e2e/expect-timeout";
@@ -10,9 +11,6 @@ nameRun();
 export const commonConfig = {
   testDir: ".",
   testMatch: /\.e2e\.ts$/,
-  // As upstream's default run: a multiprocess spec needs two servers and runs on its own. No such
-  // file is here yet; the switch test will be one, and the routes-and-flows phase leaves it out.
-  testIgnore: /\.multiprocess\.e2e\.ts$/,
   outputDir: "test-results",
   fullyParallel: true,
   workers: 1,

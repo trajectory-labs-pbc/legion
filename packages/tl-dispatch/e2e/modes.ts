@@ -3,6 +3,7 @@
 // this run did not start. `PLAYWRIGHT_BASE_URL`, which upstream's `api.ts` also reads, selects it.
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
+import type { BrowserContext, Cookie as StorageCookie } from "@playwright/test";
 
 import { PROJECT_KEY_PATTERN } from "../../contracts/src/dispatch-tools";
 import { devSignInPath, sessionCookieName } from "../../dispatch/e2e/api";
@@ -26,9 +27,10 @@ export function nameRun(env: NodeJS.ProcessEnv = process.env): string {
   return env.E2E_RUN_NAME;
 }
 
-/** The local mode's settings: none, and neither a deployed server nor, unless the run reuses
- *  servers it was given (`DISPATCH_E2E_REUSE_SERVERS=1`, which harness-up's exports set), a
- *  database. */
+/** The local mode's settings: no deployed server, and no database unless the run reuses servers
+ *  it was given (`DISPATCH_E2E_REUSE_SERVERS=1`, which harness-up's exports set) or names a
+ *  database it may empty (`E2E_LOCAL_DATABASE=throwaway`), such as a capped Postgres the operator
+ *  started. */
 export function localSettings(env: NodeJS.ProcessEnv = process.env): void {
   if (isDeployed(env)) {
     throw new Error(
@@ -36,37 +38,64 @@ export function localSettings(env: NodeJS.ProcessEnv = process.env): void {
         "database before each test. Run the deployed mode (`bun run test:browser:deployed`), or unset it."
     );
   }
+  // Empty is unset, as for every other setting here.
+  const database = env.E2E_LOCAL_DATABASE || undefined;
+  if (database !== undefined && database !== "throwaway") {
+    throw new Error(`E2E_LOCAL_DATABASE is ${database}, and its one value is throwaway.`);
+  }
   // Upstream's harness runs one stack on a given DATABASE_URL and empties it before each test.
-  if (env.DATABASE_URL && env.DISPATCH_E2E_REUSE_SERVERS !== "1") {
+  if (env.DATABASE_URL && env.DISPATCH_E2E_REUSE_SERVERS !== "1" && database === undefined) {
     throw new Error(
       "DATABASE_URL is set, and upstream's harness would run on that database and empty it " +
         "before each test. Unset it to start a Postgres from DISPATCH_E2E_PG_IMAGE or " +
-        "DISPATCH_E2E_PG_BIN, or source harness-up's exports to reuse the stack it started."
+        "DISPATCH_E2E_PG_BIN, source harness-up's exports to reuse the stack it started, or " +
+        "set E2E_LOCAL_DATABASE=throwaway when that database may be emptied."
     );
   }
 }
 
+/** A spec that needs upstream's two-process mode, which is set for a whole run. */
+const MULTIPROCESS = /\.multiprocess\.e2e\.ts$/;
+
+/** The files the local config runs: in two-process mode (`bun run test:browser:switch`) the
+ *  multiprocess specs alone, else every other spec, as upstream's config does. */
+export function localFiles(processes: number): { testMatch: RegExp; testIgnore: RegExp[] } {
+  return processes === 2
+    ? { testMatch: MULTIPROCESS, testIgnore: [] }
+    : { testMatch: /\.e2e\.ts$/, testIgnore: [MULTIPROCESS] };
+}
+
 /** The files each phase of the deployed mode runs (`E2E_PHASE`). `routes-and-flows`, the
- *  default, leaves out the multiprocess specs and the axe run, which is local; the two switch
- *  phases run the switch file alone. No multiprocess file exists yet: the switch test adds the
- *  first, so the switch phases match no file until then. */
-export type Phase = "routes-and-flows" | "switch-write" | "switch-read";
+ *  default, leaves out the multiprocess specs and the axe run, which is local; each switch phase
+ *  runs the switch file alone, across a deploy to the app the phase names. */
+export const SWITCH_PHASES = ["switch-to-upstream", "switch-to-new"] as const;
+export type SwitchPhase = (typeof SWITCH_PHASES)[number];
+export type Phase = "routes-and-flows" | SwitchPhase;
+
+const isSwitchPhase = (phase: string): phase is SwitchPhase =>
+  (SWITCH_PHASES as readonly string[]).includes(phase);
+
+const SWITCH_FILE = { testMatch: /(^|\/)switch\.multiprocess\.e2e\.ts$/, testIgnore: [] };
 
 export const PHASES: Readonly<Record<Phase, { testMatch?: RegExp; testIgnore: RegExp[] }>> = {
-  "routes-and-flows": {
-    testIgnore: [/\.multiprocess\.e2e\.ts$/, /(^|\/)accessibility\.e2e\.ts$/],
-  },
-  "switch-write": { testMatch: /(^|\/)switch\.multiprocess\.e2e\.ts$/, testIgnore: [] },
-  "switch-read": { testMatch: /(^|\/)switch\.multiprocess\.e2e\.ts$/, testIgnore: [] },
+  "routes-and-flows": { testIgnore: [MULTIPROCESS, /(^|\/)accessibility\.e2e\.ts$/] },
+  "switch-to-upstream": SWITCH_FILE,
+  "switch-to-new": SWITCH_FILE,
 };
 
 /** What the deployed mode reads from the operator's shell. */
-export interface DeployedSettings {
+export type DeployedSettings = {
   baseURL: string;
   /** A Playwright storage-state file whose cookies hold a session cookie for the server. */
   storageState: string;
-  phase: Phase;
-}
+} & (
+  | { phase: "routes-and-flows" }
+  | {
+      phase: SwitchPhase;
+      /** The file the operator writes once the deploy has finished (`E2E_SWITCH_SIGNAL`). */
+      switchSignal: string;
+    }
+);
 
 /** What names a database: the deployed mode never touches one. Upstream's psql helper reads the
  *  stacks manifest's `DATABASE_URL`. */
@@ -79,7 +108,7 @@ const DATABASE_VARIABLES = ["DATABASE_URL", stacksVariable] as const;
 function sessionCookieProblem(file: string): string | undefined {
   let cookies: unknown;
   try {
-    cookies = (JSON.parse(readFileSync(file, "utf8")) as { cookies?: unknown } | null)?.cookies;
+    cookies = storageCookies(file);
   } catch (error) {
     return `E2E_STORAGE_STATE (${file}) is not a storage state: ${String(error)}`;
   }
@@ -88,6 +117,15 @@ function sessionCookieProblem(file: string): string | undefined {
   return Array.isArray(cookies) && cookies.some(named)
     ? undefined
     : `E2E_STORAGE_STATE (${file}) holds no ${sessionCookieName} cookie.`;
+}
+
+/** The cookies of the storage state `file`, which every deployed-mode context starts with. Its
+ *  origins' storage is left out: a test starts from each app's default preferences, whatever the
+ *  person's browser held. */
+export function storageCookies(file: string): StorageCookie[] {
+  return (
+    (JSON.parse(readFileSync(file, "utf8")) as { cookies: StorageCookie[] } | null)?.cookies ?? []
+  );
 }
 
 /** The deployed mode's settings; throws, naming each problem, before any test runs. */
@@ -110,14 +148,30 @@ export function deployedSettings(env: NodeJS.ProcessEnv = process.env): Deployed
     const problem = sessionCookieProblem(storageState);
     if (problem !== undefined) problems.push(problem);
   }
+  const switchSignal = env.E2E_SWITCH_SIGNAL || undefined;
+  if (isSwitchPhase(phase) && switchSignal === undefined) {
+    problems.push(
+      `E2E_SWITCH_SIGNAL is not set: phase ${phase} waits for that file, which the operator ` +
+        "writes once the deploy has finished."
+    );
+  }
   if (problems.length > 0) {
     throw new Error(`The deployed browser tests cannot start:\n${problems.join("\n")}`);
   }
-  return { baseURL: env.PLAYWRIGHT_BASE_URL ?? "", phase: phase as Phase, storageState };
+  const common = { baseURL: env.PLAYWRIGHT_BASE_URL ?? "", storageState };
+  return isSwitchPhase(phase) && switchSignal !== undefined
+    ? { ...common, phase, switchSignal }
+    : { ...common, phase: "routes-and-flows" };
 }
 
-/** The sign-out path, which `test.ts` also aborts in the browser. */
+/** The sign-out path, which the deployed mode also aborts in the browser. */
 export const SIGN_OUT = "/auth/logout";
+
+/** Aborts the browser's sign-out in `context`, as test.ts does in the contexts it gives. A
+ *  deployed-mode test that makes a context of its own calls this on it. */
+export async function abortSignOut(context: BrowserContext): Promise<void> {
+  await context.route(`**${SIGN_OUT}`, (route) => route.abort());
+}
 
 const REFUSED: Readonly<Record<string, string>> = {
   [new URL(devSignInPath(""), "http://dispatch.invalid").pathname]:

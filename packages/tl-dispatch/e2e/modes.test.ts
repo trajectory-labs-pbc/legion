@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { temporaryDirectory } from "../../test-fixtures/src/temporary-directories";
 import {
   deployedSettings,
+  localFiles,
   localSettings,
   nameRun,
   PHASES,
@@ -55,13 +57,30 @@ describe("the deployed mode", () => {
       "e2e/switch.multiprocess.e2e.ts",
     ];
     expect(files.filter((file) => runs("routes-and-flows", file))).toEqual(["e2e/routes.e2e.ts"]);
-    for (const phase of ["switch-write", "switch-read"] as const) {
+    for (const phase of ["switch-to-upstream", "switch-to-new"] as const) {
       expect(files.filter((file) => runs(phase, file))).toEqual(["e2e/switch.multiprocess.e2e.ts"]);
+      const env = deployedEnv({ E2E_PHASE: phase, E2E_SWITCH_SIGNAL: "/tmp/deployed" });
+      expect(deployedSettings(env)).toMatchObject({ phase, switchSignal: "/tmp/deployed" });
     }
-    expect(deployedSettings(deployedEnv({ E2E_PHASE: "switch-read" })).phase).toBe("switch-read");
-    expect(() => deployedSettings(deployedEnv({ E2E_PHASE: "switch" }))).toThrow(
-      "E2E_PHASE is switch, not one of routes-and-flows, switch-write, switch-read."
+    expect(() => deployedSettings(deployedEnv({ E2E_PHASE: "switch-read" }))).toThrow(
+      "E2E_PHASE is switch-read, not one of routes-and-flows, switch-to-upstream, switch-to-new."
     );
+  });
+
+  test("refuses a switch phase with no signal file to wait for", () => {
+    for (const signal of [undefined, ""]) {
+      const env = deployedEnv({ E2E_PHASE: "switch-to-new", E2E_SWITCH_SIGNAL: signal });
+      expect(() => deployedSettings(env)).toThrow(
+        "E2E_SWITCH_SIGNAL is not set: phase switch-to-new waits for that file"
+      );
+    }
+    // A phase that is no phase is refused for that alone.
+    expect(() => deployedSettings(deployedEnv({ E2E_PHASE: "switch" }))).not.toThrow(
+      "E2E_SWITCH_SIGNAL"
+    );
+    expect(
+      deployedSettings(deployedEnv({ E2E_SWITCH_SIGNAL: "/tmp/deployed" }))
+    ).not.toHaveProperty("switchSignal");
   });
 
   test("refuses to start while a database is named", () => {
@@ -127,6 +146,45 @@ describe("the local mode", () => {
     expect(() =>
       localSettings({ DATABASE_URL: "postgres://x", DISPATCH_E2E_REUSE_SERVERS: "1" })
     ).not.toThrow();
+  });
+
+  test("takes a database named in the shell only when it is a throwaway one", () => {
+    expect(() =>
+      localSettings({ DATABASE_URL: "postgres://x", E2E_LOCAL_DATABASE: "throwaway" })
+    ).not.toThrow();
+    expect(() =>
+      localSettings({ DATABASE_URL: "postgres://x", E2E_LOCAL_DATABASE: "yes" })
+    ).toThrow("E2E_LOCAL_DATABASE is yes, and its one value is throwaway.");
+    // Empty is unset, as E2E_SWITCH_SIGNAL is.
+    expect(() => localSettings({ DATABASE_URL: "postgres://x", E2E_LOCAL_DATABASE: "" })).toThrow(
+      "DATABASE_URL is set"
+    );
+  });
+
+  test("runs the switch file only in two-process mode, and every other file otherwise", () => {
+    const files = ["e2e/routes.e2e.ts", "e2e/switch.multiprocess.e2e.ts"];
+    const runs = (processes: number) => {
+      const { testIgnore, testMatch } = localFiles(processes);
+      return files.filter(
+        (file) => testMatch.test(file) && !testIgnore.some((pattern) => pattern.test(file))
+      );
+    };
+    expect(runs(1)).toEqual(["e2e/routes.e2e.ts"]);
+    expect(runs(2)).toEqual(["e2e/switch.multiprocess.e2e.ts"]);
+  });
+});
+
+describe("the browser contexts", () => {
+  // A context the deployed mode does not guard could sign the person out of every session, so
+  // test.ts makes each one: `context`, and `emptyContext` for a test that needs its own.
+  test("are made in test.ts alone", () => {
+    const e2e = fileURLToPath(new URL(".", import.meta.url));
+    const makesContext =
+      /\bnewContext\(|\bbrowser\.newPage\(|\b(asUser|withAlice|asPlainHttpUser)\b/;
+    const makers = readdirSync(e2e)
+      .filter((file) => file.endsWith(".ts") && file !== "test.ts" && file !== "modes.test.ts")
+      .filter((file) => makesContext.test(readFileSync(join(e2e, file), "utf8")));
+    expect(makers).toEqual([]);
   });
 });
 

@@ -3,7 +3,7 @@
 import { defineConfig } from "@playwright/test";
 
 import { commonConfig, commonUse } from "./config";
-import { deployedSettings, PHASES } from "./modes";
+import { deployedSettings, PHASES, storageCookies } from "./modes";
 
 const { baseURL, phase, storageState } = deployedSettings();
 
@@ -13,5 +13,11 @@ export default defineConfig({
   reporter: "list",
   // A retry would seed the run's records again under the same name, which the server refuses.
   retries: 0,
-  use: { ...commonUse, baseURL, storageState },
+  use: {
+    ...commonUse,
+    baseURL,
+    storageState: { cookies: storageCookies(storageState), origins: [] },
+    // No trace: a trace would hold the person's session cookie.
+    trace: "off",
+  },
 });

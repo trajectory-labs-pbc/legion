@@ -51,7 +51,8 @@ jobs:
 
   tl-dispatch:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # The step budgets plus setup, until a measured run sets it to that run's time plus half.
+    timeout-minutes: 47
     defaults:
       run:
         working-directory: packages/tl-dispatch
@@ -108,6 +109,17 @@ jobs:
         working-directory: packages/envoy
         env:
           GOPROXY: https://proxy.golang.org|direct
+      # The harness otherwise compiles this inside each browser step's budget (e2e/harness-postgres.ts,
+      # DISPATCH_E2E_PG_CONNECTIONS), as upstream's browser jobs read it in a step of their own.
+      - name: Read the connections each stack's Postgres must allow
+        timeout-minutes: 4
+        run: |
+          connections=$(go run ./internal/dispatch/store/cmd/connections)
+          [[ "$connections" =~ ^[1-9][0-9]*$ ]] || { echo "::error::go run ./internal/dispatch/store/cmd/connections printed '$connections', not a positive whole number"; exit 1; }
+          echo "DISPATCH_E2E_PG_CONNECTIONS=$connections" >> "$GITHUB_ENV"
+        working-directory: packages/envoy
+        env:
+          GOPROXY: https://proxy.golang.org|direct
       # Upstream's pgvector row in .github/ci-images.yaml, so the job follows upstream's pin. The
       # harness's own `docker run` fetches it: check-ci-images.sh cannot read an image this step
       # would pull by variable.
@@ -136,6 +148,16 @@ jobs:
       - name: Browser tests (deployed mode, against a local server)
         timeout-minutes: 8
         run: bun run test:browser:deployed-local
+      # The switch test serves upstream's build beside this app's, so it builds it first.
+      - name: Build upstream's web app
+        timeout-minutes: 5
+        run: bun run build:web
+        working-directory: packages/dispatch
+      # Upstream's two-process mode: this app (on the build the local mode made) and upstream's
+      # build under one origin.
+      - name: Browser tests (switch between the two apps)
+        timeout-minutes: 8
+        run: bun run test:browser:switch
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:

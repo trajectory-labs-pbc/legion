@@ -8,12 +8,15 @@
 // refused. A sign-out would end every session of the signed-in person, so two paths refuse it:
 // this worker's `fetch`, which upstream's api.ts seeds through, refuses dev sign-in (a seed
 // `as: "user"`) and sign-out; and the `context` this `test` gives, with its pages, aborts the
-// browser's sign-out. Neither reaches `page.request`, `context.request` or a context a test
-// makes with `browser.newContext()`, so a deployed-mode test sends nothing through those.
+// browser's sign-out. Neither reaches `page.request` or `context.request`, so a deployed-mode test
+// sends nothing through those. A test that needs a context of its own takes `emptyContext`, which
+// aborts the sign-out as `context` does, rather than calling `browser.newContext()`.
 // Upstream's users.ts helpers sign in through `context.request` at dev sign-in, which a deployed
 // Dispatch does not serve.
+import type { BrowserContext } from "@playwright/test";
+
 import { test as upstreamTest } from "../../dispatch/e2e/test";
-import { isDeployed, nameRun, refusingSignInAndOut, SIGN_OUT } from "./modes";
+import { abortSignOut, isDeployed, nameRun, refusingSignInAndOut } from "./modes";
 
 export const deployed = isDeployed();
 
@@ -21,7 +24,7 @@ if (deployed) {
   globalThis.fetch = refusingSignInAndOut(globalThis.fetch);
 }
 
-export const test = deployed
+const base: typeof upstreamTest = deployed
   ? upstreamTest.extend({
       // Overrides keep upstream's options (`freshDatabase` stays automatic).
       signedIn: false,
@@ -38,11 +41,25 @@ export const test = deployed
       },
       // Only a test that takes `context` or `page` builds one.
       context: async ({ context }, use) => {
-        await context.route(`**${SIGN_OUT}`, (route) => route.abort());
+        await abortSignOut(context);
         await use(context);
       },
     })
   : upstreamTest;
+
+export const test = base.extend<{ emptyContext: BrowserContext }>({
+  /** A context of the test's own with no cookie and no storage, which it closes afterwards; in
+   *  the deployed mode it aborts the sign-out, as `context` does. */
+  emptyContext: async ({ browser }, use) => {
+    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    if (deployed) await abortSignOut(context);
+    try {
+      await use(context);
+    } finally {
+      await context.close();
+    }
+  },
+});
 
 /** The name of this run: each record a test makes carries it, and a test reads only those. */
 export const runName = nameRun();
