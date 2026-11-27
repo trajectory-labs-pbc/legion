@@ -458,9 +458,9 @@ const CONTROLS = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 /** What may hold a small control without meeting it: a link with no other role or a `role="link"`
- *  row, a tree row, or a focusable element that is no control: no control tag and no `role`
- *  attribute, or the role region, group or tabpanel (a scroll region, a group, a tab panel). Any
- *  other control that holds one meets it. */
+ *  row, a tree row, a focusable element that is no control (no control tag and no `role`
+ *  attribute), or one with the role region, group or tab panel. Any other control that holds one
+ *  meets it. */
 const HOLDERS = [
   "a[href]:not([role])",
   "[role=link]",
@@ -613,16 +613,21 @@ test("a control whose box sits in a small control's target meets it, unless it i
     -3,
     '<button style="display: block; width: 1px; height: 1px; padding: 0; border: 0"></button>'
   );
+  await drawBelow(control, 3, `<input tabindex="-1" style="${tiny}; border: 0">`);
+  await drawBelow(control, 7, `<input aria-hidden="true" style="${tiny}; border: 0">`);
   expect(await targetFaults(control)).toEqual({
     misses: [],
-    meets: [expect.stringMatching(/^<button aria-hidden="true"/)],
+    meets: [
+      expect.stringMatching(/^<button aria-hidden="true"/),
+      expect.stringMatching(/^<input tabindex="-1"/),
+      expect.stringMatching(/^<input aria-hidden="true"/),
+    ],
   });
 });
 
 test("Base UI's hidden input meets no target, even at upstream's 44 px floor", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 720 });
   const control = (await cutRows(page)).first();
-  // Base UI's style for a hidden input: 1 px, until upstream's floor below 1280 px.
   await drawBelow(
     control,
     -11,
