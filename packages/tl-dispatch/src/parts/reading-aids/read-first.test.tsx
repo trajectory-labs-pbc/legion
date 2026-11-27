@@ -10,8 +10,14 @@ import type { ConnectionCallbacks, DocumentConnection } from "@/upstream/editor/
 import { actorLabelText, buildDispatchReference } from "@/upstream/logic/reading-aids";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { refusal } from "../../../tests/network";
-import { blockIdsOf, destroyEditors, editorIn } from "../../../tests/reading-aids/editor-fixtures";
-import { warmMarkdownRenderer } from "../../../tests/upstream";
+import {
+  APPROVED,
+  CHANGED_SECTIONS,
+  REVISED,
+} from "../../../tests/reading-aids/change-marks.fixture";
+import { InProcessWorker, inProcessEditorIn } from "../../../tests/reading-aids/comparer-fixtures";
+import { blockIdsOf, destroyEditors } from "../../../tests/reading-aids/editor-fixtures";
+import { quietConsoleError, warmMarkdownRenderer } from "../../../tests/upstream";
 import { AidParts } from "./aid-parts";
 import { HOST_ATTRIBUTE } from "./aided-editor";
 import { partsSlot, reportingSync } from "./parts-slot";
@@ -118,20 +124,30 @@ function connect(artifactId: string): () => void {
   return () => act(synced);
 }
 
-/** Mounts an aided editor and its parts, its document synced unless `synced` is false. */
+/** An aided editor and its parts, synced unless `synced` is false; earlier versions read `earlier`. */
 async function mount(
   documentRef: string,
   markdown: string,
   asks: (blocks: readonly string[]) => IssueAskRow[],
   {
+    earlier = markdown,
     issueRead = Promise.resolve(issue),
     synced = true,
-  }: { issueRead?: Promise<IssueDetails>; synced?: boolean } = {}
+    tree,
+  }: {
+    earlier?: string;
+    issueRead?: Promise<IssueDetails>;
+    synced?: boolean;
+    tree?: { readonly type: string };
+  } = {}
 ) {
   const host = document.body.appendChild(document.createElement("div"));
   host.setAttribute(HOST_ATTRIBUTE, "");
   host.tabIndex = -1;
-  const handle = await editorIn(host.appendChild(document.createElement("div")), documentRef);
+  const handle = await inProcessEditorIn(
+    host.appendChild(document.createElement("div")),
+    documentRef
+  );
   handle.setMarkdown(markdown);
   const blocks = blockIdsOf(handle.view);
   const sync = connect(documentRef === VERIFICATION_REF ? VERIFICATION : SPEC);
@@ -144,7 +160,8 @@ async function mount(
   spyOn(api, "getArtifactVersion").mockImplementation(async (_id, number) => ({
     authors: [],
     created_at: "2026-11-20T10:00:00Z",
-    markdown,
+    markdown: earlier,
+    ...(tree === undefined ? {} : { markdown_tree: tree }),
     named: false,
     number,
     summary: null,
@@ -435,4 +452,110 @@ for (const [status, words] of [
 test("read-first: a request that waits on the reader with no person named says it waits on you", async () => {
   await mount(SPEC_REF, "Text.", () => [{ ...twoDocuments, waiting_on_person: "" } as IssueAskRow]);
   expect((await firstRow()).getByText("Waiting on you")).toBeDefined();
+});
+
+const EARLIER = "# Plan\n\nThe plan stays.\n\n## Rollout\n\nWe ship in the spring.";
+const CHANGED = "# Plan\n\nThe plan stays.\n\n## Rollout\n\nWe ship in the spring, after a pilot.";
+
+const countsLine = () => {
+  const line = document.querySelector<HTMLElement>("[data-reading-aids-counts]");
+  if (line === null) throw new Error("no counts line");
+  return within(line);
+};
+
+test("DOC-8 read-first: the counts line counts the changed blocks against the baseline, with a link to each changed section", async () => {
+  const user = userEvent.setup();
+  const { blocks, focusBlock } = await mount(SPEC_REF, CHANGED, () => [twoDocuments], {
+    earlier: EARLIER,
+  });
+  expect(
+    await screen.findByText(
+      "Since v8, the last approved version: 1 block, 1 changed, in 1 of 2 sections"
+    )
+  ).toBeDefined();
+  const link = countsLine().getByRole("link", { name: "Rollout" });
+  expect(countsLine().queryByRole("link", { name: "Plan" })).toBeNull();
+  // A section's link goes to its heading.
+  expect(link.getAttribute("href")).toBe(`#b-${blocks[2]}`);
+  await user.click(link);
+  expect(window.location.hash).toBe(`#b-${blocks[2]}`);
+  expect(focusBlock).toHaveBeenLastCalledWith(blocks[2]);
+});
+
+test("DOC-8 read-first: on the approval's plan the line gives 7 blocks in 5 of 7 sections, with one link for each of the 5", async () => {
+  await mount(SPEC_REF, REVISED, () => [twoDocuments], { earlier: APPROVED });
+  expect(
+    await screen.findByText(
+      "Since v8, the last approved version: 7 blocks, 6 changed, 1 added, in 5 of 7 sections"
+    )
+  ).toBeDefined();
+  expect(
+    countsLine()
+      .getAllByRole("link")
+      .map((link) => link.textContent)
+  ).toEqual(CHANGED_SECTIONS);
+});
+
+test("DOC-8 read-first: with nothing changed since the baseline, the line says so and links no section", async () => {
+  await mount(SPEC_REF, EARLIER, () => [twoDocuments]);
+  expect(await screen.findByText("No changes since v8")).toBeDefined();
+  expect(countsLine().queryByRole("link")).toBeNull();
+});
+
+test("DOC-8 read-first: while the first comparison runs, the line says it loads", async () => {
+  const held: (() => void)[] = [];
+  const post = InProcessWorker.prototype.postMessage;
+  spyOn(InProcessWorker.prototype, "postMessage").mockImplementation(function (
+    this: InProcessWorker,
+    request
+  ) {
+    held.push(() => post.call(this, request));
+  });
+  await mount(SPEC_REF, CHANGED, () => [twoDocuments], { earlier: EARLIER });
+  await waitFor(() => expect(held).toHaveLength(1));
+  expect(countsLine().getByRole("status").textContent).toBe("Loading the changes…");
+  mock.restore();
+  for (const go of held) go();
+  expect(
+    await screen.findByText(
+      "Since v8, the last approved version: 1 block, 1 changed, in 1 of 2 sections"
+    )
+  ).toBeDefined();
+});
+
+test("DOC-8 read-first: a baseline whose text the comparison refuses says so, with no Retry and no marks", async () => {
+  await mount(SPEC_REF, CHANGED, () => [twoDocuments], {
+    earlier: EARLIER,
+    tree: { type: "not-a-document" },
+  });
+  expect(await screen.findByText("v8 has no text to compare")).toBeDefined();
+  expect((await firstRow()).getByText("Approved before: v8")).toBeDefined();
+  expect(countsLine().queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(document.querySelector("[data-reading-aids-change]")).toBeNull();
+});
+
+test("DOC-8 read-first: a failed comparison shows one line with Retry and no marks, and Retry draws them", async () => {
+  quietConsoleError();
+  const user = userEvent.setup();
+  spyOn(InProcessWorker.prototype, "postMessage").mockImplementationOnce(function (
+    this: InProcessWorker
+  ) {
+    this.crash();
+  });
+  await mount(SPEC_REF, CHANGED, () => [twoDocuments], { earlier: EARLIER });
+  expect(await screen.findByText("Could not load the changes.")).toBeDefined();
+  expect(document.querySelector("[data-reading-aids-change]")).toBeNull();
+  await user.click(countsLine().getByRole("button", { name: "Retry" }));
+  expect(
+    await screen.findByText(
+      "Since v8, the last approved version: 1 block, 1 changed, in 1 of 2 sections"
+    )
+  ).toBeDefined();
+  expect(document.querySelector("[data-reading-aids-change]")).not.toBeNull();
+});
+
+test("DOC-9 read-first: off the spec's page the counts line shows, and with no request approved before it has no earlier version", async () => {
+  await mount(VERIFICATION_REF, CHANGED, () => [twoDocuments], { earlier: EARLIER });
+  expect(await screen.findByText("No earlier version to compare")).toBeDefined();
+  expect(document.querySelector("[data-reading-aids-change]")).toBeNull();
 });

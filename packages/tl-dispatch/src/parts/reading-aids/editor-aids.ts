@@ -7,7 +7,9 @@ import type { EditorHandle } from "@/upstream/editor/frame";
 import { FORK_VIEW_ATTRIBUTE } from "@/upstream/mark";
 
 import { AidParts } from "./aid-parts";
+import type { Comparer } from "./comparer";
 import { docChangesPlugin } from "./editor-doc";
+import { changeMarksPlugin } from "./marks-plugin";
 import { partsSlot } from "./parts-slot";
 
 /** The key of the parts plugin, whose state is the parts' height: an editor that holds it has the aids. */
@@ -17,6 +19,8 @@ const aidsKey = new PluginKey<number>("reading-aids");
 export const REVEAL_BLOCK = "revealBlock";
 
 export const PARTS_ATTRIBUTE = "data-reading-aids-parts";
+
+export { besideChangeMarks, showsChangeMarks, watchChanges } from "./marks-plugin";
 
 /** Asks each fold of the aids to open the block `blockId`. */
 export function revealBlock(view: EditorView, blockId: string): void {
@@ -101,11 +105,20 @@ function partsPlugin(
   });
 }
 
-/** Adds the aids to an editor that has none. */
-export function installAids(editor: EditorHandle, host: HTMLElement, documentRef: string): void {
+/** Adds the aids to an editor that has none; `startComparer` makes the change marks' comparer. */
+export function installAids(
+  editor: EditorHandle,
+  host: HTMLElement,
+  documentRef: string,
+  startComparer?: () => Comparer
+): void {
   const { view } = editor;
   if (aidsKey.get(view.state) !== undefined) throw new Error("This editor has the aids already.");
   const least = Number.parseFloat(getComputedStyle(view.dom).minHeight) || 0;
-  const aids = [partsPlugin(host, editor, documentRef, least), docChangesPlugin()];
+  const aids = [
+    partsPlugin(host, editor, documentRef, least),
+    docChangesPlugin(),
+    changeMarksPlugin(startComparer),
+  ];
   view.updateState(view.state.reconfigure({ plugins: view.state.plugins.concat(aids) }));
 }

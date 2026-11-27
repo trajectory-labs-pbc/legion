@@ -1,12 +1,16 @@
 import { afterEach, beforeAll, expect, test } from "bun:test";
 import { Plugin } from "@milkdown/kit/prose/state";
+import { waitFor } from "@testing-library/react";
 import * as Y from "yjs";
 import {
   BLOCK_ID_ATTRIBUTE,
   EDITOR_BOX_ATTRIBUTE,
   type EditorHandle,
+  specBlockMarks,
 } from "@/upstream/editor/frame";
+import { against, inProcessEditorIn } from "../../../tests/reading-aids/comparer-fixtures";
 import {
+  blockIdsOf,
   destroyEditors,
   editorIn,
   keep,
@@ -18,6 +22,7 @@ import {
 import { warmMarkdownRenderer } from "../../../tests/upstream";
 import { aidedEditor, HOST_ATTRIBUTE } from "./aided-editor";
 import { installAids, PARTS_ATTRIBUTE, REVEAL_BLOCK } from "./editor-aids";
+import { setMarksBaseline } from "./marks-plugin";
 import { partsSlot } from "./parts-slot";
 
 beforeAll(async () => {
@@ -168,4 +173,27 @@ test("the aided editor keeps the live sync both ways, and its one parts root", a
   expect(aided.view.state.doc.textContent).toBe("Typed here. And there.");
   expect(partsRoots(aided)).toHaveLength(1);
   expect(partsSlot.entries()).toHaveLength(1);
+});
+
+test("change-marks the handle's block marks leave out upstream's changed-since-read mark while the change marks show, and keep the stale-decision mark", async () => {
+  const handle = await inProcessEditorIn(rootIn(HOST_ATTRIBUTE), SPEC);
+  handle.setMarkdown("First block.\n\nSecond block.");
+  const [first = "", second = ""] = blockIdsOf(handle.view);
+  const marks = specBlockMarks([first], [second]);
+  handle.setBlockMarks(marks);
+  /** Whether the block `blockId` draws every class of the mark whose classes are `className`. */
+  const draws = (blockId: string, className: string | undefined) => {
+    const block = handle.view.dom.querySelector(`[${BLOCK_ID_ATTRIBUTE}="${blockId}"]`);
+    const classes = className?.split(" ") ?? [];
+    return classes.length > 0 && classes.every((each) => block?.classList.contains(each));
+  };
+  const [stale, changed] = marks.map(({ className }) => className);
+  expect(draws(second, changed)).toBe(true);
+
+  setMarksBaseline(handle.view, against({ markdown: "First block.\n\nSecond.", tree: undefined }));
+  await waitFor(() => expect(draws(second, changed)).toBe(false));
+  expect(draws(first, stale)).toBe(true);
+
+  setMarksBaseline(handle.view, undefined);
+  await waitFor(() => expect(draws(second, changed)).toBe(true));
 });

@@ -241,6 +241,18 @@ test("DOC-8 read-first: the changed-since-read line hides on the spec host, the 
   await expect(changedLine(page)).toHaveCount(1);
   await expect(changedLine(page)).toBeHidden();
 
+  // The aids' counts line names the changed section in its place, with a link to it.
+  const counts = page.locator("[data-reading-aids-counts]");
+  await expect(counts).toContainText(
+    "Since v1, the version you last read: 1 block, 1 changed, in 1 of 3 sections"
+  );
+  await expect(page.locator("[data-reading-aids-change='Changed']")).toHaveText(
+    "The revised plan."
+  );
+  await counts.getByRole("link", { name: "Rollout" }).click();
+  await expect.poll(() => new URL(page.url()).hash).toMatch(/^#b-/);
+  await expect(counts.getByRole("link")).toHaveCount(1);
+
   // A version made whose answer was lost: upstream's line has a test id, so it shows.
   await page.route(`**/api/v1/artifacts/${artifactId}/versions`, (route) =>
     route.request().method() === "POST"

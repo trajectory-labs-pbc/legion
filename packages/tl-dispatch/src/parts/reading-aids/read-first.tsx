@@ -19,12 +19,12 @@ import {
   useIssueRead,
 } from "@/data/document-reads";
 import { ReadFailure, useReadFailure } from "@/data/read-failure";
-import { blockFragment } from "@/upstream/editor/frame";
 import { ForkView } from "@/upstream/mark";
 import { PlainText } from "@/upstream/widgets/plain-text";
 import { ReferenceLink } from "@/upstream/widgets/reference-link";
 import { Timestamp } from "@/upstream/widgets/timestamp";
 
+import { BlockLink } from "./block-link";
 import { useBlocksInOrder } from "./editor-doc";
 import { moveToBlock } from "./moves";
 import { type PartsEntry, useSynced } from "./parts-slot";
@@ -175,17 +175,13 @@ const DecisionRow = memo(function DecisionRow({
       <Badge variant="outline">Decision</Badge>
       <Question ask={decision.ask} source={source} surface="document-open-decision">
         {(words) => (
-          <a
-            className={`min-w-0 underline-offset-2 hover:underline ${textVariants({ weight: "medium" })}`}
-            href={blockFragment(decision.blockId)}
-            onClick={(event) => {
-              event.preventDefault();
-              moveTo(decision.blockId, "click");
-            }}
+          <BlockLink
+            blockId={decision.blockId}
+            moveTo={(blockId) => moveTo(blockId, "click")}
             title={words}
           >
             <span className="line-clamp-2 [overflow-wrap:anywhere]">{words}</span>
-          </a>
+          </BlockLink>
         )}
       </Question>
       <span className={caption}>{URGENCY_LABELS[askUrgency(decision.ask.urgency)]}</span>

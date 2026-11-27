@@ -141,6 +141,8 @@
   --radius: 8px;
   --border-width: 1px;
   --icon-stroke: 1.75;
+  /* The reading aids' gutter at the left of a document's text, which holds the change labels. */
+  --reading-gutter-width: 64px;
 }
 
 .dark {
