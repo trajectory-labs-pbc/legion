@@ -118,27 +118,9 @@ test("MLP-02 a refused lookup shows the server's reason under the field", async 
 
 A port of an upstream test keeps upstream's assertion and adds the ID. A new parity item gets the number after the highest one in the page's list, and its row in the same change.
 
-## 8. Timers and listeners live in a named hook
+## 8. A component's timers and listeners live in a named hook
 
-A timer (`setTimeout`, `setInterval`) or a listener (`addEventListener`, a subscription) lives in one hook named for what it does, which starts it and cleans it up. A component calls the hook; it never starts a timer or adds a listener in a bare effect of its own. The hook is the one place to read the cleanup, and the one place to test it.
-
-```tsx
-// Bad
-function Clock() {
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  return <Time at={now} />;
-}
-
-// Good
-function Clock() {
-  const now = useNow(60_000);
-  return <Time at={now} />;
-}
-```
+A component starts no timer and adds no listener or observer in a bare effect: it calls a named hook that also cleans up, or uses a ref callback that returns its cleanup.
 
 ## Checks
 
