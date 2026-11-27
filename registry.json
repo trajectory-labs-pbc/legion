@@ -1193,6 +1193,28 @@
       ]
     },
     {
+      "name": "list-row",
+      "type": "registry:block",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/list-row.tsx",
+          "type": "registry:component",
+          "target": "@components/list-row.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
       "name": "message-page",
       "type": "registry:block",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],

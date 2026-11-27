@@ -229,6 +229,7 @@ const tokensOf = (path: string): string[] =>
 const ROUND_SLOTS = [
   "avatar",
   "avatar-group-count",
+  "list-row-dot",
   "radio-group-indicator",
   "radio-group-item",
   "slider-thumb",
@@ -373,11 +374,11 @@ describe("the components", () => {
     const widths = everyToken.filter(({ token }) => utilityOf(token) === "outline-2");
     expect(widths.length).toBeGreaterThan(10);
     for (const { path, token } of widths) {
-      // A scroll container draws its ring inside its own edge.
-      const offsets = [
-        `${variantsOf(token)}outline-offset-2`,
-        `${variantsOf(token)}-outline-offset-2`,
-      ];
+      // A scroll container draws its ring inside its own edge. A list row draws it inside itself,
+      // so its list does not clip it (FO2).
+      const inside = `${variantsOf(token)}-outline-offset-2`;
+      const outside = `${variantsOf(token)}outline-offset-2`;
+      const offsets = path === "blocks/list-row.tsx" ? [inside] : [outside, inside];
       expect(
         tokensOf(path).some((each) => offsets.includes(each)),
         `${path}: ${token}`

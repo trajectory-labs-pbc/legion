@@ -65,8 +65,9 @@ installs from the default branch, not from the ref you asked for.
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
   corners from the theme. `--radius` is one length, each step is `--radius` times 0.5 to 1.5, and
-  the only other radius is `rounded-full`, which a source check allows on seven parts only: the
-  radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar
-  group's count. It also checks the contrast of each text colour on each
+  the only other radius is `rounded-full`, which a source check allows on eight parts only: the
+  radio item and its dot, the switch and its thumb, the slider thumb, the avatar, the avatar
+  group's count and a list row's dot. A list row, like a scroll container, draws its focus outline
+  inside itself, so its list does not clip it; every other part draws it 2 px outside. It also checks the contrast of each text colour on each
   surface the components draw it on, of the focus outline and the field and state edges, and of a
   priority's track against its filled bars and each row fill.
