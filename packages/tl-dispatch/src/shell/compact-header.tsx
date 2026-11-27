@@ -25,7 +25,6 @@ export function CompactHeader({
 }) {
   const inboxCount = useInboxRowCount();
   const agentsCount = useAgentsRowCount();
-  // A refused count draws nothing, as beside a sidebar row.
   const inboxFault = retryableFaultOf(inboxCount);
   return (
     <>

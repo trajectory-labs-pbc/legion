@@ -126,7 +126,8 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
         ...agent,
         selected: agent.sessionId === open.liveView,
       })),
-      // The Agents row reads the same state, and its count's Retry is the one that reports it.
+      // The Agents row reads the same state, and its count's Retry reports a failure that can
+      // clear; a refused state shows nothing in the sidebar.
       fault: undefined,
     },
     inLiveView: open.liveView !== undefined,
