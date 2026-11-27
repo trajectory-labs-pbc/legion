@@ -37,7 +37,7 @@ function TableRow({ className, ...props }: ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "group/row in-data-[slot=table-body]:hover:bg-secondary has-aria-expanded:bg-muted aria-selected:bg-muted",
+        "group/row in-data-[slot=table-body]:not-in-aria-busy:hover:bg-secondary has-aria-expanded:bg-muted aria-selected:bg-muted",
         className
       )}
       {...props}
