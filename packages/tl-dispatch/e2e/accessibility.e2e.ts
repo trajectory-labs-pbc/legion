@@ -710,13 +710,15 @@ test("an input without its label inside an upstream widget's wrapper is left out
 });
 
 // The run's own controls for the walk and the widths, on the machine login page: a button with no
-// outline or a thin one fails the walk, and content wider than a phone fails the width check.
+// outline, a thin one or one in another colour fails the walk, and content wider than a phone
+// fails the width check.
 test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
   await openRegion(page, machineLogin);
   await page.locator(MAIN).evaluate((at) => {
     for (const [name, outline] of [
       ["No outline", "none"],
       ["Thin outline", "1px solid var(--focus)"],
+      ["Other colour", "2px solid rgb(0, 128, 0)"],
     ] as const) {
       const button = document.createElement("button");
       button.textContent = name;
@@ -728,8 +730,10 @@ test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
   expect(unmarked.map(({ scheme, name }) => ({ scheme, name }))).toEqual([
     { scheme: "light", name: 'button "No outline"' },
     { scheme: "light", name: 'button "Thin outline"' },
+    { scheme: "light", name: 'button "Other colour"' },
     { scheme: "dark", name: 'button "No outline"' },
     { scheme: "dark", name: 'button "Thin outline"' },
+    { scheme: "dark", name: 'button "Other colour"' },
   ]);
 });
 
@@ -754,27 +758,24 @@ test("a Tab loop that never comes back to the first stop fails the Tab walk", as
   );
 });
 
-/** Adds content 2000 px wide and 1 px high to the main element, wider than each width the check
- *  reads, in a box that scrolls when `inBox`. Content with no height adds nothing to scroll to. */
-const appendWide = (page: Page, inBox: boolean) =>
-  page.locator(MAIN).evaluate((at, scrolls) => {
+/** Adds content 2000 px wide and 1 px high to `parent`, wider than each width the check reads.
+ *  Content with no height adds nothing to scroll to. */
+const appendWide = (page: Page, parent: string) =>
+  page.locator(parent).evaluate((at) => {
     const wide = document.createElement("div");
-    wide.style.width = "2000px";
-    wide.style.height = "1px";
-    if (scrolls) {
-      const box = document.createElement("div");
-      box.dataset.testid = "wide-box";
-      box.style.overflowX = "auto";
-      box.append(wide);
-      at.append(box);
-    } else {
-      at.append(wide);
-    }
-  }, inBox);
+    wide.style.cssText = "width: 2000px; height: 1px";
+    at.append(wide);
+  });
 
 test("a box that scrolls sideways fails the width check", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
-  await appendWide(page, true);
+  await page.locator(MAIN).evaluate((at) => {
+    const box = document.createElement("div");
+    box.dataset.testid = "wide-box";
+    box.style.overflowX = "auto";
+    at.append(box);
+  });
+  await appendWide(page, '[data-testid="wide-box"]');
   expect(await sidewaysScrolls(page, machineLogin)).toEqual([
     expect.stringMatching(/^div "wide-box": 2000 px in \d+ px$/),
   ]);
@@ -786,7 +787,7 @@ test("content wider than a phone widens the page and fails the width check at 39
   page,
 }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
-  await appendWide(page, false);
+  await appendWide(page, MAIN);
   for (const viewport of WIDTHS) {
     await page.setViewportSize(viewport);
     expect(await sidewaysScrolls(page, machineLogin), `at ${viewport.width} px`).toEqual(
