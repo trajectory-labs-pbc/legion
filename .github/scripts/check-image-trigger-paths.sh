@@ -602,17 +602,17 @@ PINNED_IMAGE_GATES: list[tuple[str, str, str, str]] = [
         "build",
         "steps.names.outputs.base != ''",
         "that job's names step asks .github/scripts/fork-envoy-base.sh for the image "
-        "release-envoy-listener.yaml built for this same commit, and on a push the term is "
-        "false only where that workflow built none: it has no run for the commit on main, or a "
-        "later push replaced its run. On a pull request, which pushes no image, it is also "
-        "false where the pull request changes an input of that image. The fork's image is that image plus the fork's app, so where the "
-        "term is false there is nothing to build on, and the commit has no upstream image for "
-        "a pin to name either. What the trigger exists to guarantee, that a change to a build "
-        "input produces an image, therefore holds through release-envoy-listener.yaml's own "
-        "path list, which this check reads for upstream's inputs and "
-        ".github/scripts/fork-envoy-base.test.sh reads for the fork's: that test fails when "
-        "the list lacks an input of the fork's image. A failed run of that workflow, or a "
-        "failed read of its image, fails the names step and never leaves the term false.",
+        "release-envoy-listener.yaml built for this same commit, and on a push or a dispatch the "
+        "term is false only where that workflow built none: it has no run for the commit on "
+        "main, or a later push replaced its run. On a pull request, which pushes no image, the "
+        "term is never false: the step finds the newest ancestor's image or fails. The fork's "
+        "image is that image plus the fork's app, so where the term is false there is nothing "
+        "to build on, and the commit has no upstream image for a pin to name either. What the "
+        "trigger exists to guarantee, that a change to a build input produces an image, "
+        "therefore holds through release-envoy-listener.yaml's own path list, which "
+        "BASE_IMAGE_TRIGGERS below holds to every input of this build. On a push or a "
+        "dispatch, a failed run of that workflow, or a failed read of its image, fails the "
+        "names step and never leaves the term false.",
     ),
 ]
 gate_excusals: list[str] = []
@@ -652,8 +652,40 @@ COMPUTED_BUILD_INPUTS: list[tuple[str, str, str, str]] = [
         "as a COPY of it would, while the Docker build itself never reads it: .dockerignore "
         "leaves out the .git it reads.",
     ),
+    (
+        ".github/workflows/fork-envoy-image.yaml",
+        "build",
+        ".github/scripts/fork-envoy-base.sh",
+        "that job's names step runs this file, which picks the upstream image the build gets as "
+        "ENVOY_IMAGE, the upstream image the fork's image adds its app to.",
+    ),
+    (
+        ".github/workflows/fork-envoy-image.yaml",
+        "build",
+        "packages/envoy/docker/Dockerfile",
+        "that job's names step reads this file's `FROM <image> AS web` line and hands it to the "
+        "build as BUN_IMAGE, the image the fork's web and notices stages run in.",
+    ),
 ]
 computed_matches: dict[tuple[str, str, str, str], bool] = {}
+
+# A build that runs only on the image another workflow built for the same commit, and builds
+# nothing for a commit that workflow did not run for. Its own trigger then does not decide which
+# commits get an image: the other workflow's push trigger does, so that trigger owes coverage of
+# every input of this build too. DATA, by (workflow file, job id, the workflow whose push trigger
+# decides, the argument for it); an entry naming no build of a tree that holds its workflow, or a
+# deciding workflow the tree has not got, fails.
+BASE_IMAGE_TRIGGERS: list[tuple[str, str, str, str]] = [
+    (
+        ".github/workflows/fork-envoy-image.yaml",
+        "build",
+        ".github/workflows/release-envoy-listener.yaml",
+        "on a push the job builds only on the image release-envoy-listener.yaml built for the "
+        "same commit (.github/scripts/fork-envoy-base.sh), so a commit that workflow's push "
+        "paths leave out gets no `-tl` image.",
+    ),
+]
+base_matches: dict[tuple[str, str, str, str], bool] = {}
 
 
 def excused_gate_terms(workflow: Path, job_name: str) -> dict[str, tuple[str, str, str, str]]:
@@ -1882,6 +1914,37 @@ for workflow, job_name, step, context, dockerfile, _ in builds:
         except Unreadable as error:
             problems.append(f"::error file={dockerfile},line={line}::{dockerfile}:{line}: {error}")
 
+    # A build that runs only on another workflow's image of the same commit owes that workflow's
+    # push trigger every input too (BASE_IMAGE_TRIGGERS).
+    for entry in BASE_IMAGE_TRIGGERS:
+        if entry[0] != str(workflow) or entry[1] != job_name:
+            continue
+        base_matches[entry] = True
+        deciding = documents.get(Path(entry[2]))
+        pushes = [f for f in event_filters(Path(entry[2]), deciding) if f[0] == "push"] if deciding else []
+        if not pushes:
+            problems.append(
+                f"::error file={entry[0]}::BASE_IMAGE_TRIGGERS names {entry[2]} as the workflow "
+                f"whose push trigger decides {entry[0]} jobs.{entry[1]}, and this tree has no "
+                f"push trigger of it; correct the entry, or remove it"
+            )
+            continue
+        for _, label, push in pushes:
+            for name, files in inputs:
+                uncovered = [path for path in files if not push.covers(path)]
+                if uncovered:
+                    more = f" and {len(uncovered) - 1} more are" if len(uncovered) > 1 else " is"
+                    problems.append(
+                        f"::error file={entry[2]}::{entry[2]} {label} does not cover {name}: "
+                        f"{uncovered[0]}{more} built into {entry[0]}'s image, which is built only "
+                        f"on that workflow's image of the same commit, so a commit touching only "
+                        f"that gets no image; add a path covering it to that trigger"
+                    )
+            print(
+                f"{dockerfile}: checked {len(inputs)} inputs against {entry[2]} {label} "
+                f"(BASE_IMAGE_TRIGGERS)"
+            )
+
     # A trigger that starts the workflow is not enough: a gate can skip the build on a change
     # the trigger let through, and the image is then not built for that change either. The
     # gates are the build step's own `if:`, its job's, and every job that job transitively
@@ -2269,6 +2332,15 @@ for entry in COMPUTED_BUILD_INPUTS:
         f"::error file={entry[0]}::COMPUTED_BUILD_INPUTS names {entry[0]} job {entry[1]}, "
         f"which builds no image there, as the reader of {entry[2]}; name the job that builds, "
         f"or remove the entry"
+    )
+
+# An entry that reached no build of a tree holding its workflow fails, as the lists above do.
+for entry in BASE_IMAGE_TRIGGERS:
+    if base_matches.get(entry) or Path(entry[0]) not in documents:
+        continue
+    problems.append(
+        f"::error file={entry[0]}::BASE_IMAGE_TRIGGERS names {entry[0]} job {entry[1]}, which "
+        f"builds no image there; name the job that builds, or remove the entry"
     )
 
 problems = list(dict.fromkeys(problems))

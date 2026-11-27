@@ -10,6 +10,7 @@ packages/tl-dispatch/
 .github/workflows/fork-envoy-image.yaml
 .github/scripts/fork-envoy-base.sh
 .github/scripts/fork-envoy-base.test.sh
+.github/scripts/check-image-trigger-paths.test.sh
 
 # The fork's UI package, outside the root workspaces, and the shadcn registry that serves it.
 packages/ui/

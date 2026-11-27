@@ -45,14 +45,8 @@ jobs:
       - name: Check the fork's diff against the allowlist
         run: .github/scripts/check-fork-allowlist.sh FETCH_HEAD
 
-  envoy-base:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Test how the envoy image finds its base, and that upstream's build runs for its inputs
+      # Reads only .github/scripts: the script, gh-read.sh and test-lib.sh.
+      - name: Test how the envoy image finds its base
         run: bash .github/scripts/fork-envoy-base.test.sh
 
   tl-dispatch:

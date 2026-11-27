@@ -12,7 +12,7 @@ FROM ${ENVOY_IMAGE} AS envoy
 FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS web
 WORKDIR /repo
 # Upstream's lint (.github/scripts/check-bun-workspace-manifests.sh) wants each root workspace's
-# manifest copied by name before a frozen install, so the tree is copied after it.
+# manifest copied by name before a frozen install, so the sources are copied after it.
 COPY package.json bun.lock .bun-version ./
 COPY patches patches
 COPY packages/cipher-client/package.json packages/cipher-client/package.json
@@ -34,7 +34,14 @@ RUN bun install --frozen-lockfile --ignore-scripts \
     --filter './packages/dispatch' \
     --filter './packages/contracts' \
     --filter './packages/proof-editor'
-COPY . ./
+# What upstream's web stage copies, then the UI package and this app: the build reads no more.
+COPY packages/contracts packages/contracts
+COPY packages/dispatch packages/dispatch
+COPY packages/proof-editor packages/proof-editor
+COPY packages/envoy/internal/dispatch/pmdoc/schema/blocks.json packages/envoy/internal/dispatch/pmdoc/schema/blocks.json
+COPY scripts/third-party-notices.ts scripts/third-party-notices.ts
+COPY packages/ui packages/ui
+COPY packages/tl-dispatch packages/tl-dispatch
 # The UI package first: the app imports its sources, which import its own install.
 WORKDIR /repo/packages/ui
 RUN bun install --frozen-lockfile --ignore-scripts && bun scripts/link-root-packages.ts .
@@ -45,16 +52,18 @@ RUN DISPATCH_BUILD="$LEGION_COMMIT" bun run build \
     && test -s dist/index.html \
     && test -s dist/THIRD_PARTY_NOTICES.txt
 
-# The image's notices with this app's section added, as upstream's assemble script writes one.
+# The image's notices with this app's section added by upstream's assemble script. The script
+# takes the notices before the sections as an argument, too long for one here, so it writes the
+# section after an empty first line, which tail drops.
 FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS notices
 COPY --from=envoy /usr/share/doc/legion/THIRD_PARTY_NOTICES /out/THIRD_PARTY_NOTICES
 COPY --from=web /repo/packages/tl-dispatch/dist/THIRD_PARTY_NOTICES.txt /tmp/tl-dispatch-notices
+COPY scripts/assemble-third-party-notices.sh /usr/local/bin/
 RUN set -eu; \
-    rule="$(printf '%080d' 0 | tr 0 '#')"; \
-    { printf '\n%s\n%s\n%s\n\n' "$rule" \
-        "npm packages inlined into, and the typeface shipped with, the fork's web app, /srv/tl-dispatch (served as /THIRD_PARTY_NOTICES.txt)" \
-        "$rule"; \
-      cat /tmp/tl-dispatch-notices; } >> /out/THIRD_PARTY_NOTICES
+    assemble-third-party-notices.sh /tmp/section "" \
+      "npm packages inlined into, and the typeface shipped with, the fork's web app, /srv/tl-dispatch (served as /THIRD_PARTY_NOTICES.txt)" \
+      /tmp/tl-dispatch-notices; \
+    tail -n +2 /tmp/section >> /out/THIRD_PARTY_NOTICES
 
 # Only copies from here, so no target platform runs a command.
 FROM envoy AS image
@@ -75,7 +84,7 @@ RUN test -s /srv/tl-dispatch/index.html; \
     test "$DISPATCH_WEB_DIST" = /srv/dispatch-web
 # The server on a folder with no build exits 78, before the binary runs.
 RUN status=0; DISPATCH_WEB_DIST=/srv /usr/local/bin/envoy-dispatch 2>/tmp/err || status=$?; \
-    if [ "$status" -ne 78 ]; then echo "envoy-dispatch on a folder with no build exited $status, not 78" >&2; exit 1; fi
+    if [ "$status" -ne 78 ]; then cat /tmp/err >&2; echo "envoy-dispatch on a folder with no build exited $status, not 78" >&2; exit 1; fi
 # The server on a built folder reaches the binary, which stops at the missing database.
 RUN status=0; DISPATCH_WEB_DIST=/srv/tl-dispatch /usr/local/bin/envoy-dispatch 2>/tmp/err || status=$?; \
     if [ "$status" -eq 78 ] || ! grep -q "DATABASE_URL required" /tmp/err; then cat /tmp/err >&2; exit 1; fi

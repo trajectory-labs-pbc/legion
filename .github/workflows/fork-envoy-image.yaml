@@ -6,32 +6,24 @@ name: Fork envoy image
 # `envoy:<sha>-tl` to the same package and attests it. Only a run on main carries an attestation
 # that names `refs/heads/main`; a consumer verifies with `--source-ref refs/heads/main`.
 #
-# A commit gets a `-tl` image when release-envoy-listener.yaml built an image for that same
-# commit on main, so the server in the image reports the commit the image names. That workflow's
-# path list holds this image's inputs too, so it runs for a commit that changes only the app. This
-# workflow waits for that run, and uses its image only once the attestation shows that workflow
-# built it on main from that commit (.github/scripts/fork-envoy-base.sh).
+# Which upstream image each commit builds on, and when there is none, is
+# .github/scripts/fork-envoy-base.sh's to say: its header holds the rules. A commit with no upstream
+# image of its own gets no `-tl` image; the job pushes nothing, ends green and says so in a notice
+# and in the run's summary; a later commit's image usually holds the change. To give such a commit an
+# image anyway, re-run its own listener run, then its own run of this workflow. A dispatch follows
+# the push rules for the tip of the ref it names, so it builds only a commit on main.
 #
-# Some commits get no `-tl` image: one that changes no input, and one whose listener run a later
-# push replaced while it waited (that workflow builds only the newest waiting push). This workflow
-# then pushes nothing, ends green and says so in a notice and in the run's summary; the later
-# commit's image holds the change. To give such a commit an image anyway, re-run its own listener
-# run, then its own run of this workflow. A dispatch does not do that: it builds the ref's tip.
-#
-# A pull request builds only the smoke stage, on the image of the newest ancestor on main that
-# has one. When the listener's inputs changed since that ancestor, its image cannot show the pull
-# request's change: the job builds nothing, says so in a notice and in its summary, and ends
-# green, and the push run on main tests the image. A failed listener run or a base image whose
-# attestation does not hold still fails the job.
+# A pull request builds only the smoke stage, on an older upstream image (see that script).
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
+# A newer push to a pull request cancels its older run; a push or dispatch run is never cancelled.
 concurrency:
-  group: fork-envoy-image-${{ github.sha }}
-  cancel-in-progress: false
+  group: fork-envoy-image-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
@@ -50,6 +42,10 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
     env:
       COMMIT: ${{ github.sha }}
+      # gh-read.sh waits out a rate limit only within the job's limit.
+      JOB_TIMEOUT_MINUTES: 60
+      BUILDX_METADATA_PROVENANCE: disabled
+      DOCKER_BUILD_SUMMARY: "false"
     steps:
       # The history without its files: a pull request's walk back to main's last upstream image
       # crosses every commit of the branches it is stacked on.
@@ -74,10 +70,6 @@ jobs:
           # 3: this commit has no upstream image. The script said why; no `base`, so no build.
           if [ "$status" = 3 ]; then exit 0; fi
           if [ "$status" != 0 ]; then exit "$status"; fi
-          if ! [[ $base =~ ^$image@sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::fork-envoy-base.sh printed '$base', not $image@sha256:<digest>"
-            exit 1
-          fi
           bun=$(awk '$1 == "FROM" && $3 == "AS" && $4 == "web" { print $2; exit }' packages/envoy/docker/Dockerfile)
           if [ -z "$bun" ]; then
             echo "::error::packages/envoy/docker/Dockerfile has no 'FROM <image> AS web' line"
@@ -99,9 +91,6 @@ jobs:
       - name: Smoke check
         if: steps.names.outputs.base != ''
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        env:
-          BUILDX_METADATA_PROVENANCE: disabled
-          DOCKER_BUILD_SUMMARY: "false"
         with:
           context: .
           file: packages/tl-dispatch/docker/Dockerfile
@@ -116,9 +105,6 @@ jobs:
       - id: build
         if: github.event_name != 'pull_request' && steps.names.outputs.base != ''
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        env:
-          BUILDX_METADATA_PROVENANCE: disabled
-          DOCKER_BUILD_SUMMARY: "false"
         with:
           context: .
           file: packages/tl-dispatch/docker/Dockerfile
