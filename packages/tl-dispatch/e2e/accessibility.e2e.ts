@@ -625,9 +625,9 @@ function scanEach(list: readonly Region[]): void {
 function walkEach(list: readonly Region[]): void {
   for (const region of list) {
     if (region.tabStops === "skip") continue;
-    test(`the ${region.name} shows the focus outline at each Tab stop in light and dark`, async ({
-      page,
-    }) => {
+    const shows =
+      region.tabStops === "none" ? "has no Tab stop" : "shows the focus outline at each Tab stop";
+    test(`the ${region.name} ${shows} in light and dark`, async ({ page }) => {
       await openRegion(page, region);
       expect(await walk(page, region), `${region.name}: Tab stops without the outline`).toEqual([]);
     });
