@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { textVariants } from "#registry/legion/lib/typography";
 import { isDrawn } from "#registry/legion/lib/utils";
+import { Button } from "#registry/legion/ui/button";
 
 /** One set filter as a chip that reads `field | operator | value | ×` (LR9). */
 function FilterChip({
@@ -30,14 +31,16 @@ function FilterChip({
       <span className={cn(textVariants({ size: "inherit", weight: "medium" }), "px-2")}>
         {value}
       </span>
-      <button
+      <Button
         aria-label={`Remove the filter ${field} ${operator} ${value}`}
-        className="flex h-full items-center rounded-r-badge px-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        className="h-full rounded-l-none rounded-r-badge text-muted-foreground"
         onClick={onRemove}
+        size="icon-xs"
         type="button"
+        variant="ghost"
       >
-        <XIcon aria-hidden className="size-3" />
-      </button>
+        <XIcon aria-hidden />
+      </Button>
     </span>
   );
 }

@@ -1242,12 +1242,27 @@
     {
       "name": "filter-chips",
       "type": "registry:block",
-      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6", "lucide-react@1.70.0"],
+      "dependencies": [
+        "@base-ui/react@1.9.0",
+        "class-variance-authority@0.7.1",
+        "cn@0.2.6",
+        "lucide-react@1.70.0"
+      ],
       "files": [
         {
           "path": "packages/ui/src/blocks/filter-chips.tsx",
           "type": "registry:component",
           "target": "@components/filter-chips.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/button.tsx",
+          "type": "registry:ui",
+          "target": "@ui/button.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/spinner.tsx",
+          "type": "registry:ui",
+          "target": "@ui/spinner.tsx"
         },
         {
           "path": "packages/ui/src/lib/typography.ts",

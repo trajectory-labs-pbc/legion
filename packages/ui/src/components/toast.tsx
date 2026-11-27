@@ -83,12 +83,4 @@ function ToastViewport({ className }: { className?: string }) {
 
 const { Provider: ToastProvider, createToastManager, useToastManager } = ToastPrimitive;
 
-export {
-  createToastManager,
-  Toast,
-  type ToastData,
-  type ToastObject,
-  ToastProvider,
-  ToastViewport,
-  useToastManager,
-};
+export { createToastManager, Toast, type ToastData, ToastProvider, ToastViewport, useToastManager };

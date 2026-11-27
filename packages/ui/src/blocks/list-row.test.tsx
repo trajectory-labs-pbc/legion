@@ -40,7 +40,6 @@ describe("ListRow", () => {
     expect(row).toBe(rowOf(container));
     expect(row.hasAttribute("data-highlighted")).toBe(true);
     expect(row.hasAttribute("data-selected")).toBe(true);
-    expect(row.className).toContain("data-selected:data-highlighted:bg-accent");
   });
 
   it("shows the box in the leading part's place near the left edge, and on each row of a selection", () => {

@@ -27,6 +27,21 @@ interface ListRowProps extends Omit<ComponentProps<"div">, "children" | "title">
   render?: useRender.RenderProp;
 }
 
+const TITLE = cn(textVariants({ weight: "medium" }), "min-w-0 truncate");
+const DESCRIPTION = cn(textVariants({ size: "caption", tone: "muted" }), "min-w-0 truncate");
+
+/** One line of a row: its text, which truncates, and what sits at its right. */
+function Line({ className, text, end }: { className: string; text: ReactNode; end: ReactNode }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className={className}>{text}</span>
+      {isDrawn(end) ? (
+        <span className="ml-auto flex shrink-0 items-center gap-2">{end}</span>
+      ) : null}
+    </span>
+  );
+}
+
 /** A list's row: one line at 36 px, or two at 56 px, and no edge or card around it (LR1, R2). The
  *  caller marks it with `data-highlighted` and `data-selected`, and with `aria-selected` where the
  *  row is an option. */
@@ -53,30 +68,15 @@ function ListRow({
         "flex min-w-0 flex-1 flex-col justify-center text-left outline-none before:absolute before:inset-0 focus-visible:before:outline-2 focus-visible:before:-outline-offset-2 focus-visible:before:outline-focus",
       children: (
         <>
-          <span className="flex min-w-0 items-center gap-2">
-            <span className={cn(textVariants({ weight: "medium" }), "min-w-0 truncate")}>
-              {title}
-            </span>
-            {isDrawn(end) ? (
-              <span className="ml-auto flex shrink-0 items-center gap-2">{end}</span>
-            ) : null}
-          </span>
+          <Line className={TITLE} end={end} text={title} />
           {twoLines ? (
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                className={cn(textVariants({ size: "caption", tone: "muted" }), "min-w-0 truncate")}
-              >
-                {description}
-              </span>
-              {isDrawn(descriptionEnd) ? (
-                <span className="ml-auto flex shrink-0 items-center gap-2">{descriptionEnd}</span>
-              ) : null}
-            </span>
+            <Line className={DESCRIPTION} end={descriptionEnd} text={description} />
           ) : null}
         </>
       ),
     },
   });
+  const hasLeading = isDrawn(leading);
   const hasSelect = isDrawn(select);
   return (
     <div
@@ -90,10 +90,10 @@ function ListRow({
       data-slot="list-row"
       {...props}
     >
-      {isDrawn(leading) || hasSelect ? (
+      {hasLeading || hasSelect ? (
         // The row's left edge, padding included: the pointer on it shows the box.
         <span className="group/list-row-start relative z-10 -ml-3 grid shrink-0 place-items-center pl-3 *:col-start-1 *:row-start-1">
-          {isDrawn(leading) ? (
+          {hasLeading ? (
             <span
               className={cn(
                 "flex",
