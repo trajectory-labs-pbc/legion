@@ -30,10 +30,23 @@ function blockOfMark(view: EditorHandle["view"], markId: string): string | undef
   return span?.closest(`[${BLOCK_ID_ATTRIBUTE}]`)?.getAttribute(BLOCK_ID_ATTRIBUTE) ?? undefined;
 }
 
-/** Upstream's handle, whose moves first open the folds that hide their target. */
+/** Upstream's handle: moves open folds first; block marks drop changed-since-read under marks. */
 function aidedHandle(handle: EditorHandle, aids: EditorAids): EditorHandle {
+  const { view } = handle;
+  let hostMarks: Parameters<EditorHandle["setBlockMarks"]>[0] = [];
+  let marksShown = false;
+  const drawHostMarks = () => handle.setBlockMarks(aids.besideChangeMarks(view, hostMarks));
+  aids.watchChanges(view, () => {
+    if (aids.showsChangeMarks(view) === marksShown) return;
+    marksShown = !marksShown;
+    drawHostMarks();
+  });
   return {
     ...handle,
+    setBlockMarks(marks) {
+      hostMarks = marks;
+      drawHostMarks();
+    },
     focusBlock(blockId) {
       aids.revealBlock(handle.view, blockId);
       handle.focusBlock(blockId);

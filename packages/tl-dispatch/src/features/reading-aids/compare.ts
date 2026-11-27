@@ -1,3 +1,4 @@
+import { blockIdOf } from "@legion/proof-editor/headless";
 import {
   changedWords,
   pairBlocks,
@@ -95,35 +96,26 @@ const WORD_MARKS_SHARE = 0.8;
 const MOST_LOSS_PLACES = 6;
 
 const LIST_KINDS = new Set(["bullet_list", "ordered_list"]);
-const NEW: Verdict = { kind: "new" };
-const UNCHANGED: Verdict = { kind: "unchanged" };
+export const NEW: Verdict = { kind: "new" };
+export const UNCHANGED: Verdict = { kind: "unchanged" };
 
 function itemOf(node: ProseMirrorNode): BaselineItem {
-  const id: unknown = node.attrs.blockId;
   return {
     kind: node.type.name,
     text: node.textContent,
-    id: typeof id === "string" && id !== "" ? id : undefined,
+    id: blockIdOf(node) ?? undefined,
     shown: node.textBetween(0, node.content.size, " "),
   };
 }
 
-/** The top-level blocks of `doc`, each list with its items. */
-export function readBlocks(doc: ProseMirrorNode): BaselineBlock[] {
-  const blocks: BaselineBlock[] = [];
-  doc.forEach((node) => {
-    if (!LIST_KINDS.has(node.type.name)) {
-      blocks.push(itemOf(node));
-      return;
-    }
-    const items: BaselineItem[] = [];
-    node.forEach((item) => {
-      items.push(itemOf(item));
-    });
-    blocks.push({ ...itemOf(node), items });
-  });
-  return blocks;
+/** One top-level block, a list with its items. */
+export function readBlock(node: ProseMirrorNode): BaselineBlock {
+  if (!LIST_KINDS.has(node.type.name)) return itemOf(node);
+  return { ...itemOf(node), items: node.children.map(itemOf) };
 }
+
+/** The top-level blocks of `doc`, each list with its items. */
+export const readBlocks = (doc: ProseMirrorNode): BaselineBlock[] => doc.children.map(readBlock);
 
 /** A changed kind, or under PAIR_SHARE kept, is replaced; under WORD_MARKS_SHARE kept, or past
  *  MOST_LOSS_PLACES places of lost words, is rewritten; else changed. At `changedWords`' limit
@@ -146,23 +138,36 @@ function judge(before: BaselineItem, after: Item): Verdict {
   return { kind: "changed", words };
 }
 
-/** `pairBlocks`' partner of each live entry, by index, and the pairing kept by id. */
-function pairOnce<T extends Item>(
-  baseline: readonly T[],
-  live: readonly Item[]
-): { pairing: Pairing<T>; at: readonly (number | undefined)[] } {
+/** A pairing, and the baseline index each live entry is judged against. */
+interface Paired<T> {
+  readonly pairing: Pairing<T>;
+  readonly at: readonly (number | undefined)[];
+}
+
+/** `pairBlocks`' pairs kept by the live entry's id; a live entry with no id keeps none. */
+function pairOnce<T extends Item>(baseline: readonly T[], live: readonly Item[]): Paired<T> {
   const partners = new Array<string | undefined>(baseline.length).fill(undefined);
   const at = new Array<number | undefined>(live.length).fill(undefined);
   for (const pair of pairBlocks(
     baseline.map((entry) => entry.text),
     live.map((entry) => entry.text)
   )) {
-    if (pair.before !== undefined && pair.after !== undefined) {
+    // Marks are tied to ids, so an entry with no id would hide its partner's text.
+    if (
+      pair.before !== undefined &&
+      pair.after !== undefined &&
+      live[pair.after].id !== undefined
+    ) {
       partners[pair.before] = live[pair.after].id;
       at[pair.after] = pair.before;
     }
   }
   return { pairing: { baseline, partners }, at };
+}
+
+/** The partner of each live entry by an earlier pairing of the same baseline, by id. */
+function pairedAs<T>(pairing: Pairing<T>, live: readonly Item[]): Paired<T> {
+  return { pairing, at: live.map((entry) => partnerIndex(pairing, entry.id)) };
 }
 
 /** The baseline index paired with `id`; no id or no pair is none. */
@@ -231,7 +236,7 @@ export function compareBlock(pairs: Pairs, live: Block): BlockVerdict {
   return verdictOf(
     pairs.blocks.baseline[index],
     live,
-    items && live.items?.map((item) => partnerIndex(items, item.id))
+    items && live.items && pairedAs(items, live.items).at
   );
 }
 
@@ -244,22 +249,33 @@ function earlierOf({ blocks }: Pairs): Map<string, Earlier> {
   return earlier;
 }
 
-/** Pairs the blocks, and the items of each paired pair of lists, once, and compares each with its
- *  pair. A live entry with no id is compared here, but kept in no pair. */
-export function compareDocument(
-  baseline: readonly BaselineBlock[],
-  live: readonly Block[]
+/** Each live block against its partner in `blocks`; a list's items pair as in `kept`. */
+function compareAll(
+  blocks: Paired<BaselineBlock>,
+  live: readonly Block[],
+  kept: Pairs
 ): { comparison: Comparison; pairs: Pairs } {
-  const blocks = pairOnce(baseline, live);
   const lists = new Map<string, Pairing<BaselineItem>>();
-  const run = compareRun(baseline, live, blocks.at, (before, block) => {
+  const run = compareRun(blocks.pairing.baseline, live, blocks.at, (before, block) => {
     if (before === undefined) return NEW;
     if (!before.items || !block.items) return judge(before, block);
     // Lists of two kinds pair their items too: a later compare may see the kind come back.
-    const items = pairOnce(before.items, block.items);
+    const keptItems = block.id === undefined ? undefined : kept.lists.get(block.id);
+    const items =
+      keptItems === undefined
+        ? pairOnce(before.items, block.items)
+        : pairedAs(keptItems, block.items);
     if (block.id !== undefined) lists.set(block.id, items.pairing);
     return verdictOf(before, block, items.at);
   });
   const pairs: Pairs = { blocks: blocks.pairing, lists };
   return { comparison: { ...run, earlier: earlierOf(pairs) }, pairs };
 }
+
+/** The first comparison: pairs by text and place, each pair kept by its live id. */
+export const pairDocument = (baseline: readonly BaselineBlock[], live: readonly Block[]) =>
+  compareAll(pairOnce(baseline, live), live, NO_PAIRS);
+
+/** A later comparison against the same baseline, by the pairs of the first, by id. */
+export const compareDocument = (pairs: Pairs, live: readonly Block[]): Comparison =>
+  compareAll(pairedAs(pairs.blocks, live), live, pairs).comparison;

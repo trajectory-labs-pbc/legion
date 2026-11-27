@@ -208,7 +208,7 @@ export function page(
   let latest: BaselineRead | undefined;
   function Probe() {
     latest = useBaseline(document);
-    return <CountsLine read={latest} />;
+    return <CountsLine marks={undefined} moveTo={() => {}} read={latest} />;
   }
   return {
     asked,

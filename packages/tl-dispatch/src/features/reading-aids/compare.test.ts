@@ -7,6 +7,7 @@ import {
   type BlockVerdict,
   compareBlock,
   compareDocument,
+  pairDocument,
 } from "./compare";
 
 function block(text: string, id?: string, kind = "paragraph"): BaselineBlock {
@@ -47,7 +48,7 @@ function keptShare(before: string, after: string): number {
 /** One baseline block against one live block, through the whole comparison. */
 function judged(before: BaselineBlock, after: BaselineBlock): BlockVerdict {
   const live = { ...after, id: after.id ?? "live" };
-  const [result] = compareDocument([before], [live]).comparison.results;
+  const [result] = pairDocument([before], [live]).comparison.results;
   return result.verdict;
 }
 
@@ -218,7 +219,7 @@ describe("change-marks kinds and lists", () => {
     const [one, two] = ["The first item of the list.", "The second item of the list."];
     const baseline = [list([item(one), item(two)])];
     const ordered = list([item(one, "i1"), item(two, "i2")], "l", "ordered_list");
-    const { comparison, pairs } = compareDocument(baseline, [ordered]);
+    const { comparison, pairs } = pairDocument(baseline, [ordered]);
     expect(comparison.results[0].verdict.kind).toBe("replaced");
     const edited = `${two} Now.`;
     expect(compareBlock(pairs, list([item(one, "i1"), item(edited, "i2")], "l"))).toEqual({
@@ -236,7 +237,7 @@ describe("change-marks the whole document", () => {
   test("change-marks a pair with no change marks nothing", () => {
     const blocks = [block("Title", undefined, "heading"), block("A paragraph.")];
     const live = [block("Title", "h", "heading"), block("A paragraph.", "p")];
-    const { comparison } = compareDocument(blocks, live);
+    const { comparison } = pairDocument(blocks, live);
     expect(comparison.results).toEqual([
       { id: "h", verdict: { kind: "unchanged" } },
       { id: "p", verdict: { kind: "unchanged" } },
@@ -247,7 +248,7 @@ describe("change-marks the whole document", () => {
   test("change-marks a removed block folds after the nearest paired block above it", () => {
     const baseline = [block("Intro"), block("Gone"), block("Kept"), block("Last")];
     const live = [block("Intro", "a"), block("Kept", "b"), block("Added", "n"), block("Last", "c")];
-    const { comparison } = compareDocument(baseline, live);
+    const { comparison } = pairDocument(baseline, live);
     expect(comparison.results).toEqual([
       { id: "a", verdict: { kind: "unchanged" } },
       { id: "b", verdict: { kind: "unchanged" } },
@@ -258,14 +259,14 @@ describe("change-marks the whole document", () => {
   });
 
   test("change-marks a removed first block folds before the first block", () => {
-    const { comparison } = compareDocument([block("Gone"), block("Kept")], [block("Kept", "k")]);
+    const { comparison } = pairDocument([block("Gone"), block("Kept")], [block("Kept", "k")]);
     expect(comparison.removed).toEqual([{ kind: "paragraph", text: "Gone", after: undefined }]);
   });
 
   test("change-marks each paired block's baseline is in the comparison, by its live id", () => {
     const baseline = [block("Intro"), list([item("one"), item("two")]), block("Gone")];
     const live = [block("Intro", "a"), list([item("one", "i1"), item("two", "i2")], "l")];
-    expect(compareDocument(baseline, live).comparison.earlier).toEqual(
+    expect(pairDocument(baseline, live).comparison.earlier).toEqual(
       new Map([
         ["a", { kind: "paragraph", text: "Intro" }],
         ["l", { kind: "bullet_list", text: "one two" }],
@@ -273,21 +274,19 @@ describe("change-marks the whole document", () => {
     );
   });
 
-  test("change-marks a block with no id is judged against its pair at the first comparison, and is new after it", () => {
+  test("change-marks a block with no id keeps no pair: it is new, and the baseline block it matched folds as removed", () => {
     const before = "The words of this paragraph stay where they were.";
     const after = `${before} Now.`;
-    const { comparison, pairs } = compareDocument([block(before)], [block(after)]);
-    expect(comparison.results).toEqual([
-      { id: undefined, verdict: { kind: "changed", words: changedWords(before, after) } },
-    ]);
-    expect(comparison.removed).toEqual([]);
+    const { comparison, pairs } = pairDocument([block(before)], [block(after)]);
+    expect(comparison.results).toEqual([{ id: undefined, verdict: { kind: "new" } }]);
+    expect(comparison.removed).toEqual([{ after: undefined, kind: "paragraph", text: before }]);
     expect(compareBlock(pairs, block(after))).toEqual({ kind: "new" });
   });
 
   test("change-marks a later compare of one block reads the pairs the whole comparison made", () => {
     const baseline = [block("alpha beta gamma delta epsilon zeta"), block("unrelated text")];
     const live = [block("alpha beta gamma delta epsilon zeta", "x"), block("unrelated text", "y")];
-    const { pairs } = compareDocument(baseline, live);
+    const { pairs } = pairDocument(baseline, live);
     // A block inserted directly above "x" with the text "x" had does not take its pair.
     expect(compareBlock(pairs, block("alpha beta gamma delta epsilon zeta", "inserted"))).toEqual({
       kind: "new",
@@ -295,5 +294,39 @@ describe("change-marks the whole document", () => {
     expect(compareBlock(pairs, block("alpha beta gamma delta epsilon zeta eta", "x")).kind).toBe(
       "changed"
     );
+  });
+
+  test("change-marks given the earlier pairs, a block inserted above an edited block stays new, and the edited block keeps its pair", () => {
+    const baseline = [block("The design keeps most of its words today."), block("Kept.")];
+    const edited = block("The design keeps most of its words now.", "d");
+    const kept = block("Kept.", "k");
+    const { pairs } = pairDocument(baseline, [edited, kept]);
+    const live = [block("Inserted above.", "n"), edited, kept];
+    const kinds = (run: {
+      results: readonly { id: string | undefined; verdict: BlockVerdict }[];
+    }) => run.results.map(({ id, verdict }) => [id, verdict.kind]);
+    expect(kinds(compareDocument(pairs, live))).toEqual([
+      ["n", "new"],
+      ["d", "changed"],
+      ["k", "unchanged"],
+    ]);
+  });
+
+  test("change-marks given the earlier pairs, a list's items keep theirs too", () => {
+    const said = (last: string) => `The second item keeps most of its words, ${last}.`;
+    const [today, now] = [said("today"), said("now")];
+    const baseline = [list([item("one"), item(today)])];
+    const first = list([item("one", "a"), item(now, "b")], "l");
+    const { pairs } = pairDocument(baseline, [first]);
+    const live = list([item("one", "a"), item("inserted", "c"), item(now, "b")], "l");
+    const [result] = compareDocument(pairs, [live]).results;
+    expect(
+      result.verdict.kind === "list" &&
+        result.verdict.results.map(({ id, verdict }) => [id, verdict.kind])
+    ).toEqual([
+      ["a", "unchanged"],
+      ["c", "new"],
+      ["b", "changed"],
+    ]);
   });
 });

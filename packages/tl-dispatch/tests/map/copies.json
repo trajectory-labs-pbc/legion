@@ -512,5 +512,19 @@
     "copy": "src/features/reading-aids/reads.ts",
     "commit": "d317f2181ba777fbfc136d441c06ab6ccb9a3806",
     "sha256": "9239e2c1e217fead4447447b475c335e686d7fd6c184f139fad4cd85865bde0c"
+  },
+  {
+    "file": "packages/proof-editor/src/editor-change-decorations.ts",
+    "part": "textRuns",
+    "copy": "src/features/reading-aids/mark-drawing.ts",
+    "commit": "fb26c8e53a72f8abea864efc3c4f01c852eb150a",
+    "sha256": "30a9f816331ab4ad077794beff850715b92e4a9a886397a3b6557812fc276fc2"
+  },
+  {
+    "file": "packages/proof-editor/src/editor-change-decorations.ts",
+    "part": "positionAt",
+    "copy": "src/features/reading-aids/mark-drawing.ts",
+    "commit": "fb26c8e53a72f8abea864efc3c4f01c852eb150a",
+    "sha256": "d20458ba84f2cd723e5ef8c115bcb0df4887cebca772201ea3ae210694078dee"
   }
 ]
