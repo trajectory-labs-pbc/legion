@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { mergeConfig, type UserConfig } from "vite";
 import upstream from "../dispatch/web/vite.config";
+import { writeEntryModules } from "./scripts/entry-modules";
 import { oneCopyEach } from "./scripts/one-copy-each";
 
 const at = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -19,7 +20,11 @@ const { rootPackages, uiPackages } = JSON.parse(readFileSync(at("package.json"),
 export default mergeConfig(upstream, {
   root: at("."),
   publicDir: at("../dispatch/web/public"),
-  plugins: [oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`)],
+  plugins: [
+    oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`),
+    // Outside dist, which the image copies whole; the migration compares it across builds.
+    writeEntryModules(at("../.."), at(".build/entry-modules.json")),
+  ],
   resolve: {
     dedupe: [...rootPackages, ...uiPackages],
     alias: [
