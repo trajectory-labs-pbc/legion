@@ -173,10 +173,7 @@ function loadDrawnCss(): void {
 const keepsIconRoom = (node: Element) =>
   getComputedStyle(node).paddingInlineStart === "calc(4px * 8)";
 
-// happy-dom keeps only the first compound of a `:has()` argument, so it reads the menu's "a row
-// leads with an icon" as "the menu has a row". These tests check what it can tell apart: which
-// rows keep the room once a menu has one. Which menus have it is checked in Chromium, in
-// packages/tl-dispatch/e2e/menus.e2e.ts.
+// Which menus have the icon room needs a real `:has()`: packages/tl-dispatch/e2e/menus.e2e.ts.
 describe("DropdownMenu's drawn rows", () => {
   it("draws a separator only between rows: none first, none last, one where two meet", async () => {
     render(
@@ -247,5 +244,29 @@ describe("DropdownMenu's drawn rows", () => {
       screen.getByText("Move"),
     ])
       expect(keepsIconRoom(row)).toBe(true);
+  });
+
+  it("reads a radio row's leading icon and keeps a checkbox row's check room", async () => {
+    render(
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger>View</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuRadioGroup value="list">
+            <DropdownMenuRadioItem value="list">
+              <CopyIcon aria-hidden />
+              List
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuCheckboxItem checked>
+            <span data-icon="inline-start" />
+            Show done
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+    const radio = await screen.findByRole("menuitemradio", { name: "List" });
+    loadDrawnCss();
+    expect(keepsIconRoom(radio)).toBe(false);
+    expect(keepsIconRoom(screen.getByRole("menuitemcheckbox", { name: "Show done" }))).toBe(true);
   });
 });

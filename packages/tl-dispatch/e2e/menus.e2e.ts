@@ -2,7 +2,6 @@
 // `:has()` argument, so packages/ui's unit test cannot tell which menus keep the icon's room.
 import { expect, type Page, test } from "./test";
 
-/** A row's role and content. */
 type Row = { role?: string; html: string };
 
 const svg = '<svg viewBox="0 0 16 16"></svg>';
@@ -13,9 +12,14 @@ const WRAPPED: Row = { html: `<span>${svg}</span>Wrapped` };
 const TRAILING: Row = { html: `Trailing<svg data-icon="inline-end" viewBox="0 0 16 16"></svg>` };
 const BADGE: Row = { html: `Badge<span class="ml-auto">${svg}</span>` };
 const CHECKBOX: Row = { role: "menuitemcheckbox", html: "Checkbox" };
+// As DropdownMenuRadioItem draws it: the check's span comes after the row's own content.
+const RADIO: Row = {
+  role: "menuitemradio",
+  html: `${svg}Radio<span class="absolute end-2"></span>`,
+};
 
-/** Opens the account menu, puts copies of its first row holding `rows` in place of its rows, and
- *  says which keep an icon's room: a start padding wider than the end one. */
+/** Opens the account menu, only a host for the rows, puts copies of its first row holding `rows`
+ *  in place of its rows, and says which keep an icon's room: a start padding wider than the end. */
 async function keepsRoom(page: Page, rows: readonly Row[]): Promise<boolean[]> {
   await page.goto("/");
   await page.getByRole("button", { name: /^Signed in as / }).click();
@@ -25,7 +29,8 @@ async function keepsRoom(page: Page, rows: readonly Row[]): Promise<boolean[]> {
     const first = element.querySelector('[role="menuitem"]');
     if (first === null) throw new Error("the menu has no row");
     const copies = rows.map(({ role, html }) => {
-      const copy = first.cloneNode(false) as Element;
+      const copy = first.cloneNode(false);
+      if (!(copy instanceof Element)) throw new Error("the row is not an element");
       if (role !== undefined) copy.setAttribute("role", role);
       copy.innerHTML = html;
       return copy;
@@ -38,11 +43,12 @@ async function keepsRoom(page: Page, rows: readonly Row[]): Promise<boolean[]> {
   }, rows);
 }
 
-test("a row's own first svg, or a child marked inline-start, gives every other row the room", async ({
+test("a row whose first child is an svg, or that has a child marked inline-start, gives every other row the room", async ({
   page,
 }) => {
   expect(await keepsRoom(page, [ICON, PLAIN])).toEqual([false, true]);
   expect(await keepsRoom(page, [MARKED, PLAIN])).toEqual([false, true]);
+  expect(await keepsRoom(page, [RADIO, PLAIN])).toEqual([false, true]);
 });
 
 test("a wrapped, a trailing or a nested svg leads with no icon, so no row keeps the room", async ({
