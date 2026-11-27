@@ -8,7 +8,8 @@ import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/quer
 
 /**
  * The page's code, kept in the query cache so a revisit draws the page at once; no refresh or
- * invalidation asks for it again. A failed load is kept until the route mounts again.
+ * invalidation asks for it again. A failed load is kept until the route mounts again or a failed
+ * read's Retry asks for the code too.
  */
 const pageCodeQuery = queryOptions({
   queryKey: ["tl-dispatch", "machine-login-page-code"],
@@ -30,8 +31,17 @@ export function MachineLoginRoute(): ReactNode {
   useEffect(() => {
     void queryClient.prefetchQuery(machineLoginsQuery());
   }, [queryClient]);
-  const fault = readFailureOf(capabilities);
+  const read = readFailureOf(capabilities);
+  // Retry also loads a failed page's code again, which nothing else asks for.
+  const fault = read && {
+    ...read,
+    retry: () => {
+      read.retry();
+      if (code.isError) void code.refetch();
+    },
+  };
   const served = capabilities.data?.machine_code_page === true;
+  // A query with no data goes back to pending when it loads again, so a refetch drops the failure.
   const waiting =
     fault === undefined && (capabilities.data === undefined || (served && code.isPending));
   const skeleton = useSkeleton(waiting);
@@ -46,6 +56,5 @@ export function MachineLoginRoute(): ReactNode {
     );
   }
   if (!served) return waiting ? null : <NotFound />;
-  const Page = code.data;
-  return Page === undefined ? null : <Page />;
+  return code.data === undefined ? null : <code.data />;
 }

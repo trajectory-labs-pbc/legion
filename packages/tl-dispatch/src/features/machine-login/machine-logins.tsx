@@ -48,8 +48,6 @@ type RevokeQuestion = ReturnType<typeof createAlertDialogHandle<LauncherCredenti
 const HEADINGS = ["Machine", "Credential", "Approved by", "Issued", "Expires"] as const;
 const MUTED = textVariants({ tone: "muted" });
 const CUT_CELL = "w-1/4 max-w-0";
-/** The headings and the actions column. */
-const COLUMNS = HEADINGS.length + 1;
 
 // A pod login (`person` set) and a service's token login have no approver.
 function approvedBy(login: LauncherCredentialResp): string {
@@ -147,10 +145,11 @@ function RevokeQuestionDialog({
 const LOADING_ROWS = [0, 1, 2];
 
 /** The list's rows while they load: a loaded row's cells, a still bar under each heading and a
- *  Revoke no one sees or reaches, so the rows are as tall and the columns as wide at any width. */
+ *  Revoke no one sees or reaches, so they are as tall as a loaded row at any width, and the
+ *  headings stay near where the loaded rows put them. */
 function LoadingRows(): ReactNode {
   return LOADING_ROWS.map((row) => (
-    <TableRow key={row}>
+    <TableRow className="hover:bg-transparent" key={row}>
       <TableCell className={CUT_CELL}>
         <Skeleton className="h-4 w-full" />
       </TableCell>
@@ -186,10 +185,11 @@ function LoginRows({
   question: RevokeQuestion;
   revoke: Revoke;
 }): ReactNode {
+  const span = HEADINGS.length + 1;
   if (logins.length === 0) {
     return (
       <TableRow>
-        <TableCell className={MUTED} colSpan={COLUMNS}>
+        <TableCell className={MUTED} colSpan={span}>
           No live machine logins.
         </TableCell>
       </TableRow>
@@ -238,7 +238,7 @@ function LoginRows({
       </TableRow>
       {refused?.credential_id === login.credential_id ? (
         <TableRow>
-          <TableCell className="whitespace-normal" colSpan={COLUMNS}>
+          <TableCell className="whitespace-normal" colSpan={span}>
             <WriteFailure
               anew="Pressing Revoke again sends a new revoke."
               error={revoke.error}

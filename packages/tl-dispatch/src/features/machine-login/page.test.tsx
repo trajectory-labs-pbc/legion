@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from "bun:test";
+import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -11,6 +11,11 @@ import { appTree } from "../../../tests/app";
 import { changesOutsideAct, shows } from "../../../tests/outside-act";
 import { onFakeClock, tick } from "../../../tests/upstream";
 import { MachineLoginRoute } from "./page";
+
+afterEach(() => {
+  cleanup();
+  mock.restore();
+});
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -32,318 +37,250 @@ const outletState = (host: HTMLElement) =>
       ? "skeleton"
       : "blank";
 
+/** The outlet's state, or the page's error once the error boundary shows it. */
+const outletOrError = (host: HTMLElement) =>
+  shows(host, '[role="alert"]') ? "error" : outletState(host);
+
 /** The route inside the page outlet's boundary, where a page that suspends draws its fallback. */
 const inOutlet = (queryClient?: QueryClient) => (
   <Suspense fallback={<PageFallback />}>{routeTree(queryClient)}</Suspense>
 );
 
-test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: false,
+const inBoundary = (node: ReactNode) => <ErrorBoundary region="this page">{node}</ErrorBoundary>;
+
+/** Capabilities that answer `served`; the logins list answers empty. */
+function answers(served: boolean) {
+  spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  return spyOn(api, "getCredentialCapabilities").mockResolvedValue({ machine_code_page: served });
+}
+
+/** The page's code fails to load until `loads` is set, then loads once `gate` settles; `failed`
+ *  settles once the code's query holds a failure. */
+function failingCode() {
+  const state: { loads: boolean; gate?: Promise<void> } = { loads: false };
+  const failed = Promise.withResolvers<void>();
+  const importWhenOnline = resilience.importWhenOnline;
+  spyOn(resilience, "importWhenOnline").mockImplementation((load) => {
+    if (state.loads) return (state.gate ?? Promise.resolve()).then(() => importWhenOnline(load));
+    // A task later, every microtask that carries the rejection into the query has run.
+    setTimeout(failed.resolve, 0);
+    return Promise.reject(new Error("the chunk is gone"));
   });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    renderRoute();
-    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
-    expect(screen.getByRole("link", { name: "Back to inbox" }).getAttribute("href")).toBe("/");
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  return { state, failed: failed.promise };
+}
+
+test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {
+  answers(false);
+  renderRoute();
+  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+  expect(screen.getByRole("link", { name: "Back to inbox" }).getAttribute("href")).toBe("/");
 });
 
 test("MLR-02 a Dispatch with the device grant shows the machine login page", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: true,
-  });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    renderRoute();
-    expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "Page not found" })).not.toBeInTheDocument();
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  answers(true);
+  renderRoute();
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  expect(screen.queryByRole("heading", { name: "Page not found" })).not.toBeInTheDocument();
 });
 
 test("MLR-03 a page skeleton shows while the capabilities answer is out, and goes when the answer comes", async () => {
+  answers(false);
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    const container = renderRoute();
-    expect(capabilities).toHaveBeenCalledTimes(1);
-    expect(container).toBeEmptyDOMElement();
-    expect(await screen.findByRole("status", { name: "Loading the page" })).toBeDefined();
+  const container = renderRoute();
+  expect(capabilities).toHaveBeenCalledTimes(1);
+  expect(container).toBeEmptyDOMElement();
+  expect(await screen.findByRole("status", loading)).toBeDefined();
 
-    answer.resolve({ machine_code_page: false });
-    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
-    expect(screen.queryByRole("status", { name: "Loading the page" })).toBeNull();
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  answer.resolve({ machine_code_page: false });
+  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+  expect(screen.queryByRole("status", loading)).toBeNull();
 });
 
 test("MLR-05 the logins list is read beside the capabilities read, not after the page mounts", async () => {
-  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
   const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    renderRoute();
-    await waitFor(() => expect(logins).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
+  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
+  spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  renderRoute();
+  await waitFor(() => expect(logins).toHaveBeenCalledTimes(1));
+  expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
 
-    answer.resolve({ machine_code_page: true });
-    expect(await screen.findByText("No live machine logins.")).toBeDefined();
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  answer.resolve({ machine_code_page: true });
+  expect(await screen.findByText("No live machine logins.")).toBeDefined();
 });
 
 test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the focus", async () => {
+  answers(true);
   const again = Promise.withResolvers<{ machine_code_page: boolean }>();
   const capabilities = spyOn(api, "getCredentialCapabilities")
     .mockRejectedValueOnce(new Error("broker down"))
     .mockReturnValueOnce(again.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    renderRoute();
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Could not load the machine login page.");
-    expect(screen.queryByRole("heading", { name: "Page not found" })).toBeNull();
-    const retry = within(alert).getByRole("button", { name: "Retry" });
-    await userEvent.click(retry);
-    expect(retry.getAttribute("aria-busy")).toBe("true");
-    expect(document.activeElement).toBe(retry);
-    again.resolve({ machine_code_page: true });
-    expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
-    expect(capabilities).toHaveBeenCalledTimes(2);
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  renderRoute();
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("Could not load the machine login page.");
+  expect(screen.queryByRole("heading", { name: "Page not found" })).toBeNull();
+  const retry = within(alert).getByRole("button", { name: "Retry" });
+  await userEvent.click(retry);
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  expect(document.activeElement).toBe(retry);
+  again.resolve({ machine_code_page: true });
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  expect(capabilities).toHaveBeenCalledTimes(2);
 });
 
 test("MLR-03 on a fake clock, the skeleton shows at 200 ms and, its answer 50 ms after, stands 300 ms before the page", async () => {
   // The page's code is loaded, so only the answer is waited for.
   await import("./machine-login-page");
+  answers(true);
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    await onFakeClock(async () => {
-      renderRoute();
-      await tick(150);
-      expect(screen.queryByRole("status", loading)).toBeNull();
-      await tick(100);
-      expect(screen.getByRole("status", loading)).toBeDefined();
-      answer.resolve({ machine_code_page: true });
-      await tick(200);
-      expect(screen.getByRole("status", loading)).toBeDefined();
-      expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
-      await tick(100);
-      expect(screen.queryByRole("status", loading)).toBeNull();
-      expect(screen.getByRole("heading", { name: "Enter machine login code" })).toBeDefined();
-    });
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  await onFakeClock(async () => {
+    renderRoute();
+    await tick(150);
+    expect(screen.queryByRole("status", loading)).toBeNull();
+    await tick(100);
+    expect(screen.getByRole("status", loading)).toBeDefined();
+    answer.resolve({ machine_code_page: true });
+    await tick(200);
+    expect(screen.getByRole("status", loading)).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
+    await tick(100);
+    expect(screen.queryByRole("status", loading)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+  });
 });
 
 test("MLR-03 outside act, a skeleton whose answer comes 50 ms after it showed stands 300 ms before the page", async () => {
   // The page's code is loaded, so only the answer is waited for.
   await import("./machine-login-page");
+  answers(true);
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  try {
-    const changes = await changesOutsideAct(inOutlet(), outletState, {
-      done: (state) => state === "page",
-      onChange: (change) => {
-        if (change.state === "skeleton") {
-          setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
-        }
-      },
-    });
-    expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "page"]);
-    const [, skeleton, page] = changes;
-    expect((page?.at ?? 0) - (skeleton?.at ?? 0)).toBeGreaterThanOrEqual(300);
-  } finally {
-    cleanup();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  const changes = await changesOutsideAct(inOutlet(), outletState, {
+    done: (state) => state === "page",
+    onChange: (change) => {
+      if (change.state === "skeleton") {
+        setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
+      }
+    },
+  });
+  expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "page"]);
+  const [, skeleton, page] = changes;
+  expect((page?.at ?? 0) - (skeleton?.at ?? 0)).toBeGreaterThanOrEqual(300);
 });
 
 test("MLR-03 outside act, one skeleton covers the answer and the page's code after it: no blank between, and the page no sooner than the code", async () => {
+  answers(true);
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
   // The page's code comes 400 ms after the skeleton showed, well after the answer.
   const code = Promise.withResolvers<void>();
   const importWhenOnline = resilience.importWhenOnline;
-  const held = spyOn(resilience, "importWhenOnline").mockImplementation((load) =>
+  spyOn(resilience, "importWhenOnline").mockImplementation((load) =>
     code.promise.then(() => importWhenOnline(load))
   );
   let codeAt = Number.POSITIVE_INFINITY;
-  try {
-    const changes = await changesOutsideAct(inOutlet(), outletState, {
-      done: (state) => state === "page",
-      onChange: (change) => {
-        if (change.state !== "skeleton") return;
-        setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
-        setTimeout(() => {
-          codeAt = change.at + 400;
-          code.resolve();
-        }, 400);
-      },
-    });
-    expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "page"]);
-    const [, skeleton, page] = changes;
-    expect(skeleton?.at).toBeGreaterThanOrEqual(200);
-    expect((page?.at ?? 0) - (skeleton?.at ?? 0)).toBeGreaterThanOrEqual(300);
-    expect(page?.at).toBeGreaterThanOrEqual(codeAt);
-  } finally {
-    cleanup();
-    held.mockRestore();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  const changes = await changesOutsideAct(inOutlet(), outletState, {
+    done: (state) => state === "page",
+    onChange: (change) => {
+      if (change.state !== "skeleton") return;
+      setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
+      setTimeout(() => {
+        codeAt = change.at + 400;
+        code.resolve();
+      }, 400);
+    },
+  });
+  expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "page"]);
+  const [, skeleton, page] = changes;
+  expect(skeleton?.at).toBeGreaterThanOrEqual(200);
+  expect((page?.at ?? 0) - (skeleton?.at ?? 0)).toBeGreaterThanOrEqual(300);
+  expect(page?.at).toBeGreaterThanOrEqual(codeAt);
 });
 
 test("MLR-06 a revisit, with the answer cached and the page's code loaded, draws the page in its first commit", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: true,
-  });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  answers(true);
   const queryClient = newClient();
-  try {
-    const page = { done: (state: string) => state === "page" };
-    expect((await changesOutsideAct(inOutlet(queryClient), outletState, page)).at(-1)?.state).toBe(
-      "page"
-    );
-    const revisit = await changesOutsideAct(inOutlet(queryClient), outletState, {
-      ...page,
-      sync: true,
-    });
-    expect(revisit.map((change) => change.state)).toEqual(["page"]);
-  } finally {
-    cleanup();
-    queryClient.clear();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
-});
-
-/** The page's code fails to load until `loads` is set. */
-function failingCode() {
-  const state = { loads: false };
-  const importWhenOnline = resilience.importWhenOnline;
-  const spy = spyOn(resilience, "importWhenOnline").mockImplementation((load) =>
-    state.loads ? importWhenOnline(load) : Promise.reject(new Error("the chunk is gone"))
+  const page = { done: (state: string) => state === "page" };
+  expect((await changesOutsideAct(inOutlet(queryClient), outletState, page)).at(-1)?.state).toBe(
+    "page"
   );
-  return { state, spy };
-}
-
-const inBoundary = (queryClient?: QueryClient) => (
-  <ErrorBoundary region="this page">{routeTree(queryClient)}</ErrorBoundary>
-);
-
-test("MLR-08 a Dispatch without the device grant shows the not-found page, though the page's code failed to load", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: false,
+  const revisit = await changesOutsideAct(inOutlet(queryClient), outletState, {
+    ...page,
+    sync: true,
   });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  const code = failingCode();
-  try {
-    render(inBoundary());
-    expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
-    await waitFor(() => expect(code.spy).toHaveBeenCalled());
-    expect(screen.queryByRole("alert")).toBeNull();
-  } finally {
-    cleanup();
-    code.spy.mockRestore();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
-});
-
-test("MLR-08 a failed capabilities read shows its failure and Retry, though the page's code failed to load", async () => {
-  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  const code = failingCode();
-  try {
-    render(inBoundary());
-    // The code's failure is in before the read fails.
-    await waitFor(() => expect(code.spy).toHaveBeenCalled());
-    await act(() => new Promise((settled) => setTimeout(settled, 20)));
-    await act(async () => answer.reject(new Error("broker down")));
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("Could not load the machine login page.");
-    expect(within(alert).getByRole("button", { name: "Retry" })).toBeDefined();
-    expect(code.spy).toHaveBeenCalled();
-  } finally {
-    cleanup();
-    code.spy.mockRestore();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
-});
-
-test("MLR-09 a visit after the page's code failed to load loads the code again", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: true,
-  });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  const code = failingCode();
-  const queryClient = newClient();
-  try {
-    render(inBoundary(queryClient));
-    expect((await screen.findByRole("alert")).textContent).toContain("the chunk is gone");
-    cleanup();
-
-    code.state.loads = true;
-    render(inBoundary(queryClient));
-    expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
-  } finally {
-    cleanup();
-    queryClient.clear();
-    code.spy.mockRestore();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  expect(revisit.map((change) => change.state)).toEqual(["page"]);
 });
 
 test("MLR-07 a page's code that fails to load shows the page's error, with no skeleton before it", async () => {
-  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
-    machine_code_page: true,
+  answers(true);
+  failingCode();
+  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletOrError, {
+    done: (state) => state === "error",
   });
-  const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
-  const failed = spyOn(resilience, "importWhenOnline").mockImplementation(() =>
-    Promise.reject(new Error("the chunk is gone"))
-  );
-  try {
-    const changes = await changesOutsideAct(
-      <ErrorBoundary region="this page">{inOutlet()}</ErrorBoundary>,
-      (host) => (shows(host, '[role="alert"]') ? "error" : outletState(host)),
-      { done: (state) => state === "error" }
-    );
-    expect(changes.map((change) => change.state)).toEqual(["blank", "error"]);
-  } finally {
-    cleanup();
-    failed.mockRestore();
-    capabilities.mockRestore();
-    logins.mockRestore();
-  }
+  expect(changes.map((change) => change.state)).toEqual(["blank", "error"]);
+});
+
+test("MLR-07 outside act, a code load that failed shows the page's error as soon as the answer comes, with no hold on the skeleton", async () => {
+  answers(true);
+  failingCode();
+  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
+  spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
+  const changes = await changesOutsideAct(inBoundary(inOutlet()), outletOrError, {
+    done: (state) => state === "error",
+    onChange: (change) => {
+      if (change.state === "skeleton") {
+        setTimeout(() => answer.resolve({ machine_code_page: true }), 50);
+      }
+    },
+  });
+  expect(changes.map((change) => change.state)).toEqual(["blank", "skeleton", "error"]);
+  const [, skeleton, error] = changes;
+  expect((error?.at ?? 0) - (skeleton?.at ?? 0)).toBeLessThan(300);
+});
+
+test("MLR-08 a Dispatch without the device grant shows the not-found page, though the page's code failed to load", async () => {
+  answers(false);
+  const code = failingCode();
+  render(inBoundary(routeTree()));
+  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+  await act(() => code.failed);
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+test("MLR-08 a failed capabilities read shows its failure, and its Retry also loads the page's code that failed", async () => {
+  answers(true);
+  const code = failingCode();
+  const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
+  spyOn(api, "getCredentialCapabilities")
+    .mockReturnValueOnce(answer.promise)
+    .mockResolvedValue({ machine_code_page: true });
+  render(inBoundary(routeTree()));
+  // The code's failure is in before the read fails.
+  await act(() => code.failed);
+  answer.reject(new Error("broker down"));
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("Could not load the machine login page.");
+
+  // The code comes only after the served answer, so the old failure must not stand meanwhile.
+  const gate = Promise.withResolvers<void>();
+  code.state.loads = true;
+  code.state.gate = gate.promise;
+  await userEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  gate.resolve();
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
+});
+
+test("MLR-09 a visit after the page's code failed to load loads the code again", async () => {
+  answers(true);
+  const code = failingCode();
+  const queryClient = newClient();
+  render(inBoundary(routeTree(queryClient)));
+  expect((await screen.findByRole("alert")).textContent).toContain("the chunk is gone");
+  cleanup();
+
+  code.state.loads = true;
+  render(inBoundary(routeTree(queryClient)));
+  expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
 });
