@@ -1,0 +1,29 @@
+# Throwaway (not for merge): screenshots of the priority glyph's track for a pull request.
+name: WIP track screenshots
+
+on:
+  push:
+    branches: [wip/track-shots]
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: packages/ui
+      - run: bunx playwright install chromium
+      - run: bun packages/ui/scripts/track-shots.tsx shots
+      - run: node packages/ui/scripts/track-shots-shoot.mjs shots
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: track-shots
+          path: shots/*.png
