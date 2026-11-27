@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { packageRoot } from "../../../scripts/third-party-notices";
 import { bundleCopyProblems } from "./one-copy-each";
 
 type Versions = Record<string, string>;
@@ -68,5 +69,14 @@ describe("one copy of each shared package in the bundle", () => {
       Object.fromEntries(app.uiPackages.map((name) => [name, versions?.[name]]));
     expect(pins(ui.devDependencies)).toEqual(pins(app.dependencies));
     expect(pins(ui.peerDependencies)).toEqual(pins(app.dependencies));
+  });
+
+  // The build runs upstream's config: its plugins, and the vite its notices name, are its install's.
+  test("this app and upstream's web resolve the same vite and plugins", () => {
+    const resolved = (dir: string) =>
+      ["vite", "@vitejs/plugin-react", "@tailwindcss/vite"].map((name) =>
+        packageRoot(name, join(import.meta.dir, dir))
+      );
+    expect(resolved("..")).toEqual(resolved("../../dispatch/web"));
   });
 });

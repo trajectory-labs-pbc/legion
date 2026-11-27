@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
@@ -52,7 +52,7 @@ export function filesWith(overlay: ReadonlyMap<string, string> = new Map()): Fil
   return {
     text: (path) => overlay.get(path) ?? (isFile(path) ? readFileSync(path, "utf8") : undefined),
     isFile: (path) => overlay.has(path) || isFile(path),
-    exists: (path) => overlay.has(path) || dirs.has(path) || exists(path),
+    exists: (path) => overlay.has(path) || dirs.has(path) || existsSync(path),
   };
 }
 
@@ -62,16 +62,14 @@ function ancestors(path: string): string[] {
   return found;
 }
 
-/** A path's stat, or undefined where none can be read: missing, or under a file (ENOTDIR). */
-function stat(path: string) {
+/** Whether a file is there; false where none can be read: missing, or under a file (ENOTDIR). */
+function isFile(path: string): boolean {
   try {
-    return statSync(path);
+    return statSync(path).isFile();
   } catch {
-    return undefined;
+    return false;
   }
 }
-const exists = (path: string) => stat(path) !== undefined;
-const isFile = (path: string) => stat(path)?.isFile() ?? false;
 
 function packageName(specifier: string): string | undefined {
   if (/^(\.|\/|[a-z]:)/i.test(specifier)) return undefined;

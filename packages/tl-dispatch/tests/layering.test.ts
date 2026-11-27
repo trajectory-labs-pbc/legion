@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { layerViolations } from "./layering";
-import { sourceFiles } from "./source";
+import { PACKAGE_ROOT, sourceFiles } from "./source";
 
 const rulesOf = (files: { path: string; text: string }[], path = files[0]?.path) =>
   layerViolations(files)
@@ -102,5 +104,15 @@ describe("layers", () => {
       ...(sibling === undefined ? [] : [{ path: sibling[0], text: sibling[1] }]),
     ];
     expect(layerViolations(files)).toEqual([]);
+  });
+
+  // Either flag keeps `import { type App } from "..."` in the build as a bare import, which runs
+  // the module, so the type-only allowance above would let upstream's app in.
+  test("the build drops type-only imports: tsconfig sets no flag that keeps them", () => {
+    const { compilerOptions } = JSON.parse(
+      readFileSync(join(PACKAGE_ROOT, "tsconfig.json"), "utf8")
+    ) as { compilerOptions: Record<string, unknown> };
+    expect(compilerOptions.verbatimModuleSyntax ?? false).toBe(false);
+    expect(compilerOptions.preserveValueImports ?? false).toBe(false);
   });
 });

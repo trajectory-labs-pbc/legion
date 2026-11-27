@@ -114,7 +114,7 @@ const MAPS_UPSTREAM = {
 };
 const LINES = {
   path: "src/pages/lines.tsx",
-  text: '"é ü — ✓";\n\n<p className="text-sky-700" />;',
+  text: `"${"✓".repeat(10)}";\n<p className="text-sky-700" />\n;`,
 };
 
 beforeAll(async () => {
@@ -131,11 +131,15 @@ describe("design rules", () => {
   });
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {
-    const exempt = sourceFiles().filter((file) => EXEMPT[file.path] !== undefined);
-    const breaking = new Set(
-      (await designViolations(exempt, { exempt: {} })).map((violation) => violation.file)
-    );
-    expect(Object.keys(EXEMPT).filter((path) => !breaking.has(path))).toEqual([]);
+    // One compile per file: a compiled class can name another file's class as its source.
+    const files = new Map(sourceFiles().map((file) => [file.path, file]));
+    const clean: string[] = [];
+    for (const path of Object.keys(EXEMPT)) {
+      const file = files.get(path);
+      if (file === undefined || (await designViolations([file], { exempt: {} })).length === 0)
+        clean.push(path);
+    }
+    expect(clean).toEqual([]);
   });
 
   test("takes corners from the theme alone: a corner token the app declares is none", () => {
@@ -156,7 +160,7 @@ describe("design rules", () => {
     const line = found.find(
       (violation) => violation.file === LINES.path && violation.text === "text-sky-700"
     )?.line;
-    expect(line).toBe(3);
+    expect(line).toBe(2);
   });
 
   test.each(

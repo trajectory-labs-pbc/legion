@@ -57,26 +57,19 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
-  const isRadius = (property: string) => /^--radius(-|$)/.test(property);
-  // A shadow token lives in `@theme` and holds its colour, so a shadow may name it.
-  const addColour = ({ property, context }: CssDeclaration) => {
-    if (
-      property.startsWith("--") &&
-      (context.at(-1)?.startsWith(":root") || property.startsWith("--shadow-"))
-    )
-      colours.add(property);
-  };
-  for (const declaration of parseCss(theme).declarations) {
-    const { property, value } = declaration;
-    if (!isRadius(property)) addColour(declaration);
-    else {
-      radii.add(property);
-      radiusValues.add(property === "--radius" ? "var(--radius)" : value);
-    }
-  }
-  for (const css of own) {
-    for (const declaration of parseCss(css).declarations) {
-      if (!isRadius(declaration.property)) addColour(declaration);
+  for (const css of [theme, ...own]) {
+    for (const { property, value, context } of parseCss(css).declarations) {
+      if (/^--radius(-|$)/.test(property)) {
+        if (css === theme) {
+          radii.add(property);
+          radiusValues.add(property === "--radius" ? "var(--radius)" : value);
+        }
+      } else if (
+        property.startsWith("--") &&
+        // A shadow token lives in `@theme` and holds its colour, so a shadow may name it.
+        (context.at(-1)?.startsWith(":root") || property.startsWith("--shadow-"))
+      )
+        colours.add(property);
     }
   }
   return { colours, radii, radiusValues };
@@ -236,11 +229,11 @@ function sourceClass(
 
 type Where = { file: string; line: number };
 
-/** The line of a byte offset into `text`'s UTF-8, read from an index of where each line starts. */
-export function byteLines(text: string): (position: number) => number {
-  const bytes = Buffer.from(text);
+/** The line of an index into `text` (Oxide gives string indexes, not bytes), read from an index
+ *  of where each line starts. */
+function lineIndex(text: string): (position: number) => number {
   const starts = [0];
-  for (let at = bytes.indexOf(10); at !== -1; at = bytes.indexOf(10, at + 1)) starts.push(at + 1);
+  for (let at = text.indexOf("\n"); at !== -1; at = text.indexOf("\n", at + 1)) starts.push(at + 1);
   return (position) => {
     let low = 0;
     let high = starts.length - 1;
@@ -261,7 +254,7 @@ async function classViolations(
   const scanner = new Scanner({ sources: [] });
   const classes = new Map<string, Where[]>();
   for (const file of files) {
-    const lineOf = byteLines(file.text);
+    const lineOf = lineIndex(file.text);
     const scanned = scanner.getCandidatesWithPositions({
       content: file.text,
       extension: extname(file.path).slice(1),
@@ -416,9 +409,8 @@ function utilityOf(word: string): string {
 }
 
 const HEIGHT = /^(min-h|h|size)-(.+)$/;
-const SCALE: readonly number[] = CONTROL_HEIGHTS;
 const inScale = (kind: string, value: string) =>
-  (kind !== "min-h" && SCALE.includes(Number(value))) ||
+  (kind !== "min-h" && CONTROL_HEIGHTS.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
 
 function scriptViolations(
@@ -530,9 +522,7 @@ function scriptViolations(
           // A UI component's height is its `size` prop's, never a class.
           const ok =
             !UI_CONTROL.has(tag) &&
-            (check
-              ? kind === "size" && (CHECK_SIZES as readonly number[]).includes(Number(value))
-              : inScale(kind, value));
+            (check ? kind === "size" && CHECK_SIZES.includes(Number(value)) : inScale(kind, value));
           if (!ok) refuse(at, word, RULES.height);
         }
       }

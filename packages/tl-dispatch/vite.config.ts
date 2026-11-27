@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { mergeConfig } from "vite";
+import { mergeConfig, type UserConfig } from "vite";
 import upstream from "../dispatch/web/vite.config";
 import { oneCopyEach } from "./scripts/one-copy-each";
 
@@ -30,4 +30,4 @@ export default mergeConfig(upstream, {
       { find: "@legion/ui/lib", replacement: at("../ui/src/lib") },
     ],
   },
-});
+} satisfies UserConfig);

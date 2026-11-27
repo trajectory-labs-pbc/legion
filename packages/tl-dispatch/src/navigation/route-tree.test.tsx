@@ -25,7 +25,12 @@ describe("pageAt", () => {
       layout: "full",
     });
     // A static segment outranks a param, whatever order the pages come in.
-    expect(tree.pageAt("/machines/new")?.route).toBe(newMachine.routes.form);
+    for (const pages of [
+      [machines, newMachine],
+      [newMachine, machines],
+    ]) {
+      expect(createRouteTree(pages).pageAt("/machines/new")?.route).toBe(newMachine.routes.form);
+    }
     expect(tree.pageAt("/machines")?.layout).toBe("wide");
   });
 
