@@ -1,9 +1,15 @@
 import { InboxDrawer } from "@upstream-dispatch/features/inbox/InboxDrawer";
-import { CreateIssueDialog } from "@upstream-dispatch/features/issue/CreateIssueDialog";
 import { RefPreviewHost } from "@upstream-dispatch/features/refs/RefPreview";
 import { SearchPalette } from "@upstream-dispatch/features/search/SearchPalette";
+import { useEffect } from "react";
+
 import { ShortcutsSheet } from "@/commands/shortcuts-sheet";
 import type { ShortcutsSheetState } from "@/commands/use-shortcuts-sheet";
+import { lazyRegion } from "@/loading/lazy-region";
+
+const loadCreate = () => import("@upstream-dispatch/features/issue/CreateIssueDialog");
+// Drawn only while open, so each open starts a fresh draft: a region, not an overlay.
+const CreateIssueDialog = lazyRegion("a new issue", loadCreate, "CreateIssueDialog");
 
 /** Search, the inbox drawer, the shortcuts sheet, a new issue and the reference previews. */
 export function ShellDialogs({
@@ -23,6 +29,11 @@ export function ShellDialogs({
   searchOpen: boolean;
   shortcuts: ShortcutsSheetState;
 }) {
+  useEffect(() => {
+    // Out of the entry chunk, but loaded with the shell, so `c` opens it at once. A failed load
+    // fails the open too, which shows it.
+    void loadCreate().catch(() => undefined);
+  }, []);
   return (
     <>
       <SearchPalette onClose={closeSearch} open={searchOpen} />

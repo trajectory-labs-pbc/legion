@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, jest, test } from "bun:test";
-import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
+import { afterEach, describe, expect, test } from "bun:test";
+import { onFakeClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 
 import { render } from "../../tests/react";
 import { PageFallback } from "./page-skeleton";
@@ -11,8 +11,7 @@ afterEach(() => {
 
 describe("PageFallback", () => {
   test("draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
-    jest.useFakeTimers();
-    try {
+    await onFakeClock(async () => {
       const view = render(<PageFallback />);
       cleanups.push(() => view.unmount());
       await tick(150);
@@ -25,8 +24,6 @@ describe("PageFallback", () => {
       expect(
         boxes.map((box) => box.className.split(" ").find((word) => word.startsWith("h-")))
       ).toEqual(["h-control-sm", "h-9", "h-9", "h-9", "h-9"]);
-    } finally {
-      realClock();
-    }
+    });
   });
 });

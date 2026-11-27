@@ -9,7 +9,8 @@ import { gzipSync } from "node:zlib";
 export const ENTRY_BUDGET_BYTES =
   1_200_092 + // the package's first commit measured 1,142,944 on 2026-11-24, plus 5%
   24_196 + // upstream's search palette, eager so the key typed after $mod+k is the palette's
-  140_000; // the shared code the shell reads grew upstream (tool specs, write store, references)
+  140_000 - // the shared code the shell reads grew upstream (tool specs, write store, references)
+  7_000; // the new-issue dialog left the entry for its own chunk
 
 /** The entry chunk, read as the server reads it: the first script of `/assets/index-*.js`. */
 export function entryChunk(indexHtml: string): string {
@@ -21,7 +22,7 @@ export function entryChunk(indexHtml: string): string {
 }
 
 /** The chunks the entry imports statically: the page preloads each beside it. */
-export function preloadedChunks(indexHtml: string): string[] {
+function preloadedChunks(indexHtml: string): string[] {
   return [...indexHtml.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*>/g)].flatMap((link) => {
     const href = /\bhref="([^"]+)"/.exec(link[0])?.[1];
     return href === undefined ? [] : [href];
@@ -32,6 +33,7 @@ export interface EntrySize {
   path: string;
   /** The entry chunk and the chunks preloaded with it, together. */
   bytes: number;
+  /** For the log only: the budget holds `bytes`. */
   gzipBytes: number;
 }
 
