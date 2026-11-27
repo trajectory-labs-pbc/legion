@@ -58,7 +58,9 @@ installs from the default branch, not from the ref you asked for.
   light when the OS is dark), the corners (steps of the one `--radius`, and `--radius-badge` for a
   badge), the two shadows (`shadow-popover`, `shadow-dialog`, in the scheme's `--shadow-tint`),
   the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`),
-  a small control (`h-control-sm`) and the icon stroke (`--icon-stroke`). Faint text takes the
+  a small control (`h-control-sm`), a list row of one line (`h-list-row-1`, 36 px, which a group
+  header also takes) and of two lines (`h-list-row-2`, 56 px), and the icon stroke
+  (`--icon-stroke`). The style test holds these four heights and no other. Faint text takes the
   muted colour on an entry's accent fill, where it would not hold 4.5:1.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades

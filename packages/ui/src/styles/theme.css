@@ -27,6 +27,9 @@
   /* A table row, and a small control: a small button, a menu entry, a pill under a mouse. */
   --spacing-row: calc(var(--spacing) * 8);
   --spacing-control-sm: calc(var(--spacing) * 7);
+  /* A list row of one line, which a group header also takes, and a list row of two lines. */
+  --spacing-list-row-1: calc(var(--spacing) * 9);
+  --spacing-list-row-2: calc(var(--spacing) * 14);
   /* Every edge Tailwind draws (`border`, `border-t`, `divide-y`) is the one --border-width. */
   --default-border-width: var(--border-width);
   --color-background: var(--background);

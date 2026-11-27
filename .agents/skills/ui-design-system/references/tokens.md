@@ -62,6 +62,7 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 ## Size scales
 
 - Control heights: `h-6` (24 px), `h-7` (28 px), `h-8` (32 px, the default), `h-9` (36 px). On a coarse pointer every control reaches 44 px. A test refuses any other control height.
+- List rows: `h-list-row-1` (36 px, one line, and a group header) and `h-list-row-2` (56 px, two lines). There is no third row height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
 - Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. `SurfaceTitle` is the page's `h1`. `Heading` starts at `h2` and takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. Running text is `Text`, which takes the same `size`, `tone` and `weight` as `textVariants`; a part that draws its own element passes `textVariants(...)` to `className`.

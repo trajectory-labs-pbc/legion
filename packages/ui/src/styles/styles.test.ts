@@ -541,6 +541,42 @@ describe("accentFill", () => {
   });
 });
 
+// The theme's heights, in steps of --spacing (4 px): a table row, a small control, and a list row of
+// one line (a group header too) and of two lines. A list row takes one of the two, never a third.
+const HEIGHTS = { row: 8, "control-sm": 7, "list-row-1": 9, "list-row-2": 14 };
+
+/** Each `--spacing-*` token of the stylesheet's theme, as its steps of --spacing. */
+function heightTokens(css: string): Record<string, number | string> {
+  const found: Record<string, number | string> = {};
+  postcss.parse(css).walkAtRules("theme", (theme) => {
+    theme.walkDecls(/^--spacing-/, (decl) => {
+      const steps = decl.value.match(/^calc\(var\(--spacing\) \* (\d+)\)$/)?.[1];
+      found[decl.prop.slice("--spacing-".length)] =
+        steps === undefined ? decl.value : Number(steps);
+    });
+  });
+  return found;
+}
+
+describe("the theme's heights", () => {
+  it("are a table row, a small control, and a list row of 36 px and of 56 px", async () => {
+    expect(heightTokens(globalsText)).toEqual(HEIGHTS);
+    const css = (await generate({ extra: ["h-list-row-1", "h-list-row-2"] })).toString();
+    expect(css).toContain("height: calc(var(--spacing) * 9)");
+    expect(css).toContain("height: calc(var(--spacing) * 14)");
+  });
+
+  it("fail the check without the two-line row, or with a third list row", () => {
+    const without = globalsText.replace(/\s*--spacing-list-row-2: [^;]+;/, "");
+    expect(heightTokens(without)).not.toEqual(HEIGHTS);
+    const third = globalsText.replace(
+      "--spacing-list-row-2:",
+      "--spacing-list-row-3: calc(var(--spacing) * 18);\n  --spacing-list-row-2:"
+    );
+    expect(heightTokens(third)).not.toEqual(HEIGHTS);
+  });
+});
+
 describe("the theme", () => {
   it("draws faint text in the muted colour on each accent fill an entry takes", () => {
     const selectors: string[] = [];
