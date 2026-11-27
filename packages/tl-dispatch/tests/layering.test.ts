@@ -207,6 +207,17 @@ describe("layers", () => {
     expect(rulesOf(unlisted)).toContain("is read by no file");
   });
 
+  test("the storage file reads neither the data layer nor the seam: browser is above both", () => {
+    const storage = (target: string, targetFile: SourceFile) =>
+      rulesOf([file("src/browser/storage.ts", `import "${target}";`), targetFile]);
+    expect(storage("@/data/read", file("src/data/read.ts"))).toContain(
+      "imports-only-above: browser is above data"
+    );
+    const seam = storage("@/upstream/api", file("src/upstream/api.ts"));
+    expect(seam).toContain("seam-readers");
+    expect(seam).toContain("imports-only-above: browser is above upstream");
+  });
+
   test("a page's view file is read by that page alone", () => {
     const view = (path: string, target: string) =>
       rulesOf([

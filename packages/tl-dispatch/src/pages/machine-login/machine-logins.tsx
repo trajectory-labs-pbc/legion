@@ -31,6 +31,7 @@ import { textVariants } from "@legion/ui/lib/typography";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Fragment, memo, type ReactNode, useRef, useState } from "react";
+import { WriteFailure } from "@/data/write-failure";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/features/read-failure";
 import type { LauncherCredentialResp } from "@/upstream/contract";
 import { machineName } from "@/upstream/logic/machine-login";
@@ -38,7 +39,6 @@ import { machineLoginsQuery } from "@/upstream/queries";
 import { type FocusFallback, firstUsable, useFocusKeeper } from "@/upstream/shell";
 import { Timestamp } from "@/upstream/widgets/timestamp";
 import { refusedNote } from "@/upstream/writes";
-import { WriteFailure } from "@/writes/write-failure";
 import { isListed, type Revoke, useRevoke } from "./use-revoke";
 
 type RevokeQuestion = ReturnType<typeof createAlertDialogHandle<LauncherCredentialResp>>;

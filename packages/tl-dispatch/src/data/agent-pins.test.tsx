@@ -5,7 +5,7 @@ import { userAgentStateQuery } from "@/upstream/queries";
 
 import { holdReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
-import { type PinWrite, useLiveViewPins, usePinsMigration } from "./use-agent-pins";
+import { type PinWrite, useLiveViewPins, usePinsMigration } from "./agent-pins";
 
 function Probe({ login, write }: { login: string; write: PinWrite }) {
   usePinsMigration(login, write);

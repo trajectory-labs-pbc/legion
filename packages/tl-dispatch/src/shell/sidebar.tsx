@@ -8,13 +8,13 @@ import type { ReactNode } from "react";
 import { HotkeyTooltip, LabelTooltip } from "@/commands/hotkey-tooltip";
 import { navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
+import { unreadRepliesLabel, usePinnedAgent } from "@/data/agent-pins";
+import type { AuthenticatedUser } from "@/data/session";
 import { ReadFailure } from "@/features/read-failure";
 import { PageLink } from "@/navigation/page-link";
 import { agents } from "@/pages/agents";
 import { issue } from "@/pages/issue";
 import { project } from "@/pages/project";
-import type { AuthenticatedUser } from "@/upstream/contract";
-import { unreadRepliesLabel } from "@/upstream/data-hooks";
 import { AgentName } from "@/upstream/widgets/agent-name";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
@@ -25,7 +25,6 @@ import {
   type SidebarAgent,
   type SidebarData,
   type SidebarItem,
-  usePinnedAgent,
   useSidebarData,
 } from "./sidebar-data";
 

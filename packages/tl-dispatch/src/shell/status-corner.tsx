@@ -2,7 +2,7 @@ import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Badge } from "@legion/ui/components/badge";
 import { Button } from "@legion/ui/components/button";
 import { useRef } from "react";
-import { useLiveSocketPill } from "@/upstream/live";
+import { useLiveSocketPill } from "@/data/live";
 import { useFootInset } from "@/upstream/shell";
 import { DraftsNotKept, PendingWritesIndicator } from "@/upstream/widgets/status";
 import type { SignOut } from "./use-sign-out";

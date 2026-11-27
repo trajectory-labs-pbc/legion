@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { act } from "react";
+import { sessionKey } from "@/data/session";
 import type { WriteBounds } from "@/upstream/api";
-import { whoAmIQuery } from "@/upstream/queries";
 import { plainWrite, writesOf } from "@/upstream/writes";
 import { settle as letWritesRun } from "./upstream";
 
@@ -11,7 +11,7 @@ export const reader = { event_head: "0", kind: "user", login: "reader" } as cons
 /** A query client whose sign-in check has named `reader`. */
 export function signedInClient(): QueryClient {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  client.setQueryData(whoAmIQuery().queryKey, reader);
+  client.setQueryData(sessionKey, reader);
   return client;
 }
 
@@ -27,7 +27,7 @@ export async function pressWrite(
     write = () => new Promise<never>(() => {}),
   }: { label?: string; write?: (bounds: WriteBounds) => Promise<unknown> } = {}
 ): Promise<{ outcome: Promise<unknown> }> {
-  client.setQueryData(whoAmIQuery().queryKey, reader);
+  client.setQueryData(sessionKey, reader);
   let outcome: Promise<unknown> = Promise.resolve();
   await act(async () => {
     outcome = writesOf(client)

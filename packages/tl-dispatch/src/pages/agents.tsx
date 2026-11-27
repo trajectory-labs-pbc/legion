@@ -1,5 +1,6 @@
+import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
-import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { pageRoute } from "@/navigation/page-route";
 import { userAgentStateQuery } from "@/upstream/queries";
 import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH } from "@/upstream/routes";
 import { LiveViewRoute } from "@/upstream/widgets/live-views";

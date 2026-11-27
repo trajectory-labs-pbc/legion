@@ -25,7 +25,7 @@ Ask these questions in order, and stop at the first yes.
 10. Is it the route tree, the providers or the start? It goes to `src/app`.
 
 Until the migration moves them, some files sit in a layer that is not their folder's; the table names each one with the step that moves it.
-Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; `src/writes` and `src/features/read-failure.tsx`, in `data`; and `src/start.tsx`, in `app`.
+Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; `src/features/read-failure.tsx`, in `data`; and `src/start.tsx`, in `app`.
 
 ## Every file has a layer (`every-file-has-a-layer`)
 

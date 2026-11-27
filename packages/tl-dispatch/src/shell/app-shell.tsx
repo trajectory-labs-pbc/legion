@@ -1,5 +1,6 @@
-import type { AuthenticatedUser } from "@/upstream/contract";
-import { useAgentPinWrite, useRecordRecents } from "@/upstream/data-hooks";
+import { useAgentPinWrite, useLiveViewPins, usePinsMigration } from "@/data/agent-pins";
+import { useRecordRecents } from "@/data/recents";
+import type { AuthenticatedUser } from "@/data/session";
 
 import { CompactHeader } from "./compact-header";
 import { ContentPanel } from "./content-panel";
@@ -13,7 +14,6 @@ import { ShellProviders } from "./shell-providers";
 import { SidebarRegion } from "./sidebar-region";
 import { SignOutQuestion } from "./sign-out-question";
 import { StatusCorner } from "./status-corner";
-import { useLiveViewPins, usePinsMigration } from "./use-agent-pins";
 import { useShellLayout } from "./use-shell-layout";
 import { useShellOverlays } from "./use-shell-overlays";
 import { useSignOut } from "./use-sign-out";

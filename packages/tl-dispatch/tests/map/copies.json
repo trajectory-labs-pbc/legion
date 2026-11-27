@@ -51,28 +51,28 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "signIns",
-    "copy": "src/shell/sign-ins.ts",
+    "copy": "src/data/sign-ins.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "9016f3593388689a451fcbd394be3d4941c39a35a2f87da44e66d976f2904831"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "unsentChanges",
-    "copy": "src/shell/sign-ins.ts",
+    "copy": "src/data/sign-ins.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "4b245459555d8325d6c15af50e911149c9838ddffaab4b0d5db725b44a669da8"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "signOutQuestion",
-    "copy": "src/shell/sign-ins.ts",
+    "copy": "src/shell/use-sign-out.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "3c005cd1eae5986556b6b5ba50a0b0c73f9f8325200ec63a1e5313250b6b4fda"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "heldWritesOfGoneHolder",
-    "copy": "src/shell/sign-ins.ts",
+    "copy": "src/data/sign-ins.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "dd56662cc1568e6b5271628d5d79efe55487e40b36e7aa67f7df4153b4c67990"
   },
@@ -81,7 +81,8 @@
     "part": "AuthenticatedApp",
     "copy": "src/shell/auth-gate.tsx",
     "also": [
-      "src/shell/signed-in-parts.tsx"
+      "src/shell/signed-in-parts.tsx",
+      "src/data/sign-ins.ts"
     ],
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "8ad293a3407793cca7c2baff2ae50d57bf104536ce00eaffc20024971e3ef358"
@@ -90,6 +91,10 @@
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AuthGate",
     "copy": "src/shell/auth-gate.tsx",
+    "also": [
+      "src/data/session.ts",
+      "src/data/sign-ins.ts"
+    ],
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "069d636f08f925e5d5425b2546812c3accb960c6caaa4ab6d1f91a2b6d6bd3fe"
   },
@@ -467,14 +472,17 @@
   {
     "file": "packages/dispatch/web/src/features/credentials/pending.ts",
     "part": "useCredentialRequests",
-    "copy": "src/shell/inbox-count.ts",
+    "copy": "src/data/inbox-count.ts",
     "commit": "d317f2181ba777fbfc136d441c06ab6ccb9a3806",
     "sha256": "e98c84ce3987cb21a5abcd2408b81ff0e979d5961914a4d17c2ff774b4e4c0e9"
   },
   {
     "file": "packages/dispatch/web/src/features/inbox/BlockedOnYou.tsx",
     "part": "useNeedsYouCount",
-    "copy": "src/shell/inbox-count.ts",
+    "copy": "src/data/inbox-count.ts",
+    "also": [
+      "src/shell/inbox-count.ts"
+    ],
     "commit": "46d9b0b1228fbf1ac4ecf6a45300f93a5cf33966",
     "sha256": "e4f1998d9e34ea4f3ea86ba03fe37bd3876a131d72ea1c5923ddcad1e320208b"
   },
@@ -490,7 +498,9 @@
     "part": "*",
     "copy": "src/shell/sidebar.tsx",
     "also": [
-      "src/shell/sidebar-data.ts"
+      "src/shell/sidebar-data.ts",
+      "src/data/sidebar.ts",
+      "src/data/agent-pins.ts"
     ],
     "commit": "c6e674809a210e7f3076d15e88f4027c8e2d1661",
     "sha256": "6ea23d1895fdb70cb566b034aa5fd11596fa33194ea4cf979b0e5cefebf8b436",

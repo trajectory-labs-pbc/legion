@@ -11,7 +11,8 @@ replaces them one page at a time.
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it |
 | `src/navigation` | The router: typed links, hooks and the route tree |
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
-| `src/writes` | What a surface says of a failed write, and the alert that says it |
+| `src/browser` | The browser's storage (`storage.ts`, the one file that reads or writes it) and the unload prompt (`unload.ts`) |
+| `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name |
 | `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
@@ -167,8 +168,10 @@ then, a swap means running both routers.
   `shell-dialogs.tsx`. Each takes the values it reads. The navigation
   drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
   loads when it first opens; the global keys still run in it.
-- `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, then their view.
-- `auth-gate.tsx`: the sign-in check before the shell: `shell-skeleton.tsx`, `sign-in-page.tsx`,
+- `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, from the reads of
+  `src/data/sidebar.ts`, then their view.
+- `auth-gate.tsx`: the sign-in check before the shell, from `src/data/session.ts` and
+  `src/data/sign-ins.ts`: `shell-skeleton.tsx`, `sign-in-page.tsx`,
   `connection-error-page.tsx`, or the shell for the person signed in, inside
   `signed-in-parts.tsx` (the keys, the agent registry's poller and the ask card).
 - `page-fallbacks.tsx`: what main shows while a page's code loads.
