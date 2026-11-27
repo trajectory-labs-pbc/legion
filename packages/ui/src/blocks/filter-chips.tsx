@@ -28,7 +28,7 @@ function FilterChip({
     >
       <span className="px-2 text-muted-foreground">{field}</span>
       <span className="px-2 text-muted-foreground">{operator}</span>
-      <span className={cn(textVariants({ size: "inherit", weight: "medium" }), "px-2")}>
+      <span className={cn(textVariants({ size: "caption", weight: "medium" }), "px-2")}>
         {value}
       </span>
       <Button
