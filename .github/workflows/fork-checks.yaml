@@ -148,7 +148,7 @@ jobs:
       - name: Browser tests (deployed mode, against a local server)
         timeout-minutes: 8
         run: bun run test:browser:deployed-local
-      # The switch test serves upstream's build beside this app's, so it builds it first.
+      # The switch test and the baseline below serve upstream's build, so it is built first.
       - name: Build upstream's web app
         timeout-minutes: 5
         run: bun run build:web
@@ -158,6 +158,17 @@ jobs:
       - name: Browser tests (switch between the two apps)
         timeout-minutes: 8
         run: bun run test:browser:switch
+      # The baseline: upstream-still-works on the upstream build above.
+      - name: Browser tests (upstream's build, the baseline)
+        timeout-minutes: 8
+        run: bun run test:browser:upstream
+      # The pictures the aids' screenshot test writes, for a review, on every run.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: reading-aids-screenshots
+          path: packages/tl-dispatch/e2e/screenshots
+          overwrite: true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:

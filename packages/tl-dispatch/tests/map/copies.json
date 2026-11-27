@@ -472,6 +472,15 @@
     "sha256": "e98c84ce3987cb21a5abcd2408b81ff0e979d5961914a4d17c2ff774b4e4c0e9"
   },
   {
+    "file": "packages/dispatch/web/src/features/doc/ProofDocument.tsx",
+    "part": "*",
+    "copy": "src/features/reading-aids/read-first.tsx",
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "0bf1d1a67d5fad8d5abe99bc6c14744e3b9ce7dc0f19431e2e19b762ab3b1ba7",
+    "outcome": "ported",
+    "reason": "Read first replaces its Open-decisions navigator and hides its changed-since-read line; its other regions stay upstream's"
+  },
+  {
     "file": "packages/dispatch/web/src/features/inbox/BlockedOnYou.tsx",
     "part": "useNeedsYouCount",
     "copy": "src/shell/inbox-count.ts",

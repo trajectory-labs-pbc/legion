@@ -1,12 +1,13 @@
 // What the route test and the exit flows share: the run's records, reads as the signed-in person
-// and as the agent, the person's session cookie, a write held in the browser, and a mark that
-// tells a reload apart.
+// and as the agent, a write as the person, the person's session cookie, a write held in the
+// browser, and a mark that tells a reload apart.
 import type { Cookie, Page } from "@playwright/test";
 
 import {
   baseUrl,
   createIssue,
   createProject,
+  dashboardOrigin,
   e2eAgentToken,
   sessionCookie,
 } from "../../dispatch/e2e/api";
@@ -34,10 +35,30 @@ async function read<T>(path: string, headers: Record<string, string>): Promise<T
   return (await response.json()) as T;
 }
 
+/** The page's session cookie, as a request header. */
+async function sessionOf(page: Page): Promise<{ Cookie: string }> {
+  const cookies = await page.context().cookies(baseUrl);
+  return { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; ") };
+}
+
 /** A read as the signed-in person. */
 export async function readAsPerson<T>(page: Page, path: string): Promise<T> {
-  const cookies = await page.context().cookies(baseUrl);
-  return read(path, { Cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; ") });
+  return read(path, await sessionOf(page));
+}
+
+/** A PUT as the signed-in person, with the Origin a user's write carries in upstream's api.ts. */
+export async function writeAsPerson(page: Page, path: string, body: object): Promise<void> {
+  const response = await fetch(new URL(path, baseUrl), {
+    body: JSON.stringify(body),
+    headers: {
+      ...(await sessionOf(page)),
+      "Content-Type": "application/json",
+      Origin: dashboardOrigin,
+    },
+    method: "PUT",
+  });
+  if (!response.ok)
+    throw new Error(`PUT ${path} answered ${response.status}: ${await response.text()}`);
 }
 
 /** A read as the run's agent (`E2E_AGENT_TOKEN` in the deployed mode). */

@@ -12,3 +12,36 @@
 .reading-aids-parts:not(:empty) {
   margin-block-end: calc(var(--spacing) * 6);
 }
+
+/* Once Read first shows, it replaces upstream's navigator and changed line, in its section only. */
+section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-aids-read-first])
+> :is(nav[aria-label="Open decisions"], p.text-sm[role="status"]:not([data-testid])) {
+  display: none;
+}
+
+/* The editor's own list and paragraph type and spacing stay off every part, as upstream's slots do. */
+.milkdown .reading-aids-parts :is(p, ul, ol, li) {
+  line-height: revert-layer;
+  margin: revert-layer;
+  padding: revert-layer;
+}
+
+/* Each link of Read first: a pointer target grown to 24 px, and the focus token's outline. */
+[data-reading-aids-read-first] a {
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+[data-reading-aids-read-first] a::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block: calc(var(--spacing) * -0.5);
+}
+
+[data-reading-aids-read-first] a:focus-visible {
+  outline-style: solid;
+  outline-width: calc(var(--spacing) * 0.5);
+  outline-color: var(--focus);
+  outline-offset: calc(var(--spacing) * 0.5);
+}
