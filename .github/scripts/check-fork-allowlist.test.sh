@@ -161,7 +161,7 @@ change "$root" more packages/app/index.ts
 run_check "$root"
 check "fails" "$(is "$status" 1)"
 check "the annotation's file property encodes both" \
-  "$(contains "$out" "^::error file=docs/a%2Cb%3Ac.md::docs/a,b:c.md differs")"
+  "$(contains "$out" "^::error file=docs/a%2Cb%3Ac\\.md::docs/a,b:c\\.md differs")"
 
 echo "case: a path that holds a percent sign"
 root=$(fixture percent)
@@ -171,7 +171,28 @@ change "$root" more packages/app/index.ts
 run_check "$root"
 check "fails" "$(is "$status" 1)"
 check "the property and the message encode it" \
-  "$(contains "$out" "^::error file=docs/100%25.md::docs/100%25.md differs")"
+  "$(contains "$out" "^::error file=docs/100%25\\.md::docs/100%25\\.md differs")"
+
+echo "case: an allowlist line that holds a percent sign"
+root=$(fixture percent-line)
+change "$root" upstream "docs/100%/guide.md"
+git -C "$root" tag -f up > /dev/null
+list "$root" "docs/100%/"
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "the upstream-directory message encodes it" \
+  "$(contains "$out" '^::error file=.github/fork-allowlist.txt::docs/100%25/ is on .*upstream has files in it')"
+check "the stale-line message encodes it" \
+  "$(contains "$out" '^::error file=.github/fork-allowlist.txt::docs/100%25/ is on .*no longer changes it')"
+
+echo "case: a HEAD that shares no history with upstream's main"
+root=$(fixture orphan)
+git -C "$root" checkout -q --orphan unrelated
+git -C "$root" commit -q -m unrelated
+list "$root" "# Only a comment."
+run_check "$root"
+check "fails" "$(is "$status" 1)"
+check "says why" "$(is "$out" '::error::up and HEAD have no merge base')"
 
 echo "case: a line with white space before the path"
 root=$(fixture indented)

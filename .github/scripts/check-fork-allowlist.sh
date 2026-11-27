@@ -26,7 +26,10 @@ escape_property() {
   printf '%s' "${text//,/%2C}"
 }
 
-upstream=$(git merge-base "$base" HEAD)
+upstream=$(git merge-base "$base" HEAD) || {
+  echo "::error::$(escape_message "$base and HEAD have no merge base")"
+  exit 1
+}
 entries_text=$(sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$list")
 # Without quotePath, git prints a path that holds a non-ASCII byte in quotes, and no line matches it.
 changed_text=$(git -c core.quotePath=false diff --name-only --no-renames "$upstream" HEAD)
