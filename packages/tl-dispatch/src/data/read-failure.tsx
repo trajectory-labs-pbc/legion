@@ -94,7 +94,7 @@ export function ReadFailure({
       variant="danger"
     >
       <AlertTitle>{lineOf(fault, noun)}</AlertTitle>
-      {fault.refusal === undefined ? (
+      {refused ? null : (
         <AlertAction>
           <Button
             loading={fault.retrying}
@@ -106,7 +106,7 @@ export function ReadFailure({
             Retry
           </Button>
         </AlertAction>
-      ) : null}
+      )}
     </Alert>
   );
 }
