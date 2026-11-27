@@ -105,26 +105,31 @@ test("MLP-02 a NO_SUCH_CODE lookup failure renders inline under the input", asyn
   }
 });
 
-test("MLP-02 the code field names the lookup failure and is marked invalid", async () => {
+// A 403 says nothing of the code. A 429 never reaches the field: the lookup asks again under its key.
+test.each([
+  [404, "NO_SUCH_CODE", "true"],
+  [403, "FORBIDDEN", null],
+] as const)("MLP-11 the code field names a %i %s lookup failure", async (status, code, invalid) => {
   const user = userEvent.setup();
   const lookupMachineCredential = spyOn(api, "lookupMachineCredential").mockRejectedValue(
-    new ApiError(404, { code: "NO_SUCH_CODE", error: "No pending request matches that code." })
+    new ApiError(status, { code, error: "The lookup was refused." })
   );
   const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
 
   try {
     renderPage();
     const field = screen.getByLabelText("Code shown on the machine");
-    expect(field).not.toHaveAttribute("aria-describedby");
-    expect(field).not.toHaveAttribute("aria-invalid");
     await user.click(field);
-    await user.paste("zzzz9999");
+    await user.paste("zzzz999");
     await user.click(screen.getByRole("button", { name: "Look up" }));
 
     const failure = await screen.findByRole("alert");
     expect(field).toHaveAttribute("aria-describedby", failure.id);
-    expect(field).toHaveAccessibleDescription("No pending request matches that code.");
-    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription("The lookup was refused.");
+    expect(field.getAttribute("aria-invalid")).toBe(invalid);
+    // A new code is not the one refused.
+    await user.type(field, "9");
+    expect(field).not.toHaveAttribute("aria-invalid");
   } finally {
     cleanup();
     lookupMachineCredential.mockRestore();
@@ -341,6 +346,7 @@ test.each(
     await user.click(pressedButton);
     await waitFor(() => expect(pressedButton).toHaveAttribute("aria-busy", "true"));
     expect(pressedButton).toHaveFocus();
+    expect(screen.getByLabelText("Code shown on the machine")).toBeEnabled();
     const otherButton = screen.getByRole("button", { name: other });
     expect(otherButton).not.toHaveAttribute("aria-busy");
     // The guard would drop a second decision, so the other button does not offer one.
@@ -370,6 +376,7 @@ test("MLP-09 Look up waits for a code, keeps the focus while it is out, and a re
     await user.click(button);
     await waitFor(() => expect(button).toHaveAttribute("aria-busy", "true"));
     expect(button).toHaveFocus();
+    expect(screen.getByLabelText("Code shown on the machine")).toBeEnabled();
     answer.reject(new ApiError(404, { code: "NOT_FOUND", error: "No login waits on that code." }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No login waits on that code.");
   } finally {

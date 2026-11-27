@@ -52,6 +52,9 @@ function Decision({
 /** The code form's failure line, which the code field names as its description. */
 const CODE_ERROR = "machine-code-error";
 
+/** The lookup's refusals that say the typed code is wrong; any other failure leaves it valid. */
+const CODE_REFUSALS = new Set(["NO_SUCH_CODE", "CODE_REQUIRED", "INVALID_LOOKUP"]);
+
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
   const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
@@ -75,8 +78,11 @@ export function MachineLoginPage(): ReactNode {
   const approvable =
     view?.decided === null && view.record.state === "pending" && view.record.service === null;
   const lookUpLeads = !approvable && (view === undefined || code !== "");
-  // A 4xx refused the code itself; a stopped or failed send says nothing of it.
-  const codeRefused = lookup.error instanceof ApiError && lookup.error.status < 500;
+  // Only these refuse the code itself, and only while the field still holds that code.
+  const codeRefused =
+    lookup.error instanceof ApiError &&
+    CODE_REFUSALS.has(lookup.error.code ?? "") &&
+    lookup.variables === code;
 
   return (
     <section className="max-w-180 space-y-8">
