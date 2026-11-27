@@ -35,6 +35,15 @@ function contextOf(node: Node): string[] {
   return context;
 }
 
+/** A CSS identifier with its escapes read: `\6c ayer` gives `layer`. */
+export function unescapeCss(name: string): string {
+  return name
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16))
+    )
+    .replace(/\\(.)/g, "$1");
+}
+
 /** Reads a stylesheet into its declarations and its at-rule statements, nesting included. */
 export function parseCss(text: string): ParsedCss {
   const root = postcss.parse(text);
@@ -42,7 +51,7 @@ export function parseCss(text: string): ParsedCss {
   const statements: CssStatement[] = [];
   root.walkDecls((decl) => {
     declarations.push({
-      property: decl.prop.toLowerCase(),
+      property: unescapeCss(decl.prop).toLowerCase(),
       value: decl.important ? `${decl.value} !important` : decl.value,
       context: contextOf(decl),
       line: decl.source?.start?.line ?? 0,

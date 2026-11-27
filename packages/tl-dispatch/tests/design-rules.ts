@@ -2,10 +2,11 @@ import { readFileSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
+import postcss, { AtRule } from "postcss";
 import ts from "typescript";
 
 import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale";
-import { type CssDeclaration, importedPath, parseCss } from "./css";
+import { type CssDeclaration, importedPath, parseCss, unescapeCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
 import {
@@ -41,7 +42,7 @@ export const RULES = {
   duration:
     "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
   themeOnly:
-    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and the theme keys that name them (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
+    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -74,8 +75,6 @@ export interface ThemeTokens {
   /** Each layer token's name (`--layer-*`) and each fade length's (`--duration-*`). */
   layers: ReadonlySet<string>;
   durations: ReadonlySet<string>;
-  /** Each theme key that names one of those or the disabled opacity (`--z-index-overlay`). */
-  aliases: ReadonlySet<string>;
 }
 
 /** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
@@ -87,12 +86,9 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const radiusValues = new Set<string>();
   const layers = new Set<string>();
   const durations = new Set<string>();
-  const aliases = new Set<string>();
   for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
-      if (css === theme && THEME_ONLY.test(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "")) {
-        aliases.add(property);
-      } else if (/^--(layer|duration)-/.test(property)) {
+      if (/^--(layer|duration)-/.test(property)) {
         if (css === theme) (property.startsWith("--layer-") ? layers : durations).add(property);
       } else if (/^--radius(-|$)/.test(property)) {
         if (css === theme) {
@@ -107,7 +103,7 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
         colours.add(property);
     }
   }
-  return { colours, radii, radiusValues, layers, durations, aliases };
+  return { colours, radii, radiusValues, layers, durations };
 }
 
 const NAMED_COLOURS = new Set(
@@ -165,12 +161,12 @@ const typeSet = (property: string, value: string) =>
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
 /** What a `transition-*` class compiles its length to: the `duration-*` class's, or the default. */
 const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
-/** The variables the theme alone declares. */
-const THEME_ONLY = /^--(layer|duration)-|^--(disabled-opacity|default-transition-duration)$/;
-/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it but
- *  the important mark. */
+/** The variables the theme alone declares, and the theme keys the classes resolve through. */
+const THEME_ONLY =
+  /^--(layer|duration|z-index|transition-duration)-|^--(disabled-opacity|default-transition-duration|opacity-disabled|opacity-\*)$/;
+/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
 const namesOne = (value: string, names: ReadonlySet<string>) =>
-  names.has(/^var\(\s*(--[\w-]+)\s*\)(\s*!important)?$/.exec(value)?.[1] ?? "");
+  names.has(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "");
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -215,13 +211,15 @@ export function declarationProblems(
   tokens: ThemeTokens,
   { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
-  const { property, value, context } = declaration;
-  // `@property` gives a variable its initial value, so a theme token's is the theme's alone.
-  const registers = context.some((prelude) =>
-    THEME_ONLY.test(/^@property\s+(\S+)/.exec(prelude)?.[1] ?? "")
-  );
-  if (registers) return [RULES.themeOnly];
-  if (context.some((prelude) => SKIPPED.test(prelude))) return [];
+  const { property, context } = declaration;
+  // The important mark changes no rule: `!z-overlay` is `z-overlay`.
+  const value = declaration.value.replace(/\s*!important$/, "");
+  // `@property` gives a variable its initial value, so a theme token's is the theme's alone, and
+  // a skipped block declares one no more freely than any other.
+  const themeOnly =
+    THEME_ONLY.test(property) ||
+    context.some((prelude) => THEME_ONLY.test(/^@property\s+(\S+)/.exec(prelude)?.[1] ?? ""));
+  if (context.some((prelude) => SKIPPED.test(prelude))) return themeOnly ? [RULES.themeOnly] : [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
   if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
@@ -264,7 +262,7 @@ export function declarationProblems(
   ) {
     problems.push(RULES.duration);
   }
-  if (THEME_ONLY.test(property) || tokens.aliases.has(property)) problems.push(RULES.themeOnly);
+  if (themeOnly) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
@@ -274,21 +272,23 @@ export function declarationProblems(
  * and ours, so a class compiles here exactly as in the build, with nothing else emitted.
  */
 function compilerInput(): string {
-  const imports = parseCss(readFileSync(APP_STYLESHEET, "utf8"))
+  const entry = readFileSync(APP_STYLESHEET, "utf8");
+  const imports = parseCss(entry)
     .statements.filter((statement) => statement.name === "import")
     .map((statement) => resolve(SRC_DIR, importedPath(statement.prelude) ?? ""));
+  // The entry's own theme blocks, so a class built on one of its keys compiles here too.
+  const themes = postcss
+    .parse(entry)
+    .nodes.flatMap((node) =>
+      node instanceof AtRule && node.name === "theme"
+        ? [String(node.clone({ params: `${node.params} reference`.trim() }))]
+        : []
+    );
   return [
     ...imports.map((path) => `@import ${JSON.stringify(path)} reference;`),
+    ...themes,
     "@tailwind utilities;",
   ].join("\n");
-}
-
-function unescapeClass(name: string): string {
-  return name
-    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16))
-    )
-    .replace(/\\(.)/g, "$1");
 }
 
 /** The declarations `classes` compile to, with Tailwind and the app's theme, as the build does. */
@@ -304,7 +304,7 @@ function sourceClass(
 ): string | undefined {
   for (const prelude of [...context].reverse()) {
     for (const match of prelude.matchAll(/\.((?:\\[0-9a-f]{1,6}\s?|\\.|[\w-])+)/gi)) {
-      const name = unescapeClass(match[1] as string);
+      const name = unescapeCss(match[1] as string);
       if (classes.has(name)) return name;
     }
   }

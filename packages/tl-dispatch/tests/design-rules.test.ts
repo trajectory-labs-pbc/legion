@@ -84,6 +84,21 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", "@theme inline { --opacity-disabled: 1; }", "declared in the theme alone"],
   ["css", "@theme inline { --z-index-overlay: 9999; }", "declared in the theme alone"],
   ["css", "@theme { --transition-duration-popup: 2s; }", "declared in the theme alone"],
+  ["css", "@theme inline { --z-index-top: 9999; }", "declared in the theme alone"],
+  ["css", "@theme inline { --transition-duration-slow: 2s; }", "declared in the theme alone"],
+  ["css", "@theme { --z-index-*: initial; }", "declared in the theme alone"],
+  [
+    "css",
+    "@property --z-index-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
+    "declared in the theme alone",
+  ],
+  [
+    "css",
+    "@layer properties { :root { --layer-overlay: 9999 !important; } }",
+    "declared in the theme alone",
+  ],
+  ["css", "@keyframes k { to { --layer-overlay: 9999; } }", "declared in the theme alone"],
+  ["css", ":root { --\\6c ayer-overlay: 9999; }", "declared in the theme alone"],
   [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
@@ -179,6 +194,9 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<div className="motion-safe:transition-[opacity] motion-safe:transition-none">'],
   ["tsx", '<div className="z-raised focus:z-overlay">'],
   ["tsx", '<div className="!z-overlay">'],
+  ["tsx", '<div className="!rounded-sm">'],
+  ["tsx", '<div className="motion-safe:!transition-opacity">'],
+  ["tsx", '<a className="outline-hidden focus-visible:outline-2 focus-visible:!outline-focus">'],
   [
     "tsx",
     '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',
@@ -356,7 +374,7 @@ describe("design rules", () => {
     ]);
   });
 
-  test("takes corners, layers, fades and their keys from the theme alone: one the app declares is none", () => {
+  test("takes corners, layers and fades from the theme alone: one the app declares is none", () => {
     const tokens = themeTokens(
       ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); --layer-top: 10; --duration-quick: 150ms; } @theme inline { --z-index-top: var(--layer-top); --color-x: var(--brand); }",
       ":root { --radius-card: 3px; --brand: var(--primary); --layer-app: 20; --duration-app: 1s; } @theme inline { --z-index-app: var(--layer-top); }"
@@ -365,7 +383,6 @@ describe("design rules", () => {
     expect([...tokens.radiusValues]).toEqual(["var(--radius)", "calc(var(--radius) * 0.5)"]);
     expect([...tokens.layers]).toEqual(["--layer-top"]);
     expect([...tokens.durations]).toEqual(["--duration-quick"]);
-    expect([...tokens.aliases]).toEqual(["--z-index-top"]);
     expect(tokens.colours.has("--brand")).toBe(true);
   });
 

@@ -75,12 +75,8 @@ const DURATIONS = new Set(["initial", "var(--tw-duration, var(--default-transiti
 // The variables the theme's :root alone declares, and the names it gives them.
 const ROOT_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
 const ROOT_TOKENS = new Set<string>();
-postcss.parse(readFileSync(join(src, "styles/theme.css"), "utf8")).each((node) => {
-  if (node instanceof Rule && node.selector === ":root") {
-    node.each((decl) => {
-      if (decl.type === "decl" && ROOT_ONLY.test(decl.prop)) ROOT_TOKENS.add(decl.prop);
-    });
-  }
+postcss.parse(readFileSync(join(src, "styles/theme.css"), "utf8")).walkDecls(ROOT_ONLY, (decl) => {
+  if (where(decl) === ":root") ROOT_TOKENS.add(decl.prop);
 });
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
