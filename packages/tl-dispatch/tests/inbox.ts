@@ -5,7 +5,7 @@ import type {
   MyAnswerRow,
   MyReplyRow,
 } from "@/upstream/contract";
-import { json } from "./network";
+import { json, type ShellAnswer } from "./network";
 import { issueAsk, replyRow } from "./upstream";
 import { reader } from "./writes";
 
@@ -124,16 +124,12 @@ export const PENDING_CREDENTIAL_REQUEST: CredentialPendingRow = {
 };
 
 /** One read's answer: its rows, a response now or later, or undefined to hold the read. */
-export type ReadAnswer<T extends readonly unknown[]> = () =>
-  | T
-  | Response
-  | Promise<Response>
-  | undefined;
+export type ReadAnswer<T extends readonly unknown[]> = () => T | ShellAnswer;
 
 function answerWith<T extends readonly unknown[]>(
   read: ReadAnswer<T>,
   wrap: (rows: T) => unknown = (rows) => rows
-): Response | Promise<Response> | undefined {
+): ShellAnswer {
   const answer = read();
   if (answer === undefined || answer instanceof Response || answer instanceof Promise) {
     return answer;
@@ -159,7 +155,7 @@ export function inboxReads({
   replies?: ReadAnswer<MyReplyRow[]>;
   unread?: number;
 } = {}) {
-  return (url: string): Response | Promise<Response> | undefined => {
+  return (url: string): ShellAnswer => {
     const path = pathOf(url);
     if (path === "/auth/whoami") return json(reader);
     if (path === "/api/v1/inbox") return answerWith(inbox);

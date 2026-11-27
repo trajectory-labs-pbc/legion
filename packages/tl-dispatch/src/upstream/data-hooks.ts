@@ -28,3 +28,5 @@ export {
   userPreferenceStorageKey,
   useUserPreference,
 } from "@upstream-dispatch/features/shell/userPreference";
+// The focus hand-off a failed read's alert takes from its Retry.
+export { useFocusHandOff } from "@upstream-dispatch/hooks/useFocusHandOff";

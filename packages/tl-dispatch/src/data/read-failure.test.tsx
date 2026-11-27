@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { readRetry } from "@/data/read";
 import {
   ApiError,
   DispatchQueryClient,
@@ -15,9 +16,8 @@ import {
   NO_ROUTE_ROLLING_RELEASE_MESSAGE,
   RequestTimeoutError,
 } from "@/upstream/api";
-
 import { holdNotifications } from "../../tests/upstream";
-import { ReadFailure, readRetry, refreshFailureOf, useReadFailure } from "./read-failure";
+import { ReadFailure, refreshFailureOf, useReadFailure } from "./read-failure";
 
 afterEach(() => {
   onlineManager.setOnline(true);
@@ -26,7 +26,9 @@ afterEach(() => {
 
 const answered = (status: number, error = "no") =>
   new ApiError(status, { code: status === 404 ? "NOT_FOUND" : "X", error });
-const NO_ROUTE = "no route for GET /api/v1/rows";
+
+/** What each render of `Failure` drew: its failure, or `none`. */
+const drawn: string[] = [];
 
 /** Reads that each ask `answers[i]`, and the failure they make together. */
 function Failure({ answers }: { answers: readonly (() => Promise<unknown>)[] }) {
@@ -34,6 +36,7 @@ function Failure({ answers }: { answers: readonly (() => Promise<unknown>)[] }) 
     queries: answers.map((answer, index) => ({ queryKey: ["read", index], queryFn: answer })),
   });
   const fault = useReadFailure(...reads);
+  drawn.push(fault === undefined ? "none" : (fault.refusal ?? "retryable"));
   return (
     <>
       <p data-testid="fetching">{reads.map((read) => read.fetchStatus).join(" ")}</p>
@@ -64,7 +67,6 @@ for (const [name, errors, line, retry] of [
     true,
   ],
   ["a time-out", [new RequestTimeoutError("/rows", 10_000)], LOAD, true],
-  ["a no-route 404", [answered(404, NO_ROUTE)], LOAD, true],
   [
     "a no-route 404 at the end of a rolling release",
     [answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE)],
@@ -157,29 +159,11 @@ test("read-failure: a refusal that answers a Retry takes the focus the Retry had
   expect(document.activeElement).toBe(screen.getByRole("alert"));
 });
 
-/** What each render of `Single` drew: its failure, or `none`. */
-const drawn: string[] = [];
-
-/** One read through `useQuery`, and its failure. */
-function Single({ answer }: { answer: () => Promise<unknown> }) {
-  const read = useQuery({ queryKey: ["single"], queryFn: answer });
-  const fault = useReadFailure(read);
-  drawn.push(fault === undefined ? "none" : (fault.refusal ?? "retryable"));
-  return (
-    <>
-      <p data-testid="fetching">{read.fetchStatus}</p>
-      {fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />}
-    </>
-  );
-}
-
 test("read-failure: a failed read asked again keeps its line while a second ask waits behind the first", async () => {
   let answer = () => Promise.reject(answered(500));
-  const client = new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
-      <Single answer={() => answer()} />
-    </QueryClientProvider>
+  const client = mount(
+    [() => answer()],
+    new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } })
   );
   expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
 
@@ -234,7 +218,7 @@ test("read-failure: a Retry held while the browser is offline shows it is busy",
 function Refresh({ answer }: { answer: () => Promise<unknown> }) {
   const read = useQuery({ queryKey: ["refresh"], queryFn: answer });
   const fault = refreshFailureOf(read);
-  return fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" refresh />;
+  return fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />;
 }
 
 test("read-failure: a refresh's Retry held while the browser is offline shows it is busy", async () => {

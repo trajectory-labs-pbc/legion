@@ -2,8 +2,9 @@ import { expect, spyOn, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ApiError, api } from "@/upstream/api";
+import { api } from "@/upstream/api";
 import { renderApp } from "../../../tests/app";
+import { refusal } from "../../../tests/network";
 import { MachineLoginRoute } from "./page";
 
 function renderRoute(
@@ -113,9 +114,7 @@ for (const [id, status, shown] of [
   ["MLR-07", 404, "the not-found page"],
 ] as const) {
   test(`${id} a capabilities read the server answers with a ${status} shows ${shown}`, async () => {
-    const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(
-      new ApiError(status, { code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", error: "no" })
-    );
+    const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(refusal(status));
     const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
     try {
       renderRoute();
@@ -139,7 +138,7 @@ test("MLR-08 a logins list refused before the route mounts again is loading unti
   const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
     machine_code_page: true,
   });
-  const refused = () => new ApiError(403, { code: "FORBIDDEN", error: "no" });
+  const refused = () => refusal(403);
   const logins = spyOn(api, "getMachineLogins").mockRejectedValue(refused());
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const section = async () => within(await screen.findByRole("region", { name: "Machine logins" }));

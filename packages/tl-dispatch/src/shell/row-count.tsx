@@ -3,6 +3,7 @@ import { Count } from "@legion/ui/components/count";
 import { CircleAlertIcon } from "lucide-react";
 import { LabelTooltip } from "@/commands/hotkey-tooltip";
 import type { ReadFault, RetryableFault } from "@/data/read";
+import { lineOf } from "@/data/read-failure";
 import { NeedsYouMark } from "@/parts/needs-you";
 
 /** A count beside a row; none at zero. */
@@ -51,7 +52,7 @@ export function CountRetry({
   fault: RetryableFault;
   noun: string;
 }) {
-  const label = `Could not load ${noun}. Retry`;
+  const label = `${lineOf(fault, noun)} Retry`;
   return (
     <LabelTooltip label={label} side="right">
       <Button

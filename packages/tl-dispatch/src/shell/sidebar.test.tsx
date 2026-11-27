@@ -12,6 +12,7 @@ import {
   json,
   readFailed,
   refusalLanded,
+  type ShellAnswer,
   waitFor,
 } from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
@@ -493,7 +494,7 @@ describe("the sidebar", () => {
   test("an inbox read refused before the sidebar mounts again draws no Retry while it is asked again", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const refused = () => json({ error: { code: "FORBIDDEN" } }, 403);
-    let inbox: () => Response | Promise<Response> = refused;
+    let inbox: () => ShellAnswer = refused;
     const answer = inboxReads({ inbox: () => inbox(), unread: 3 });
     mount("/agents", { answer, client });
     await waitFor(() => refusalLanded(client, 403));

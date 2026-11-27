@@ -12,6 +12,9 @@ export function holdReads(...paths: string[]): void {
   answerReads(paths, () => undefined);
 }
 
+/** A shell read's response, now or later, or none to leave it pending. */
+export type ShellAnswer = Response | Promise<Response> | undefined;
+
 /** The reads the shell's header and sidebar make. */
 const SHELL_READS = [
   "/auth/whoami",
@@ -37,7 +40,7 @@ export function holdShellReads(): void {
  */
 export function answerReads(
   paths: readonly string[],
-  answer: (url: string) => Response | Promise<Response> | undefined
+  answer: (url: string) => ShellAnswer
 ): { asked: string[] } {
   const asked: string[] = [];
   answerRequests(
@@ -52,9 +55,8 @@ export function answerReads(
 }
 
 /** `answerReads` for the reads of the shell's header and sidebar. */
-export const answerShellReads = (
-  answer: (url: string) => Response | Promise<Response> | undefined
-) => answerReads(SHELL_READS, answer);
+export const answerShellReads = (answer: (url: string) => ShellAnswer) =>
+  answerReads(SHELL_READS, answer);
 
 export const json = (body: unknown, status = 200) => Response.json(body, { status });
 
@@ -77,3 +79,7 @@ export const refusalLanded = (client: QueryClient, status: number) =>
     .getQueryCache()
     .getAll()
     .some((query) => query.state.error instanceof ApiError && query.state.error.status === status);
+
+/** A read the server refused: a 403, or a 404 of a record it does not have. */
+export const refusal = (status: 403 | 404) =>
+  new ApiError(status, { code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", error: "no" });

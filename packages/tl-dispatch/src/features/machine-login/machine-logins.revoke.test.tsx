@@ -335,11 +335,11 @@ test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with 
   }
 });
 
-test("RVL-13 a loaded list whose refresh is refused keeps its rows and says so, with no Retry", async () => {
-  for (const [status, line] of [
-    [403, "Could not refresh machine logins: access refused."],
-    [404, "Could not refresh machine logins: not found."],
-  ] as const) {
+for (const [id, status, line] of [
+  ["RVL-13", 403, "Could not refresh machine logins: access refused."],
+  ["RVL-13", 404, "Could not refresh machine logins: not found."],
+] as const) {
+  test(`${id} a loaded list whose refresh is refused with a ${status} keeps its rows and says so, with no Retry`, async () => {
     const user = userEvent.setup();
     const stubs = stub(async () => stubs.failList(status));
     try {
@@ -353,8 +353,8 @@ test("RVL-13 a loaded list whose refresh is refused keeps its rows and says so, 
       cleanup();
       stubs.restore();
     }
-  }
-});
+  });
+}
 
 test("RVL-06 a revoke the reader stopped says it may have been made", async () => {
   jest.useFakeTimers();

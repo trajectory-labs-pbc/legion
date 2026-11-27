@@ -1,15 +1,10 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { type ReadFault, type Refusal, refusalOf } from "@/data/read";
-import { queryRetry } from "@/upstream/api";
-
-/** Every read's retry policy: upstream's, except that it never asks a refused read again by itself. */
-export function readRetry(failureCount: number, error: unknown): boolean {
-  return refusalOf(error) === undefined && queryRetry(failureCount, error);
-}
+import { useFocusHandOff } from "@/upstream/data-hooks";
 
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
@@ -31,8 +26,7 @@ export function useReadFailure(
     if (read.error !== null) return refusalOf(read.error) ?? "retryable";
     return read.fetchStatus === "idle" ? undefined : seen[index];
   });
-  const changed = failures.some((failure, index) => failure !== seen[index]);
-  if (failures.length !== seen.length || changed) setSeen(failures);
+  if (failures.some((failure, index) => failure !== seen[index])) setSeen(failures);
   if (failures.every((failure) => failure === undefined)) return undefined;
   const retrying = reads.some(
     (read, index) => failures[index] !== undefined && read?.fetchStatus !== "idle"
@@ -54,12 +48,19 @@ export function useReadFailure(
 export function refreshFailureOf(read: UseQueryResult<unknown>): ReadFault | undefined {
   if (!read.isRefetchError) return undefined;
   const refusal = refusalOf(read.error);
-  if (refusal !== undefined) return { refusal, retrying: read.fetchStatus !== "idle" };
-  return { retrying: read.fetchStatus !== "idle", retry: () => void read.refetch() };
+  if (refusal !== undefined) {
+    return { refusal, retrying: read.fetchStatus !== "idle", refresh: true };
+  }
+  return {
+    retrying: read.fetchStatus !== "idle",
+    retry: () => void read.refetch(),
+    refresh: true,
+  };
 }
 
-function lineOf(fault: ReadFault, noun: string, refresh: boolean): string {
-  if (refresh) {
+/** What a failed read says of `noun`. */
+export function lineOf(fault: ReadFault, noun: string): string {
+  if (fault.refresh === true) {
     if (fault.refusal === undefined) return `Could not refresh ${noun}.`;
     return `Could not refresh ${noun}: ${fault.refusal === "forbidden" ? "access refused" : "not found"}.`;
   }
@@ -74,26 +75,16 @@ function lineOf(fault: ReadFault, noun: string, refresh: boolean): string {
 export function ReadFailure({
   fault,
   noun,
-  refresh = false,
   size = "compact",
 }: {
   fault: ReadFault;
   noun: string;
-  /** The read failed under rows it still shows. */
-  refresh?: boolean;
   /** `default` where the failure stands for a whole page. */
   size?: "default" | "compact";
 }) {
   const alert = useRef<HTMLDivElement>(null);
-  const retry = useRef<HTMLButtonElement>(null);
-  const retryHadFocus = useRef(false);
+  const retry = useFocusHandOff(() => alert.current);
   const refused = fault.refusal !== undefined;
-  useLayoutEffect(() => {
-    const active = document.activeElement;
-    const lost = active === null || active === document.body || !active.isConnected;
-    if (refused && retryHadFocus.current && lost) alert.current?.focus();
-    retryHadFocus.current = !refused && document.activeElement === retry.current;
-  });
   return (
     <Alert
       className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
@@ -102,7 +93,7 @@ export function ReadFailure({
       tabIndex={refused ? -1 : undefined}
       variant="danger"
     >
-      <AlertTitle>{lineOf(fault, noun, refresh)}</AlertTitle>
+      <AlertTitle>{lineOf(fault, noun)}</AlertTitle>
       {fault.refusal === undefined ? (
         <AlertAction>
           <Button

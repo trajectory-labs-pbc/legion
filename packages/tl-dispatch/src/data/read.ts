@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ApiError, isNoRoute, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
+import { ApiError, NO_ROUTE_ROLLING_RELEASE_MESSAGE, queryRetry } from "@/upstream/api";
 
 /** Why asking a read again cannot change its answer: a 403 or a 404. */
 export type Refusal = "forbidden" | "not-found";
@@ -17,6 +17,8 @@ export interface RetryableFault {
   readonly retrying: boolean;
   readonly retry: () => void;
   readonly refusal?: undefined;
+  /** The read failed under data it still shows. */
+  readonly refresh?: true;
 }
 
 /** A read Dispatch refused for good: the reader may not see it, or it is gone. */
@@ -25,6 +27,8 @@ export interface RefusedFault {
   readonly retrying: boolean;
   readonly retry?: undefined;
   readonly refusal: Refusal;
+  /** The read failed under data it still shows. */
+  readonly refresh?: true;
 }
 
 export type ReadFault = RetryableFault | RefusedFault;
@@ -50,15 +54,21 @@ export interface ReadOptions<TQueryFnData, T> {
 }
 
 /**
- * Whether a failed read is refused, which decides whether it offers Retry. A 404 from a Dispatch
- * process with no route for the read is no refusal: while a release rolls out, another process
- * can answer it. A read's 409 keeps its Retry: the conflict rule is for writes.
+ * Whether a failed read is refused, which decides whether it offers Retry. The 404 the client
+ * answers once a route stayed missing through its retries is no refusal: while a release rolls
+ * out, another process can answer it. A read's 409 keeps its Retry: the conflict rule is for
+ * writes.
  */
 export function refusalOf(error: unknown): Refusal | undefined {
-  if (!(error instanceof ApiError) || isNoRoute(error)) return undefined;
+  if (!(error instanceof ApiError)) return undefined;
   if (error.message === NO_ROUTE_ROLLING_RELEASE_MESSAGE) return undefined;
   if (error.status === 403) return "forbidden";
   return error.status === 404 ? "not-found" : undefined;
+}
+
+/** Every read's retry policy: upstream's, except that it never asks a refused read again by itself. */
+export function readRetry(failureCount: number, error: unknown): boolean {
+  return refusalOf(error) === undefined && queryRetry(failureCount, error);
 }
 
 /**

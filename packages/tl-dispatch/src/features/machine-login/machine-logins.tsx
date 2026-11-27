@@ -285,7 +285,7 @@ export const MachineLogins = memo(function MachineLogins({
         </Collapsible>
       </div>
       {refreshFault !== undefined ? (
-        <ReadFailure fault={refreshFault} noun="machine logins" refresh />
+        <ReadFailure fault={refreshFault} noun="machine logins" />
       ) : null}
       {logins.data !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">

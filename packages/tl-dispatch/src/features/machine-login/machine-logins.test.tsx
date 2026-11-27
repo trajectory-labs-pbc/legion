@@ -5,10 +5,11 @@ import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import { ApiError, api } from "@/upstream/api";
+import { api } from "@/upstream/api";
 import type { ApproverGrantResp, LauncherCredentialResp } from "@/upstream/contract";
 import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { refusal } from "../../../tests/network";
 import {
   GrantsSection,
   keyedAttempt,
@@ -559,9 +560,7 @@ for (const [id, status, line] of [
   ["MLS-12", 403, "You cannot see machine logins."],
 ] as const) {
   test(`${id} a machine logins read the server answers with a ${status} says so with no Retry`, async () => {
-    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(
-      new ApiError(status, { code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", error: "no" })
-    );
+    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(refusal(status));
     try {
       renderPage();
       const section = within(await screen.findByRole("region", { name: "Machine logins" }));

@@ -7,7 +7,6 @@ export {
   api,
   apiErrorMessage,
   isNoIdentity,
-  isNoRoute,
   isUnauthorized,
   NetworkError,
   RequestTimeoutError,

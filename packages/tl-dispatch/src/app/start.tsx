@@ -2,7 +2,7 @@
 import "@/upstream/write-kinds";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { readRetry } from "@/data/read-failure";
+import { readRetry } from "@/data/read";
 import { AuthGate } from "@/shell/auth-gate";
 import { DispatchQueryClient, queryRetryDelay } from "@/upstream/api";
 import { ForkView } from "@/upstream/mark";
