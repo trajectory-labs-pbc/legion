@@ -118,9 +118,34 @@ test("MLP-02 a refused lookup shows the server's reason under the field", async 
 
 A port of an upstream test keeps upstream's assertion and adds the ID. A new parity item gets the number after the highest one in the page's list, and its row in the same change.
 
-## 8. A component's timers and listeners live in a named hook
+## 8. A component's timers and listeners live in a named hook or a ref callback
 
 A component starts no timer and adds no listener or observer in a bare effect: it calls a named hook that also cleans up, or uses a ref callback that returns its cleanup.
+
+```tsx
+// Bad
+function PageSkeleton() {
+  const [after, setAfter] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAfter(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+}
+
+// Good
+function useAfter(ms: number): boolean {
+  const [after, setAfter] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAfter(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return after;
+}
+
+function PageSkeleton() {
+  const after = useAfter(200);
+}
+```
 
 ## Checks
 
