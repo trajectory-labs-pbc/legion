@@ -1237,6 +1237,33 @@
           "target": "@lib/typography.ts"
         }
       ]
+    },
+    {
+      "name": "states",
+      "type": "registry:block",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/states.tsx",
+          "type": "registry:component",
+          "target": "@components/states.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
     }
   ]
 }
