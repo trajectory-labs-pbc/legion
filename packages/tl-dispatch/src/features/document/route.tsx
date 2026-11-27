@@ -1,7 +1,7 @@
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
-
-import type { Page } from "./page";
+import { routes } from "@/navigation/routes";
+import type { AppPage } from "@/shell/page-layout";
 
 const DocumentPage = lazyNamed(() => import("@/upstream/views/document"), "DocumentPage");
 
@@ -9,7 +9,7 @@ export const projectDocument = {
   id: "document",
   server: "upstream",
   routes: {
-    document: pageRoute({ path: "/projects/:key/documents/:slug", element: <DocumentPage /> }),
+    document: pageRoute({ ...routes.document.document, element: <DocumentPage /> }),
   },
   views: ["features/document/**"],
-} satisfies Page;
+} satisfies AppPage<typeof routes.document>;

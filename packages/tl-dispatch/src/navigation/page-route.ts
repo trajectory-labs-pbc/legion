@@ -17,18 +17,29 @@ export interface PageAddress {
   readonly search: string;
 }
 
+/** An address of a page: its path in navigation's grammar (`path.ts`) and its search keys. */
+export interface RoutePath<Path extends string = string, Search extends string = string> {
+  readonly path: Path;
+  readonly search?: readonly Search[];
+}
+
+/** Keeps the path and the search keys as literals, so links to the address are typed. */
+export function routePath<const Path extends string, const Search extends string = never>(
+  route: RoutePath<Path, Search>
+): RoutePath<Path, Search> {
+  return route;
+}
+
 /**
- * One address of a page: its path in navigation's grammar (`path.ts`), what it draws, its search
- * keys, its first reads, and its layout, which is the app's to define and to read.
+ * A route of a page: its address, what it draws, its first reads, and its layout, which is the
+ * app's to define and to read.
  */
 export interface PageRoute<
   Path extends string = string,
   Search extends string = string,
   Layout = unknown,
-> {
-  readonly path: Path;
+> extends RoutePath<Path, Search> {
   readonly element: ReactNode;
-  readonly search?: readonly Search[];
   prefetch?(params: PathParams<Path>): readonly Prefetch[];
   readonly layout?: Layout | ((address: PageAddress) => Layout);
 }
@@ -58,7 +69,7 @@ export function pageRoute<
  * The keys are typed from the route; a param its path binds and the call leaves out throws.
  */
 export function pageHref<Path extends string, Search extends string>(
-  page: PageRoute<Path, Search>,
+  page: RoutePath<Path, Search>,
   params?: PathParams<Path>,
   search?: PageSearch<Search>
 ): string {

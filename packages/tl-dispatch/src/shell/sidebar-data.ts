@@ -1,4 +1,4 @@
-import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
+import { NAV_DESTINATIONS, NAV_NAMES, type NavName } from "@/commands/destinations";
 import type { CommandIcon } from "@/commands/schema";
 import { totalUnreadReplies, unreadRepliesLabel } from "@/data/agent-pins";
 import type { RetryableFault } from "@/data/read";
@@ -12,10 +12,9 @@ import {
   useProjects,
 } from "@/data/sidebar";
 import { useAddress } from "@/navigation/hooks";
-import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
+import type { RoutePath } from "@/navigation/routes";
 import { useInboxRowCount } from "./inbox-count";
-import { NAV_PAGES } from "./nav-pages";
 import { type PageLayout, useCurrentRoute } from "./page-layout";
 import type { RowCount } from "./row-count";
 
@@ -23,7 +22,7 @@ interface SidebarDestination {
   name: NavName;
   label: string;
   icon: CommandIcon;
-  page: PageRoute<string, string>;
+  page: RoutePath;
   current: boolean;
   count: RowCount | undefined;
 }
@@ -115,19 +114,13 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
   const pinnedIssues = usePinnedIssues();
   const projects = useProjects();
   return {
-    destinations: NAV_DESTINATIONS.filter(
-      ({ name }) => name !== "settings" || user.kind === "user"
-    ).map(({ name, label, icon }) => {
-      const page = NAV_PAGES[name];
-      return {
-        name,
-        label,
-        icon,
-        page,
-        current: pathUnder(page.path, pathname),
-        count: counts[name],
-      };
-    }),
+    destinations: NAV_NAMES.filter((name) => name !== "settings" || user.kind === "user").map(
+      (name) => {
+        const { label, icon, route } = NAV_DESTINATIONS[name];
+        const current = pathUnder(route.path, pathname);
+        return { name, label, icon, page: route, current, count: counts[name] };
+      }
+    ),
     pinnedAgents: {
       rows: pinnedAgents?.map((agent) => ({
         ...agent,

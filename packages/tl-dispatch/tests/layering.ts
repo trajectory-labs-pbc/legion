@@ -14,11 +14,13 @@ import {
 } from "./imports";
 import {
   type BREAKS,
+  EAGER,
   type Layer,
   LIBRARIES,
   ONE_ROW,
   READERS,
   ROOT_FILES,
+  ROUTE_IMPORTS,
   ROWS,
   RULES,
   type Rule,
@@ -46,6 +48,10 @@ const UI_PACKAGE = join(REPO_ROOT, "packages/ui");
 const INDEX = /^index\.[jt]sx?$/;
 /** The seam files whose components draw inside the upstream mark. */
 const MARKED_FILES = /^src\/upstream\/(views|widgets)\//;
+/** A page's route file, and its page: `src/features/<page>/route.tsx` and `page.tsx`. */
+const ROUTE_FILE = /^src\/features\/([^/]+)\/route\.tsx?$/;
+const PAGE_FILE = /^src\/features\/([^/]+)\/page\.tsx?$/;
+const UPSTREAM_VIEW = /^src\/upstream\/views\//;
 
 const patterns = new Map<string, RegExp>();
 
@@ -178,6 +184,65 @@ function orderRules(from: Place, to: Place): [Rule, string][] {
     : [["one-row", `${from.layer} does not import ${to.path}`]];
 }
 
+/** Only the app imports a route file, which loads its page and upstream views lazily. */
+function routeRules(from: Place, to: Place, entry: Import): [Rule, string][] {
+  if (from.test) return [];
+  if (ROUTE_FILE.test(to.path) && from.layer !== "app") {
+    return [["only-the-app-imports-routes", "only src/app imports a route file"]];
+  }
+  // A type-only import loads nothing.
+  if (entry.kind === "type") return [];
+  const page = PAGE_FILE.exec(to.path)?.[1];
+  const own = page !== undefined && ROUTE_FILE.exec(from.path)?.[1] === page;
+  if (page !== undefined && !(own && (entry.kind === "dynamic" || Object.hasOwn(EAGER, to.path)))) {
+    return [["pages-load-lazily", `only src/features/${page}/route.tsx imports it, with import()`]];
+  }
+  if (ROUTE_FILE.test(from.path) && UPSTREAM_VIEW.test(to.path) && entry.kind !== "dynamic") {
+    return [["pages-load-lazily", "a route file loads an upstream view with import()"]];
+  }
+  return [];
+}
+
+/** A route file imports a value only from what `ROUTE_IMPORTS` and `EAGER` name. */
+function routeImportRules(from: Place, entry: Import): [Rule, string][] {
+  if (from.test || !ROUTE_FILE.test(from.path)) return [];
+  if (entry.kind !== "static" && entry.kind !== "require") return [];
+  const path =
+    entry.file?.startsWith(PACKAGE_ROOT + sep) === true ? packageRelative(entry.file) : undefined;
+  const listed =
+    path !== undefined &&
+    (Object.hasOwn(EAGER, path) ||
+      Object.keys(ROUTE_IMPORTS).some((key) => pattern(key).test(path)));
+  if (listed) return [];
+  const named = path ?? entry.pkg ?? entry.specifier ?? "(not a literal)";
+  return [["routes-draw-nothing", `a route file imports no ${named}: its page draws`]];
+}
+
+/** Each element a route file draws itself: a lowercase JSX tag. */
+function drawnElements(file: SourceFile): LayerViolation[] {
+  if (!ROUTE_FILE.test(file.path) || TEST.test(file.path)) return [];
+  const source = parseScript(file.path, file.text);
+  const found: LayerViolation[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = node.tagName;
+      if (ts.isJsxNamespacedName(tag) || (ts.isIdentifier(tag) && /^[a-z]/.test(tag.text))) {
+        const name = tag.getText(source);
+        found.push({
+          file: file.path,
+          line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+          specifier: `<${name}>`,
+          rule: "routes-draw-nothing",
+          detail: `a route file draws no <${name}>: its page draws`,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
 function folderRules(from: Place, to: Place): [Rule, string][] {
   if (to.folder === undefined || from.layer === "tests") return [];
   const rootIndex = INDEX.test(to.path.slice(to.folder.length + 1));
@@ -193,6 +258,7 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
   const unreadable = readable(entry);
   if (unreadable !== undefined) broken.push(["imports-are-readable", unreadable]);
   if (entry.pkg !== undefined) broken.push(...libraryRules(from, entry.pkg));
+  broken.push(...routeImportRules(from, entry));
   if (entry.file === undefined || entry.file.startsWith(UI_PACKAGE + sep)) return broken;
 
   if (!entry.file.startsWith(PACKAGE_ROOT + sep)) {
@@ -207,7 +273,13 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
     return broken;
   }
   const to = placeOf(path);
-  return [...broken, ...readerRules(from, to), ...orderRules(from, to), ...folderRules(from, to)];
+  return [
+    ...broken,
+    ...readerRules(from, to),
+    ...orderRules(from, to),
+    ...routeRules(from, to, entry),
+    ...folderRules(from, to),
+  ];
 }
 
 interface Export {
@@ -403,7 +475,7 @@ export function layerViolations(files: readonly SourceFile[]): LayerViolation[] 
         detail: `${from.folder} has its index at its root`,
       });
     }
-    violations.push(...unmarkedExports(file));
+    violations.push(...unmarkedExports(file), ...drawnElements(file));
     for (const entry of importsOf(join(PACKAGE_ROOT, file.path), disk, cache)) {
       for (const [rule, detail] of rulesFor(from, entry)) {
         violations.push({ ...at(file.path, entry), rule, detail });
@@ -465,6 +537,37 @@ export function upstreamAppLoads(
     });
   }
   return found;
+}
+
+/**
+ * The entries of `eager` that do not hold: each names a page or an upstream view among `files`,
+ * with a reason, and a page's own route imports it statically.
+ */
+export function eagerProblems(
+  files: readonly SourceFile[],
+  eager: Readonly<Record<string, string>>
+): string[] {
+  const disk = filesWith(ownFiles(files));
+  const cache = resolutionCache();
+  const paths = new Set(files.map((file) => file.path));
+  return Object.entries(eager).flatMap(([path, reason]) => {
+    const problems: string[] = [];
+    if (reason.trim() === "") problems.push(`${path}: no reason`);
+    if (!paths.has(path)) problems.push(`${path}: no such file`);
+    const page = PAGE_FILE.exec(path)?.[1];
+    if (page === undefined) {
+      if (!UPSTREAM_VIEW.test(path)) problems.push(`${path}: neither a page nor an upstream view`);
+      return problems;
+    }
+    const route = [".tsx", ".ts"]
+      .map((extension) => `src/features/${page}/route${extension}`)
+      .find((candidate) => paths.has(candidate));
+    const loaded = (
+      route === undefined ? [] : importsOf(join(PACKAGE_ROOT, route), disk, cache)
+    ).some((entry) => entry.kind === "static" && entry.file === join(PACKAGE_ROOT, path));
+    if (!loaded) problems.push(`${path}: its route does not import it statically`);
+    return problems;
+  });
 }
 
 /** The violations that `breaks` does not list, and the entries of `breaks` that break no rule. */

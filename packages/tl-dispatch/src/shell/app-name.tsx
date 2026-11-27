@@ -1,7 +1,7 @@
 import { headingVariants } from "@legion/ui/lib/typography";
 import { cn } from "@legion/ui/lib/utils";
 import { PageLink } from "@/navigation/page-link";
-import { inbox } from "@/pages/inbox";
+import { routes } from "@/navigation/routes";
 
 const NAME = cn(
   headingVariants({ size: "group" }),
@@ -18,7 +18,7 @@ export function AppName({ className, onClick }: { className?: string; onClick?: 
         className
       )}
       onClick={onClick}
-      page={inbox.routes.home}
+      page={routes.inbox.home}
     >
       Dispatch
     </PageLink>

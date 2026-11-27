@@ -7,7 +7,8 @@ import { prefetchOf } from "@/data/prefetch";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { quietConsoleError, renderWithQueries } from "../../tests/upstream";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
-import { pageRoute } from "./page-route";
+import { type PageRoute, pageRoute, routePath } from "./page-route";
+import { RouteProvider } from "./route-tree";
 
 /** A read that waits until the test lets it answer, and records each start. */
 function slowRead() {
@@ -24,11 +25,16 @@ function slowRead() {
   return { log, options, answer: () => answer() };
 }
 
-/** Draws `children` at `/` over the test's own client, which the test reads. */
-function mount(client: QueryClient, children: ReactNode) {
+/** Draws `children` at `/` over the test's own client, in a route tree that holds `page`. */
+function mount(
+  { client, page }: { client: QueryClient; page: PageRoute<string, string> },
+  children: ReactNode
+) {
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path="/">{children}</MemoryNavigationProvider>
+      <MemoryNavigationProvider path="/">
+        <RouteProvider pages={[{ routes: { page } }]}>{children}</RouteProvider>
+      </MemoryNavigationProvider>
     </QueryClientProvider>
   );
   const link = view.container.querySelector("a");
@@ -52,7 +58,7 @@ describe("PageLink", () => {
   test("links to the typed address", () => {
     const { page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -63,7 +69,7 @@ describe("PageLink", () => {
   test("starts the page's read once the pointer rests on it", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -76,10 +82,23 @@ describe("PageLink", () => {
     expect(client.getQueryState(read.options.queryKey)?.status).toBe("success");
   });
 
+  test("starts the reads of the route its address opens, from the app's route tree", async () => {
+    const { read, page, client } = setup();
+    const address = routePath({ path: "/machines/:machine" });
+    const { link } = mount(
+      { client, page },
+      <PageLink page={address} params={{ machine: "m" }}>
+        Box
+      </PageLink>
+    );
+    fireEvent.focus(link);
+    expect(read.log).toEqual(["start"]);
+  });
+
   test("control: a pointer that passes through starts nothing", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -93,7 +112,7 @@ describe("PageLink", () => {
   test("focus starts the read at once, and losing focus keeps it", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -113,7 +132,7 @@ describe("PageLink", () => {
   test("the pointer leaving keeps a read that started, so its answer is cached", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -131,7 +150,7 @@ describe("PageLink", () => {
   test("a click during the wait keeps the read the wait then starts", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -145,7 +164,7 @@ describe("PageLink", () => {
   test("the pointer must rest the whole wait: half of it starts nothing", async () => {
     const { read, page, client } = setup();
     const { link } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -160,7 +179,7 @@ describe("PageLink", () => {
   test("a link unmounted during the wait starts nothing", async () => {
     const { read, page, client } = setup();
     const { link, unmount } = mount(
-      client,
+      { client, page },
       <PageLink page={page} params={{ machine: "m" }}>
         Box
       </PageLink>
@@ -174,12 +193,12 @@ describe("PageLink", () => {
   test("takes no params for a page whose path binds none, and requires them where it does", () => {
     const { page, client } = setup();
     const home = pageRoute({ path: "/", element: null });
-    const { link } = mount(client, <PageLink page={home}>Home</PageLink>);
+    const { link } = mount({ client, page }, <PageLink page={home}>Home</PageLink>);
     expect(link.getAttribute("href")).toBe("/");
     // React logs the render error it rethrows.
     quietConsoleError();
     // @ts-expect-error the route binds :machine
-    expect(() => mount(client, <PageLink page={page}>Box</PageLink>)).toThrow(
+    expect(() => mount({ client, page }, <PageLink page={page}>Box</PageLink>)).toThrow(
       'needs its "machine" param'
     );
   });
@@ -195,8 +214,10 @@ function Place() {
 function place(path: string, children: ReactNode) {
   return renderWithQueries(
     <MemoryNavigationProvider path={path}>
-      {children}
-      <Place />
+      <RouteProvider pages={[]}>
+        {children}
+        <Place />
+      </RouteProvider>
     </MemoryNavigationProvider>
   ).container;
 }

@@ -7,7 +7,7 @@ Before you change it, read the skill for your task.
 
 - `.agents/skills/commands/SKILL.md`: the command catalog, `CommandButton`, `HotkeyTooltip`, scopes and overlays, and the shortcuts sheet.
 
-- `.agents/skills/navigation/SKILL.md`: page files, `PageLink`, the navigation hooks, and why only `src/navigation` and `src/app` import the router.
+- `.agents/skills/navigation/SKILL.md`: route files, `PageLink`, the navigation hooks, and why only `src/navigation` and `src/app` import the router.
 
 - `.agents/skills/porting-upstream/SKILL.md`: how to port an upstream commit to a rebuilt page, and the checks in `tests/map` that fail in a sync pull request.
 

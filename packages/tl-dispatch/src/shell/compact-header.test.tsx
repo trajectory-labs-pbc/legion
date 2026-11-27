@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, json, waitFor } from "../../tests/network";
-import { render, settle, tooltipOf } from "../../tests/react";
+import { settle, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
 const PEEK = "Peek inbox";
@@ -24,13 +24,12 @@ function mount(
   client = new QueryClient()
 ) {
   answered = answerShellReads(answer).asked;
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path="/agents">
-        <GlobalCommands />
-        {children}
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
+  const view = renderApp(
+    <>
+      <GlobalCommands />
+      {children}
+    </>,
+    { path: "/agents", client }
   );
   cleanups.push(() => view.unmount());
   return view.container;

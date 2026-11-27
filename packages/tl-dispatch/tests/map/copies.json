@@ -2,7 +2,7 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "InboxPage",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "b4f2666374f34f721198e12e61284fbd98cd5881a763b22017b0740700216904"
   },
@@ -227,28 +227,28 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ANSWERS_PATH",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/navigation/routes.ts",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "d71043e638b511b08a4b2fcc73b6d308383160ee7f9038d1e93e157e3d0fa8d3"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "Inbox",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "5096142f28773eeaf838ef57f77aac7d8c71e08fe95a86d912f7d38e4eca9dd1"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "Link",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "7c8c42396d418b4cd23028019818414dd5e870bda90041c558f91231422b0b9a"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "READING_PANE_QUERY",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "771fd7f0d476b3fd29b8a22929a858096075fc9a84f03d9b90536e001fd98af4"
   },
@@ -262,175 +262,175 @@
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "linkHoverText",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "92db9a3c38362b435645ed5980fd681cfd2bbc11fca73bf38d0687e4e62d31e8"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "linkText",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "99b310d3e2f1e4b5332eb230b9bfd1dad46e28fe83bad7f53fb58bff7a375081"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "useDocumentTitle",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "b38637be150b440b92022f5236fa635bce2d92eda4e6c21f52f73ae80d9a9761"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "useMediaQuery",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/page.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "f05ea4a32c0a427e0dabac2a8e911f42a67ccf1e3add5c34d899c429a9b80c15"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AgentArtifactPage",
-    "copy": "src/pages/agents.tsx",
+    "copy": "src/features/agents/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "3e25ba61d5defbfe722f07df8cf3e14701538678128affba3648ee200feda64f"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AgentsPage",
-    "copy": "src/pages/agents.tsx",
+    "copy": "src/features/agents/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "98acb20792bccb763667ef3f3c03bbd74e00212bec47c07c8c02043681a952e4"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AnswersPage",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "2c3fb0158b83b663b64725f9b1a7600742bae4ca2c20a8c4d498d156ff5bbf56"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "BroadcastPage",
-    "copy": "src/pages/agents.tsx",
+    "copy": "src/features/agents/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "618e2f5ac9f9d6dd36286557362531ab9cbad72825f68f8eda8f99641ba73379"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "BroadcastsPage",
-    "copy": "src/pages/agents.tsx",
+    "copy": "src/features/agents/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "5b92d4d932ae4b202710820188cd92d63914ec98c5e49fd33f1792334e799564"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "DeliveryPage",
-    "copy": "src/pages/delivery.tsx",
+    "copy": "src/features/delivery/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "1cff68d6428b61fbc610aee8198d9c692428cc861673b3778eedc3c082574ef4"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "DocumentPage",
-    "copy": "src/pages/document.tsx",
+    "copy": "src/features/document/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "1e5ec50a267e12760e9dade7e10e6c40bd419dc008ac80c24f7b39b42448dc25"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "IssuePage",
-    "copy": "src/pages/issue.tsx",
+    "copy": "src/features/issue/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "a4ff7772a088231089c1483435beb9ca628342a3efd7666a6bbe8de4dc1f90a7"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "LiveViewRoute",
-    "copy": "src/pages/agents.tsx",
+    "copy": "src/features/agents/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0daec4572cf024b6cca3d2d75ac146a6f0feede0d363cee24a5d26041a57010f"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "MachineLoginRoute",
-    "copy": "src/pages/machine-login.tsx",
+    "copy": "src/features/machine-login/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "cbda06bd6251a915234c8f70f2251c7421724852f471444d6e9f77f9b96b6908"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "MachinePage",
-    "copy": "src/pages/machines.tsx",
+    "copy": "src/features/machines/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "b571897874f2c08513c1904c03b286e1d5c18487a60a16f88599b5ef6743a86f"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "MachinesPage",
-    "copy": "src/pages/machines.tsx",
+    "copy": "src/features/machines/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "def1ee8a75c6ecd05c6c9c87f4a83f514e1cf9d3bd01176d73b237ace2686f50"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "Navigate",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "609dacc91a9b7af616cdea2405ca9759dbc58724cbba169348ec32b581dc6b7e"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "NotFoundPage",
-    "copy": "src/pages/not-found.tsx",
+    "copy": "src/features/not-found/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "e2d7438193f555598c249258374bcf8136b4df8b6201d27c566f8d748b361db2"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "PipelinePage",
-    "copy": "src/pages/delivery.tsx",
+    "copy": "src/features/delivery/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "2d66205d0a4c644257786b0044914f9bb10fc74b48e7b0d8077adafa887d3958"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "PrioritiesPage",
-    "copy": "src/pages/priorities.tsx",
+    "copy": "src/features/priorities/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "0eb6dc8052ac9ad08b886d43ce32d201e34b3c952e262c259c5237526d799ad2"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "PriorityPage",
-    "copy": "src/pages/priorities.tsx",
+    "copy": "src/features/priorities/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "e430b5fa5f2fb3dd575dc4012b7c33bb851cc96e666c4515d22241777e40c175"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "ProjectPage",
-    "copy": "src/pages/project.tsx",
+    "copy": "src/features/project/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "f6d42e774aacd0929e2eb52562fca8c27b6cb60a8284167eab4549e31dfbe935"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "SettingsPage",
-    "copy": "src/pages/settings.tsx",
+    "copy": "src/features/settings/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "70cee6fd6fc9ef905af1e449e73ee88b1560d2a7e3067dd6a404508ff5f82c08"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "buildInboxPath",
-    "copy": "src/pages/inbox.tsx",
+    "copy": "src/features/inbox/route.tsx",
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "551a13bc2c05904356062afe9fa88a9f9a50222570c75fdd240aa273f6727ae9"
   },
   {
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "PersonPage",
-    "copy": "src/pages/people.tsx",
+    "copy": "src/features/people/route.tsx",
     "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
     "sha256": "476d4a15dbf62a778ab5b94ed35c3dcb038a8867f59c0077a3412ab36abe52ef"
   },

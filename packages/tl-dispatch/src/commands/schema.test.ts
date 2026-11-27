@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { type KeyRegistration, keyRegistrations } from "../../tests/key-registrations";
 import { UPSTREAM_WEB } from "../../tests/source";
 import { appCatalog } from "./app-catalog";
-import { NAV_DESTINATIONS, navCommandName } from "./nav";
+import { NAV_DESTINATIONS, NAV_NAMES, navCommandName } from "./destinations";
 import { CatalogError, type CommandContext, type CommandDefinition, createCatalog } from "./schema";
 
 function global(commands: CommandDefinition[]): CommandContext {
@@ -119,9 +119,9 @@ describe("the app's catalog", () => {
   });
 
   test("gives each sidebar destination one command, with its chord", () => {
-    for (const destination of NAV_DESTINATIONS) {
-      const command = appCatalog.command(`global.${navCommandName(destination.name)}`);
-      expect(command.keys).toEqual([`g ${destination.key}`]);
+    for (const name of NAV_NAMES) {
+      const command = appCatalog.command(`global.${navCommandName(name)}`);
+      expect(command.keys).toEqual([`g ${NAV_DESTINATIONS[name].key}`]);
     }
   });
 });
