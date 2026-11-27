@@ -43,8 +43,7 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
-  type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
-  wrap: "the wrap style comes from `Heading` and `textVariants`: a page sets none (`text-balance`, `text-pretty`)",
+  type: "type comes from `Heading` and `textVariants`, and the root smooths it: no raw size, weight, leading, tracking or uppercase class, and any wrap style or smoothing",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
@@ -143,12 +142,16 @@ const fades = (property: string, value: string) =>
         .every((item) => /^(opacity|none)\b/.test(item.trim()));
 /** What a class may not set: type comes from `Heading` and `textVariants`. */
 const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "letter-spacing"]);
-const typeSet = (property: string, value: string) =>
+/** The wrap mode alone, which a page may set; any other `text-wrap` value names a style. */
+const WRAP_MODE = /^(wrap|nowrap)$/;
+/** The wrap style and the smoothing count as type too. Under a variant, even a mode is refused:
+ *  the shorthand comes after the recipe's style and resets it. */
+const typeSet = (property: string, value: string, variant: boolean) =>
   TYPE_PROPERTY.has(property) ||
-  (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
-/** A wrap style a class may not set: the type recipes own it. */
-const wrapStyled = (property: string, value: string) =>
-  /^text-wrap(-style)?$/.test(property) && /\b(balance|pretty)\b/.test(value);
+  (property === "text-transform" && /^(uppercase|lowercase)$/.test(value)) ||
+  property === "text-wrap-style" ||
+  (property === "text-wrap" && (variant || !WRAP_MODE.test(value))) ||
+  /font-smoothing$/.test(property);
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -187,12 +190,17 @@ function radiusAllowed(
 /**
  * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
  * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
- * is set for a class's CSS, which may not set type; a stylesheet may.
+ * is set for a class's CSS, which may not set type; a stylesheet may. `variant` is set when that
+ * class has a variant.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
   tokens: ThemeTokens,
-  { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
+  {
+    circle = false,
+    fromClass = false,
+    variant = false,
+  }: { circle?: boolean; fromClass?: boolean; variant?: boolean } = {}
 ): string[] {
   const { property, value, context } = declaration;
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
@@ -229,8 +237,7 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
-  if (fromClass && typeSet(property, value)) problems.push(RULES.type);
-  if (fromClass && wrapStyled(property, value)) problems.push(RULES.wrap);
+  if (fromClass && typeSet(property, value, variant)) problems.push(RULES.type);
   return problems;
 }
 
@@ -318,7 +325,8 @@ async function classViolations(
   for (const declaration of await compiledDeclarations([...classes.keys()])) {
     const name = sourceClass(declaration.context, classes);
     const circle = name !== undefined && utilityOf(name) === "rounded-full";
-    const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
+    const variant = name !== undefined && utilityOf(name) !== name;
+    const problems = declarationProblems(declaration, tokens, { circle, fromClass: true, variant });
     if (problems.length === 0) continue;
     const where =
       name === undefined ? [{ file: "(compiled CSS)", line: 0 }] : (classes.get(name) ?? []);
