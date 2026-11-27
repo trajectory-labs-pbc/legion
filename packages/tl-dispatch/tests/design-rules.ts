@@ -475,8 +475,7 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // React and the DOM read a camelCase key, where a leading `webkit` or `ms` is a vendor prefix,
-  // or a dashed one as written; `setProperty` lower-cases any name but a custom property's.
+  // A dashed key as written; a leading `webkit` as the DOM's prefix (`ms` too: it sets nothing).
   const styleKey = (
     node: ts.Node,
     key: string,
@@ -547,6 +546,7 @@ function scriptViolations(
     ) {
       const key = node.arguments[0];
       if (key !== undefined && ts.isStringLiteralLike(key)) {
+        // CSSOM lower-cases the name; a custom property is refused whatever its case.
         styleKey(node, key.text, key.text.toLowerCase());
       } else refuse(node, node.getText(), RULES.styleProp);
     }
