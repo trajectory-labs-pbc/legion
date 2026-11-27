@@ -35,7 +35,6 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | `border` | Dividers, the content panel's edge, an overlay's edge, a table's cells. |
 | `input` | The edge of a control: input, select, checkbox, outline button. It reaches 3:1 on the page, a card and `muted`. |
 | `sidebar-border` | The sidebar's dividers. |
-| `track` | A glyph's unfilled part: a priority's unfilled bars. It stays 4.5:1 or more from `foreground` and 1.3:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
 
 ## Text
 
@@ -43,6 +42,7 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | --- | --- |
 | `foreground` | Titles, body text, values. |
 | `muted-foreground` | Metadata: ids, dates, counts, descriptions, placeholder text, a property's label. |
+| `track` | Never text: a glyph's unfilled part, a priority's unfilled bars. It stays 4.5:1 or more from `foreground` and 1.8:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
 | `primary-foreground`, `destructive-foreground` | Text on a primary or destructive fill. |
 
 Never lower a text token's opacity: the contrast tests read the token, not the mix.

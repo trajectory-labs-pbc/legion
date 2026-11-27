@@ -597,7 +597,8 @@ describe("the theme", () => {
 
   it.each(
     Object.entries(THEMES)
-  )("keeps a glyph's filled part apart from its track, and the track visible on each row fill, %s", (_name, tokens) => {
+  )("keeps a priority's filled bars apart from its track, and the track visible on each row fill, %s", (_name, tokens) => {
+    expect(generated.toString()).toMatch(/\.fill-track\s*\{\s*fill: var\(--track\)/);
     expect(
       contrast(colour(tokens, "foreground"), colour(tokens, "track")),
       "foreground on track"
@@ -606,7 +607,7 @@ describe("the theme", () => {
       expect(
         contrast(colour(tokens, "track"), colour(tokens, ground)),
         `track on ${ground}`
-      ).toBeGreaterThanOrEqual(1.3);
+      ).toBeGreaterThanOrEqual(1.8);
     }
   });
 });
