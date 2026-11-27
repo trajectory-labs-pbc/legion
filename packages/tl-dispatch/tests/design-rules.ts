@@ -363,33 +363,45 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
 
 const STYLE_COLOUR_KEYS = new Set([
   "background",
-  "backgroundImage",
+  "background-image",
   "fill",
   "stroke",
   "outline",
   "border",
-  "borderTop",
-  "borderRight",
-  "borderBottom",
-  "borderLeft",
-  "borderBlock",
-  "borderInline",
-  "boxShadow",
-  "textShadow",
+  "border-top",
+  "border-right",
+  "border-bottom",
+  "border-left",
+  "border-block",
+  "border-inline",
+  "box-shadow",
+  "text-shadow",
   "filter",
 ]);
 
-/** What a style key sets that the rules govern, or undefined. */
-function styleKeyKind(key: string): string | undefined {
-  if (key.startsWith("--")) return "a custom property, which can override a theme token";
-  const camel = key.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-  if (/colou?r$/i.test(camel) || STYLE_COLOUR_KEYS.has(camel)) return "a colour";
-  if (/radius$/i.test(camel)) return "a radius";
-  if (/^(min|max)?(height|blockSize)$/i.test(camel)) return "a height";
-  if (/^(animation|transition)/i.test(camel)) return "motion";
-  if (camel === "scale") return "a scale";
-  if (camel === "cursor") return "a cursor";
+/** What a CSS property sets that the style rule governs, or undefined. */
+function styleKind(property: string): string | undefined {
+  if (/colou?r$/.test(property) || STYLE_COLOUR_KEYS.has(property)) return "a colour";
+  if (/radius$/.test(property)) return "a radius";
+  if (/^(min-|max-)?(height|block-size)$/.test(property)) return "a height";
+  if (/^(animation|transition)/.test(property)) return "motion";
+  if (property === "scale") return "a scale";
+  if (property === "cursor") return "a cursor";
   return undefined;
+}
+
+/** The rule a style key breaks, or undefined. */
+function styleKeyRule(key: string): string | undefined {
+  if (key.startsWith("--")) {
+    return `a custom property, which can override a theme token ${RULES.style}`;
+  }
+  // The CSS property: a dashed key is one already, which `setProperty` reads in any case.
+  const property = key.includes("-")
+    ? key.toLowerCase()
+    : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+  if (WRAP_OR_SMOOTHING.test(property)) return RULES.wrap;
+  const what = styleKind(property);
+  return what === undefined ? undefined : `${what} ${RULES.style}`;
 }
 
 const STYLE_NAME = /(^|[a-z_])(style|styles|css|sx)$/i;
@@ -486,10 +498,8 @@ function scriptViolations(
   }));
   const refuse = refuserOf(file, source, violations);
   const styleKey = (node: ts.Node, key: string) => {
-    const property = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-    const what = styleKeyKind(key);
-    if (WRAP_OR_SMOOTHING.test(property)) refuse(node, key, RULES.wrap);
-    else if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
+    const rule = styleKeyRule(key);
+    if (rule !== undefined) refuse(node, key, rule);
   };
 
   const visit = (node: ts.Node) => {
