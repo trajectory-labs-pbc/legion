@@ -1,6 +1,6 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
-import type { UseQueryResult } from "@tanstack/react-query";
+import { hashKey, type QueryKey, type UseQueryResult } from "@tanstack/react-query";
 import { useRef } from "react";
 
 import { type ReadFault, type Refusal, refusalOf, useKeptFailures } from "@/data/read";
@@ -12,19 +12,40 @@ type ShownFault = ReadFault & { readonly refresh?: true };
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
 
+/** A query's answer as a failure reads it; its key where one place reads more than one query. */
+type FailableRead = Pick<
+  UseQueryResult<unknown>,
+  "data" | "error" | "fetchStatus" | "isPlaceholderData"
+> & { readonly queryKey?: QueryKey; refetch: () => unknown };
+
+/** `read` as a failure reads it, at a place that reads the query under `queryKey`. */
+export const keyedRead = (read: UseQueryResult<unknown>, queryKey: QueryKey): FailableRead => ({
+  data: read.data,
+  error: read.error,
+  fetchStatus: read.fetchStatus,
+  isPlaceholderData: read.isPlaceholderData,
+  queryKey,
+  refetch: read.refetch,
+});
+
 /**
  * The reads that failed with nothing to show, if any; the failure stays while their Retry runs,
- * kept by place through `useKeptFailures`. Every render passes the same reads in the same places,
- * each place always the same query, `undefined` for a read left out.
+ * kept by place through `useKeptFailures`, so another query at a place that names its key starts
+ * afresh. Another key's placeholder is nothing of the read's own to show. Every render passes the
+ * same reads in the same places, a place that names no key always the same query, `undefined` for
+ * a read left out.
  */
 export function useReadFailure(
-  ...reads: readonly (UseQueryResult<unknown> | undefined)[]
+  ...reads: readonly (FailableRead | undefined)[]
 ): ReadFault | undefined {
   const failures = useKeptFailures<Failure>(
     reads.map((read) => {
-      if (read === undefined || read.data !== undefined) return undefined;
+      if (read === undefined || (read.data !== undefined && !read.isPlaceholderData)) {
+        return undefined;
+      }
       const failure = read.error === null ? undefined : (refusalOf(read.error) ?? "retryable");
-      return { failure, out: read.fetchStatus !== "idle" };
+      const query = read.queryKey === undefined ? undefined : hashKey(read.queryKey);
+      return { failure, out: read.fetchStatus !== "idle", query };
     })
   );
   if (failures.every((failure) => failure === undefined)) return undefined;

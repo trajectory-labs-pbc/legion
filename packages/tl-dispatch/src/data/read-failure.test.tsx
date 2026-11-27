@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import {
+  keepPreviousData,
   onlineManager,
   QueryClient,
   QueryClientProvider,
@@ -17,7 +18,7 @@ import {
 } from "@/upstream/api";
 import { answered } from "../../tests/network";
 import { holdNotifications } from "../../tests/upstream";
-import { ReadFailure, refreshFailureOf, useReadFailure } from "./read-failure";
+import { keyedRead, ReadFailure, refreshFailureOf, useReadFailure } from "./read-failure";
 
 afterEach(() => {
   onlineManager.setOnline(true);
@@ -125,6 +126,107 @@ test("read-failure: a read refused before it mounts is loading until it answers 
 
   await act(async () => again.reject(answered(403)));
   expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
+});
+
+/** One read of `version`, which shows the last answer while another version is read. */
+function Picked({
+  answer,
+  version,
+}: {
+  answer: (version: number) => Promise<unknown>;
+  version: number;
+}) {
+  const queryKey = ["picked", version];
+  const read = useQuery({
+    placeholderData: keepPreviousData,
+    queryFn: () => answer(version),
+    queryKey,
+  });
+  const fault = useReadFailure(keyedRead(read, queryKey));
+  return (
+    <>
+      <p data-testid="fetching">{read.fetchStatus}</p>
+      {fault === undefined ? null : <ReadFailure fault={fault} noun="the rows" />}
+    </>
+  );
+}
+
+/** Mounts `Picked`; `show` changes the version it reads. */
+function mountPicked(answer: (version: number) => Promise<unknown>) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const at = (version: number) => (
+    <QueryClientProvider client={client}>
+      <Picked answer={answer} version={version} />
+    </QueryClientProvider>
+  );
+  const view = render(at(1));
+  return { client, show: (version: number) => view.rerender(at(version)) };
+}
+
+/** Waits until the read's fetch status is `status`. */
+const fetchStatus = (status: "fetching" | "idle") =>
+  waitFor(() => expect(screen.getByTestId("fetching").textContent).toBe(status));
+
+test("read-failure: another read at the same place does not take the last read's refusal", async () => {
+  const again = Promise.withResolvers<never>();
+  const answers = new Map<number, () => Promise<unknown>>([
+    [1, () => Promise.resolve("one")],
+    [2, () => Promise.reject(answered(500))],
+    [3, () => Promise.reject(answered(403))],
+  ]);
+  const { show } = mountPicked((version) => answers.get(version)?.() ?? Promise.resolve(null));
+  await fetchStatus("idle");
+  show(2);
+  expect((await screen.findByRole("alert")).textContent).toBe(`${LOAD}Retry`);
+  show(3);
+  await waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.")
+  );
+  answers.set(2, () => again.promise);
+  show(2);
+  await fetchStatus("fetching");
+  // This place last saw version 3's 403, and a failure is kept only for its own key: 2 is loading.
+  expect(screen.queryByRole("alert")).toBeNull();
+  await act(async () => again.reject(answered(500)));
+  await fetchStatus("idle");
+  expect(screen.getByRole("alert").textContent).toBe(`${LOAD}Retry`);
+});
+
+test("read-failure: a failed read asked again over the last answer keeps its failure", async () => {
+  const again = Promise.withResolvers<never>();
+  let answer = (version: number) =>
+    version === 1 ? Promise.resolve("one") : Promise.reject(answered(500));
+  const { show } = mountPicked((version) => answer(version));
+  await fetchStatus("idle");
+  show(2);
+  const button = await screen.findByRole("button", { name: "Retry" });
+  answer = () => again.promise;
+  await userEvent.click(button);
+  await fetchStatus("fetching");
+  const retry = screen.getByRole("button", { name: "Retry" });
+  expect(retry.hasAttribute("data-loading")).toBe(true);
+  await act(async () => again.reject(answered(500)));
+  await fetchStatus("idle");
+  expect(screen.getByRole("alert").textContent).toBe(`${LOAD}Retry`);
+});
+
+test("read-failure: a refused read asked again over the last answer keeps its refusal", async () => {
+  const again = Promise.withResolvers<never>();
+  let answer = (version: number) =>
+    version === 1 ? Promise.resolve("one") : Promise.reject(answered(403));
+  const { client, show } = mountPicked((version) => answer(version));
+  await fetchStatus("idle");
+  show(2);
+  expect((await screen.findByRole("alert")).textContent).toBe("You cannot see the rows.");
+  answer = () => again.promise;
+  await act(async () => {
+    void client.refetchQueries({ queryKey: ["picked", 2] });
+  });
+  await fetchStatus("fetching");
+  expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.");
+  await act(async () => again.reject(answered(403)));
+  await fetchStatus("idle");
+  expect(screen.getByRole("alert").textContent).toBe("You cannot see the rows.");
 });
 
 test("read-failure: Retry on a 500 beside a 403 asks both reads again", async () => {
