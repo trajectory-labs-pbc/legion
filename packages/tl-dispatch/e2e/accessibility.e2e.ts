@@ -606,9 +606,9 @@ async function hideLeftOut(page: Page, region: Region): Promise<void> {
 
 /** Each box that scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
  *  content wider than itself. A box whose `overflow-x` is `hidden`, as cut text (`truncate`) is,
- *  is not read. Two boxes may be wider inside (FR4): a table's own box, in which packages/ui's
- *  Table scrolls a table wider than its column, and a field, which Chrome clips (`input`) or
- *  scrolls (`textarea`) around its own value. */
+ *  is not read. Two kinds of box may be wider inside (FR4): a table's own box, in which
+ *  packages/ui's Table scrolls a table wider than its column, and a field, which Chrome clips
+ *  (`input`) or scrolls (`textarea`) around its own value. */
 async function wideBoxes(page: Page): Promise<string[]> {
   return page.evaluate((allowed) => {
     const found: string[] = [];
