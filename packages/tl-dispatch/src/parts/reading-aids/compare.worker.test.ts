@@ -21,7 +21,8 @@ async function treeOf(markdown: string) {
 }
 
 function comparisonOf(reply: CompareReply) {
-  if (reply.kind !== "document") throw new Error("not a document reply");
+  if (reply.kind === "refused") return undefined;
+  if (reply.kind !== "pair" && reply.kind !== "compare") throw new Error("not a document reply");
   return reply.comparison;
 }
 
@@ -30,7 +31,7 @@ test("change-marks a baseline with no tree is parsed, and reads as its tree does
   const fromMarkdown = comparisonOf(
     await createCompareSession(engine)({
       id: 1,
-      kind: "document",
+      kind: "pair",
       baseline: { markdown: BASELINE, tree: undefined },
       live,
     })
@@ -38,7 +39,7 @@ test("change-marks a baseline with no tree is parsed, and reads as its tree does
   const fromTree = comparisonOf(
     await createCompareSession(engine)({
       id: 2,
-      kind: "document",
+      kind: "pair",
       baseline: { markdown: BASELINE, tree: await treeOf(BASELINE) },
       live,
     })
@@ -72,7 +73,7 @@ const LIST =
 async function pairedList() {
   const answer = createCompareSession(engine);
   const live = await liveBlocks(LIST);
-  await answer({ id: 1, kind: "document", baseline: { markdown: LIST, tree: undefined }, live });
+  await answer({ id: 1, kind: "pair", baseline: { markdown: LIST, tree: undefined }, live });
   const [list] = live;
   const [first, second, third] = list.items ?? [];
   return { answer, list, first, second, third };
@@ -113,7 +114,7 @@ test("change-marks an item split in two keeps its pair on the first part, which 
   ]);
 });
 
-test("change-marks a document request that throws leaves no pairs of the baseline before it", async () => {
+test("change-marks a pair request that throws leaves no pairs of the baseline before it", async () => {
   quietConsoleError();
   const { answer, list } = await pairedList();
   const unreadable: Block = {
@@ -124,7 +125,7 @@ test("change-marks a document request that throws leaves no pairs of the baselin
     },
   };
   const baseline = { markdown: LIST, tree: undefined };
-  expect(await answer({ id: 2, kind: "document", baseline, live: [unreadable] })).toEqual({
+  expect(await answer({ id: 2, kind: "pair", baseline, live: [unreadable] })).toEqual({
     id: 2,
     kind: "failed",
   });
@@ -141,7 +142,7 @@ async function comparedWith(baseline: string, live: string) {
   const comparison = comparisonOf(
     await createCompareSession(engine)({
       id: 1,
-      kind: "document",
+      kind: "pair",
       baseline: { markdown: baseline, tree: undefined },
       live: blocks,
     })
@@ -184,7 +185,7 @@ test("change-marks a request that throws is answered as a failure of that reques
   const answer = createCompareSession(Promise.reject(new Error("no engine")));
   const document = answer({
     id: 1,
-    kind: "document",
+    kind: "pair",
     baseline: { markdown: LIST, tree: undefined },
     live: [],
   });
@@ -203,7 +204,7 @@ test("change-marks an empty baseline holds no block, so every block is new", asy
   const comparison = comparisonOf(
     await createCompareSession(engine)({
       id: 1,
-      kind: "document",
+      kind: "pair",
       baseline: { markdown: "", tree: undefined },
       live,
     })
@@ -212,23 +213,21 @@ test("change-marks an empty baseline holds no block, so every block is new", asy
   expect(comparison?.removed).toEqual([]);
 });
 
-test("change-marks a tree the schema refuses compares nothing", async () => {
-  const comparison = comparisonOf(
-    await createCompareSession(engine)({
-      id: 1,
-      kind: "document",
-      baseline: { markdown: BASELINE, tree: { type: "doc", content: [{ type: "no_such_node" }] } },
-      live: await liveBlocks(),
-    })
-  );
-  expect(comparison).toBeUndefined();
+test("change-marks a tree the schema refuses compares nothing, and its reply carries no pairs", async () => {
+  const reply = await createCompareSession(engine)({
+    id: 1,
+    kind: "pair",
+    baseline: { markdown: BASELINE, tree: { type: "doc", content: [{ type: "no_such_node" }] } },
+    live: await liveBlocks(),
+  });
+  expect(reply).toEqual({ id: 1, kind: "refused" });
 });
 
 test("change-marks a tree whose top node is not a document compares nothing", async () => {
   const comparison = comparisonOf(
     await createCompareSession(engine)({
       id: 1,
-      kind: "document",
+      kind: "pair",
       baseline: {
         markdown: BASELINE,
         tree: { type: "paragraph", content: [{ type: "text", text: "A paragraph." }] },
@@ -237,4 +236,27 @@ test("change-marks a tree whose top node is not a document compares nothing", as
     })
   );
   expect(comparison).toBeUndefined();
+});
+
+test("change-marks a pair reply carries its pairs, and a compare request with them keeps them without parsing the baseline", async () => {
+  const baseline = { markdown: "The design keeps most of its words today.\n", tree: undefined };
+  const [edited] = await liveBlocks("The design keeps most of its words now.\n");
+  if (edited === undefined) throw new Error("no block");
+  const answer = createCompareSession(engine);
+  const first = await answer({ id: 1, kind: "pair", baseline, live: [edited] });
+  if (first.kind !== "pair") throw new Error("no pairs");
+  const inserted = { id: "inserted", kind: "paragraph", text: "Inserted above." };
+  // A session with no engine: the earlier pairs need no parse.
+  const reply = await createCompareSession(new Promise<never>(() => {}))({
+    id: 2,
+    kind: "compare",
+    live: [inserted, edited],
+    pairs: first.pairs,
+  });
+  expect(reply.kind).toBe("compare");
+  const again = comparisonOf(reply);
+  expect(again?.results.map(({ id, verdict }) => [id, verdict.kind])).toEqual([
+    ["inserted", "new"],
+    [edited.id, "changed"],
+  ]);
 });

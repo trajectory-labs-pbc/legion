@@ -123,7 +123,8 @@
           "shadow-tint": "rgb(20 19 17 / 0.14)",
           "radius": "8px",
           "border-width": "1px",
-          "icon-stroke": "1.75"
+          "icon-stroke": "1.75",
+          "reading-gutter-width": "64px"
         },
         "dark": {
           "background": "#141311",

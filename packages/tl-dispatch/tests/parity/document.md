@@ -1,14 +1,14 @@
 # Document
 
 The two regions of upstream's `ProofDocument.tsx` above a document's text that the reading aids replace.
-"Read first" (`src/parts/reading-aids/read-first.tsx`) rebuilds the Open-decisions navigator. Where Read first shows, the "Changed since you last read" line is hidden; the fork does not draw it yet.
+"Read first" (`src/parts/reading-aids/read-first.tsx`) rebuilds the Open-decisions navigator, and the counts line (`src/parts/reading-aids/counts-line.tsx`) rebuilds the "Changed since you last read" line. Where Read first shows, upstream's two are hidden.
 Each row of a rebuilt region needs a test whose name starts with its ID.
 `scripts/check-parity.ts` holds this list to the tests.
 
 | Region | Rebuilt |
 | --- | --- |
 | Open decisions | yes |
-| Changed since you last read | no |
+| Changed since you last read | yes |
 
 | ID | Region | Item | Mark | Note |
 | --- | --- | --- | --- | --- |
@@ -19,5 +19,5 @@ Each row of a rebuilt region needs a test whose name starts with its ID.
 | DOC-5 | Open decisions | An answered decision leaves the navigator | | |
 | DOC-6 | Open decisions | No navigator in a pane or under `?v=` | | |
 | DOC-7 | Open decisions | The question is drawn as its plain words | | |
-| DOC-8 | Changed since you last read | The line names what changed since the reader's last read of the spec | changed | Hidden where Read first shows; it still shows in an outline row's editor |
-| DOC-9 | Changed since you last read | No line off the spec's own page or under `?v=` | | |
+| DOC-8 | Changed since you last read | The line names what changed since the reader's last read of the spec | changed | The counts line counts the changed blocks against the baseline and links each changed section; upstream's line is hidden where Read first shows, and still shows in an outline row's editor |
+| DOC-9 | Changed since you last read | No line off the spec's own page or under `?v=` | changed | The counts line shows on each document Read first shows on; off the spec's page it takes no read mark, so with no request approved before it has no earlier version; under `?v=` no part shows (DOC-6) |

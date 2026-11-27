@@ -66,6 +66,7 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 - List rows: `h-list-row-1` (36 px, one line, and a group header) and `h-list-row-2` (56 px, two lines). There is no third row height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
+- `--reading-gutter-width` (in `packages/ui/src/styles/theme.css`): the reading aids' gutter at the left of a document's text, where the change marks' labels stand.
 - Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. On a page, `SurfaceTitle` is the `h1` and `Heading` starts at `h2`; inside an overlay, `OverlayOutline` makes the title an `h2` and the first `Heading` an `h3`. `Heading` takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. Running text is `Text`, which takes the same `size`, `tone` and `weight` as `textVariants`; a part that draws its own element passes `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
 
 | Recipe | Use |

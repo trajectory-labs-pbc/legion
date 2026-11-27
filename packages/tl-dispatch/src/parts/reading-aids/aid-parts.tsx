@@ -1,10 +1,15 @@
+import { useCallback } from "react";
+
 import { type AidedDocument, useAidedDocument } from "@/data/document-reads";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
 import { CountsLine } from "./counts-line";
+import { moveToBlock } from "./moves";
 import type { PartsProps } from "./parts-slot";
 import { ReadFirst, useReadFirst } from "./read-first";
+import { useMeasuredRender } from "./timing";
 import { useBaseline } from "./use-baseline";
+import { useChangeMarks } from "./use-change-marks";
 
 function AidCommands({ actions }: { actions: AidActions }): null {
   useAidCommands(actions);
@@ -12,13 +17,19 @@ function AidCommands({ actions }: { actions: AidActions }): null {
 }
 
 function DocumentParts({ document, entry, shown }: PartsProps & { document: AidedDocument }) {
+  useMeasuredRender();
   const readFirst = useReadFirst(entry, document);
   const baseline = useBaseline(document);
+  const marks = useChangeMarks(entry.editor.view, baseline.baseline);
+  const moveToSection = useCallback(
+    (blockId: string) => moveToBlock(entry, blockId, "click"),
+    [entry]
+  );
   const { step } = readFirst;
   return (
     <>
       <ReadFirst document={document} state={readFirst} />
-      <CountsLine read={baseline} />
+      <CountsLine marks={marks} moveTo={moveToSection} read={baseline} />
       {shown ? (
         <AidCommands
           actions={{

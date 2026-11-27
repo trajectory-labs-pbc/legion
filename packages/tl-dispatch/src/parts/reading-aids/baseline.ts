@@ -11,6 +11,10 @@ export interface BaselineChoice {
   readonly version: number;
 }
 
+/** Whether two choices name the same version for the same reason. */
+export const sameChoice = (left: BaselineChoice, right: BaselineChoice) =>
+  left.kind === right.kind && left.version === right.version;
+
 /** Why a version gives no baseline to compare with, which asking again would not change. */
 export type Unavailable = "file" | Refusal;
 
@@ -57,6 +61,9 @@ const versionName = (version: number) => `v${version}`;
 /** What the counts line names the baseline by. */
 export const baselineText = ({ kind, version }: BaselineChoice) =>
   `Since ${versionName(version)}${SINCE[kind]}`;
+
+/** What the line says when nothing changed since `version`. */
+export const noChangesText = (version: number) => `No changes since ${versionName(version)}`;
 
 /** The note that the document changed since the version the request named. */
 export const textChangedText = (version: number) =>
