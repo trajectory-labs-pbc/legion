@@ -280,10 +280,11 @@ refuses to start it on a folder with no build.
   `e2e/accessibility.e2e.ts`, in the local mode only, runs axe at WCAG 2.0 and 2.1 A and AA on
   each region the app draws, in light and in dark, and leaves out upstream's widgets and pages.
   With the same scope, a Tab walk finds the focus outline at each Tab stop of each region but the
-  account menu and the key tooltip. Six pages scroll nothing sideways at 390, 768 and 1440 px,
-  except a table wider than its column, inside its own box: the Inbox's frame, the machine login
-  page with a login listed, the not-found page, the issue frame, the connection error page and the
-  sign-in page.
+  account menu and the key tooltip; a region that holds no control is walked too, and must have no
+  stop. Six pages, the Inbox's frame, the machine login page with a login listed, the not-found
+  page, the issue frame, the connection error page and the sign-in page, scroll nothing sideways
+  at 390, 768 and 1440 px. A table wider than its column may scroll inside its own box. From
+  768 px the content panel clips what is wider than it, so the width tests do not find that.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.
