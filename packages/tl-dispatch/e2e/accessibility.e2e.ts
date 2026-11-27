@@ -9,8 +9,7 @@
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
 // the pages the fork draws, at 390, 768 and 1440 px, each fits the window, and no box in it scrolls
-// (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip` content wider than itself
-// (FR4).
+// or clips content wider than itself, as `wideBoxes` reads it (FR4).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -660,7 +659,9 @@ function checkEach(list: readonly Region[]): void {
 
 /** Resizes the page to `viewport`, and waits for the layout drawn for that width before anything
  *  reads it. The shell draws the sidebar, or the issue frame's icon rail, only from 768 px, from
- *  React state that follows the width, and the sidebar then fetches what it lists. A page with no
+ *  React state that follows the width, and the sidebar then fetches what it lists; the marker
+ *  proves that redraw. From 1280 px the frame's fill and the Inbox's reading pane also follow React
+ *  state, with no marker: the two frames and the quiet window cover that redraw. A page with no
  *  shell lays out by CSS alone. */
 async function resize(
   page: Page,
