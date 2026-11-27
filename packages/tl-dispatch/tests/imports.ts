@@ -236,16 +236,11 @@ const upstream = {
   imports: new Map<string, Import[]>(),
 };
 
-/** What a walk reached: every file, and the import that first reached each one past the roots. */
-export interface Reach {
-  reached: Set<string>;
-  reachedBy: Map<string, Import>;
-}
-
 /**
  * The files `roots` load, breadth first, through each import `follow` accepts. This app's files
  * are read through `files`, upstream's from disk once per run. `visit` is told each file's
- * imports as the walk reads them, and the walk stops once `done` holds.
+ * imports as the walk reads them, and the walk stops once `done` holds. Gives back every file
+ * reached, and the import that first reached each one past the roots.
  */
 export function reach(
   roots: Iterable<string>,
@@ -259,7 +254,7 @@ export function reach(
     visit?: (path: string, imports: readonly Import[]) => void;
     done?: (reached: ReadonlySet<string>) => boolean;
   } = {}
-): Reach {
+): { reached: Set<string>; reachedBy: Map<string, Import> } {
   const cache = resolutionCache();
   const importsFor = (path: string): Import[] => {
     if (!path.startsWith(UPSTREAM_WEB + sep)) return importsOf(path, files, cache);

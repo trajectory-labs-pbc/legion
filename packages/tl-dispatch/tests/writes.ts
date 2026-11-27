@@ -16,7 +16,7 @@ export function signedInClient(): QueryClient {
 }
 
 /**
- * Presses a status write as `login`, which the sign-in check then names, and lets the store take
+ * Presses a status write as `reader`, which the sign-in check then names, and lets the store take
  * it up inside `act`. By default Dispatch never answers it; `write` replaces the attempt. Gives
  * back `outcome`, the press's answer or the error it ends with.
  */
@@ -24,11 +24,10 @@ export async function pressWrite(
   client: QueryClient,
   {
     label = "AB-1 set to done",
-    login = reader.login,
     write = () => new Promise<never>(() => {}),
-  }: { label?: string; login?: string; write?: (bounds: WriteBounds) => Promise<unknown> } = {}
+  }: { label?: string; write?: (bounds: WriteBounds) => Promise<unknown> } = {}
 ): Promise<{ outcome: Promise<unknown> }> {
-  client.setQueryData(whoAmIQuery().queryKey, { ...reader, login });
+  client.setQueryData(whoAmIQuery().queryKey, reader);
   let outcome: Promise<unknown> = Promise.resolve();
   await act(async () => {
     outcome = writesOf(client)
