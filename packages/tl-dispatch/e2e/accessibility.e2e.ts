@@ -610,11 +610,7 @@ test("a control whose box sits in a small control's target meets it, unless it i
   );
   await drawBelow(control, -7, `<button style="${TINY}; visibility: hidden"></button>`);
   // 1 px, as Base UI draws its focus guards.
-  await drawBelow(
-    control,
-    -3,
-    '<button style="display: block; width: 1px; height: 1px; padding: 0; border: 0"></button>'
-  );
+  await drawBelow(control, -3, `<button style="${TINY}; width: 1px; height: 1px"></button>`);
   await drawBelow(control, 3, `<input tabindex="-1" style="${TINY}">`);
   await drawBelow(control, 7, `<input aria-hidden="true" style="${TINY}">`);
   expect(await targetFaults(control)).toEqual({
@@ -666,19 +662,23 @@ test("a small control whose square meets a small control's band meets it", async
   expect(await targetFaults(control)).toEqual({ misses: [], meets: [expect.any(String)] });
 });
 
-test("a region, a tab panel, a link or a tree row holds a small control, and a control that holds one meets it", async ({
+test("a region, a group, a tab panel, a link or a tree row holds a small control, and a control that holds one meets it", async ({
   page,
 }) => {
   const checkbox = '<span data-slot="checkbox" role="checkbox" aria-checked="false"></span>';
+  // The button and the summary sit at tabindex 0, so only the native-control guard in HOLDERS
+  // keeps them from holding.
   await page.setContent(`
     <style>[data-slot="checkbox"] { display: block; width: 16px; height: 16px; margin: 20px; }</style>
     <section aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
     <section role="region" aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
     <div role="tabpanel" tabindex="0">${checkbox}</div>
+    <div role="group" tabindex="0">${checkbox}</div>
     <div role="treeitem" aria-selected="false" tabindex="0">${checkbox}</div>
     <a href="#row" style="display: block">${checkbox}</a>
     <div role="link" tabindex="0" style="display: block">${checkbox}</div>
     <button type="button" tabindex="0" style="display: block; padding: 0">${checkbox}</button>
+    <details open><summary tabindex="0" style="display: block">${checkbox}</summary></details>
     <div role="button" tabindex="0">${checkbox}</div>
     <a href="#menu" role="menuitem" style="display: block">${checkbox}</a>
   `);
@@ -692,7 +692,9 @@ test("a region, a tab panel, a link or a tree row holds a small control, and a c
     [],
     [],
     [],
+    [],
     [expect.stringMatching(/^<button/)],
+    [expect.stringMatching(/^<summary/)],
     [expect.stringMatching(/^<div role="button"/)],
     [expect.stringMatching(/^<a href="#menu" role="menuitem"/)],
   ]);
