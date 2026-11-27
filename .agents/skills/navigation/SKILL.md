@@ -40,7 +40,7 @@ An address is `routePath({ path, search? })` in `src/navigation/routes.ts`, unde
 
 A route is `pageRoute({ ...routes.<page>.<name>, element, prefetch?, layout? })`:
 
-- `element` is the page, loaded lazily with `lazyNamed`: a route file imports its `page.tsx` and upstream's views only with `import()`, and draws nothing itself. The home page is the exception: `EAGER` in `tests/layers.table.ts` names the modules that load before first paint.
+- `element` is the page, loaded lazily with `lazyNamed`: a route file imports its `page.tsx` and upstream's views only with `import()`, and draws nothing itself. The Inbox (the home page), the machine login page and the not-found page are the exceptions: `EAGER` in `tests/layers.table.ts` names the modules that load before first paint.
 - `prefetch(params)` returns the page's first reads, each `prefetchOf(queryOptions)` from `src/data/prefetch.ts`.
 - `layout` says how the shell frames the page: a `PageLayout` (`src/shell/page-layout.ts`), or a function of the address.
 

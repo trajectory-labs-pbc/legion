@@ -15,8 +15,6 @@ export const routeFile = (id: string) => join(SRC_DIR, "features", id, "route.ts
 export const pageRoots = (id: string) => [
   join(SRC_DIR, "features", id),
   join(SRC_DIR, "upstream", "views", id),
-  // Until the machine login and not-found folders move.
-  join(SRC_DIR, "pages", id),
 ];
 
 /** Upstream's scripts under `dir`, tests and fixtures (`__fixtures__/`, `*-fixture(s).ts`) aside. */

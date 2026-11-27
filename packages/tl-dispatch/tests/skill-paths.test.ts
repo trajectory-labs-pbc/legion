@@ -22,10 +22,10 @@ describe("the skills and AGENTS.md", () => {
       "A command: `bun tests/map/no-such.ts --update`, `bun run test src/commands tests/map`.",
       "Read from another root than the convention's: `references/tokens.md`, `commands/SKILL.md`,",
       "`features/refs/routes.ts`, the folder `features/shell`, and the folder `@upstream-dispatch/features/shell`.",
-      "These exist: `src/pages`, `page-link.tsx`, `packages/ui`, `registry.json`,",
+      "These exist: `src/features`, `page-link.tsx`, `packages/ui`, `registry.json`,",
       "`@upstream-dispatch/features/shell/keymap`, `packages/dispatch/web/src/app.tsx`.",
       "These name no path: `g d`, `$mod+k`, `max-w-1/2`, `@legion/ui`, `<context>.<name>`, `3 / 84`,",
-      "`git show <sha> -- <file>`, `src/pages/<page>/upstream.ts`.",
+      "`git show <sha> -- <file>`, `src/features/<page>/upstream.ts`.",
       "```sh\nbun test src/no-such-folder\n```",
     ].join("\n");
     expect(missingPaths([{ file, text }])).toEqual(

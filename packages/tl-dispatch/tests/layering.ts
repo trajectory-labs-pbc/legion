@@ -52,6 +52,7 @@ const MARKED_FILES = /^src\/upstream\/(views|widgets)\//;
 const ROUTE_FILE = /^src\/features\/([^/]+)\/route\.tsx?$/;
 const PAGE_FILE = /^src\/features\/([^/]+)\/page\.tsx?$/;
 const UPSTREAM_VIEW = /^src\/upstream\/views\//;
+const FEATURE_FILE = /^src\/features\/[^/]+\//;
 
 const patterns = new Map<string, RegExp>();
 
@@ -203,7 +204,7 @@ function routeRules(from: Place, to: Place, entry: Import): [Rule, string][] {
   return [];
 }
 
-/** A route file imports a value only from what `ROUTE_IMPORTS` and `EAGER` name. */
+/** A route file imports a value only from what `ROUTE_IMPORTS` names and the pages of `EAGER`. */
 function routeImportRules(from: Place, entry: Import): [Rule, string][] {
   if (from.test || !ROUTE_FILE.test(from.path)) return [];
   if (entry.kind !== "static" && entry.kind !== "require") return [];
@@ -211,7 +212,7 @@ function routeImportRules(from: Place, entry: Import): [Rule, string][] {
     entry.file?.startsWith(PACKAGE_ROOT + sep) === true ? packageRelative(entry.file) : undefined;
   const listed =
     path !== undefined &&
-    (Object.hasOwn(EAGER, path) ||
+    ((Object.hasOwn(EAGER, path) && PAGE_FILE.test(path)) ||
       Object.keys(ROUTE_IMPORTS).some((key) => pattern(key).test(path)));
   if (listed) return [];
   const named = path ?? entry.pkg ?? entry.specifier ?? "(not a literal)";
@@ -540,8 +541,9 @@ export function upstreamAppLoads(
 }
 
 /**
- * The entries of `eager` that do not hold: each names a page or an upstream view among `files`,
- * with a reason, and a page's own route imports it statically.
+ * The entries of `eager` that do not hold: each names a file among `files`, with a reason; a page
+ * is imported statically by its own route, and a feature's other file or an upstream view by an
+ * eager page.
  */
 export function eagerProblems(
   files: readonly SourceFile[],
@@ -550,22 +552,31 @@ export function eagerProblems(
   const disk = filesWith(ownFiles(files));
   const cache = resolutionCache();
   const paths = new Set(files.map((file) => file.path));
+  const importsStatically = (from: string | undefined, path: string) =>
+    from !== undefined &&
+    importsOf(join(PACKAGE_ROOT, from), disk, cache).some(
+      (entry) => entry.kind === "static" && entry.file === join(PACKAGE_ROOT, path)
+    );
   return Object.entries(eager).flatMap(([path, reason]) => {
     const problems: string[] = [];
     if (reason.trim() === "") problems.push(`${path}: no reason`);
     if (!paths.has(path)) problems.push(`${path}: no such file`);
     const page = PAGE_FILE.exec(path)?.[1];
-    if (page === undefined) {
-      if (!UPSTREAM_VIEW.test(path)) problems.push(`${path}: neither a page nor an upstream view`);
-      return problems;
+    if (page !== undefined) {
+      const route = [".tsx", ".ts"]
+        .map((extension) => `src/features/${page}/route${extension}`)
+        .find((candidate) => paths.has(candidate));
+      if (!importsStatically(route, path)) {
+        problems.push(`${path}: its route does not import it statically`);
+      }
+    } else if (FEATURE_FILE.test(path) || UPSTREAM_VIEW.test(path)) {
+      const pages = Object.keys(eager).filter((other) => PAGE_FILE.test(other));
+      if (!pages.some((other) => importsStatically(other, path))) {
+        problems.push(`${path}: no eager page imports it statically`);
+      }
+    } else {
+      problems.push(`${path}: neither a feature's file nor an upstream view`);
     }
-    const route = [".tsx", ".ts"]
-      .map((extension) => `src/features/${page}/route${extension}`)
-      .find((candidate) => paths.has(candidate));
-    const loaded = (
-      route === undefined ? [] : importsOf(join(PACKAGE_ROOT, route), disk, cache)
-    ).some((entry) => entry.kind === "static" && entry.file === join(PACKAGE_ROOT, path));
-    if (!loaded) problems.push(`${path}: its route does not import it statically`);
     return problems;
   });
 }

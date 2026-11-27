@@ -8,6 +8,9 @@ import { createRouteTree, RouteProvider } from "@/navigation/route-tree";
 import type { PageLayout } from "@/shell/page-layout";
 import { MemoryNavigationProvider, type Move } from "./navigation";
 
+// A feature's test draws the shell from here: the features are above the shell.
+export { AppShell } from "@/shell/app-shell";
+
 /** The page and route the app's route map gives an address. */
 export const { pageAt } = createRouteTree<PageLayout, (typeof pages)[number]>(pages);
 

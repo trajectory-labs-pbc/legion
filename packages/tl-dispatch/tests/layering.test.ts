@@ -41,8 +41,8 @@ describe("layers", () => {
   });
 
   test("an EAGER entry fails without a file, a reason or its route's static import", () => {
-    const page = file("src/features/x/page.tsx");
-    const view = file("src/upstream/views/x.tsx");
+    const page = file("src/features/x/page.tsx", 'import { View } from "@/upstream/views/x";');
+    const view = file("src/upstream/views/x.tsx", "export const View = () => null;");
     const route = (text: string) => file("src/features/x/route.tsx", text);
     const staticRoute = route('import { X } from "./page";');
     const eager = { "src/features/x/page.tsx": "a reason", "src/upstream/views/x.tsx": "a reason" };
@@ -52,12 +52,34 @@ describe("layers", () => {
     ]);
     expect(eagerProblems([page, staticRoute], eager)).toEqual([
       "src/upstream/views/x.tsx: no such file",
+      "src/upstream/views/x.tsx: no eager page imports it statically",
     ]);
     expect(
       eagerProblems([page, view, staticRoute], { ...eager, "src/upstream/views/x.tsx": " " })
     ).toEqual(["src/upstream/views/x.tsx: no reason"]);
     expect(eagerProblems([file("src/shell/x.tsx")], { "src/shell/x.tsx": "a reason" })).toEqual([
-      "src/shell/x.tsx: neither a page nor an upstream view",
+      "src/shell/x.tsx: neither a feature's file nor an upstream view",
+    ]);
+  });
+
+  test("an EAGER view or feature file fails when no eager page imports it statically", () => {
+    const page = (text: string) => file("src/features/x/page.tsx", text);
+    const route = file("src/features/x/route.tsx", 'import { X } from "./page";');
+    const parts = [
+      file("src/upstream/views/x.tsx", "export const View = () => null;"),
+      file("src/features/x/part.tsx", "export const Part = () => null;"),
+    ];
+    const eager = {
+      "src/features/x/page.tsx": "a reason",
+      "src/upstream/views/x.tsx": "a reason",
+      "src/features/x/part.tsx": "a reason",
+    };
+    const both = 'import { View } from "@/upstream/views/x";\nimport { Part } from "./part";';
+    expect(eagerProblems([page(both), route, ...parts], eager)).toEqual([]);
+    const lazy = 'const view = import("@/upstream/views/x");\nconst part = import("./part");';
+    expect(eagerProblems([page(lazy), route, ...parts], eager)).toEqual([
+      "src/upstream/views/x.tsx: no eager page imports it statically",
+      "src/features/x/part.tsx: no eager page imports it statically",
     ]);
   });
 
@@ -249,9 +271,9 @@ describe("layers", () => {
     ["imports its folder's view", 'import { View } from "./view";', [VIEW], "src/features/x/view"],
     [
       "imports a part",
-      'import { NeedsYouMark } from "@/features/needs-you";',
+      'import { NeedsYouMark } from "@/parts/needs-you";',
       [],
-      "src/features/needs-you/index.ts",
+      "src/parts/needs-you/index.ts",
     ],
     ["imports an icon", 'import { BotIcon } from "lucide-react";', [], "no lucide-react"],
     [
@@ -267,6 +289,27 @@ describe("layers", () => {
     const rules = rulesOf([file("src/features/x/route.tsx", text), ...siblings]);
     expect(rules).toContain(`routes-draw-nothing: a route file `);
     expect(rules).toContain(detail);
+  });
+
+  test.each([
+    [
+      "src/features/not-found/route.tsx",
+      'import { NotFound } from "./not-found";',
+      "not-found.tsx",
+    ],
+    [
+      "src/features/machine-login/route.tsx",
+      'import { MachineLoginPage } from "./machine-login-page";',
+      "src/features/machine-login/machine-login-page.tsx",
+    ],
+    [
+      "src/features/issue/route.tsx",
+      'import { NotFound } from "@/features/not-found";',
+      "src/features/not-found/index.ts",
+    ],
+  ])("refuses %s: %s, a file of a feature but an eager page", (path, text, detail) => {
+    expect(rulesOf([{ path, text }])).toContain(`routes-draw-nothing: a route file imports no `);
+    expect(rulesOf([{ path, text }])).toContain(detail);
   });
 
   test("a type-only import is no load: a route may import its page's and a part's types", () => {
@@ -490,7 +533,7 @@ describe("layers", () => {
     ["src/shell/x.tsx", 'import { y } from "./y";', ["src/shell/y.ts", "export const y = 1;"]],
     ["src/shell/x.tsx", 'import { useState } from "react";', undefined],
     ["src/shell/x.tsx", 'import { Button } from "@legion/ui/components/button";', undefined],
-    ["src/shell/x.tsx", 'import { NeedsYouMark } from "@/features/needs-you";', undefined],
+    ["src/shell/x.tsx", 'import { NeedsYouMark } from "@/parts/needs-you";', undefined],
     [
       "src/features/x/route.tsx",
       'import type { PageLayout } from "@/shell/page-layout";',

@@ -1,5 +1,5 @@
 import { useInboxCount } from "@/data/inbox-count";
-import { needsYouLabel } from "@/features/needs-you";
+import { needsYouLabel } from "@/parts/needs-you";
 import type { RowCount } from "./row-count";
 
 /**

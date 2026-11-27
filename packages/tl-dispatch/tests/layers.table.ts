@@ -32,8 +32,7 @@ export type Rule = (typeof RULES)[number];
 export const ROWS = [
   [{ layer: "browser", paths: ["src/browser"] }],
   [{ layer: "upstream", paths: ["src/upstream"] }],
-  // Until the features move: src/features/read-failure.tsx.
-  [{ layer: "data", paths: ["src/data", "src/features/read-failure.tsx"] }],
+  [{ layer: "data", paths: ["src/data"] }],
   [
     { layer: "commands", paths: ["src/commands"] },
     { layer: "navigation", paths: ["src/navigation"] },
@@ -42,13 +41,7 @@ export const ROWS = [
   [{ layer: "parts", paths: ["src/parts/*"] }],
   [{ layer: "features", paths: ["src/features/*"] }],
   [{ layer: "shell", paths: ["src/shell"] }],
-  // Until the folders move: the machine login and not-found folders of src/pages.
-  [
-    {
-      layer: "routes",
-      paths: ["src/features/*/route.tsx", "src/features/*/route.ts", "src/pages"],
-    },
-  ],
+  [{ layer: "routes", paths: ["src/features/*/route.tsx", "src/features/*/route.ts"] }],
   [{ layer: "app", paths: ["src/app"] }],
 ] as const;
 
@@ -105,11 +98,17 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
 
 /**
  * The page modules that load before first paint, each with its reason: a page is eager because
- * its route imports its `page.tsx` statically, and an upstream view because its eager page
- * imports it. Every other page and upstream view loads with `import()`.
+ * its route imports its `page.tsx` statically, and a feature's other file or an upstream view
+ * because an eager page imports it. Every other page and upstream view loads with `import()`.
+ * `scripts/check-entry-modules.ts` reads this table too. A new entry is refused in review.
  */
 export const EAGER: Readonly<Record<string, string>> = {
   "src/features/inbox/page.tsx": "the home page draws at first paint, with no loading fallback",
+  "src/features/machine-login/page.tsx":
+    "upstream draws it at first paint; a lazy page would show the skeleton first",
+  "src/features/not-found/page.tsx":
+    "upstream draws it at first paint; a lazy page would show the skeleton first",
+  "src/features/not-found/not-found.tsx": "the not-found and machine login pages draw it",
   "src/upstream/views/inbox/inbox.tsx": "the home page draws it at first paint",
 };
 
@@ -123,9 +122,6 @@ export const ROUTE_IMPORTS: Readonly<Record<string, string>> = {
   "src/loading/lazy-named.ts": "the lazy element of the page",
   "src/upstream/queries.ts": "the page's first reads",
   "src/upstream/widgets/live-views.tsx": "LiveViewRoute draws nothing: the shell mounts live views",
-  "src/pages/machine-login/machine-login-route.tsx":
-    "drawn at first paint before the features move",
-  "src/pages/not-found/not-found.tsx": "drawn at first paint before the features move",
 };
 
 /** The files outside src/upstream that may import upstream's code, each with its reason. */
@@ -178,51 +174,44 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/commands/hotkey-tooltip.test.tsx": ["(not a literal)"],
   },
   "library-owners": {
-    "src/pages/machine-login/machine-login-route.tsx": ["@tanstack/react-query"],
-    "src/pages/machine-login/machine-logins.tsx": ["@tanstack/react-query"],
-    "src/pages/machine-login/use-machine-login.ts": ["@tanstack/react-query"],
-    "src/pages/machine-login/use-revoke.ts": ["@tanstack/react-query"],
+    "src/features/machine-login/page.tsx": ["@tanstack/react-query"],
+    "src/features/machine-login/machine-logins.tsx": ["@tanstack/react-query"],
+    "src/features/machine-login/use-machine-login.ts": ["@tanstack/react-query"],
+    "src/features/machine-login/use-revoke.ts": ["@tanstack/react-query"],
   },
   "seam-readers": {
     "src/features/agents/route.tsx": ["@/upstream/queries", "@/upstream/widgets/live-views"],
     "src/features/inbox/route.tsx": ["@/upstream/queries"],
     "src/features/issue/route.tsx": ["@/upstream/queries"],
     "src/features/priorities/route.tsx": ["@/upstream/queries"],
-    "src/pages/machine-login/decision-buttons.tsx": [
+    "src/features/machine-login/decision-buttons.tsx": [
       "@/upstream/api",
       "@/upstream/contract",
       "@/upstream/writes",
     ],
-    "src/pages/machine-login/machine-login-page.tsx": [
+    "src/features/machine-login/machine-login-page.tsx": [
       "@/upstream/api",
       "@/upstream/logic/machine-login",
-      "@/upstream/shell",
     ],
-    "src/pages/machine-login/machine-login-route.tsx": ["@/upstream/queries"],
-    "src/pages/machine-login/machine-logins.tsx": [
+    "src/features/machine-login/page.tsx": ["@/upstream/queries"],
+    "src/features/machine-login/machine-logins.tsx": [
       "@/upstream/contract",
       "@/upstream/logic/machine-login",
       "@/upstream/queries",
-      "@/upstream/shell",
-      "@/upstream/widgets/timestamp",
       "@/upstream/writes",
     ],
-    "src/pages/machine-login/record-facts.tsx": [
-      "@/upstream/contract",
-      "@/upstream/widgets/timestamp",
-    ],
-    "src/pages/machine-login/use-machine-login.ts": [
+    "src/features/machine-login/record-facts.tsx": ["@/upstream/contract"],
+    "src/features/machine-login/use-machine-login.ts": [
       "@/upstream/api",
       "@/upstream/contract",
       "@/upstream/queries",
       "@/upstream/writes",
     ],
-    "src/pages/machine-login/use-revoke.ts": [
+    "src/features/machine-login/use-revoke.ts": [
       "@/upstream/api",
       "@/upstream/contract",
       "@/upstream/queries",
       "@/upstream/writes",
     ],
-    "src/pages/not-found/not-found.tsx": ["@/upstream/shell"],
   },
 };

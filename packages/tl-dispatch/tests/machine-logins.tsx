@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import { MachineLoginPage } from "@/pages/machine-login/machine-login-page";
+import { MachineLoginPage } from "@/features/machine-login/machine-login-page";
 import type { LauncherCredentialResp, RecordResponse } from "@/upstream/contract";
 import { MemoryNavigationProvider } from "./navigation";
 

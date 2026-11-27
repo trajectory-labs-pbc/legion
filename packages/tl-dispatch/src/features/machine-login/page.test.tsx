@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { api } from "@/upstream/api";
 import { renderApp } from "../../../tests/app";
-import { MachineLoginRoute } from "./machine-login-route";
+import { MachineLoginRoute } from "./page";
 
 function renderRoute(): HTMLElement {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

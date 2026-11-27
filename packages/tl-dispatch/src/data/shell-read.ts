@@ -1,6 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { readFailureOf } from "@/features/read-failure";
 import type { RetryableFault } from "./read";
+import { readFailureOf } from "./read-failure";
 
 /** A read the shell draws: none while it is out or after it failed, and the failure then. */
 export interface ShellRead<T> {

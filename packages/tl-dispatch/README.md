@@ -12,11 +12,11 @@ replaces them one page at a time.
 | `src/navigation` | The router: each page's addresses (`routes.ts`), typed links, hooks and the route tree |
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
 | `src/browser` | The browser's storage (`storage.ts`, the one file that reads or writes it) and the unload prompt (`unload.ts`) |
-| `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed write; only it and the seam reach the network |
+| `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed read (`read-failure`, the alert with its Retry) or write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
-| `src/pages` | The parts of the two pages this app serves, machine login and not found, until they move to their features |
 | `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
-| `src/features` | Each page's folder, with its route file (`route.tsx`) and, where this app draws the page, its `page.tsx`; and, until they move, the domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
+| `src/parts` | The connected parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
+| `src/features` | Each page's folder, with its route file (`route.tsx`) and, where this app draws the page, its `page.tsx` |
 
 `tests/layers.table.ts` holds the layers and their rules as data, with the list of the imports
 that break a rule today, and `tests/layers.md` gives the reason for each rule and the questions
@@ -250,6 +250,9 @@ refuses to start it on a folder with no build.
   a `.each` table's first value gives one name for each row.
 - `bun run build && bun run check:entry-budget`: the entry chunk, with the chunks the page preloads beside it, stays within its budget. The
   shortcuts sheet and the tooltips are their own chunks for it.
+- `bun run build && bun run check:entry-modules`: no page loads before first paint, neither a
+  feature's file other than its route file nor an upstream view, except the modules `EAGER` in
+  `tests/layers.table.ts` names, and each of those does. It reads `.build/entry-modules.json`, which the build writes.
 - `bun run typecheck`, `bun run lint`.
 - `bun run test:browser`: the browser tests (`e2e/*.e2e.ts`) in the local mode. Upstream's
   harness (`packages/dispatch/e2e`) starts a Go server on this app's `dist` (`e2e/server.ts`),

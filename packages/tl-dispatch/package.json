@@ -16,6 +16,7 @@
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx biome check .",
     "check:entry-budget": "bun scripts/check-entry-budget.ts",
+    "check:entry-modules": "bun scripts/check-entry-modules.ts",
     "check:parity": "bun scripts/check-parity.ts",
     "postinstall": "bun ../ui/scripts/link-root-packages.ts ."
   },
