@@ -16,8 +16,8 @@ const BARS = [
 const TOP_LEVEL =
   "M4 1h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3ZM7.25 4v5h1.5V4ZM7.25 10.5V12h1.5v-1.5Z";
 
-/** A level as bars: monochrome, its filled part in the foreground and the rest muted. The caller
- *  gives the name a reader hears. */
+/** A level as bars: monochrome, its filled bars in the foreground and the rest a faint track, so
+ *  each level reads apart. The caller gives the name a reader hears. */
 function BarsGlyph({
   level,
   ...props
@@ -30,7 +30,7 @@ function BarsGlyph({
       ) : (
         BARS.map((bar, index) => (
           <rect
-            className={!dash && index < level ? "fill-foreground" : "fill-muted-foreground"}
+            className={dash ? "fill-muted-foreground" : index < level ? "fill-foreground" : "fill-track"}
             height={dash ? 1.5 : bar.height}
             key={bar.x}
             rx={dash ? 0.75 : 1}

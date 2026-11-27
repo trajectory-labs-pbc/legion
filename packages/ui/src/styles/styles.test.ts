@@ -663,4 +663,19 @@ describe("the theme", () => {
       "accent on popover"
     ).toBeGreaterThanOrEqual(1.3);
   });
+
+  it.each(
+    Object.entries(THEMES)
+  )("keeps a glyph's filled part apart from its track, and the track visible on each row fill, %s", (_name, tokens) => {
+    expect(
+      contrast(colour(tokens, "foreground"), colour(tokens, "track")),
+      "foreground on track"
+    ).toBeGreaterThanOrEqual(4.5);
+    for (const ground of ["background", "card", "popover", "secondary", "muted", "accent"]) {
+      expect(
+        contrast(colour(tokens, "track"), colour(tokens, ground)),
+        `track on ${ground}`
+      ).toBeGreaterThanOrEqual(1.3);
+    }
+  });
 });

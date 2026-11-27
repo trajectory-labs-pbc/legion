@@ -35,6 +35,7 @@ Measured on the content panel (`card`), light / dark: `secondary` 1.10 / 1.09, `
 | `border` | Dividers, the content panel's edge, an overlay's edge, a table's cells. |
 | `input` | The edge of a control: input, select, checkbox, outline button. It reaches 3:1 on the page, a card and `muted`. |
 | `sidebar-border` | The sidebar's dividers. |
+| `track` | A glyph's unfilled part: a priority's unfilled bars. It stays 4.5:1 or more from `foreground` and 1.3:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
 
 ## Text
 

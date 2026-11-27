@@ -14,10 +14,10 @@ describe("BarsGlyph", () => {
   });
 
   it.each([
-    [1, ["fill-foreground", "fill-muted-foreground", "fill-muted-foreground"]],
-    [2, ["fill-foreground", "fill-foreground", "fill-muted-foreground"]],
+    [1, ["fill-foreground", "fill-track", "fill-track"]],
+    [2, ["fill-foreground", "fill-foreground", "fill-track"]],
     [3, ["fill-foreground", "fill-foreground", "fill-foreground"]],
-  ] as const)("fills %p of its three bars, and mutes the rest", (level, expected) => {
+  ] as const)("fills %p of its three bars, and draws the rest as a track", (level, expected) => {
     render(<BarsGlyph label="Level" level={level} />);
     expect(fills(screen.getByRole("img"))).toEqual([...expected]);
   });
