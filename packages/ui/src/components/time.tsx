@@ -10,6 +10,8 @@ import {
 } from "#registry/legion/lib/format";
 import { textVariants } from "#registry/legion/lib/typography";
 
+const TIME = cn(textVariants({ size: "caption", tone: "muted" }), "shrink-0 tabular-nums");
+
 /** A past instant as its age at `now` ("5m"), muted and tabular, named in words ("5 minutes ago"),
  *  with the instant itself in its title. It does not tick: the caller renders it again with a
  *  later `now`. An invalid instant shows a dash. */
@@ -23,11 +25,7 @@ function Time({
   /** The instant the age is counted to. */
   now: Date;
 }) {
-  const classes = cn(
-    textVariants({ size: "caption", tone: "muted" }),
-    "shrink-0 tabular-nums",
-    className
-  );
+  const classes = cn(TIME, className);
   if (!isInstant(value)) {
     return (
       <span data-slot="time" className={classes}>

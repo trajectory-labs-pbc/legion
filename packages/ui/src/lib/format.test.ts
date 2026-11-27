@@ -68,4 +68,8 @@ describe("formatInstant", () => {
     );
     expect(words).toContain("2026");
   });
+
+  it("writes a dash for an invalid instant", () => {
+    expect(formatInstant(new Date(Number.NaN))).toBe(NO_INSTANT);
+  });
 });

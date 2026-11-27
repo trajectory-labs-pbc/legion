@@ -1,12 +1,16 @@
 // The one place a value part turns a datum into the words it shows.
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
 const UNITS: readonly (readonly [ms: number, short: string, word: string])[] = [
-  [365 * 24 * 60 * 60 * 1000, "y", "year"],
-  [30 * 24 * 60 * 60 * 1000, "mo", "month"],
-  [7 * 24 * 60 * 60 * 1000, "w", "week"],
-  [24 * 60 * 60 * 1000, "d", "day"],
-  [60 * 60 * 1000, "h", "hour"],
-  [60 * 1000, "m", "minute"],
+  [365 * DAY, "y", "year"],
+  [30 * DAY, "mo", "month"],
+  [7 * DAY, "w", "week"],
+  [DAY, "d", "day"],
+  [HOUR, "h", "hour"],
+  [MINUTE, "m", "minute"],
 ];
 
 /** What an invalid instant shows. */
@@ -47,7 +51,7 @@ const instantFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
-/** An instant as the reader's locale writes its date and its time. */
+/** An instant as the reader's locale writes its date and its time; an invalid one is a dash. */
 export function formatInstant(at: Date): string {
-  return instantFormat.format(at);
+  return isInstant(at) ? instantFormat.format(at) : NO_INSTANT;
 }
