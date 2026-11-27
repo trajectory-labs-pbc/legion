@@ -16,7 +16,7 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 | Token | Use |
 | --- | --- |
 | `background` | The frame: the window behind the content panel, the sidebar and its header. Also the panel of a dialog, an alert dialog, a sheet and a drawer. |
-| `sidebar` | In light, the same colour as `background`. In dark it is `card`'s colour, so the frame draws the sidebar on `background` (FR2). |
+| `sidebar` | The same colour as `background`, in light and in dark: the sidebar is part of the frame (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. |
 | `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
@@ -24,9 +24,9 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 | `sidebar-accent` | The hovered and the current row in the sidebar. |
 | `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast. |
 | `field` | The inside of an input. |
-| `scrim` | The backdrop of a modal overlay, at 50 %. |
+| `scrim` | The backdrop of a modal overlay, drawn as `bg-scrim/50`: 50 % black in light. In dark `scrim` is already 60 % black, so the backdrop is 30 %. |
 
-Measured on the content panel (`card`), light / dark: `secondary` 1.10 / 1.09, `muted` 1.15 / 1.16, `background` 1.21 / 1.11. The steps are small on purpose: a step separates, a border outlines.
+Measured on the content panel (`card`), light / dark: `secondary` 1.08 / 1.10, `muted` 1.13 / 1.15, `background` 1.11 / 1.07 (WCAG 2 contrast ratio against `card`). The steps are small on purpose: a step separates, a border outlines.
 
 ## Lines
 
@@ -64,7 +64,7 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 - Control heights: the steps of `CONTROL_HEIGHTS` in `packages/tl-dispatch/tests/control-scale.ts`, with `h-8` (32 px) the default; on a coarse pointer every control reaches `TOUCH_MIN_HEIGHT`. The design-rule tests read that file and refuse any other control height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
-- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. `SurfaceTitle` is the page's `h1`. `Heading` starts at `h2` and takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
+- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. On a page, `SurfaceTitle` is the `h1` and `Heading` starts at `h2`; inside an overlay, `OverlayOutline` makes the title an `h2` and the first `Heading` an `h3`. `Heading` takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
 
 | Recipe | Use |
 | --- | --- |
