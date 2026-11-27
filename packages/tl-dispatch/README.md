@@ -282,8 +282,9 @@ refuses to start it on a folder with no build.
   With the same scope, a Tab walk finds the focus outline at each Tab stop of each region but the
   account menu and the key tooltip; a region that holds no control is walked too, and must have no
   stop. Each page in `forkPages`, and the sign-in page, fits the window at 390, 768 and 1440 px,
-  and no box in it scrolls or clips content wider than itself, except a table wider than its
-  column, which may scroll inside its own box.
+  and no box in it scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
+  content wider than itself, except a table wider than its column, which may scroll inside its
+  own box. A box set to `overflow: hidden`, as cut text (`truncate`) is, is not read.
 - `bun run test:browser:deployed-local`: the deployed mode once, against a local stack that
   `e2e/local-stack.ts` starts as the local mode does and whose URL it prints, with a dev
   sign-in's storage state and an agent token with no scope.
