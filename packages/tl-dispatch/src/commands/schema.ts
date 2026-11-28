@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { DIALOG_SCOPE, type KeymapScope } from "@/upstream/keys";
 
-import { browserKeeps, chordStartsRight, clashChecker, malformed } from "./keys";
+import { browserKeeps, clashChecker, malformed, wrongChordStart } from "./keys";
 
 /** A section of the shortcuts sheet. Declare each once: the sheet compares groups by id. */
 export interface CommandGroup {
@@ -154,10 +154,8 @@ export function createCatalog<const Contexts extends readonly CommandContext[]>(
       const command: CatalogCommand = { ...definition, id, context: context.name };
       commands.set(id, command);
       for (const keys of definition.keys ?? []) {
-        const unreadable = malformed(keys);
-        if (unreadable !== undefined) problems.push(`"${id}": ${unreadable}`);
-        else if (!chordStartsRight(keys))
-          problems.push(`"${id}": the chord "${keys}" starts with neither G, O nor N`);
+        const refused = malformed(keys) ?? wrongChordStart(keys);
+        if (refused !== undefined) problems.push(`"${id}": ${refused}`);
         else if (browserKeeps(keys)) problems.push(`"${id}": the browser keeps "${keys}"`);
         else own.push({ command, keys });
       }

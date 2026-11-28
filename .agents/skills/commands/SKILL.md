@@ -14,7 +14,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 3. One gate per command: `enabled`. Keys, buttons, the palette and the sheet all obey it. Never test a permission or a state at the call site.
 4. Register one command for the record in view or the highlighted row. Never one command per record (`delete-${id}`).
 5. Put all the keys of one action in one command: `keys: ["j", "ArrowDown"]`. A tooltip shows the first key; the sheet shows all.
-6. A chord starts with `g` (go to a page), `o` (open a picker) or `n` (open a create form). The catalog refuses any other first step.
+6. A chord starts with `g` (go to a page) or `n` (open a create form). `o` alone opens a row's page, so no key sequence starts with `o`. The catalog refuses any other first step.
 7. Do not bind a key the browser keeps. The catalog refuses each key in `BROWSER_KEYS` (`src/commands/keys.ts`).
 8. An action with no safe key has no key. It is a palette command: `keys` empty or absent.
 9. A label follows TY8 in `.agents/skills/ui-design-system/references/surfaces-and-type.md`. The same label shows on every surface.

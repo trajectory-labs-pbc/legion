@@ -61,7 +61,7 @@ describe("upstream's key registrations", () => {
   });
 
   test("an O chord in the catalog clashes with the pages that bind O alone", () => {
-    const withPicker: CommandContext[] = [
+    const withOChord: CommandContext[] = [
       {
         name: "global",
         parent: null,
@@ -69,7 +69,7 @@ describe("upstream's key registrations", () => {
         commands: [{ name: "pick", label: "Pick", keys: ["o p"] }],
       },
     ];
-    const files = clashesWithUpstream(withPicker).map(
+    const files = clashesWithUpstream(withOChord).map(
       (clash) => clash.split(" and ")[1]?.split(":")[0]
     );
     expect(files).toEqual(
