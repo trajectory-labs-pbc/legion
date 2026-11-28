@@ -62,7 +62,8 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
 
   // From 1280 px the list scrolls in itself under the header, which stays; the page does not.
   const fold = main(page).getByRole("button", { name: /^Later/ });
-  await main(page).getByText(release.text).first().hover();
+  // The row's click area covers its words, so the pointer goes to the row.
+  await main(page).locator('[data-slot="list-row"]').filter({ hasText: release.text }).hover();
   await page.mouse.wheel(0, 4000);
   await expect(fold).toBeInViewport();
   await expect(newView(page)).toBeInViewport();
