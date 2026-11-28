@@ -167,8 +167,9 @@ function varNames(value: string): string[] {
   return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map((match) => match[1] as string);
 }
 
-/** The colours a left edge may take: the theme's neutral borders, or none. */
-const NEUTRAL_EDGE = new Set(["--border", "--sidebar-border", "--input"]);
+/** The colours a left edge may take: the theme's neutral borders, the muted fill that a row
+ *  card's edge takes, or none. */
+const NEUTRAL_EDGE = new Set(["--border", "--sidebar-border", "--input", "--muted"]);
 const LEFT_EDGE = /^border-(left|inline-start|inline)(-color)?$/;
 const LEFT_COLOUR = /^border-(left|inline-start|inline)-color$/;
 const LEFT_WIDTH = /^border-(left|inline-start|inline)-width$/;
@@ -352,8 +353,10 @@ async function classViolations(
     const circle = name !== undefined && utilityOf(name) === "rounded-full";
     const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
     const { property, value, context } = declaration;
-    // What a class sets on its children, as `divide-x` does, is not the element's own edge.
-    if (name !== undefined && !context.some((prelude) => prelude.includes(">"))) {
+    // What a class sets on its children, as `divide-x` does, is not the element's own edge. A
+    // media query's `>` (`md:` is `@media (width >= 48rem)`) names no child.
+    const onChildren = context.some((prelude) => !prelude.startsWith("@") && prelude.includes(">"));
+    if (name !== undefined && !onChildren) {
       if (LEFT_WIDTH.test(property) && !/^0(px)?$/.test(value)) stripes.leftWidths.add(name);
       if (property === "border-color" && colouredEdge(property, value)) {
         stripes.edgeColours.add(name);
