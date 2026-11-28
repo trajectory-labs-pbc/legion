@@ -46,7 +46,8 @@ export function PageSkeleton({ label = "Loading the page" }: { label?: string })
 
 /**
  * What the page outlet shows while a page's code loads, after a moment. React itself reveals the
- * page about 300 ms after this fallback committed, no sooner.
+ * page no sooner than about 290 ms after this fallback committed: its throttle is 300 ms and it
+ * commits at once when 10 ms or less remain.
  */
 export function PageFallback(): ReactNode {
   return useSkeleton(true) ? <PageSkeleton /> : null;
