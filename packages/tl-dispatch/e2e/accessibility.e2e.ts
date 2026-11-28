@@ -1,10 +1,10 @@
 // The axe run: each region the fork draws, in light and in dark, read by axe at WCAG 2.0 and 2.1
 // level A and AA, the tags upstream's accessibility.e2e.ts reads its pages at. A row fails on any
-// serious or critical finding, and accepts none. Each scan leaves out what upstream draws inside
-// the region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's
-// own axe run reads those. Fork elements passed into a marked component sit in a
-// `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
-// only: the deployed mode leaves this file out (modes.ts).
+// serious or critical finding, and accepts none. Each scan leaves out upstream's views inside the
+// region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's own
+// axe run reads those. Fork elements passed into a marked component sit in a `data-fork-view`
+// mark inside it, which the scan reads again. The run seeds, so it is local only: the deployed
+// mode leaves this file out (modes.ts).
 //
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
@@ -84,7 +84,8 @@ interface Finding {
   selector: string;
 }
 
-/** What every check leaves out of `region`: upstream's views, and the region's own `exclude`. */
+/** What every check leaves out of `region`: what the fork mounts in a `data-upstream-view`
+ *  wrapper, and the region's own `exclude`. */
 const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
 
 /** An open ask of the person's, so the Inbox and its counts draw a row and not an empty state. */
