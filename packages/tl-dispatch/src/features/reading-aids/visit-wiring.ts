@@ -32,7 +32,7 @@ export function visitWiring<Part, Aid>(name: string): VisitWiring<Part, Aid> {
       if (aid === undefined) throw new Error(`the editor has no ${name}`);
       return aid;
     },
-    start: (documentRef) => byDocument.get(documentRef),
+    start: () => undefined,
     attached: (documentRef, part) => {
       byDocument.set(documentRef, part);
     },

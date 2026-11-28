@@ -132,6 +132,11 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   white-space: normal;
 }
 
+.reading-aids-only-changes * {
+  position: relative !important;
+  top: 100px !important;
+}
+
 /* A head inside a part that "Only changes" folds folds with it. */
 .reading-aids-fold-head:has(+ .reading-aids-only-changes) {
   display: none;
