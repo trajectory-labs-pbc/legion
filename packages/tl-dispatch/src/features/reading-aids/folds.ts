@@ -10,6 +10,8 @@ import {
 } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet, type EditorView } from "@milkdown/kit/prose/view";
 
+import { measured } from "./timing";
+
 /** The meta of a transaction that asks each fold to open the block it names, by id. */
 export const REVEAL_BLOCK = "revealBlock";
 
@@ -218,16 +220,20 @@ export function foldsPlugin(name: string, folds: Folds): { key: FoldsKey; plugin
       init: (_config, state) => stateOf(state.doc, folds.folded(state.doc), NONE, className),
       apply: (transaction, value, _old, state: EditorState) => {
         const redraw = transaction.docChanged || transaction.getMeta(FOLDS_CHANGED) === true;
-        const folded = redraw ? folds.folded(state.doc) : value.folded;
-        const opened = foldsOpenedBy(transaction, folded);
-        if (!redraw && opened.size === 0) return value;
-        const pending = value.opened === recorded ? NONE : value.opened;
-        return stateOf(
-          state.doc,
-          folded,
-          pending.size === 0 ? opened : new Set([...pending, ...opened]),
-          className
-        );
+        const next = () => {
+          const folded = redraw ? folds.folded(state.doc) : value.folded;
+          const opened = foldsOpenedBy(transaction, folded);
+          if (!redraw && opened.size === 0) return value;
+          const pending = value.opened === recorded ? NONE : value.opened;
+          return stateOf(
+            state.doc,
+            folded,
+            pending.size === 0 ? opened : new Set([...pending, ...opened]),
+            className
+          );
+        };
+        // An edit or a new set redraws every fold, which is timed with the marks' work.
+        return redraw ? measured("folds", next) : next();
       },
     },
     props: {

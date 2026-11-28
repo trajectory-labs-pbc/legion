@@ -39,6 +39,7 @@ export const READ_MARK = "document-read";
 
 const visits = new Map<string, Visit>();
 const listeners = new Set<() => void>();
+const forgetListeners = new Set<() => void>();
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
@@ -63,6 +64,11 @@ export function visitOf(artifactId: string): Visit {
 export const useVisit = (artifactId: string): Visit =>
   useSyncExternalStore(subscribe, () => visitOf(artifactId));
 
+/** Runs `listener` each time the visits are forgotten. */
+export function onForget(listener: () => void): void {
+  forgetListeners.add(listener);
+}
+
 function update(artifactId: string, change: Partial<Visit>): void {
   visits.set(artifactId, { ...visitOf(artifactId), ...change });
   notify();
@@ -70,6 +76,7 @@ function update(artifactId: string, change: Partial<Visit>): void {
 
 function forget(): void {
   visits.clear();
+  for (const listener of forgetListeners) listener();
   notify();
 }
 

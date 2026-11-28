@@ -19,7 +19,8 @@ import {
 } from "./folds";
 import { drawnChanges, type Marked, markedBlocks } from "./marks-plugin";
 import { moveToBlock } from "./moves";
-import type { FoldedPart, OnlyChangesFolds, Visit } from "./visit";
+import { measured } from "./timing";
+import { type FoldedPart, type OnlyChangesFolds, onForget, type Visit } from "./visit";
 
 /** The class each block that "Only changes" folds takes beside the fold's own. */
 export const ONLY_CHANGES_FOLD = "reading-aids-only-changes";
@@ -146,6 +147,15 @@ const byView = new WeakMap<EditorView, OnlyChanges>();
 /** Each document's last attached visit choice, which a new editor of it starts from. */
 const byDocument = new Map<string, Visit["onlyChanges"]>();
 
+/** Each live editor's reset to no choice. */
+const resets = new Map<EditorView, () => void>();
+
+// A forgotten visit's choice ends in every editor; a drawn part then attaches the new visit.
+onForget(() => {
+  byDocument.clear();
+  for (const reset of resets.values()) reset();
+});
+
 /** The "Only changes" of an aided editor. */
 export function onlyChangesOf(view: EditorView): OnlyChanges {
   const only = byView.get(view);
@@ -251,6 +261,10 @@ function createOnlyChanges(view: EditorView, documentRef: string) {
     }
     return more;
   };
+  resets.set(view, () => {
+    visit = {};
+    changed();
+  });
   const only: OnlyChanges = {
     folded: () => new Set(visit.made?.folded),
     open: (blockIds) => {
@@ -304,11 +318,19 @@ function linesPlugin(
   let last: { doc: Node; folded: ReadonlySet<string>; lines: DecorationSet } | undefined;
   return new Plugin({
     key: new PluginKey("reading-aids-fold-lines"),
+    // A reconfigure also destroys a plugin's view, so only an editor's own end drops its reset.
+    view: (view) => ({
+      destroy: () =>
+        queueMicrotask(() => {
+          if (view.isDestroyed) resets.delete(view);
+        }),
+    }),
     props: {
       decorations: (state) => {
         const folded = foldedNow(foldsKey, state);
         if (last?.doc !== state.doc || last.folded !== folded) {
-          last = { doc: state.doc, folded, lines: drawLines(state.doc, folded, parts(), open) };
+          const lines = measured("folds", () => drawLines(state.doc, folded, parts(), open));
+          last = { doc: state.doc, folded, lines };
         }
         return last.lines;
       },

@@ -92,12 +92,13 @@ async function collectTimings(page: Page): Promise<() => Promise<Timing[]>> {
   };
 }
 
-/** The plugin's work for each transaction: its state's step and its update's sends after it. */
+/** The aids' work for each transaction: the marks' step, then the folds' and the marks' sends after it. */
 function perTransaction(seen: readonly Timing[]): number[] {
   const costs: number[] = [];
   for (const { detail, duration } of [...seen].sort((a, b) => a.start - b.start)) {
     if (detail === "transaction") costs.push(duration);
-    else if (detail === "send" && costs.length > 0) costs.push((costs.pop() ?? 0) + duration);
+    else if ((detail === "send" || detail === "folds") && costs.length > 0)
+      costs.push((costs.pop() ?? 0) + duration);
   }
   return costs;
 }

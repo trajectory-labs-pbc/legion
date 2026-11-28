@@ -9,7 +9,7 @@
     "build": "vite build",
     "test": "bun test --timeout 60000",
     "build:contracts": "bun run --cwd ../contracts build:dispatch",
-    "test:browser": "bun run build:contracts && vite build && bunx playwright test --config e2e/playwright.config.ts",
+    "test:browser": "bun run build:contracts && vite build && bunx playwright test --config e2e/playwright.config.ts change-timing -g \\\"Only changes on\\\" --repeat-each 3",
     "test:browser:switch": "DISPATCH_E2E_PROCESSES=2 bunx playwright test --config e2e/playwright.config.ts --output e2e/test-results/switch",
     "test:browser:deployed": "bun run build:contracts && bunx playwright test --config e2e/playwright.deployed.config.ts",
     "test:browser:deployed-local": "bun e2e/local-stack.ts",

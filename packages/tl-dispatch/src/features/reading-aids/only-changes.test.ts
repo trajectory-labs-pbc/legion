@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, expect, test } from "bun:test";
 import { TextSelection } from "@milkdown/kit/prose/state";
+import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import type { EditorHandle } from "@upstream-dispatch/features/doc/editor";
 import { warmMarkdownRenderer } from "@upstream-dispatch/features/refs/markdown-engine";
@@ -13,7 +14,7 @@ import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
 import { revealBlock, setFoldQuery } from "./folds";
 import { compareWith, drawnChanges } from "./marks-plugin";
 import { FOLD_LINE_ATTRIBUTE, ONLY_CHANGES_FOLD, onlyChangesOf } from "./only-changes";
-import { visitOf } from "./visit";
+import { recordReadMarks, visitOf } from "./visit";
 
 beforeAll(async () => {
   await warmMarkdownRenderer();
@@ -283,6 +284,31 @@ test("only-changes: a new editor of the document starts with the choice and its 
   expect(onlyChangesOf(again.view).isOn()).toBe(true);
   expect(folded(again)).toEqual(shown);
   expect(lines(again)).toEqual(shownLines);
+});
+
+test("only-changes: a sign-out ends the choice in every editor of the document, and a new editor starts without it", async () => {
+  const ydoc = new Y.Doc();
+  const { documentRef, handle, only } = await marked(RUNS(false), RUNS(true), ydoc);
+  only.toggle(undefined);
+  // A later reconfigure, as upstream's cursors make, destroys and remakes each plugin's view.
+  handle.view.updateState(
+    handle.view.state.reconfigure({ plugins: [...handle.view.state.plugins] })
+  );
+  await Promise.resolve();
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(["whoami"], { login: "ada" });
+  const stop = recordReadMarks(queryClient);
+  try {
+    // Another person signs in after a lapse; no part is drawn to attach a new visit.
+    queryClient.setQueryData(["whoami"], { login: "grace" });
+    await waitFor(() => expect(only.isOn()).toBe(false));
+    expect(folded(handle)).toEqual([]);
+    const again = await inProcessEditorIn(rootIn(HOST_ATTRIBUTE), documentRef, ydoc);
+    expect(onlyChangesOf(again.view).isOn()).toBe(false);
+    expect(folded(again)).toEqual([]);
+  } finally {
+    stop();
+  }
 });
 
 test("only-changes: a new baseline makes the folds again, and the old ones go", async () => {
