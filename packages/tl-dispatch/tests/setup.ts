@@ -1,7 +1,7 @@
 // Loaded before every test file, after upstream's preloads (bunfig.toml).
 import { afterEach, beforeEach } from "bun:test";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
-import { sidebarFolds } from "@/stores/sidebar-folds";
+import { resetStores } from "@/stores/persisted";
 import { resetWidth } from "./viewport";
 
 // The app loads the key tooltips' code after its first paint. Here it is in place before any
@@ -16,8 +16,5 @@ afterEach(() => {
 // Before, not after: a file's own afterEach that throws would skip a later reset.
 beforeEach(resetWidth);
 
-// A store keeps its state in memory between tests; each test starts from the store's first state.
-beforeEach(() => {
-  sidebarFolds.setState(sidebarFolds.getInitialState(), true);
-  sidebarFolds.persist.clearStorage();
-});
+// A store keeps its state in memory between tests; each test starts from each store's first state.
+beforeEach(resetStores);

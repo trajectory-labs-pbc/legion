@@ -2,8 +2,16 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { quietly } from "@/browser/storage";
 
-/** The prefix of each key of the fork's own, so none meets a key of upstream's. */
-export const FORK_PREFIX = "tl-dispatch.";
+/** The stored name of the fork's key `name`: under the fork's prefix, so it meets no key of upstream's. */
+export const forkKey = (name: string) => `tl-dispatch.${name}`;
+
+/** Each store's way back to its first state with its key removed. */
+const resets: (() => void)[] = [];
+
+/** Puts each store back to its first state and removes its key; the tests do it before each test. */
+export function resetStores(): void {
+  for (const reset of resets) reset();
+}
 
 interface StoreOptions<State> {
   /** The key's name, after the fork's prefix. */
@@ -21,7 +29,7 @@ interface StoreOptions<State> {
  */
 export function persistedStore<State extends object>(options: StoreOptions<State>) {
   const { initial, migrate, version } = options;
-  const name = `${FORK_PREFIX}${options.name}`;
+  const name = forkKey(options.name);
   // `persist` keeps the first state when a read throws, so only a write needs `quietly`.
   const storage = createJSONStorage(() => ({
     getItem: (key: string) => window.localStorage.getItem(key),
@@ -47,6 +55,10 @@ export function persistedStore<State extends object>(options: StoreOptions<State
   );
   window.addEventListener("storage", (event) => {
     if (event.key === name || event.key === null) void store.persist.rehydrate();
+  });
+  resets.push(() => {
+    store.setState(store.getInitialState(), true);
+    store.persist.clearStorage();
   });
   return store;
 }

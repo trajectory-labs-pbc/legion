@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
+import { withLocalStorage } from "../../tests/local-storage";
 import { moveOlderFolds, setFolded, sidebarFolds } from "./sidebar-folds";
 
 afterEach(() => {
@@ -37,25 +38,22 @@ describe("sidebar folds", () => {
   test("the old keys stay when the store's key cannot be written", () => {
     const real = window.localStorage;
     real.setItem(`${OLDER}Agents`, "true");
-    const full = {
+    const full: Storage = {
       get length() {
         return real.length;
       },
-      key: (index: number) => real.key(index),
-      getItem: (key: string) => real.getItem(key),
-      removeItem: (key: string) => real.removeItem(key),
+      key: (index) => real.key(index),
+      getItem: (key) => real.getItem(key),
+      removeItem: (key) => real.removeItem(key),
+      clear: () => real.clear(),
       setItem: () => {
         throw new DOMException("full", "QuotaExceededError");
       },
     };
-    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
-    Object.defineProperty(window, "localStorage", { configurable: true, get: () => full });
-    try {
-      expect(() => moveOlderFolds()).toThrow("full");
-    } finally {
-      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
-      else Object.defineProperty(window, "localStorage", kept);
-    }
+    withLocalStorage(
+      () => full,
+      () => expect(() => moveOlderFolds()).toThrow("full")
+    );
     expect(window.localStorage.getItem(`${OLDER}Agents`)).toBe("true");
   });
 

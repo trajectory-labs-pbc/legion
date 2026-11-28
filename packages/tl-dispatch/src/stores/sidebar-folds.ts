@@ -1,5 +1,5 @@
 import { quietly } from "@/browser/storage";
-import { FORK_PREFIX, persistedStore } from "./persisted";
+import { forkKey, persistedStore } from "./persisted";
 
 interface SidebarFolds {
   /** The headings of the folded sidebar sections. */
@@ -8,7 +8,7 @@ interface SidebarFolds {
 
 const NAME = "sidebar.folds";
 /** Version 0 kept one key for each folded heading, holding the text "true". */
-const OLDER_PREFIX = `${FORK_PREFIX}sidebar.folded.`;
+const OLDER_PREFIX = forkKey("sidebar.folded.");
 
 /**
  * Moves version 0's keys under the store's key, as version 0, when the store has no key yet. The
@@ -16,7 +16,7 @@ const OLDER_PREFIX = `${FORK_PREFIX}sidebar.folded.`;
  */
 export function moveOlderFolds(): void {
   const storage = window.localStorage;
-  const key = `${FORK_PREFIX}${NAME}`;
+  const key = forkKey(NAME);
   if (storage.getItem(key) !== null) return;
   const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index) ?? "");
   const older = keys.filter((each) => each.startsWith(OLDER_PREFIX));

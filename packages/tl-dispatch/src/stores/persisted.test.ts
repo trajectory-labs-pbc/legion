@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { FORK_PREFIX, persistedStore } from "./persisted";
+import { refused, withLocalStorage } from "../../tests/local-storage";
+import { forkKey, persistedStore } from "./persisted";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -16,7 +17,7 @@ function counterStore(version = 1) {
     initial: { count: 0 },
     migrate: () => ({ count: -1 }),
   });
-  return { key: `${FORK_PREFIX}${name}`, store };
+  return { key: forkKey(name), store };
 }
 
 const keep = (key: string, count: number, version: number) =>
@@ -70,21 +71,11 @@ describe("persistedStore", () => {
   });
 
   test("a browser that refuses storage keeps the state in memory, and nothing throws", () => {
-    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      get() {
-        throw new DOMException("refused", "SecurityError");
-      },
-    });
-    try {
+    withLocalStorage(refused, () => {
       const { store } = counterStore();
       expect(store.getState().count).toBe(0);
       expect(() => store.setState({ count: 4 })).not.toThrow();
       expect(store.getState().count).toBe(4);
-    } finally {
-      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
-      else Object.defineProperty(window, "localStorage", kept);
-    }
+    });
   });
 });

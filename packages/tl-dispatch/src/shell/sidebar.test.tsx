@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
+import { refused, withLocalStorage } from "../../tests/local-storage";
 import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
@@ -330,14 +331,7 @@ describe("the sidebar", () => {
   });
 
   test("a browser that refuses storage still folds a section", () => {
-    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      get() {
-        throw new DOMException("refused", "SecurityError");
-      },
-    });
-    try {
+    withLocalStorage(refused, () => {
       const container = mountView({
         destinations: [],
         pinnedAgents: readOf([]),
@@ -347,10 +341,7 @@ describe("the sidebar", () => {
       });
       settle(() => foldOf(container, "Projects").click());
       expect(openOf(container)).toEqual([false]);
-    } finally {
-      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
-      else Object.defineProperty(window, "localStorage", kept);
-    }
+    });
   });
 
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
