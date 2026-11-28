@@ -320,3 +320,11 @@ retracts its open ask, in both modes, and leaves its project, issue, document an
 The flow tests leave an issue each in the run's project: the live-event test's has its title
 changed, the unsent-write test's has its status set to todo, and the sign-out and switch tests'
 are as they were made, since their write never reaches Dispatch.
+
+The Inbox tests (`e2e/inbox/`) write some records as the signed-in person, because only a
+person can write them: an answer, a thread's root comment, a read mark, a snooze and a
+dismissal. Each test makes its own project, because three of them need a project that holds no
+row. When a test ends, it closes its issues, which withdraws their open asks, and it dismisses
+its threads. A deployed run keeps no row in the person's Inbox, but it leaves one project for
+each test, their closed issues, and in the person's name the answers, the thread roots and the
+dismissed threads.
