@@ -1,13 +1,13 @@
 // The outline: its room at two margin widths, its place beside the text, its marked entry and its
 // clicks and its counts.
-import type { Locator } from "@playwright/test";
-
 import { documentEditor } from "../../../dispatch/e2e/editor";
 import { marginShell } from "../../../dispatch/e2e/issue-page";
 import { userPreferenceStorageKey } from "../../../dispatch/web/src/features/shell/userPreference";
 import { personOf } from "../flows";
 import { expect, type Page, test } from "../test";
-import { counterOffset, HOST, openHost, seedHost, TEXT, topsApart } from "./hosts";
+import { seedEditedSpec } from "./baseline-seed";
+import { box, counterOffset, focusHost, openHost, seedHost, TEXT, topsApart } from "./hosts";
+import { ONLY_CHANGES_FOLD, onlyChangesOn } from "./only-changes-seed";
 import {
   ENTRIES,
   expectMovedTo,
@@ -24,12 +24,6 @@ import { focusOnHost } from "./read-first-seed";
 const article = (page: Page) => page.locator('article[aria-label="Document"]');
 
 const marked = (page: Page) => outline(page).locator('[aria-current="location"]');
-
-const box = async (locator: Locator) => {
-  const found = await locator.first().boundingBox();
-  if (found === null) throw new Error(`${locator} has no box`);
-  return found;
-};
 
 /** The theme's outline tokens, as the page computes them. */
 async function outlineTokens(page: Page): Promise<{ width: number; gap: number; room: number }> {
@@ -131,7 +125,7 @@ for (const margin of [384, 280]) {
     await expectStable(page, false);
     // The outline is out of the parts' flow: the text starts where it did.
     expect(await titleOffset(page)).toBeCloseTo(shownOffset, 0);
-    await page.locator(HOST).focus();
+    await focusHost(page);
     await page.keyboard.press("j");
     await expectMovedTo(page, "Title");
 
@@ -213,7 +207,7 @@ test("outline: a document with no heading draws no outline and gives j and k no 
   await openWide(page, TEXT);
   await setArticleWidth(page, (await outlineTokens(page)).room);
   await expectStable(page, false);
-  await page.locator(HOST).focus();
+  await focusHost(page);
   await page.keyboard.press("?");
   await expect(shortcutsSheet(page)).toBeVisible();
   await expect(shortcutsSheet(page)).not.toContainText("Next heading");
@@ -231,6 +225,23 @@ test("outline: a click on an entry moves to its heading and leaves the address a
   // With headings, the sheet lists the outline's keys.
   await page.keyboard.press("?");
   await expect(shortcutsSheet(page)).toContainText("Next heading");
+});
+
+test("outline: with Only changes on, a click on an entry whose heading a quiet section folds opens its part and moves to it", async ({
+  page,
+}) => {
+  const { path } = await seedEditedSpec(page, OUTLINE_TEXT, [
+    { find: "The later part, paragraph 1:", op: "replace", with: "The later part, paragraph one:" },
+  ]);
+  await page.setViewportSize({ height: 800, width: 1600 });
+  await openHost(page, path);
+  await onlyChangesOn(page);
+  const order = heading(page, "Order");
+  await expect(order).toContainClass(ONLY_CHANGES_FOLD);
+  await outline(page).getByRole("button", { name: "Order" }).click();
+  await expectMovedTo(page, "Order");
+  await expect(order).not.toContainClass(ONLY_CHANGES_FOLD);
+  await expect(order).toBeInViewport();
 });
 
 test("outline: each entry counts the changes and the open decisions in its range, an h2's with its subsections", async ({

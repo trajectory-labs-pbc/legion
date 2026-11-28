@@ -3,11 +3,20 @@
 export { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 export { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
 export { holdNotifications } from "@upstream-dispatch/__tests__/commits";
+export { fakeDocumentRuntime } from "@upstream-dispatch/__tests__/document-runtime";
 export { onFakeClock, realClock, settle, tick } from "@upstream-dispatch/__tests__/fake-clock";
+export { graphNode } from "@upstream-dispatch/__tests__/graph-fixture";
 export { details } from "@upstream-dispatch/__tests__/issue-picks";
 export { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
 export { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
 export { answerRequests } from "@upstream-dispatch/__tests__/network";
+export {
+  answerTextReadsWithTheSeededText,
+  artifact,
+  createQueryClient,
+  documentSurfaceHandlers,
+  renderProofDocument,
+} from "@upstream-dispatch/__tests__/proof-document";
 export { renderWithQueries } from "@upstream-dispatch/__tests__/query-provider";
 export { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
 export { userOnFakeClock } from "@upstream-dispatch/__tests__/user";

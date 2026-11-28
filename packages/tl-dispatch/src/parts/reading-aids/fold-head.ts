@@ -38,6 +38,39 @@ function span(className: string, text: string): HTMLSpanElement {
   return element;
 }
 
+/** A fold's row outside the text: one ghost button the width of the column. */
+export function foldRow(
+  tag: "div" | "li",
+  {
+    attribute,
+    blockId,
+    buttonClass,
+    className,
+    expanded,
+  }: {
+    attribute: string;
+    blockId: string;
+    buttonClass: string;
+    className: string;
+    expanded: boolean;
+  }
+): { button: HTMLButtonElement; row: HTMLElement } {
+  const row = document.createElement(tag);
+  row.className = className;
+  row.setAttribute(attribute, blockId);
+  row.setAttribute("contenteditable", "false");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = cn(
+    buttonVariants({ size: "sm", variant: "ghost" }),
+    "w-full justify-start",
+    buttonClass
+  );
+  button.setAttribute("aria-expanded", String(expanded));
+  row.append(button);
+  return { button, row };
+}
+
 /** The head's row: a button that reads the kind, name and start folded, and "Fold" open. */
 export function foldHead(
   node: Node,
@@ -45,17 +78,13 @@ export function foldHead(
   folded: boolean,
   toggle: (blockId: string) => void
 ) {
-  const row = document.createElement("div");
-  row.className = "reading-aids-fold-head";
-  row.setAttribute(FOLD_HEAD_ATTRIBUTE, blockId);
-  row.setAttribute("contenteditable", "false");
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = cn(
-    buttonVariants({ size: "sm", variant: "ghost" }),
-    "group w-full justify-start"
-  );
-  button.setAttribute("aria-expanded", String(!folded));
+  const { button, row } = foldRow("div", {
+    attribute: FOLD_HEAD_ATTRIBUTE,
+    blockId,
+    buttonClass: "group",
+    className: "reading-aids-fold-head",
+    expanded: !folded,
+  });
   button.append(
     span(
       cn(headingVariants({ size: "label", tone: "muted" }), "group-aria-expanded:sr-only"),
@@ -83,7 +112,6 @@ export function foldHead(
     )
   );
   button.addEventListener("click", () => toggle(blockId));
-  row.append(button);
   return row;
 }
 
