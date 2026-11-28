@@ -13,7 +13,15 @@ import type { ShellLayout } from "./use-shell-layout";
 
 /** Main: the page outlet, and the live views that outlive the route that opened them. */
 export function MainRegion({ shell }: { shell: ShellLayout }) {
-  const { fillsViewport, issueFrame, liveView, mainRef, pageFallback: Fallback, pathname } = shell;
+  const {
+    fillsViewport,
+    flush,
+    issueFrame,
+    liveView,
+    mainRef,
+    pageFallback: Fallback,
+    pathname,
+  } = shell;
   const { marginHidden, sidebarHidden } = shell.preferences;
   // The page takes the width of the frame: no sidebar and no margin column beside it.
   const fullWidth = issueFrame || (sidebarHidden && !(shell.hasMargin && !marginHidden));
@@ -23,8 +31,9 @@ export function MainRegion({ shell }: { shell: ShellLayout }) {
         issueFrame
           ? "min-h-dvh min-w-0 flex-1 bg-background outline-none md:pl-14"
           : cn(
-              "min-w-0 flex-1 p-6 outline-none",
-              fillsViewport ? "flex min-h-0 flex-col" : "pb-32 xl:pb-6"
+              "min-w-0 flex-1 outline-none",
+              flush ? undefined : "p-6",
+              fillsViewport ? "flex min-h-0 flex-col" : flush ? "pb-32 xl:pb-0" : "pb-32 xl:pb-6"
             )
       }
       data-shell-layout={fullWidth ? "full-width" : "standard"}

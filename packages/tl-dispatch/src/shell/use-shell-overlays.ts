@@ -4,6 +4,7 @@ import { NAV_DESTINATIONS } from "@/commands/destinations";
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
 import { routes } from "@/navigation/routes";
+import { useInboxPreview } from "@/stores/inbox-preview";
 import type { ShellNavigation } from "@/upstream/shell";
 import { useGlobalCommands } from "./global-commands";
 import type { ShellLayout } from "./use-shell-layout";
@@ -63,7 +64,10 @@ export function useShellOverlays(
       setNavigationOpen(false);
       run(...args);
     };
+  const inboxPreview = useInboxPreview();
   useGlobalCommands({
+    previewInbox: inboxPreview.on ? undefined : closing(() => inboxPreview.turn(true)),
+    leaveInboxPreview: inboxPreview.on ? closing(() => inboxPreview.turn(false)) : undefined,
     openSearch: closing(() => setSearchOpen(true)),
     toggleShortcuts: shortcuts.toggle,
     createIssue: closing(() => setCreateOpen(true)),

@@ -49,6 +49,8 @@ function Commands({ onPeek }: { onPeek?: () => void }) {
     toggleInboxDrawer: onPeek,
     toggleSidebar: undefined,
     toggleMargin: undefined,
+    previewInbox: run,
+    leaveInboxPreview: undefined,
   });
   return null;
 }

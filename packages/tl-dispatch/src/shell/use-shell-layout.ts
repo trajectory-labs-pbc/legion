@@ -31,6 +31,7 @@ export interface ShellLayout {
   /** The navigation is a drawer, not a sidebar. */
   inDrawer: boolean;
   fillsViewport: boolean;
+  flush: boolean;
   hasMargin: boolean;
   onInbox: boolean;
   project: string | undefined;
@@ -78,6 +79,7 @@ export function useShellLayout(): ShellLayout {
     pageFallback: pageFallbackOf(issueFrame, layout.issue),
     inDrawer: compact || issueFrame,
     fillsViewport,
+    flush: layout.flush === true,
     hasMargin: layout.margin === true,
     onInbox: layout.inbox === true,
     project: layout.project,

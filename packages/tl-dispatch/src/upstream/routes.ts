@@ -6,6 +6,7 @@ export {
   buildInboxPath,
   liveViewSessionOf,
   PERSON_PATH,
+  parseInboxSearch,
   parseIssuePath,
   parseProjectPath,
   routeFillsViewport,

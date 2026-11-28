@@ -21,6 +21,10 @@ export interface GlobalActions {
   toggleSidebar: (() => void) | undefined;
   /** The margin, or an issue's Details drawer with a label that says so; absent with neither. */
   toggleMargin: { label?: string; run: () => void } | undefined;
+  /** Absent while this browser shows the new Inbox. */
+  previewInbox: (() => void) | undefined;
+  /** Absent while this browser shows upstream's Inbox. */
+  leaveInboxPreview: (() => void) | undefined;
 }
 
 const off = (run: (() => void) | undefined): CommandState => ({
@@ -47,6 +51,8 @@ const useGlobalActions = defineActions(appCatalog, "global", (actions: GlobalAct
   "toggle-sidebar": off(actions.toggleSidebar),
   "toggle-margin": { ...off(actions.toggleMargin?.run), label: actions.toggleMargin?.label },
   "sign-out": off(actions.signOut),
+  "preview-inbox": off(actions.previewInbox),
+  "leave-inbox-preview": off(actions.leaveInboxPreview),
 }));
 
 /** Registers the catalog's global commands with what they do in the shell now. */

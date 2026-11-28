@@ -12,6 +12,7 @@ export {
   setAnswerDraft,
   useAnswerDraft,
 } from "@upstream-dispatch/features/inbox/answer-drafts";
+export { askIssueKey } from "@upstream-dispatch/features/inbox/ask-name";
 export {
   beginInboxFetch,
   clearPendingAskThreadInvalidation,
@@ -169,5 +170,6 @@ export {
   sameWriteScope,
   scopeKinds,
 } from "@upstream-dispatch/features/inbox/write-scope";
-export type { InboxRoute } from "@upstream-dispatch/features/refs/routes";
+export type { InboxGroupBy, InboxRoute } from "@upstream-dispatch/features/refs/routes";
+export { INBOX_FILTER_FIELDS } from "@upstream-dispatch/features/refs/routes";
 export { capSearchQuery } from "@upstream-dispatch/lib/query-param";

@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 
+import type { InboxListAddress } from "@/data/inbox/list";
 import { type PageAddress, type PageSearch, pageHref, type RoutePath } from "./page-route";
 import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from "./path";
 import { routerPath } from "./router-path";
+import { inboxAddress } from "./routes";
 
 /** Where a move goes on a page: its params, required where its path binds any, and search. */
 type PageTarget<Path extends string, Search extends string> = ParamsProp<Path> & {
@@ -57,6 +59,12 @@ export function usePageSearch<Search extends string>(
   }, [page, search]);
   if (match === null) throw new Error(`usePageSearch: the address is not on ${page.path}`);
   return values;
+}
+
+/** The Inbox's address, as the new Inbox reads it (`inboxAddress`). */
+export function useInboxAddress(): InboxListAddress {
+  const { search } = useLocation();
+  return useMemo(() => inboxAddress(search), [search]);
 }
 
 /** The address as text, for upstream's helpers that read it. */

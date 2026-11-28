@@ -10,6 +10,8 @@ import {
   PanelRightIcon,
   PlusIcon,
   SearchIcon,
+  SparklesIcon,
+  Undo2Icon,
 } from "lucide-react";
 import { navCommandDefinitions } from "./destinations";
 import { COMMAND_GROUPS } from "./groups";
@@ -98,6 +100,20 @@ export const APP_CONTEXTS = [
         group: COMMAND_GROUPS.layout,
       },
       { name: "sign-out", label: "Sign out", icon: LogOutIcon },
+      // Until the Inbox's last pull request: each shows only while it applies (R16). A label
+      // has four words at most, so R16's "Leave the new Inbox preview" drops "new".
+      {
+        name: "preview-inbox",
+        label: "Preview the new Inbox",
+        icon: SparklesIcon,
+        group: COMMAND_GROUPS.layout,
+      },
+      {
+        name: "leave-inbox-preview",
+        label: "Leave the Inbox preview",
+        icon: Undo2Icon,
+        group: COMMAND_GROUPS.layout,
+      },
     ],
   },
 ] as const satisfies readonly CommandContext[];

@@ -24,14 +24,14 @@ function RowAvatar({ facts }: { facts: InboxRowFacts }): ReactNode {
   const { actor } = facts;
   return (
     <span className="relative flex">
-      <Avatar className="size-9">
+      <Avatar size="row">
         <AvatarFallback>
           {actor.agent ? <Bot aria-hidden className="size-4" /> : actor.id.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <span
         aria-label={facts.kindLabel}
-        className="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full bg-background text-foreground"
+        className="absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-foreground"
         role="img"
       >
         <Kind aria-hidden className="size-3" />
@@ -72,6 +72,7 @@ export function RowSelectBox({
 /**
  * A row of the Inbox, in two lines: the unread dot before a thread's title, the owner and the
  * title, an ask's urgency bars at the right, and the preview over the time. An ask has no dot.
+ * A row in an urgency group shows no bars, because its group shows the urgency (LR7).
  */
 export function InboxRowView({
   facts,
@@ -79,6 +80,7 @@ export function InboxRowView({
   title,
   preview,
   now,
+  urgencyShown = true,
   ...props
 }: Omit<
   ComponentProps<typeof ListRow>,
@@ -93,6 +95,8 @@ export function InboxRowView({
   preview: ReactNode;
   /** The instant the row's age is counted to. */
   now: Date;
+  /** Whether an ask draws its urgency bars; not where its group shows the urgency. */
+  urgencyShown?: boolean;
 }): ReactNode {
   const unread = facts.kind === "thread" && facts.unread;
   return (
@@ -100,7 +104,7 @@ export function InboxRowView({
       description={preview}
       descriptionEnd={<Time now={now} value={facts.at} />}
       end={
-        facts.kind === "ask" ? (
+        facts.kind === "ask" && urgencyShown ? (
           <UrgencyBars priority={facts.priority} urgency={facts.urgency} />
         ) : undefined
       }
@@ -110,11 +114,11 @@ export function InboxRowView({
           {unread ? (
             <span
               aria-label="Unread"
-              className="mr-2 inline-block size-1.5 rounded-full bg-foreground align-middle"
+              className="mr-1.5 inline-block size-2 rounded-full bg-foreground align-middle"
               role="img"
             />
           ) : null}
-          {isDrawn(owner) ? <span className="mr-2">{owner}</span> : null}
+          {isDrawn(owner) ? <span className="mr-1 text-muted-foreground">{owner}</span> : null}
           <span>{title}</span>
         </>
       }

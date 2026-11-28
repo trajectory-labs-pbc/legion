@@ -46,7 +46,8 @@ export function ViewHeader({
           </nav>
         )
       }
-      title={title}
+      // When the first tab repeats the title, the tab shows it; the h1 keeps it for readers.
+      title={tabs[0]?.label === title ? <span className="sr-only">{title}</span> : title}
     />
   );
 }
