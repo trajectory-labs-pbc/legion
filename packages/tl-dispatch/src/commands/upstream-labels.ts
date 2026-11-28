@@ -1,4 +1,4 @@
-import type { KeymapScope } from "@upstream-dispatch/features/shell/keymap";
+import type { KeymapScope } from "@/upstream/keys";
 
 /** Our labels for upstream's bindings, by `scope:id`, where theirs do not fit the sheet. */
 export type UpstreamLabels = Readonly<

@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 import ts from "typescript";
-
 import { pages } from "@/pages/index";
 import { SRC_DIR } from "../source";
 import { parseScript } from "../typescript";
+import { DISPATCH_HREF_REFERENCES } from "../upstream";
 import {
   forkRoutes,
   linkFormProblems,

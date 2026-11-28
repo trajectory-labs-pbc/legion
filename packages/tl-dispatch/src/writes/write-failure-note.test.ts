@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { SendStoppedError } from "@upstream-dispatch/features/writes/keyed-write";
+import { SendStoppedError } from "@/upstream/writes";
 
 import { writeFailureNote } from "./write-failure-note";
 

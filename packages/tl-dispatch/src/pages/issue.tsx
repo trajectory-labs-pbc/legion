@@ -1,14 +1,10 @@
-import { issueQuery } from "@upstream-dispatch/api/queries";
-
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { issueQuery } from "@/upstream/queries";
 
 import type { Page } from "./page";
 
-const IssuePage = lazyNamed(
-  () => import("@upstream-dispatch/features/issue-page/IssuePage"),
-  "IssuePage"
-);
+const IssuePage = lazyNamed(() => import("@/upstream/views/issue"), "IssuePage");
 
 export const issue = {
   id: "issue",

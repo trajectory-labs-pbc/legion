@@ -1,5 +1,5 @@
-import { DIALOG_SCOPE, type KeymapScope } from "@upstream-dispatch/features/shell/keymap";
 import type { ComponentType } from "react";
+import { DIALOG_SCOPE, type KeymapScope } from "@/upstream/keys";
 
 import { browserKeeps, chordStartsRight, clashChecker, malformed } from "./keys";
 

@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import type { SignInChannel } from "@upstream-dispatch/features/shell/sign-in-channel";
 import { http } from "msw";
-
+import type { SignInChannel } from "@/upstream/data-hooks";
 import { render } from "../../tests/react";
+import { answerRequests } from "../../tests/upstream";
 import { useSignInChannel } from "./use-sign-in-channel";
 
 type Handlers = Parameters<SignInChannel["listen"]>[0];

@@ -7,6 +7,7 @@ replaces them one page at a time.
 
 | Folder | Holds |
 | --- | --- |
+| `src/upstream` | The seam: the one folder that imports upstream's code, one file for each subject, each a re-export by name, besides `mark.tsx` and the side-effect `write-kinds.ts`; each component a `views/` or `widgets/` file gives draws inside the mark, or is a name `UNMARKED` lists; `tests/upstream.ts` is the tests' door to upstream's test helpers |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it |
 | `src/navigation` | The router: typed links, hooks and the route tree |
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |

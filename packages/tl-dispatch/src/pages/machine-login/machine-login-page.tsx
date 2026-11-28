@@ -5,11 +5,13 @@ import { Input } from "@legion/ui/components/input";
 import { Label } from "@legion/ui/components/label";
 import { textVariants } from "@legion/ui/lib/typography";
 import { type ReactNode, useEffect, useRef } from "react";
+import { apiErrorMessage } from "@/upstream/api";
+import { machineName } from "@/upstream/logic/machine-login";
+import { useDocumentTitle } from "@/upstream/shell";
 import { WriteFailure } from "@/writes/write-failure";
 import { DecisionButtons } from "./decision-buttons";
 import { MachineLogins } from "./machine-logins";
 import { RecordFacts } from "./record-facts";
-import { apiErrorMessage, machineName, useDocumentTitle } from "./upstream";
 import { useMachineLogin } from "./use-machine-login";
 
 /** The login's decision, in place of the buttons that decide it. */

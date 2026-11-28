@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  DIALOG_SCOPE,
-  type Keymap,
-  type KeymapScope,
-  useKeymapScope,
-} from "@upstream-dispatch/features/shell/keymap";
+import { DIALOG_SCOPE, type Keymap, type KeymapScope, useKeymapScope } from "@/upstream/keys";
 
 import { testKeymap } from "../../tests/keymap";
 import { render } from "../../tests/react";

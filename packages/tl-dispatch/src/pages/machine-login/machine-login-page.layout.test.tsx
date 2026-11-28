@@ -1,8 +1,8 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ApiError } from "@upstream-dispatch/api/client";
-
+import { ApiError, api } from "@/upstream/api";
+import type { RecordResponse } from "@/upstream/contract";
 import {
   lookUpCode,
   machineLogin,
@@ -10,7 +10,6 @@ import {
   renderMachineLoginPage as renderPage,
 } from "../../../tests/machine-logins";
 import { formatMachineCode } from "./format-machine-code";
-import { api, type RecordResponse } from "./upstream";
 
 const record = pendingRecord();
 

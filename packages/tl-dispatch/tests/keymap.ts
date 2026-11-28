@@ -1,13 +1,7 @@
-import {
-  createKeymap,
-  DIALOG_SCOPE,
-  type Keymap,
-  type KeymapOptions,
-} from "@upstream-dispatch/features/shell/keymap";
-
 import { contextBindings } from "@/commands/bindings";
 import { trackEngineStack } from "@/commands/engine-stack";
 import type { Catalog, CommandSpecs } from "@/commands/schema";
+import { createKeymap, DIALOG_SCOPE, type Keymap, type KeymapOptions } from "@/upstream/keys";
 import { createLayerSource } from "./layers";
 import { settle } from "./react";
 

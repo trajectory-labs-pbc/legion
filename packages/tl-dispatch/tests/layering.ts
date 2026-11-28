@@ -1,4 +1,5 @@
-import { join, sep } from "node:path";
+import { join, posix, sep } from "node:path";
+import ts from "typescript";
 
 import {
   type Files,
@@ -21,9 +22,11 @@ import {
   ROWS,
   RULES,
   type Rule,
+  UNMARKED,
   UPSTREAM_DOORS,
 } from "./layers.table";
 import { PACKAGE_ROOT, REPO_ROOT, type SourceFile, TEST, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 
 export interface LayerViolation {
   file: string;
@@ -41,6 +44,8 @@ const NEVER_LOADED = new Map([
 const RUNTIME = new Set(["static", "dynamic", "require"]);
 const UI_PACKAGE = join(REPO_ROOT, "packages/ui");
 const INDEX = /^index\.[jt]sx?$/;
+/** The seam files whose components draw inside the upstream mark. */
+const MARKED_FILES = /^src\/upstream\/(views|widgets)\//;
 
 const patterns = new Map<string, RegExp>();
 
@@ -201,6 +206,135 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
   return [...broken, ...readerRules(from, to), ...orderRules(from, to), ...folderRules(from, to)];
 }
 
+interface Export {
+  name: string;
+  node: ts.Node;
+  /** False for a type, which draws nothing. */
+  value: boolean;
+}
+
+/** The names one statement exports; undefined for `export *` and `export * as`, which the rule cannot read. */
+function exportsOf(statement: ts.Statement): Export[] | undefined {
+  if (ts.isExportDeclaration(statement)) {
+    const clause = statement.exportClause;
+    if (clause === undefined || ts.isNamespaceExport(clause)) return undefined;
+    return clause.elements.map((element) => ({
+      name: element.name.text,
+      node: element,
+      value: !(statement.isTypeOnly || element.isTypeOnly),
+    }));
+  }
+  if (ts.isExportAssignment(statement)) return [{ name: "default", node: statement, value: true }];
+  const exported =
+    ts.canHaveModifiers(statement) &&
+    (ts.getModifiers(statement) ?? []).some(
+      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+    );
+  if (!exported || ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) {
+    return [];
+  }
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations.map((declaration) => ({
+      name: declaration.name.getText(),
+      node: declaration,
+      value: true,
+    }));
+  }
+  const name =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement)
+      ? statement.name?.text
+      : ts.isModuleDeclaration(statement) && ts.isIdentifier(statement.name)
+        ? statement.name.text
+        : undefined;
+  return [{ name: name ?? "default", node: statement, value: true }];
+}
+
+/** Each name a file imports, with the name it has in its module and the module's specifier. */
+function importedNames(source: ts.SourceFile): Map<string, { name: string; from: string }> {
+  const names = new Map<string, { name: string; from: string }>();
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+      continue;
+    }
+    const from = statement.moduleSpecifier.text;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings === undefined || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      names.set(element.name.text, { name: (element.propertyName ?? element.name).text, from });
+    }
+  }
+  return names;
+}
+
+/** Whether `from`, written in the file at `path`, names the mark. */
+const isMarkModule = (path: string, from: string) =>
+  from === "@/upstream/mark" ||
+  (from.startsWith(".") && posix.join(posix.dirname(path), from) === "src/upstream/mark");
+
+/** `const X = upstreamView(Y)`, with the mark's `upstreamView` and a `Y` imported from upstream. */
+function isMarked(
+  node: ts.Node,
+  path: string,
+  imported: ReadonlyMap<string, { name: string; from: string }>
+): boolean {
+  if (!ts.isVariableDeclaration(node) || !ts.isIdentifier(node.name)) return false;
+  if (node.initializer === undefined) return false;
+  const call = node.initializer;
+  if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression)) return false;
+  const mark = imported.get(call.expression.text);
+  const [argument, ...more] = call.arguments;
+  const component =
+    argument !== undefined && ts.isIdentifier(argument) ? imported.get(argument.text) : undefined;
+  return (
+    ts.isVariableDeclarationList(node.parent) &&
+    (node.parent.flags & ts.NodeFlags.Const) !== 0 &&
+    mark?.name === "upstreamView" &&
+    isMarkModule(path, mark.from) &&
+    more.length === 0 &&
+    component?.from.startsWith("@upstream-dispatch/") === true
+  );
+}
+
+/**
+ * Each value that a `views/` or `widgets/` file of the seam exports and that is not an
+ * `upstreamView(...)` call, a hook, a provider or a name that `unmarked` lists.
+ */
+export function unmarkedExports(
+  file: SourceFile,
+  unmarked: Readonly<Record<string, string>> = UNMARKED
+): LayerViolation[] {
+  if (!MARKED_FILES.test(file.path) || TEST.test(file.path)) return [];
+  const source = parseScript(file.path, file.text);
+  const at = (node: ts.Node, specifier: string, detail: string): LayerViolation => ({
+    file: file.path,
+    line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+    specifier,
+    rule: "views-are-marked",
+    detail,
+  });
+  const imported = importedNames(source);
+  return source.statements.flatMap((statement) => {
+    const names = exportsOf(statement);
+    if (names === undefined) {
+      return [at(statement, "*", "`export *` names nothing the rule can read; export each name")];
+    }
+    return names
+      .filter(
+        ({ name, node, value }) =>
+          value &&
+          !isMarked(node, file.path, imported) &&
+          !/^use[A-Z]/.test(name) &&
+          !name.endsWith("Provider") &&
+          !Object.hasOwn(unmarked, name)
+      )
+      .map(({ name, node }) =>
+        at(node, name, `${name} is not an upstreamView(...) call, a hook, a provider or listed`)
+      );
+  });
+}
+
 /** Each set of folders whose imports make a chain back to its start: Tarjan's components. */
 function cycles(edges: ReadonlyMap<string, ReadonlyMap<string, Import>>): string[][] {
   const order = new Map<string, number>();
@@ -265,6 +399,7 @@ export function layerViolations(files: readonly SourceFile[]): LayerViolation[] 
         detail: `${from.folder} has its index at its root`,
       });
     }
+    violations.push(...unmarkedExports(file));
     for (const entry of importsOf(join(PACKAGE_ROOT, file.path), disk, cache)) {
       for (const [rule, detail] of rulesFor(from, entry)) {
         violations.push({ ...at(file.path, entry), rule, detail });

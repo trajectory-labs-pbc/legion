@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { inboxQuery, myRepliesCountQuery, whoAmIQuery } from "@upstream-dispatch/api/queries";
-import { credentialPendingQuery } from "@upstream-dispatch/features/credentials/pending";
-import { useNeedsYouCount } from "@upstream-dispatch/features/inbox/BlockedOnYou";
 import { needsYouLabel } from "@/features/needs-you";
 import { readFailureOf } from "@/features/read-failure";
+import { useNeedsYouCount } from "@/upstream/data-hooks";
+import {
+  credentialPendingQuery,
+  inboxQuery,
+  myRepliesCountQuery,
+  whoAmIQuery,
+} from "@/upstream/queries";
 import type { RowCount } from "./row-count";
 
 /**

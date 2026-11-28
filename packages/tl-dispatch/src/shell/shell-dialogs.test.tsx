@@ -1,16 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
-import {
-  closeRefPreview,
-  referenceTriggerProps,
-} from "@upstream-dispatch/features/refs/RefPreview";
 import { act } from "react";
 import { Link } from "react-router-dom";
-
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdReads, holdShellReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";
+import { closeRefPreview, referenceTriggerProps } from "../../tests/upstream";
 import { ShellDialogs } from "./shell-dialogs";
 
 const noop = () => {};
@@ -70,7 +66,7 @@ describe("ShellDialogs", () => {
     mounted.push(view);
     // The shell loads the dialog's code when it mounts.
     await act(async () => {
-      await import("@upstream-dispatch/features/issue/CreateIssueDialog");
+      await import("@/upstream/widgets/create-issue");
     });
     expect(form()).toBeNull();
     view.rerender(wrapped(true));

@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  liveViewSessionOf,
-  parseIssuePath,
-  parseProjectPath,
-} from "@upstream-dispatch/features/refs/routes";
-
 import { pageAt } from "@/pages/index";
+import { liveViewSessionOf, parseIssuePath, parseProjectPath } from "@/upstream/routes";
 import { openOf, priorityFaults } from "./sidebar-data";
 
 describe("openOf", () => {

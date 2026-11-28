@@ -1,12 +1,11 @@
-import type { ShellNavigation } from "@upstream-dispatch/features/issue-page/shell-navigation";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
 import { inbox } from "@/pages/inbox";
 import { machineLogin } from "@/pages/machine-login";
 import { project } from "@/pages/project";
+import type { ShellNavigation } from "@/upstream/shell";
 import { useGlobalCommands } from "./global-commands";
 import { NAV_PAGES } from "./nav-pages";
 import type { ShellLayout } from "./use-shell-layout";

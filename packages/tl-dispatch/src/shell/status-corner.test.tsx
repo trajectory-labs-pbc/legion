@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, jest, spyOn, test } from "bun:test";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { onFakeClock } from "@upstream-dispatch/__tests__/fake-clock";
-import { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
-import { liveSocketFor } from "@upstream-dispatch/api/live-socket";
-import { createDraftStore, DRAFT_KEPT_UNITS } from "@upstream-dispatch/features/inbox/draft-store";
-
+import { liveSocketFor } from "@/upstream/live";
 import { mount } from "../../tests/mount";
 import { settle } from "../../tests/react";
+import {
+  createDraftStore,
+  DRAFT_KEPT_UNITS,
+  installFakeLiveSockets,
+  onFakeClock,
+} from "../../tests/upstream";
 import { pressWrite, signedInClient } from "../../tests/writes";
 import { StatusCorner } from "./status-corner";
 import type { SignOut } from "./use-sign-out";

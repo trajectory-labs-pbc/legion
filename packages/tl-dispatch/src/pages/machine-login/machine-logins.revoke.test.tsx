@@ -7,15 +7,17 @@ import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
-import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
-import { stopTheLateWrite } from "@upstream-dispatch/__tests__/stop-late-write";
-import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
-import { ApiError, NetworkError } from "@upstream-dispatch/api/client";
-
+import { ApiError, api, NetworkError } from "@/upstream/api";
+import { stoppedWriteNote } from "@/upstream/writes";
 import { confirmRevoke } from "../../../tests/machine-logins";
+import {
+  keyedAttempt,
+  realClock,
+  stopTheLateWrite,
+  tick,
+  userOnFakeClock,
+} from "../../../tests/upstream";
 import { MachineLogins } from "./machine-logins";
-import { api, stoppedWriteNote } from "./upstream";
 
 const heading = "Machine logins";
 const empty = "No live machine logins.";

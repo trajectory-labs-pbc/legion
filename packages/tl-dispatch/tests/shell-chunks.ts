@@ -14,6 +14,6 @@ export function chunksArrive(...loads: (() => Promise<unknown>)[]): Promise<void
 /** The chunks the shell itself draws lazily: upstream's margin and the account's menu. */
 export const shellChunksArrive = () =>
   chunksArrive(
-    () => import("@upstream-dispatch/features/margin/Margin"),
+    () => import("@/upstream/widgets/margin"),
     () => import("@/shell/account-menu")
   );

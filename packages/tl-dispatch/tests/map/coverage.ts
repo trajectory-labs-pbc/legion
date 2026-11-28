@@ -1,10 +1,12 @@
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
+import ts from "typescript";
 
 import { pages } from "@/pages/index";
 import type { Page } from "@/pages/page";
 import { sharedViews, shellViews, widgetViews } from "@/views";
 import { type Files, filesWith, importsOf, resolutionCache } from "../imports";
 import { PACKAGE_ROOT, SRC_DIR, sourceFiles, UPSTREAM_WEB } from "../source";
+import { literal, parseScript } from "../typescript";
 import { pageFile, upstreamScripts } from "./source";
 
 export interface Owner {
@@ -97,14 +99,10 @@ export function ownOwner(file: string, pageFiles: readonly { file: string; id: s
 }
 
 /**
- * The files `file` loads at run time, type-only imports aside. An import that resolves to no file
- * and no package throws, so the map never drops an edge the build follows.
+ * The imports `file` follows at run time, type-only imports aside. An import that resolves to no
+ * file and no package throws, so the map never drops an edge the build follows.
  */
-export function loadedFiles(
-  file: string,
-  files: Files = filesWith(),
-  cache = resolutionCache()
-): string[] {
+function loadedImports(file: string, files: Files, cache: ts.ModuleResolutionCache) {
   return importsOf(file, files, cache).flatMap((entry) => {
     if (entry.kind === "type") return [];
     if (!entry.resolved) {
@@ -112,31 +110,115 @@ export function loadedFiles(
         `${file}:${entry.line}: ${entry.specifier ?? "an import"} resolves to no file and no package, so the view map cannot follow it`
       );
     }
-    return entry.file === undefined ? [] : [entry.file];
+    const target = entry.file;
+    return target === undefined ? [] : [{ ...entry, file: target }];
   });
 }
 
+/** The files `file` loads at run time, type-only imports aside. */
+export function loadedFiles(
+  file: string,
+  files: Files = filesWith(),
+  cache = resolutionCache()
+): string[] {
+  return loadedImports(file, files, cache).map((entry) => entry.file);
+}
+
+const SEAM_DIR = join(SRC_DIR, "upstream");
+
+/** The path the graph follows a file by: upstream's under `web/src`, the seam's from this package. */
+function followed(file: string): string | undefined {
+  if (file.startsWith(SEAM_DIR + sep)) return relative(PACKAGE_ROOT, file);
+  return file.startsWith(UPSTREAM_WEB + sep) ? relative(UPSTREAM_WEB, file) : undefined;
+}
+
 /**
- * For each script under upstream's `features/`, what loads it at run time: an upstream file by its
- * path under `web/src`, a file of this app by its owner.
+ * Each value a seam file gives, with the file it comes from: the module it re-exports the name
+ * from, or the module of the component that an `upstreamView(...)` const wraps.
  */
-export function importGraph(): Map<string, string[]> {
-  const files = filesWith();
+function seamNames(
+  file: string,
+  files: Files,
+  cache: ts.ModuleResolutionCache
+): Map<string, string> {
+  const targets = new Map(loadedImports(file, files, cache).map((e) => [e.specifier, e.file]));
+  const source = parseScript(file, files.text(file) ?? "");
+  const imported = new Map<string, string>();
+  const given = new Map<string, string>();
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) continue;
+    const target = targets.get(literal(statement.moduleSpecifier));
+    const bindings = ts.isImportDeclaration(statement)
+      ? statement.importClause?.namedBindings
+      : statement.exportClause;
+    if (target === undefined || bindings === undefined || !("elements" in bindings)) continue;
+    const names = ts.isImportDeclaration(statement) ? imported : given;
+    for (const element of bindings.elements) names.set(element.name.text, target);
+  }
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const { name, initializer } of statement.declarationList.declarations) {
+      const [argument] =
+        initializer !== undefined && ts.isCallExpression(initializer) ? initializer.arguments : [];
+      const target =
+        argument !== undefined && ts.isIdentifier(argument)
+          ? imported.get(argument.text)
+          : undefined;
+      if (ts.isIdentifier(name) && target !== undefined) given.set(name.text, target);
+    }
+  }
+  return given;
+}
+
+/**
+ * For each script under upstream's `features/` and under the seam, what loads it at run time: an
+ * upstream or seam file by its path, any other file of this app by its owner. A file that takes
+ * names from a seam file loads only the modules behind those names, or the whole file for a name
+ * it cannot place. `overlay` adds files.
+ */
+export function importGraph(
+  overlay: ReadonlyMap<string, string> = new Map()
+): Map<string, string[]> {
+  const files = filesWith(overlay);
   const cache = resolutionCache();
   const own = pages.map((page) => ({ file: pageFile(page.id), id: page.id }));
-  const scripts = [
+  const scripts = new Set([
     ...upstreamScripts(join(UPSTREAM_WEB, "features")),
     ...sourceFiles()
       .filter((file) => /\.tsx?$/.test(file.path))
       .map((file) => join(PACKAGE_ROOT, file.path)),
-  ];
+    ...overlay.keys(),
+  ]);
+  const seams = new Map<string, Map<string, string>>();
+  const namesOf = (seam: string) => {
+    const found = seams.get(seam) ?? seamNames(seam, files, cache);
+    seams.set(seam, found);
+    return found;
+  };
   const graph = new Map<string, string[]>();
-  for (const file of scripts) {
-    const ref = file.startsWith(SRC_DIR) ? ownOwner(file, own) : relative(UPSTREAM_WEB, file);
-    for (const target of loadedFiles(file, files, cache)) {
-      const loaded = relative(UPSTREAM_WEB, target);
-      if (loaded.startsWith("features/")) graph.set(loaded, [...(graph.get(loaded) ?? []), ref]);
+  const add = (target: string, ref: string) => {
+    const loaded = followed(target);
+    if (loaded !== undefined && /^(features|src\/upstream)\//.test(loaded)) {
+      graph.set(loaded, [...(graph.get(loaded) ?? []), ref]);
     }
+  };
+  for (const file of scripts) {
+    const ref = followed(file) ?? ownOwner(file, own);
+    for (const entry of loadedImports(file, files, cache)) {
+      const names = entry.file.startsWith(SEAM_DIR + sep) ? entry.names : undefined;
+      if (names === undefined) add(entry.file, ref);
+      for (const name of names ?? []) {
+        const target = namesOf(entry.file).get(name);
+        add(target ?? entry.file, ref);
+      }
+    }
+  }
+  // A seam file that no file loads whole loads only through the names its readers take.
+  for (const [file, refs] of graph) {
+    graph.set(
+      file,
+      refs.filter((ref) => !ref.startsWith("src/upstream/") || graph.has(ref))
+    );
   }
   return graph;
 }

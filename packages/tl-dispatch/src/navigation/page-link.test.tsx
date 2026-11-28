@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-query";
 import { fireEvent, render } from "@testing-library/react";
-import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
-import { renderWithQueries } from "@upstream-dispatch/__tests__/query-provider";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { MemoryNavigationProvider } from "../../tests/navigation";
+import { quietConsoleError, renderWithQueries } from "../../tests/upstream";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
 import { pageRoute, prefetchOf } from "./page-route";
 

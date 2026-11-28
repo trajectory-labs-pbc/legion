@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { act, render } from "@testing-library/react";
-import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
+import { quietConsoleError } from "../../tests/upstream";
 
 import { lazyOverlay, lazyRegion } from "./lazy-region";
 

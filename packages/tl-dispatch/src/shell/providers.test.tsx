@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
 import { http } from "msw";
-
 import { useAddress } from "@/navigation/hooks";
 import { json, waitFor } from "../../tests/network";
 import { render, settle } from "../../tests/react";
+import { answerRequests } from "../../tests/upstream";
 import { AppProviders } from "./providers";
 
 const start = `${window.location.pathname}${window.location.search}`;

@@ -1,5 +1,5 @@
-import { appKeymap } from "@upstream-dispatch/features/shell/keymap";
 import { useCallback, useState } from "react";
+import { appKeymap } from "@/upstream/keys";
 
 import { appCatalog } from "./app-catalog";
 import { appStack } from "./engine-stack";

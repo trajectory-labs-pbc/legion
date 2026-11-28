@@ -3,14 +3,8 @@ import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const DeliveryPage = lazyNamed(
-  () => import("@upstream-dispatch/features/delivery/DeliveryPage"),
-  "DeliveryPage"
-);
-const PipelinePage = lazyNamed(
-  () => import("@upstream-dispatch/features/delivery/PipelinePage"),
-  "PipelinePage"
-);
+const DeliveryPage = lazyNamed(() => import("@/upstream/views/delivery/delivery"), "DeliveryPage");
+const PipelinePage = lazyNamed(() => import("@/upstream/views/delivery/pipeline"), "PipelinePage");
 
 export const delivery = {
   id: "delivery",

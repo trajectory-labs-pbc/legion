@@ -1,18 +1,21 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
-import { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import type { EventPages } from "@upstream-dispatch/api/event-feed";
-import { liveSocketFor } from "@upstream-dispatch/api/live-socket";
-import type { DispatchEvent } from "@upstream-dispatch/api/types";
-import { answerDraft, setAnswerDraft } from "@upstream-dispatch/features/inbox/answer-drafts";
-import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { http, type RequestHandler } from "msw";
+import type { DispatchEvent } from "@/upstream/contract";
+import type { EventPages } from "@/upstream/live";
+import { liveSocketFor } from "@/upstream/live";
+import { writesOf } from "@/upstream/writes";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdReads, json } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
+import {
+  answerDraft,
+  answerRequests,
+  installFakeLiveSockets,
+  setAnswerDraft,
+} from "../../tests/upstream";
 import { pressWrite, reader } from "../../tests/writes";
 import { AuthGate } from "./auth-gate";
 

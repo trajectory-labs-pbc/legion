@@ -1,9 +1,10 @@
 // The axe run: each region the fork draws, in light and in dark, read by axe at WCAG 2.0 and 2.1
 // level A and AA, the tags upstream's accessibility.e2e.ts reads its pages at. A row fails on any
 // serious or critical finding, and accepts none. Each scan leaves out what upstream draws inside
-// the region: the widgets and pages the fork mounts in a `data-upstream-view` wrapper, and an
-// upstream page in the issue frame's main region. Upstream's own axe run reads those. The run
-// seeds, so it is local only: the deployed mode leaves this file out (modes.ts).
+// the region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's
+// own axe run reads those. Fork elements passed into a marked component sit in a
+// `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
+// only: the deployed mode leaves this file out (modes.ts).
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -31,6 +32,7 @@ const MAIN = '[data-testid="main-content"]';
 const SIDEBAR = '[data-testid="sidebar"]';
 const STATUS_CORNER = 'div:has(> [data-testid="connection-status"])';
 const UPSTREAM_VIEW = "[data-upstream-view]";
+const FORK_VIEW = "[data-fork-view]";
 
 interface Region {
   name: string;
@@ -91,10 +93,12 @@ async function seedMachineLogin(): Promise<void> {
 }
 
 /** Holds every request to `url` unanswered. */
-const hold = (url: string) => async (page: Page) => {
+const hold = (url: string | RegExp) => async (page: Page) => {
   await page.route(url, () => undefined);
 };
-const ISSUE_CHUNK = "**/assets/IssuePage-*.js";
+/** A page view's chunk, named for its seam file: `views/issue.tsx` builds `issue-<hash>.js`. */
+const viewChunk = (name: string) => new RegExp(`/assets/${name}-[\\w-]{8}\\.js$`, "u");
+const ISSUE_CHUNK = viewChunk("issue");
 /** The new issue page, which the shell draws in the issue frame. */
 const issueFrameOn = (page: Page) => withIssuePage(page.context(), "alice");
 const issueHref = (title: string) => async (page: Page) => `/issues/${await runIssue(page, title)}`;
@@ -242,7 +246,7 @@ const regions: readonly Region[] = [
     name: "page fallback",
     href: "/machines",
     selector: MAIN,
-    prepare: hold("**/assets/MachinesPage-*.js"),
+    prepare: hold(viewChunk("machines")),
     ready: (page) => [page.getByRole("status", { name: "Loading the page" })],
     settles: false,
   },
@@ -322,6 +326,15 @@ async function openRegion(page: Page, region: Region): Promise<void> {
   }
 }
 
+/**
+ * The fork elements inside an upstream mark of `region`, outside what the row leaves out. The
+ * nearest mark decides, so axe reads them again; an upstream mark inside them stays out.
+ */
+const forkViewsOf = (region: Region) =>
+  `${region.selector} ${UPSTREAM_VIEW} ${FORK_VIEW}${(region.exclude ?? [])
+    .map((selector) => `:not(${selector}, ${selector} *)`)
+    .join("")}`;
+
 /** The serious and critical findings in `region`, in light and dark. */
 async function scan(page: Page, region: Region): Promise<Finding[]> {
   // As upstream's run: no colour is read part-way through a transition after the scheme changes.
@@ -339,6 +352,9 @@ async function scan(page: Page, region: Region): Promise<Finding[]> {
       .exclude(UPSTREAM_VIEW)
       .withTags(AXE_TAGS);
     for (const selector of region.exclude ?? []) builder.exclude(selector);
+    // Axe refuses an include that matches nothing.
+    const forkViews = forkViewsOf(region);
+    if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
     const results = await builder.analyze();
     await test.info().attach(`axe ${region.name} ${scheme}.json`, {
       body: JSON.stringify(results, null, 2),
@@ -381,13 +397,15 @@ test.describe("signed out", () => {
 });
 
 // The run's own controls, on the machine login page: an input with no label fails the scan in the
-// fork's region, and passes in an upstream widget's wrapper, which the scan leaves out.
-const appendInput = (page: Page, parent: string) =>
-  page.locator(parent).evaluate((at) => at.append(document.createElement("input")));
+// fork's page, which main draws inside upstream's error boundary and its `ForkView`, and passes in
+// an upstream widget's mark, which the scan leaves out. Without that `ForkView` the page is under
+// the boundary's mark alone, and the first control passes, so it fails.
+const appendInput = (parent: Locator) =>
+  parent.evaluate((at) => at.append(document.createElement("input")));
 
 test("an input without its label fails the scan in a fork region", async ({ page }) => {
   await openRegion(page, machineLogin);
-  await appendInput(page, MAIN);
+  await appendInput(heading(page, "Enter machine login code").locator(".."));
   const findings = await scan(page, machineLogin);
   expect(findings.map(({ rule, impact, scheme }) => ({ rule, impact, scheme }))).toEqual([
     { rule: "label", impact: "critical", scheme: "light" },
@@ -399,7 +417,8 @@ test("an input without its label inside an upstream widget's wrapper is left out
   page,
 }) => {
   await openRegion(page, machineLogin);
-  await appendInput(page, `${MAIN} ${UPSTREAM_VIEW}`);
+  // The live views' mark, the last child of main.
+  await appendInput(page.locator(`${MAIN} > ${UPSTREAM_VIEW}`).last());
   await expect(page.locator(`${MAIN} ${UPSTREAM_VIEW} > input`)).toHaveCount(1);
   expect(await scan(page, machineLogin)).toEqual([]);
 });

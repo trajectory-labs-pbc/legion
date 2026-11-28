@@ -59,7 +59,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 ## Scopes and overlays
 
-The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`). `src/commands/engine-stack.ts` follows the engine's scope stack and the overlays over the page, and `bindings.ts` writes a context's commands as the engine's bindings.
+The app compiles the catalog to upstream's key engine (`@upstream-dispatch/features/shell/keymap`, through the seam file `src/upstream/keys.ts`). `src/commands/engine-stack.ts` follows the engine's scope stack and the overlays over the page, and `bindings.ts` writes a context's commands as the engine's bindings.
 
 - `src/commands/focused-overlay.ts` reads the overlays from the DOM, by the `data-slot` of a `packages/ui` popup, in the order the page stacks them: each open dialog, alert dialog and sheet, then each menu, popover or select the focus is inside. A tooltip or hover card is none. The page's keys and the global ones stop under them.
 - An overlay is one of three kinds. A `passthrough` one lets the global commands run: a popup with the `data-global-keys` attribute, as the navigation drawer's has. An `alert-dialog` stops every command. Any other stops all but the `under-all` ones.

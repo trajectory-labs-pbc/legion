@@ -24,6 +24,8 @@ export interface Import {
   resolved: boolean;
   /** `import.meta.glob`, which names files by pattern. */
   glob?: true;
+  /** The values a static import or re-export takes by name; unset when it takes the whole module. */
+  names?: readonly string[];
 }
 
 /** A source file read from disk or given in memory, by absolute path. */
@@ -126,6 +128,22 @@ type Written = Omit<Import, "file" | "pkg" | "resolved">;
 const allTypes = (elements: ts.NodeArray<ts.ImportSpecifier | ts.ExportSpecifier>) =>
   elements.length > 0 && elements.every((element) => element.isTypeOnly);
 
+/** The names of the values that a list of specifiers takes from its module. */
+const valueNames = (elements: ts.NodeArray<ts.ImportSpecifier | ts.ExportSpecifier>) =>
+  elements
+    .filter((element) => !element.isTypeOnly)
+    .map((element) => (element.propertyName ?? element.name).text);
+
+/** What an import declaration takes by name, or undefined for the whole module. */
+function importedNames(clause: ts.ImportClause | undefined): string[] | undefined {
+  const bindings = clause?.namedBindings;
+  if (clause === undefined || (bindings !== undefined && !ts.isNamedImports(bindings))) {
+    return undefined;
+  }
+  const named = bindings === undefined ? [] : valueNames(bindings.elements);
+  return clause.name === undefined ? named : ["default", ...named];
+}
+
 function scriptImports(path: string, text: string): Written[] {
   const source = parseScript(path, text);
   const found: Written[] = [];
@@ -133,7 +151,8 @@ function scriptImports(path: string, text: string): Written[] {
     node: ts.Node,
     specifier: string | undefined,
     importKind: ImportKind,
-    glob = false
+    glob = false,
+    names?: readonly string[]
   ) =>
     found.push({
       from: path,
@@ -141,6 +160,7 @@ function scriptImports(path: string, text: string): Written[] {
       kind: importKind,
       line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
       ...(glob ? { glob: true as const } : {}),
+      ...(names === undefined ? {} : { names }),
     });
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node)) {
@@ -151,14 +171,19 @@ function scriptImports(path: string, text: string): Written[] {
           clause?.namedBindings !== undefined &&
           ts.isNamedImports(clause.namedBindings) &&
           allTypes(clause.namedBindings.elements));
-      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static");
+      const names = importedNames(clause);
+      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static", false, names);
     } else if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) {
       const typeOnly =
         node.isTypeOnly ||
         (node.exportClause !== undefined &&
           ts.isNamedExports(node.exportClause) &&
           allTypes(node.exportClause.elements));
-      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static");
+      const names =
+        node.exportClause !== undefined && ts.isNamedExports(node.exportClause)
+          ? valueNames(node.exportClause.elements)
+          : undefined;
+      add(node, literal(node.moduleSpecifier), typeOnly ? "type" : "static", false, names);
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference)

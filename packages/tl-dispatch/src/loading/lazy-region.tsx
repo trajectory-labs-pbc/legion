@@ -1,5 +1,6 @@
-import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { type ComponentType, Suspense, useState } from "react";
+import { ForkView } from "@/upstream/mark";
+import { ErrorBoundary } from "@/upstream/shell";
 
 import { lazyNamed, type PropsOf } from "./lazy-named";
 
@@ -18,9 +19,11 @@ export function lazyRegion<Module, Name extends keyof Module>(
   return function LazyRegion(props) {
     return (
       <ErrorBoundary region={region}>
-        <Suspense fallback={null}>
-          <View {...props} />
-        </Suspense>
+        <ForkView>
+          <Suspense fallback={null}>
+            <View {...props} />
+          </Suspense>
+        </ForkView>
       </ErrorBoundary>
     );
   };

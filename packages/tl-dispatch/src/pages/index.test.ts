@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { isValidElement } from "react";
+import { pageHref } from "@/navigation/page-route";
+import { pageAt, pages } from "@/pages/index";
 import {
   buildInboxPath,
   liveViewSessionOf,
@@ -7,10 +10,7 @@ import {
   routeHasMargin,
   routeIsInbox,
   routeProjectOf,
-} from "@upstream-dispatch/features/refs/routes";
-import { isValidElement } from "react";
-import { pageHref } from "@/navigation/page-route";
-import { pageAt, pages } from "@/pages/index";
+} from "@/upstream/routes";
 import { InboxPage, inbox } from "./inbox";
 import type { PageLayout } from "./page";
 

@@ -1,6 +1,6 @@
 import { Skeleton } from "@legion/ui/components/skeleton";
-import { ISSUE_TAB_LABELS } from "@upstream-dispatch/features/issue/issue-tab-list";
 import type { ReactNode } from "react";
+import { ISSUE_TAB_LABELS } from "@/upstream/shell";
 
 const ROWS = [0, 1, 2, 3];
 

@@ -1,4 +1,4 @@
-import { createKeymap, type Keymap } from "@upstream-dispatch/features/shell/keymap";
+import { createKeymap, type Keymap } from "@/upstream/keys";
 
 /** The first step of every chord: G jumps, O opens a picker, N opens a create form. */
 const CHORD_PREFIXES = ["g", "o", "n"] as const;

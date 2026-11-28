@@ -1,13 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  api,
-  credentialGrantsQuery,
-  type LauncherCredentialResp,
-  machineLoginsQuery,
-  useKeyedWrite,
-  useRefusalOfSubject,
-  useSubmitGuard,
-} from "./upstream";
+import { api } from "@/upstream/api";
+import type { LauncherCredentialResp } from "@/upstream/contract";
+import { credentialGrantsQuery, machineLoginsQuery } from "@/upstream/queries";
+import { useKeyedWrite, useRefusalOfSubject, useSubmitGuard } from "@/upstream/writes";
 
 export interface Revoke {
   /** Revokes the login; one revoke is out at a time. */

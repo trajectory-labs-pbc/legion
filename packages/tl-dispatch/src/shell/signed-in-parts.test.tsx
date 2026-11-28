@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TextAskBlockCard } from "@upstream-dispatch/features/doc/AskBlockCard";
-import { useRegistryPolling } from "@upstream-dispatch/features/refs/agent-registry";
-import { TextAskCard } from "@upstream-dispatch/features/refs/markdown-cards";
 import { type ReactNode, useContext } from "react";
+import { TextAskBlockCard, TextAskCard, useRegistryPolling } from "@/upstream/shell";
 
 import { GlobalCommands } from "../../tests/global-shell";
 import { answerShellReads, json, waitFor } from "../../tests/network";
