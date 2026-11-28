@@ -13,7 +13,8 @@ import { namedImports, routeTargets, topLevelNames, upstreamAppFile } from "./so
 const pinsFile = join(import.meta.dir, "copies.json");
 const pinsPath = relative(REPO_ROOT, pinsFile);
 const appFile = relative(REPO_ROOT, upstreamAppFile);
-const upstreamWeb = relative(REPO_ROOT, UPSTREAM_WEB);
+/** Upstream's web sources from the repository root, as a pin's `file` begins. */
+export const upstreamWeb = relative(REPO_ROOT, UPSTREAM_WEB);
 const updateHint = (file: string, part: string) =>
   `run \`bun tests/map/copies.ts --update ${file} '${part}' --outcome ported --reason '<why>'\`, or \`--outcome closed\` for a change not ported`;
 /** The files of this app that hold a pin's copy. */

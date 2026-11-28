@@ -1,6 +1,8 @@
 // Upstream's Inbox logic, unchanged. Only src/data/inbox reads it, and no file of the Inbox, the
 // parts or the Inbox's data declares one of these names (tests/inbox-copies.test.ts).
 
+export { awaitsDecision } from "@legion/contracts";
+export { searchWords } from "@upstream-dispatch/features/agents/agent-search";
 export { answerAskInput } from "@upstream-dispatch/features/inbox/answer-ask";
 export {
   answerDraft,
@@ -166,3 +168,5 @@ export {
   sameWriteScope,
   scopeKinds,
 } from "@upstream-dispatch/features/inbox/write-scope";
+export type { InboxRoute } from "@upstream-dispatch/features/refs/routes";
+export { capSearchQuery } from "@upstream-dispatch/lib/query-param";
