@@ -267,9 +267,7 @@ func replaceFile(path, content string) (changed bool, err error) {
 		_ = temporary.Close()
 		return false, err
 	}
-	if err := temporary.Close(); err != nil {
-		return false, err
-	}
+	_ = temporary.Close()
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return false, err
 	}
