@@ -19,18 +19,15 @@ import { changesOutsideAct, shows } from "../../../tests/outside-act";
 import { onFakeClock, tick } from "../../../tests/upstream";
 import { MachineLoginRoute } from "./page";
 
-// The real loader, taken before any spy: a spy left in place can never call itself through it.
-const importWhenOnline = resilience.importWhenOnline;
-
 afterEach(() => {
   // Back to the synchronous scheduler the shared test setup sets.
   notifyManager.setScheduler((callback) => callback());
-  focusManager.setFocused(undefined);
-  onlineManager.setOnline(true);
   try {
     cleanup();
   } finally {
     mock.restore();
+    focusManager.setFocused(undefined);
+    onlineManager.setOnline(true);
   }
 });
 
@@ -75,7 +72,7 @@ function failingCode() {
   const state: { loads: boolean; gate?: Promise<void> } = { loads: false };
   const failed = Promise.withResolvers<void>();
   const loads = spyOn(resilience, "importWhenOnline").mockImplementation((load) => {
-    if (state.loads) return (state.gate ?? Promise.resolve()).then(() => importWhenOnline(load));
+    if (state.loads) return (state.gate ?? Promise.resolve()).then(() => load());
     // A task later, every microtask that carries the rejection into the query has run.
     setTimeout(failed.resolve, 0);
     return Promise.reject(new Error("the chunk is gone"));
@@ -207,7 +204,7 @@ test("MLR-03 outside act, one skeleton covers the answer and the page's code aft
   // The page's code comes 400 ms after the skeleton showed, well after the answer.
   const code = Promise.withResolvers<void>();
   spyOn(resilience, "importWhenOnline").mockImplementation((load) =>
-    code.promise.then(() => importWhenOnline(load))
+    code.promise.then(() => load())
   );
   let codeAt = Number.POSITIVE_INFINITY;
   const changes = await changesOutsideAct(inOutlet(), outletState, {
