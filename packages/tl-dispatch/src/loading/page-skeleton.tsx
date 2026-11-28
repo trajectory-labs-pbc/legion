@@ -5,7 +5,7 @@ const ROWS = [0, 1, 2, 3];
 
 /** How long a wait may take before its skeleton shows, so a quick one draws none. */
 const SKELETON_DELAY_MS = 200;
-/** How long a skeleton stays once shown, so it does not flash. */
+/** The least time a skeleton stays once shown, so it does not flash. */
 const SKELETON_HOLD_MS = 300;
 
 /**

@@ -49,7 +49,7 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLS-08 | Machine logins | Two logins of one service on one host are told apart by their credential IDs | | |
 | MLS-09 | Machine logins | A login approved on the page joins the list | | |
 | MLS-10 | Machine logins | A cut name or approver is a button that shows it in full in its tooltip | | |
-| MLS-11 | Machine logins | A list still loading shows still skeleton rows after 200 ms, held 300 ms once shown | changed | Upstream shows the text "Loading machine logins…" at once |
+| MLS-11 | Machine logins | A list still loading shows still skeleton rows after 200 ms, kept through the hold once shown | changed | Upstream shows the text "Loading machine logins…" at once |
 | RVL-01 | Revoke | The pressed Revoke shows that its revoke is out and keeps the focus | | |
 | RVL-02 | Revoke | A double press on the question's Revoke sends one revoke | | |
 | RVL-03 | Revoke | A refused revoke shows the broker's refusal under its row | | |
