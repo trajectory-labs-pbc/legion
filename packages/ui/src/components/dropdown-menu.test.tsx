@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { compile } from "@tailwindcss/node";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CopyIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "#registry/legion/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "#registry/legion/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -238,7 +244,13 @@ describe("DropdownMenu's drawn rows", () => {
             <CopyIcon aria-hidden data-icon="inline-start" />
             List
           </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="board">Board</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+        <DropdownMenuLinkItem href="#docs">Docs</DropdownMenuLinkItem>
+        <DropdownMenuItem>
+          Open
+          <CopyIcon aria-hidden data-icon="inline-end" />
+        </DropdownMenuItem>
         <DropdownMenuItem>Rename</DropdownMenuItem>
         <DropdownMenuGroup>
           <DropdownMenuLabel>Move</DropdownMenuLabel>
@@ -257,12 +269,15 @@ describe("DropdownMenu's drawn rows", () => {
         "Assign to me",
         "Wrapped",
         "List",
+        "Board",
+        "Docs",
+        "Open",
         "Rename",
         "Move",
         "Move to",
         "Backlog",
       ])
-    ).toEqual([false, false, false, false, true, true, true, false]);
+    ).toEqual([false, false, false, false, true, true, true, true, true, true, false]);
   });
 
   it("keeps no room in a menu whose rows mark no icon, though its open submenu marks one", async () => {
@@ -292,6 +307,38 @@ describe("DropdownMenu's drawn rows", () => {
       false,
       true,
     ]);
+  });
+
+  it("keeps no room in a menu whose only mark is a trailing inline-end icon", async () => {
+    const rows = (
+      <>
+        <DropdownMenuItem>
+          Open
+          <CopyIcon aria-hidden data-icon="inline-end" />
+        </DropdownMenuItem>
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+      </>
+    );
+    expect(await roomOf(rows, ["Open", "Rename"])).toEqual([false, false]);
+  });
+
+  it("gives a context menu's plain row the room when another row marks its icon", async () => {
+    render(
+      <ContextMenu>
+        <ContextMenuTrigger>Row</ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem>
+            <CopyIcon aria-hidden data-icon="inline-start" />
+            Copy link
+          </ContextMenuItem>
+          <ContextMenuItem>Rename</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+    fireEvent.contextMenu(screen.getByText("Row"));
+    const found = await Promise.all(["Copy link", "Rename"].map((name) => screen.findByText(name)));
+    loadDrawnCss();
+    expect(found.map(keepsIconRoom)).toEqual([false, true]);
   });
 
   it("keeps the room on a checkbox row, for its check, and on every row beside it", async () => {
