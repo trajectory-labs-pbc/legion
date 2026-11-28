@@ -6,6 +6,7 @@ import { navigateInApp } from "../../../dispatch/e2e/sends";
 import { AGENT } from "../flows";
 import { expect, type Page, test } from "../test";
 import { pickVersion } from "./baseline-seed";
+import { probeFill } from "./fill-probe";
 import { blockIdOf, HOST, openHost, partsRoot, SECOND } from "./hosts";
 import {
   foldLines,
@@ -146,7 +147,10 @@ test("only-changes: the preamble, a run between two changes and a list's items e
   await openComparedWithFirst(page, path);
   const control = onlyChangesControl(page);
   const off = await fill(page, control);
+  await probeFill(page, control, "lines-test-before-on");
   await onlyChangesOn(page);
+  await page.mouse.move(0, 0);
+  await probeFill(page, control, "lines-test-on");
   // The pressed control draws a fill of its own.
   expect(await fill(page, control)).not.toBe(off);
   await expect(foldLines(page)).toHaveText(LINE_TEXTS);

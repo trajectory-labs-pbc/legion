@@ -10,10 +10,12 @@ import {
   seedReadThenRevised,
   sinceText,
 } from "./baseline-seed";
+import { probeFill } from "./fill-probe";
 import { head, openHost, SECOND, seedHost } from "./hosts";
 import {
   foldLines,
   LINE_TEXTS,
+  onlyChangesControl,
   onlyChangesOn,
   onlyFolded,
   openComparedWithFirst,
@@ -154,6 +156,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await onlyChangesOn(page);
         await expect(onlyFolded(page)).toHaveCount(5);
         await page.mouse.move(0, 0);
+        await probeFill(page, onlyChangesControl(page), `shot-${kind}-${colorScheme}`);
         await page.screenshot({ path: `${SCREENSHOTS}only-changes-on-${kind}-${colorScheme}.png` });
       });
     }
