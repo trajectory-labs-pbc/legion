@@ -26,7 +26,7 @@ If an item that a region needs is missing, do not build it inside the page: wait
 
 | Skill | When |
 | --- | --- |
-| `.agents/skills/ui-design-system/SKILL.md` | Before you choose a component, a token or a layout. Its references hold the rules, in the families its index lists, and the tokens. A reviewer cites the ID of each rule that a change breaks |
+| `.agents/skills/ui-design-system/SKILL.md` | Before you choose a component, a token or a layout. Its references hold the rules and the tokens. A reviewer cites the ID of each rule that a change breaks |
 | `.agents/skills/commands/SKILL.md` | Before you add a key, a button that runs an action, or a menu row |
 | `.agents/skills/navigation/SKILL.md` | Before you add a route, a link or a prefetch |
 | `.agents/skills/porting-upstream/SKILL.md` | Before you pin a file, and when a gate in `tests/map` fails |
