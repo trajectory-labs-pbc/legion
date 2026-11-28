@@ -54,7 +54,7 @@ describe("the view map", () => {
       ],
     ]);
     expect(messages(coverage([...files, added], all, importGraph(overlay)))).toEqual([
-      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/features/machine-login/route.tsx views`,
     ]);
   });
 
@@ -63,7 +63,7 @@ describe("the view map", () => {
     const added = "features/zz-new/NewMachineLoginNotice.tsx";
     const loaded = new Map([...graph, [added, ["features/credentials/machineLogins.ts"]]]);
     expect(messages(coverage([...files, added], all, loaded))).toEqual([
-      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/features/machine-login/route.tsx views`,
     ]);
   });
 
@@ -81,7 +81,7 @@ describe("the view map", () => {
       ],
     ]);
     expect(messages(coverage([...files, added], all, importGraph(overlay)))).toEqual([
-      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/pages/machine-login.tsx views`,
+      `${added} is new upstream, and only page:machine-login's files load it, which this app serves: port what it adds, then name it in src/features/machine-login/route.tsx views`,
     ]);
   });
 
@@ -169,19 +169,26 @@ describe("the view map", () => {
 
   test("a page this app serves names files, not globs", () => {
     const served: Owner[] = [
-      { name: "page:a", globs: ["features/a/**"], list: "src/pages/a.tsx views", server: "fork" },
+      {
+        name: "page:a",
+        globs: ["features/a/**"],
+        list: "src/features/a/route.tsx views",
+        server: "fork",
+      },
     ];
     expect(messages(coverage(["features/a/A.tsx"], served))).toEqual([
-      "src/pages/a.tsx views has the glob features/a/**: a page this app serves names each upstream file it replaces",
+      "src/features/a/route.tsx views has the glob features/a/**: a page this app serves names each upstream file it replaces",
     ]);
   });
 
-  test("a file in a page's folder is the page's, and any other file of the app the shell's", () => {
-    const pages = [{ file: "/app/src/pages/sign-in.tsx", id: "credentials" }];
-    expect(ownOwner("/app/src/pages/sign-in.tsx", pages)).toBe("page:credentials");
-    expect(ownOwner("/app/src/pages/sign-in/form.tsx", pages)).toBe("page:credentials");
-    expect(ownOwner("/app/src/pages/sign-in-help/form.tsx", pages)).toBe("shell");
-    expect(ownOwner("/app/src/shell/frame.tsx", pages)).toBe("shell");
+  test("a file of a page's feature or upstream view is the page's, and any other the shell's", () => {
+    const at = (path: string) => join(SRC_DIR, path);
+    expect(ownOwner(at("features/sign-in/route.tsx"), ["sign-in"])).toBe("page:sign-in");
+    expect(ownOwner(at("features/sign-in/form.tsx"), ["sign-in"])).toBe("page:sign-in");
+    expect(ownOwner(at("upstream/views/sign-in.tsx"), ["sign-in"])).toBe("page:sign-in");
+    expect(ownOwner(at("upstream/views/sign-in/form.tsx"), ["sign-in"])).toBe("page:sign-in");
+    expect(ownOwner(at("features/sign-in-help/form.tsx"), ["sign-in"])).toBe("shell");
+    expect(ownOwner(at("shell/frame.tsx"), ["sign-in"])).toBe("shell");
   });
 
   test("a type-only import loads nothing", () => {
@@ -217,8 +224,18 @@ describe("the view map", () => {
 describe("the view map on ordinary upstream churn", () => {
   // Page a is upstream's and page b is this app's; each loads its own folder.
   const map: Owner[] = [
-    { name: "page:a", globs: ["features/a/**"], list: "src/pages/a.tsx views", server: "upstream" },
-    { name: "page:b", globs: ["features/b/B.tsx"], list: "src/pages/b.tsx views", server: "fork" },
+    {
+      name: "page:a",
+      globs: ["features/a/**"],
+      list: "src/features/a/route.tsx views",
+      server: "upstream",
+    },
+    {
+      name: "page:b",
+      globs: ["features/b/B.tsx"],
+      list: "src/features/b/route.tsx views",
+      server: "fork",
+    },
     { name: "shell", globs: ["features/shell/**"], list: "src/views.ts shellViews" },
   ];
   const views = ["features/a/A.tsx", "features/b/B.tsx", "features/shell/Shell.tsx"];
@@ -263,7 +280,7 @@ describe("the view map on ordinary upstream churn", () => {
     expect(
       failing(["features/b/Added.tsx"], [["features/b/Added.tsx", ["features/b/B.tsx"]]])
     ).toEqual([
-      "features/b/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+      "features/b/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/features/b/route.tsx views",
     ]);
   });
 
@@ -280,8 +297,8 @@ describe("the view map on ordinary upstream churn", () => {
     ];
     const more = ["features/refs/Ref.tsx", "features/b/Panel.tsx", "features/b/Row.tsx"];
     expect(failing(more, graph, shared)).toEqual([
-      "features/b/Panel.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
-      "features/b/Row.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+      "features/b/Panel.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/features/b/route.tsx views",
+      "features/b/Row.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/features/b/route.tsx views",
     ]);
   });
 
@@ -294,7 +311,7 @@ describe("the view map on ordinary upstream churn", () => {
       entry.name === "page:a" ? { ...entry, globs: ["features/a/A.tsx", "features/a/*.ts"] } : entry
     );
     expect(failing(["features/a/Added.tsx"], graph, unlisted)).toEqual([
-      "features/a/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/pages/b.tsx views",
+      "features/a/Added.tsx is new upstream, and only page:b's files load it, which this app serves: port what it adds, then name it in src/features/b/route.tsx views",
     ]);
     const added = [...views, "features/a/Added.tsx"];
     const loaded = new Map([...loads, ...graph]);
@@ -315,7 +332,7 @@ describe("the view map on ordinary upstream churn", () => {
       entry.name === "page:b" ? { ...entry, globs: [...entry.globs, "features/b/Old.tsx"] } : entry
     );
     expect(failing([], [], renamed)).toEqual([
-      "src/pages/b.tsx views names features/b/Old.tsx, which matches no upstream view: upstream renamed or removed it; name the file that replaced it, or drop the entry",
+      "src/features/b/route.tsx views names features/b/Old.tsx, which matches no upstream view: upstream renamed or removed it; name the file that replaced it, or drop the entry",
     ]);
   });
 

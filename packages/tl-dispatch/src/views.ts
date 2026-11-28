@@ -1,7 +1,7 @@
 /**
  * Upstream view files that no page owns, as paths or globs under upstream's `web/src`. With each
- * page file's `views`, they name the owner of each view file under `features/`; a file in two lists
- * fails the view map, and a file in none takes the owner of what loads it. An exact
+ * route file's `views`, they name the owner of each view file under `features/`; a file in two
+ * lists fails the view map, and a file in none takes the owner of what loads it. An exact
  * path wins over a glob, so a file another owner renders can leave its folder's owner.
  */
 

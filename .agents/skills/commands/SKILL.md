@@ -10,7 +10,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 ## The rules
 
 1. Declare a command once, in the catalog. Never bind a key in a component, and never write a key chip by hand.
-2. A command takes callbacks named for what they do (`goTo`, `createIssue`). Code in `src/commands` never imports the router, `src/shell` or `src/pages`. `tests/layering.test.ts` refuses it.
+2. A command takes callbacks named for what they do (`goTo`, `createIssue`). Code in `src/commands` never imports the router, `src/shell` or a feature. `tests/layering.test.ts` refuses it.
 3. One gate per command: `enabled`. Keys, buttons, the palette and the sheet all obey it. Never test a permission or a state at the call site.
 4. Register one command for the record in view or the highlighted row. Never one command per record (`delete-${id}`).
 5. Put all the keys of one action in one command: `keys: ["j", "ArrowDown"]`. A tooltip shows the first key; the sheet shows all.
@@ -36,7 +36,7 @@ One catalog declares every action of the app once. Keys, buttons, tooltips, menu
 
 `COMMAND_GROUPS` in `groups.ts` holds the sheet's sections. Declare a group once there.
 
-`NAV_DESTINATIONS` in `nav.ts` is the table of pages the sidebar lists and `g` chords open. One row gives the name, label, icon and the letter after `g`; its route is in `NAV_PAGES` (`src/shell/nav-pages.ts`). The sidebar and the chords read the same row. A row adds a `go-<name>` command to the global context.
+`NAV_DESTINATIONS` in `destinations.ts` is the table of pages the sidebar lists and `g` chords open. Each entry, under its name, gives the route (from `src/navigation/routes.ts`), the label, the icon and the letter after `g`. The sidebar and the chords read the same entry, in the table's order. An entry adds a `go-<name>` command to the global context.
 
 ## Add a command
 

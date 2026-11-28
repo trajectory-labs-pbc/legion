@@ -1,11 +1,11 @@
 ---
 name: navigation
-description: "Use when you add a page or a route to packages/tl-dispatch, write a link or a page move, read a URL param or search key, or are about to import react-router-dom: page files, PageLink, the navigation hooks and the router rule."
+description: "Use when you add a page or a route to packages/tl-dispatch, write a link or a page move, read a URL param or search key, or are about to import react-router-dom: route files, PageLink, the navigation hooks and the router rule."
 ---
 
 # Navigation in tl-dispatch
 
-Every address of the app is declared in a page file. Links and moves are typed from those declarations. The code is in `packages/tl-dispatch/src/navigation`.
+Every address of the app is declared in `src/navigation/routes.ts`, and each route file puts its page on those addresses. Links and moves are typed from those declarations. The code is in `packages/tl-dispatch/src/navigation`.
 
 ## The rules
 
@@ -20,9 +20,9 @@ Every address of the app is declared in a page file. Links and moves are typed f
 
 The app keeps React Router while it still draws upstream's pages, because each of them reads React Router's hooks. A later move to another router must change `src/navigation` and the few files the README lists, not every page. `packages/tl-dispatch/README.md` ("Changing the router") lists every file a move changes and the files that stay. Tests wrap a page in `MemoryNavigationProvider` from `tests/navigation.tsx`.
 
-## Page files
+## Route files
 
-Each page has one file in `src/pages/`. It exports a `Page`:
+Each page has a route file, `src/features/<page>/route.tsx`, and its addresses are in `src/navigation/routes.ts`. The route file exports a page that `satisfies AppPage<typeof routes.<page>>` (`src/shell/page-layout.ts`), so `tsc` fails a page that misses, adds or moves one of its addresses:
 
 | Field | Meaning |
 | --- | --- |
@@ -31,22 +31,27 @@ Each page has one file in `src/pages/`. It exports a `Page`:
 | `routes` | Named routes, each written with `pageRoute`. A link names the route it opens. |
 | `views` | The upstream view files the page replaces, as paths under `packages/dispatch/web/src`. See `.agents/skills/porting-upstream/SKILL.md`. |
 
-A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
+An address is `routePath({ path, search? })` in `src/navigation/routes.ts`, under the page's id and the route's name:
 
 - `path` uses navigation's grammar, which only `path.ts` reads: `/`-separated text, a `:name` segment for a param, and a last `*` for the rest of the address. `"/issues/:key/*"` binds `key`.
 - `search` lists the search keys the page reads, as literals.
+
+`routePath` keeps the path and search keys as literal types, so every link to the address is typed. A link names the address, so the shell and a feature link to a page without its route file.
+
+A route is `pageRoute({ ...routes.<page>.<name>, element, prefetch?, layout? })`:
+
+- `element` is the page, loaded lazily with `lazyNamed`: a route file imports its `page.tsx` and upstream's views only with `import()`, and draws nothing itself. The home page is the exception: `EAGER` in `tests/layers.table.ts` names the modules that load before first paint.
 - `prefetch(params)` returns the page's first reads, each `prefetchOf(queryOptions)` from `src/data/prefetch.ts`.
 - `layout` says how the shell frames the page: a `PageLayout` (`src/shell/page-layout.ts`), or a function of the address.
 
-`pageRoute` keeps the path and search keys as literal types, so every link to the route is typed.
-
 ## Add a page or a route
 
-1. Write or extend the page file in `src/pages/`, with a `pageRoute` for each address.
-2. Add the page to `pages` in `src/app/routes.ts`, the route map. `src/navigation` and the shell import no page: `tests/layering.test.ts` refuses it.
-3. If the sidebar lists the page, add a row to `NAV_DESTINATIONS` (`src/commands/nav.ts`), its route to `NAV_PAGES` (`src/shell/nav-pages.ts`), and the action of its `go-<name>` command to `src/shell/global-commands.ts`. All three are typed by the destination's name, so a missing one fails `tsc`.
-4. If upstream serves the same address, keep upstream's path. Run the link test.
-5. Run `bun run test src/navigation tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
+1. Add each address to `routes` in `src/navigation/routes.ts`.
+2. Write or extend the route file `src/features/<page>/route.tsx`, with a `pageRoute` for each address. A page the fork draws goes in `page.tsx` beside it.
+3. Add the page to `routeFiles` in `src/app/routes.ts`, the route map. Only `src/app` imports a route file: `tests/layering.test.ts` refuses any other importer.
+4. If the sidebar lists the page, add an entry under its name with its route to `NAV_DESTINATIONS` (`src/commands/destinations.ts`), and the action of its `go-<name>` command to `src/shell/global-commands.ts`. Both are typed by the destination's name, so a missing one fails `tsc`.
+5. If upstream serves the same address, keep upstream's path. Run the link test.
+6. Run `bun run test src/navigation src/app tests/map` and `bun run typecheck` in `packages/tl-dispatch`.
 
 ## Links and moves
 
@@ -73,4 +78,4 @@ A wrong route, a wrong param name or an unknown search key fails the type check.
 - `src/app/routes.test.tsx`: the route map, the route tree, and each page's layout against upstream's rules for the frame.
 - `tests/layering.test.ts`: the router rule, through every import the build resolves.
 - `tests/map/links.test.ts`: every upstream route, reference form and server-written address opens the same page here.
-- A reviewer checks that a diff adds no path string literal outside `src/pages` and no router import outside `src/navigation`.
+- A reviewer checks that a diff adds no path string literal outside `src/navigation/routes.ts` and no router import outside `src/navigation` and `src/app`.

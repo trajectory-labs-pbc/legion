@@ -77,13 +77,13 @@ const value = useMemo(() => ({ sidebar, setSidebar }), [sidebar]);
 
 ```ts
 // Bad
-const PAGES = Object.fromEntries(NAV_DESTINATIONS.map((d) => [d.name, routeOf(d)]));
+const NAV_DESTINATIONS = Object.fromEntries(rows.map((row) => [row.name, row]));
 
 // Good
-export const NAV_PAGES = {
-  inbox: inbox.routes.home,
-  agents: agents.routes.list,
-} as const satisfies Readonly<Record<NavName, PageRoute>>;
+export const NAV_DESTINATIONS = {
+  inbox: { route: routes.inbox.home, label: "Inbox", icon: InboxIcon, key: "i" },
+  agents: { route: routes.agents.list, label: "Agents", icon: BotIcon, key: "a" },
+} as const satisfies Readonly<Record<string, NavDestination>>;
 
 const byName = new Map(list.map((spec) => [spec.command.name, spec]));
 const spec = byName.get(name);

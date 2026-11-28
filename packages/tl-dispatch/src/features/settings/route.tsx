@@ -1,7 +1,7 @@
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
-
-import type { Page } from "./page";
+import { routes } from "@/navigation/routes";
+import type { AppPage } from "@/shell/page-layout";
 
 const SettingsPage = lazyNamed(() => import("@/upstream/views/settings"), "SettingsPage");
 
@@ -9,7 +9,7 @@ export const settings = {
   id: "settings",
   server: "upstream",
   routes: {
-    settings: pageRoute({ path: "/settings", element: <SettingsPage /> }),
+    settings: pageRoute({ ...routes.settings.settings, element: <SettingsPage /> }),
   },
   views: [
     "features/settings/**",
@@ -18,4 +18,4 @@ export const settings = {
     "features/credentials/SignInsSection.tsx",
     "features/issue-page/IssuePagePreference.tsx",
   ],
-} satisfies Page;
+} satisfies AppPage<typeof routes.settings>;

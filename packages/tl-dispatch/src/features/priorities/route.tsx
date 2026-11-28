@@ -1,9 +1,9 @@
 import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
+import { routes } from "@/navigation/routes";
+import type { AppPage } from "@/shell/page-layout";
 import { prioritiesQuery } from "@/upstream/queries";
-
-import type { Page } from "./page";
 
 const PrioritiesPage = lazyNamed(
   () => import("@/upstream/views/priorities/priorities"),
@@ -19,11 +19,11 @@ export const priorities = {
   server: "upstream",
   routes: {
     list: pageRoute({
-      path: "/priorities",
+      ...routes.priorities.list,
       element: <PrioritiesPage />,
       prefetch: () => [prefetchOf(prioritiesQuery())],
     }),
-    priority: pageRoute({ path: "/priorities/:id", element: <PriorityPage /> }),
+    priority: pageRoute({ ...routes.priorities.priority, element: <PriorityPage /> }),
   },
   views: ["features/priorities/**"],
-} satisfies Page;
+} satisfies AppPage<typeof routes.priorities>;

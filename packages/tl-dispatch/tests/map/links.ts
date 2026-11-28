@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import ts from "typescript";
 import { pages } from "@/app/routes";
+import type { Page } from "@/navigation/page";
 import { firstMatch, routerPath } from "@/navigation/router-path";
-import type { Page } from "@/pages/page";
 import { filesWith, importsOf, resolutionCache } from "../imports";
 import { UPSTREAM_WEB } from "../source";
 import { parseScript } from "../typescript";
@@ -12,7 +12,7 @@ import {
   constantOf,
   namedImports,
   openingOf,
-  pageFile,
+  routeFile,
   tagName,
   upstreamAppFile,
   upstreamScripts,
@@ -183,7 +183,7 @@ export function routeElements(file: string): Map<string, string> {
       if (
         value &&
         ts.isSatisfiesExpression(value) &&
-        value.type.getText(source) === "Page" &&
+        /^AppPage\b/.test(value.type.getText(source)) &&
         ts.isObjectLiteralExpression(value.expression)
       ) {
         const routes = property(source, value.expression, "routes");
@@ -204,13 +204,13 @@ export function routeElements(file: string): Map<string, string> {
       }
     }
   }
-  throw new Error(`${file}: no \`const <name> = {...} satisfies Page\``);
+  throw new Error(`${file}: no \`const <name> = {...} satisfies AppPage\``);
 }
 
 /** The routes of every page of the route map. */
 export function forkRoutes(list: readonly Page[] = pages): ForkRoute[] {
   return list.flatMap((page) => {
-    const file = pageFile(page.id);
+    const file = routeFile(page.id);
     const elements = routeElements(file);
     return Object.entries(page.routes).map(([name, route]) => {
       const element = elements.get(name);
@@ -237,7 +237,7 @@ function resolveHref(routes: readonly ForkRoute[], href: string): ForkRoute | un
  */
 export const OWN_ELEMENTS: Readonly<Record<string, { own: string; upstream: string }>> = {
   "/replies": {
-    own: '< Redirect page = { home } search = { { type : "reply" } } / >',
+    own: '< Redirect page = { routes . inbox . home } search = { { type : "reply" } } / >',
     upstream:
       '< Navigate replace to = { buildInboxPath ( { filters : { type : [ "reply" ] } } ) } / >',
   },

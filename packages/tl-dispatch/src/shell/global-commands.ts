@@ -1,6 +1,6 @@
 import { type CommandState, defineActions } from "@/commands/actions";
 import { appCatalog } from "@/commands/app-catalog";
-import type { NavName } from "@/commands/nav";
+import type { NavName } from "@/commands/destinations";
 import { useRegisterCommands } from "@/commands/use-register-commands";
 
 /** What the shell's global commands do here; an absent action shuts its command's gate. */

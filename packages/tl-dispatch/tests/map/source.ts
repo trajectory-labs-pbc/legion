@@ -1,4 +1,4 @@
-// Reads upstream's sources and this app's page files where the checks need code as written.
+// Reads upstream's sources and this app's route files where the checks need code as written.
 import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
@@ -8,8 +8,16 @@ import { parseScript } from "../typescript";
 
 export const upstreamAppFile = join(UPSTREAM_WEB, "app.tsx");
 
-/** The file of a page in the route map: `src/pages/<id>.tsx`. */
-export const pageFile = (id: string) => join(SRC_DIR, "pages", `${id}.tsx`);
+/** The route file of a page in the route map: `src/features/<id>/route.tsx`. */
+export const routeFile = (id: string) => join(SRC_DIR, "features", id, "route.tsx");
+
+/** The roots of a page's files in this app: its feature, and its upstream view, a file or a folder. */
+export const pageRoots = (id: string) => [
+  join(SRC_DIR, "features", id),
+  join(SRC_DIR, "upstream", "views", id),
+  // Until the machine login and not-found folders move.
+  join(SRC_DIR, "pages", id),
+];
 
 /** Upstream's scripts under `dir`, tests and fixtures (`__fixtures__/`, `*-fixture(s).ts`) aside. */
 export function upstreamScripts(dir: string): string[] {

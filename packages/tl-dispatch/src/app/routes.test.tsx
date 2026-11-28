@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { isValidElement } from "react";
 import { Route, Routes } from "react-router-dom";
+import { inbox } from "@/features/inbox/route";
 import { useAddress } from "@/navigation/hooks";
-import { pageHref } from "@/navigation/page-route";
+import { pageHref, pageRoute } from "@/navigation/page-route";
 import { PageRoutes } from "@/navigation/route-tree";
-import { InboxPage, inbox } from "@/pages/inbox";
-import type { PageLayout } from "@/shell/page-layout";
+import { routes } from "@/navigation/routes";
+import type { AppPage, PageLayout } from "@/shell/page-layout";
 import {
   buildInboxPath,
   liveViewSessionOf,
@@ -24,11 +25,12 @@ import { render } from "../../tests/react";
 import { SRC_DIR } from "../../tests/source";
 import { pages } from "./routes";
 
-/** The route files: one for each page, beside the parts in its folder. */
+/** The features that have a route file: one for each page. */
 function routeFiles(): string[] {
-  return readdirSync(join(SRC_DIR, "pages"))
-    .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) && name !== "page.ts")
-    .map((name) => name.replace(/\.tsx?$/, ""));
+  const features = join(SRC_DIR, "features");
+  return readdirSync(features).filter((name) =>
+    ["route.tsx", "route.ts"].some((route) => existsSync(join(features, name, route)))
+  );
 }
 
 const mounted: { unmount(): void }[] = [];
@@ -37,8 +39,28 @@ afterEach(() => {
 });
 
 describe("the route map", () => {
-  test("holds each route file, named by its page's id", () => {
+  test("holds each route file, named by its page's id, and a page for each entry of routes", () => {
     expect(pages.map((page) => page.id).sort()).toEqual(routeFiles().sort());
+    expect(Object.keys(routes).sort()).toEqual(routeFiles().sort());
+  });
+
+  test("each route file serves the addresses its routes entry gives, or tsc fails", () => {
+    type Machines = typeof routes.machines;
+    const list = pageRoute({ ...routes.machines.list, element: null });
+    const machine = pageRoute({ ...routes.machines.machine, element: null });
+    const page = { id: "machines", server: "upstream", views: [] } as const;
+    const pages = [
+      { ...page, routes: { list, machine } } satisfies AppPage<Machines>,
+      // @ts-expect-error the page misses its machine route
+      { ...page, routes: { list } } satisfies AppPage<Machines>,
+      // @ts-expect-error the page adds a route its entry does not name
+      { ...page, routes: { list, machine, other: list } } satisfies AppPage<Machines>,
+      // @ts-expect-error the page puts its list route on the machine's address
+      { ...page, routes: { list: machine, machine } } satisfies AppPage<Machines>,
+      // @ts-expect-error the page names another page's id
+      { ...page, id: "agents", routes: { list, machine } } satisfies AppPage<Machines>,
+    ];
+    expect(pages).toHaveLength(5);
   });
 
   test("PageRoutes draws the page an address opens", () => {
@@ -77,9 +99,12 @@ describe("the route tree", () => {
     };
     expect(at("/")).toEqual(["inbox", "/", {}]);
     // The old credentials addresses draw the Inbox, except the machine login page.
-    expect(at("/credentials/abc")?.[0]).toBe("credentials");
+    expect(at("/credentials/abc")?.slice(0, 2)).toEqual(["inbox", "/credentials/*"]);
     const element = pageAt("/credentials/abc")?.route.element;
-    expect(isValidElement(element) && element.type).toBe(InboxPage);
+    const home = inbox.routes.home.element;
+    expect(isValidElement(element) && isValidElement(home) && element.type).toBe(
+      isValidElement(home) && home.type
+    );
     expect(at("/credentials/machine")?.[0]).toBe("machine-login");
     expect(at("/issues/AB-1/plan")).toEqual([
       "issue",

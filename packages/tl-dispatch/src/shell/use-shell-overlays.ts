@@ -1,13 +1,11 @@
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { NAV_DESTINATIONS } from "@/commands/destinations";
 import { type ShortcutsSheetState, useShortcutsSheet } from "@/commands/use-shortcuts-sheet";
 import { usePageNavigate } from "@/navigation/hooks";
-import { inbox } from "@/pages/inbox";
-import { machineLogin } from "@/pages/machine-login";
-import { project } from "@/pages/project";
+import { routes } from "@/navigation/routes";
 import type { ShellNavigation } from "@/upstream/shell";
 import { useGlobalCommands } from "./global-commands";
-import { NAV_PAGES } from "./nav-pages";
 import type { ShellLayout } from "./use-shell-layout";
 
 /** What opens over the page, and the global commands that open it. */
@@ -69,14 +67,14 @@ export function useShellOverlays(
     openSearch: closing(() => setSearchOpen(true)),
     toggleShortcuts: shortcuts.toggle,
     createIssue: closing(() => setCreateOpen(true)),
-    goTo: closing((destination) => navigate(NAV_PAGES[destination])),
+    goTo: closing((destination) => navigate(NAV_DESTINATIONS[destination].route)),
     openDocuments:
       routeProject === undefined
         ? undefined
-        : closing(() => navigate(project.routes.documents, { params: { key: routeProject } })),
-    openAnswers: closing(() => navigate(inbox.routes.answers)),
+        : closing(() => navigate(routes.project.documents, { params: { key: routeProject } })),
+    openAnswers: closing(() => navigate(routes.inbox.answers)),
     // The page itself says when this deployment does not serve it.
-    openMachineLogins: closing(() => navigate(machineLogin.routes.machine)),
+    openMachineLogins: closing(() => navigate(routes["machine-login"].machine)),
     signOut: signOut && closing(signOut),
     toggleInboxDrawer: shell.onInbox
       ? undefined

@@ -4,12 +4,13 @@ import { join } from "node:path";
 
 import {
   againstBreaks,
+  eagerProblems,
   layerViolations,
   rulesWithoutHeading,
   unmarkedExports,
   upstreamAppLoads,
 } from "./layering";
-import { BREAKS } from "./layers.table";
+import { BREAKS, EAGER } from "./layers.table";
 import { filesUnder, layeringFiles, PACKAGE_ROOT, type SourceFile } from "./source";
 
 /** Each rule the first file breaks, with its detail. */
@@ -35,16 +36,41 @@ describe("layers", () => {
     expect(upstreamAppLoads([door]).map((violation) => violation.file)).toEqual(["e2e/door.ts"]);
   });
 
+  test("each page EAGER names exists and its route imports it statically, with a reason", () => {
+    expect(eagerProblems(layeringFiles(), EAGER)).toEqual([]);
+  });
+
+  test("an EAGER entry fails without a file, a reason or its route's static import", () => {
+    const page = file("src/features/x/page.tsx");
+    const view = file("src/upstream/views/x.tsx");
+    const route = (text: string) => file("src/features/x/route.tsx", text);
+    const staticRoute = route('import { X } from "./page";');
+    const eager = { "src/features/x/page.tsx": "a reason", "src/upstream/views/x.tsx": "a reason" };
+    expect(eagerProblems([page, view, staticRoute], eager)).toEqual([]);
+    expect(eagerProblems([page, view, route('const x = import("./page");')], eager)).toEqual([
+      "src/features/x/page.tsx: its route does not import it statically",
+    ]);
+    expect(eagerProblems([page, staticRoute], eager)).toEqual([
+      "src/upstream/views/x.tsx: no such file",
+    ]);
+    expect(
+      eagerProblems([page, view, staticRoute], { ...eager, "src/upstream/views/x.tsx": " " })
+    ).toEqual(["src/upstream/views/x.tsx: no reason"]);
+    expect(eagerProblems([file("src/shell/x.tsx")], { "src/shell/x.tsx": "a reason" })).toEqual([
+      "src/shell/x.tsx: neither a page nor an upstream view",
+    ]);
+  });
+
   test("today's breaks match each import once: an entry that breaks no rule fails", () => {
-    const shell = file("src/shell/x.tsx", 'import "@/pages/inbox";');
+    const shell = file("src/shell/x.tsx", 'import "@/app/routes";');
     const found = layerViolations([shell]);
-    const listed = { "imports-only-above": { "src/shell/x.tsx": ["@/pages/inbox"] } };
+    const listed = { "imports-only-above": { "src/shell/x.tsx": ["@/app/routes"] } };
     expect(againstBreaks(found, listed)).toEqual({ unlisted: [], stale: [] });
     const twice = {
-      "imports-only-above": { "src/shell/x.tsx": ["@/pages/inbox", "@/pages/inbox"] },
+      "imports-only-above": { "src/shell/x.tsx": ["@/app/routes", "@/app/routes"] },
     };
     expect(againstBreaks(found, twice).stale).toEqual([
-      "imports-only-above src/shell/x.tsx @/pages/inbox",
+      "imports-only-above src/shell/x.tsx @/app/routes",
     ]);
     expect(againstBreaks([...found, ...found], listed).unlisted).toHaveLength(1);
     expect(againstBreaks([...found, ...found, ...found], listed).unlisted).toHaveLength(2);
@@ -71,7 +97,7 @@ describe("layers", () => {
       "reaches upstream's app.tsx",
     ],
     [
-      "src/pages/x.tsx",
+      "src/features/x/route.tsx",
       'import { fixture } from "@upstream-dispatch/app-sign-out-fixture";',
       "app-sign-out-fixture.tsx > ../dispatch/web/src/app.tsx",
     ],
@@ -125,7 +151,11 @@ describe("layers", () => {
       'import { y } from "@upstream-dispatch/api/client";',
       "only-the-seam-imports-upstream",
     ],
-    ["src/pages/x.tsx", 'import { Dialog } from "@base-ui/react/dialog";', "Base UI comes through"],
+    [
+      "src/features/x/route.tsx",
+      'import { Dialog } from "@base-ui/react/dialog";',
+      "Base UI comes through",
+    ],
     [
       "src/shell/x.test.tsx",
       'import { Dialog } from "@base-ui/react/dialog";',
@@ -137,7 +167,7 @@ describe("layers", () => {
       "library-owners",
     ],
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
-    ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
+    ["src/features/x/route.tsx", 'import { Link } from "react-router";', "only src/navigation"],
     ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],
     ["src/shell/x.tsx", 'import { useLocation } from "react-router-dom";', "and src/app import"],
     ["src/shell/x.tsx", 'import { AppProviders } from "@/app/providers";', "shell is above app"],
@@ -149,7 +179,37 @@ describe("layers", () => {
     ],
     ["src/commands/x.ts", 'import { useGoTo } from "@/navigation/hooks";', "one-row"],
     ["src/navigation/x.ts", 'import { bindings } from "@/commands/bindings";', "one-row"],
-    ["src/navigation/x.ts", 'import { inbox } from "@/pages/inbox";', "navigation is above routes"],
+    [
+      "src/navigation/x.ts",
+      'import { inbox } from "@/features/inbox/route";',
+      "navigation is above routes",
+    ],
+    [
+      "src/shell/x.tsx",
+      'import { inbox } from "@/features/inbox/route";',
+      "only-the-app-imports-routes",
+    ],
+    [
+      "src/features/agents/route.tsx",
+      'import { inbox } from "@/features/inbox/route";',
+      "only-the-app-imports-routes",
+    ],
+    [
+      "src/features/agents/route.tsx",
+      'const page = import("@/features/inbox/page");',
+      "pages-load-lazily",
+    ],
+    ["src/shell/x.tsx", 'const page = import("@/features/inbox/page");', "pages-load-lazily"],
+    [
+      "src/features/agents/route.tsx",
+      'import { AgentsPage } from "@/upstream/views/agents/agents";',
+      "a route file loads an upstream view with import()",
+    ],
+    [
+      "src/features/x/route.tsx",
+      'import { Button } from "@legion/ui/components/button";',
+      "routes-draw-nothing",
+    ],
     [
       "src/navigation/x.ts",
       'import type { ShellLayout } from "../shell/use-shell-layout";',
@@ -176,11 +236,64 @@ describe("layers", () => {
     expect(rulesOf([{ path, text }])).toContain(rule);
   });
 
+  test("a route imports its page statically only when EAGER names the page", () => {
+    const route = file("src/features/agents/route.tsx", 'import { AgentsPage } from "./page";');
+    expect(rulesOf([route, file("src/features/agents/page.tsx")])).toContain(
+      "pages-load-lazily: only src/features/agents/route.tsx imports it, with import()"
+    );
+  });
+
+  const VIEW = file("src/features/x/view.tsx", "export const View = () => null;");
+  test.each([
+    ["draws an element", "export const x = <div />;", [], "draws no <div>"],
+    ["imports its folder's view", 'import { View } from "./view";', [VIEW], "src/features/x/view"],
+    [
+      "imports a part",
+      'import { NeedsYouMark } from "@/features/needs-you";',
+      [],
+      "src/features/needs-you/index.ts",
+    ],
+    ["imports an icon", 'import { BotIcon } from "lucide-react";', [], "no lucide-react"],
+    [
+      "imports a feature whose index gives a view",
+      'import { View } from "@/features/y";',
+      [
+        file("src/features/y/index.ts", 'export { View } from "./view";'),
+        file("src/features/y/view.tsx", "export const View = () => null;"),
+      ],
+      "src/features/y/index.ts",
+    ],
+  ])("a route file that %s draws: routes-draw-nothing", (_, text, siblings, detail) => {
+    const rules = rulesOf([file("src/features/x/route.tsx", text), ...siblings]);
+    expect(rules).toContain(`routes-draw-nothing: a route file `);
+    expect(rules).toContain(detail);
+  });
+
+  test("a type-only import is no load: a route may import its page's and a part's types", () => {
+    const route = file(
+      "src/features/agents/route.tsx",
+      'import type { AgentsPage } from "./page";\nimport type { BotIcon } from "lucide-react";'
+    );
+    expect(layerViolations([route, file("src/features/agents/page.tsx")])).toEqual([]);
+  });
+
+  test("a route.ts and a page.ts are a route file and a page", () => {
+    const route = file("src/features/agents/route.ts", "export const agents = {};");
+    expect(
+      rulesOf([file("src/shell/x.tsx", 'import { agents } from "@/features/agents/route";'), route])
+    ).toContain("only-the-app-imports-routes");
+    const page = file("src/features/agents/page.ts", "export const AgentsPage = () => null;");
+    const eager = file("src/features/agents/route.tsx", 'import { AgentsPage } from "./page";');
+    expect(rulesOf([eager, page])).toContain("pages-load-lazily");
+    const lazy = file("src/features/agents/route.ts", 'const page = import("./page");');
+    expect(layerViolations([lazy, page])).toEqual([]);
+  });
+
   test("a page imports no route file: the route file is below the features", () => {
     const page = file("src/features/inbox/page.tsx", 'import { route } from "./route";');
-    expect(rulesOf([page, file("src/features/inbox/route.tsx")])).toContain(
-      "features is above routes"
-    );
+    const rules = rulesOf([page, file("src/features/inbox/route.tsx")]);
+    expect(rules).toContain("features is above routes");
+    expect(rules).toContain("only-the-app-imports-routes");
   });
 
   test.each([
@@ -234,7 +347,6 @@ describe("layers", () => {
       ]);
     expect(view("src/features/inbox/route.tsx", "inbox")).toBe("");
     expect(view("src/features/inbox/page.tsx", "inbox")).toBe("");
-    expect(view("src/pages/inbox.tsx", "inbox")).toBe("");
     expect(view("src/features/agents/route.tsx", "inbox")).toContain("seam-readers");
     expect(view("src/features/agents/x.tsx", "inbox")).toContain("seam-readers");
     const folder = [
@@ -247,8 +359,8 @@ describe("layers", () => {
         file(path, 'import("@/upstream/views/agents/broadcasts");'),
         file("src/upstream/views/agents/broadcasts.tsx"),
       ]);
-    expect(inFolder("src/pages/agents.tsx")).toBe("");
-    expect(inFolder("src/pages/inbox.tsx")).toContain("seam-readers");
+    expect(inFolder("src/features/agents/route.tsx")).toBe("");
+    expect(inFolder("src/features/inbox/route.tsx")).toContain("seam-readers");
   });
 
   test("the mark is read by the seam and by the layers that pass fork elements into it", () => {
@@ -328,7 +440,7 @@ describe("layers", () => {
     expect(inner("src/parts/a/x.tsx", "parts/b")).toContain("through-the-index");
     expect(inner("src/features/inbox/x.tsx", "parts/b")).toContain("through-the-index");
     expect(inner("src/shell/x.tsx", "features/agents")).toContain("through-the-index");
-    expect(inner("src/features/agents/route.tsx", "features/agents")).toBe("");
+    expect(inner("src/features/agents/x.tsx", "features/agents")).toBe("");
   });
 
   test("the imports between features, and between parts, make no cycle", () => {
@@ -379,7 +491,16 @@ describe("layers", () => {
     ["src/shell/x.tsx", 'import { useState } from "react";', undefined],
     ["src/shell/x.tsx", 'import { Button } from "@legion/ui/components/button";', undefined],
     ["src/shell/x.tsx", 'import { NeedsYouMark } from "@/features/needs-you";', undefined],
-    ["src/pages/x.tsx", 'import { AppShell } from "@/shell/app-shell";', undefined],
+    [
+      "src/features/x/route.tsx",
+      'import type { PageLayout } from "@/shell/page-layout";',
+      undefined,
+    ],
+    ["src/features/inbox/route.tsx", 'const page = import("./page");', undefined],
+    // The home page loads before first paint (EAGER).
+    ["src/features/inbox/route.tsx", 'import { InboxPage } from "./page";', undefined],
+    ["src/app/x.ts", 'import { inbox } from "@/features/inbox/route";', undefined],
+    ["src/features/inbox/page.test.tsx", 'import { InboxPage } from "./page";', undefined],
     ["src/commands/x.ts", 'import { lazyNamed } from "@/loading/lazy-named";', undefined],
     ["src/navigation/x.tsx", 'import { Link } from "react-router-dom";', undefined],
     ["src/app/x.tsx", 'import { BrowserRouter } from "react-router-dom";', undefined],

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 
-import { type PageAddress, type PageRoute, type PageSearch, pageHref } from "./page-route";
+import { type PageAddress, type PageSearch, pageHref, type RoutePath } from "./page-route";
 import { isParamsOf, type ParamsProp, type PathParamName, type PathParams } from "./path";
 import { routerPath } from "./router-path";
 
@@ -12,7 +12,7 @@ type PageTarget<Path extends string, Search extends string> = ParamsProp<Path> &
 };
 
 type PageNavigate = <Path extends string, Search extends string>(
-  page: PageRoute<Path, Search>,
+  page: RoutePath<Path, Search>,
   ...target: [PathParamName<Path>] extends [never]
     ? [target?: PageTarget<Path, Search>]
     : [target: PageTarget<Path, Search>]
@@ -31,7 +31,7 @@ export function usePageNavigate(): PageNavigate {
 
 /** The params of the page the address is on. Called on another page, it throws. */
 export function usePageParams<Path extends string>(
-  page: PageRoute<Path, string>
+  page: RoutePath<Path, string>
 ): PathParams<Path> {
   const match = useMatch(routerPath(page.path));
   if (match === null || !isParamsOf(page.path, match.params)) {
@@ -42,7 +42,7 @@ export function usePageParams<Path extends string>(
 
 /** The search keys the page reads, from the address. Called on another page, it throws. */
 export function usePageSearch<Search extends string>(
-  page: PageRoute<string, Search>
+  page: RoutePath<string, Search>
 ): PageSearch<Search> {
   const match = useMatch(routerPath(page.path));
   const { search } = useLocation();
