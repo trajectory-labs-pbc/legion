@@ -442,7 +442,7 @@ function isStyleObject(node: ts.ObjectLiteralExpression): boolean {
     return parent.type.getText().includes("CSSProperties");
   }
   if (ts.isCallExpression(parent)) {
-    return parent.expression.getText() === "Object.assign" && isStyle(parent.arguments[0]);
+    return bare(parent.expression).getText() === "Object.assign" && isStyle(parent.arguments[0]);
   }
   return false;
 }
@@ -502,14 +502,14 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` or `epub-`
-  // (or `ms-`, which sets nothing) is then read as its prefix, as a browser reads it.
+  // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` (or `ms-`,
+  // which sets nothing) is then read as its prefix, as Chromium reads it.
   const styleKey = (
     node: ts.Node,
     key: string,
     property = (
       key.includes("-") ? key : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-    ).replace(/^(webkit|ms|epub)-/, "-$1-")
+    ).replace(/^(webkit|ms)-/, "-$1-")
   ) => {
     const rule = key === "cssText" ? RULES.styleText : styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
