@@ -24,7 +24,8 @@
   /* A menu, a list box or a tooltip over the page, and a dialog over the scrim. */
   --shadow-popover: 0 8px 24px -8px var(--shadow-tint);
   --shadow-dialog: 0 24px 64px -16px var(--shadow-tint);
-  /* A table row, and a small control: a small button, a menu entry, a pill under a mouse. */
+  /* A table row and a record's property row, and a small control: a small button, a menu entry,
+     a pill under a mouse. */
   --spacing-row: calc(var(--spacing) * 8);
   --spacing-control-sm: calc(var(--spacing) * 7);
   /* A list row of one line, which a group header also takes, and a list row of two lines. */

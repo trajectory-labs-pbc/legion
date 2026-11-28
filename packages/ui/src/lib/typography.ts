@@ -13,7 +13,8 @@ export type Tone = keyof typeof TONE;
 export const headingVariants = cva("", {
   variants: {
     size: {
-      page: "text-xl font-semibold tracking-tight",
+      // A record's title wraps, and breaks a long word rather than overflow.
+      page: "text-xl font-semibold tracking-tight wrap-anywhere",
       section: "text-base font-semibold tracking-tight",
       group: "text-sm font-semibold tracking-tight",
       label: "text-xs font-medium",

@@ -57,10 +57,10 @@ installs from the default branch, not from the ref you asked for.
   in the `prefers-color-scheme: dark` block, which must match; a `.light` class on the root keeps
   light when the OS is dark), the corners (steps of the one `--radius`, and `--radius-badge` for a
   badge), the two shadows (`shadow-popover`, `shadow-dialog`, in the scheme's `--shadow-tint`),
-  the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`),
-  a small control (`h-control-sm`), a list row of one line (`h-list-row-1`, 36 px, which a group
-  header also takes) and of two lines (`h-list-row-2`, 56 px), and the icon stroke
-  (`--icon-stroke`). The style test holds these four heights and no other.
+  the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`,
+  which a record's property row also takes), a small control (`h-control-sm`), a list row of one
+  line (`h-list-row-1`, 36 px, which a group header also takes) and of two lines (`h-list-row-2`,
+  56 px), and the icon stroke (`--icon-stroke`). The style test holds these four heights and no other.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
