@@ -85,6 +85,8 @@ jobs:
 
       - name: Decide whether to review
         id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: .github/scripts/fork-review.sh gate
 
       - name: Put the pull request's files beside the checkout and write the prompt

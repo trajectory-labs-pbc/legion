@@ -24,6 +24,12 @@ cat > "$work/bin/gh" << 'STUB'
 #!/usr/bin/env bash
 echo "gh $*" >> "$STUB_LOG"
 cat >> "$STUB_LOG"
+# A permission read answers from access-<login>, and a login with no such file is not found.
+if [[ $* =~ /collaborators/([^/]+)/permission ]]; then
+  [ -e "$STUB_DIR/access-${BASH_REMATCH[1]}" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+  cat "$STUB_DIR/access-${BASH_REMATCH[1]}"
+  exit 0
+fi
 [ ! -e "$STUB_DIR/gh-answer" ] || cat "$STUB_DIR/gh-answer"
 echo >> "$STUB_LOG"
 if [ -e "$STUB_DIR/refuse-once" ]; then
@@ -58,13 +64,23 @@ payload() {
 }
 
 echo "gate"
-payload person MEMBER feat/x fork/legion
+echo admin > "$work/access-person"
+echo write > "$work/access-writer"
+echo read > "$work/access-outsider"
+# The event shows a private member of the organization as CONTRIBUTOR.
+payload person CONTRIBUTOR feat/x fork/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
-check "a member's pull request is reviewed" "$(is "$status:$(outvar decision)" 0:review)"
-payload person CONTRIBUTOR feat/x person/legion
+check "a member's pull request is reviewed, whatever the event's association" "$(is "$status:$(outvar decision)" 0:review)"
+payload writer NONE feat/x fork/legion
+run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
+check "an author with write access is reviewed" "$(is "$(outvar decision)" review)"
+payload outsider MEMBER feat/x outsider/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
 check "an outside author's pull request is refused" "$(is "$status:$(outvar decision)" 0:fail)"
 check "the refusal says what to do" "$(contains "$(outvar reason)" 'a maintainer takes the branch')"
+payload ghost MEMBER feat/x fork/legion
+run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
+check "an author whose access cannot be read is refused" "$(is "$status:$(outvar decision):$(contains "$(outvar reason)" 'could not be read')" 0:fail:true)"
 payload 'legion-upstream-sync[bot]' NONE fork-sync fork/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
 check "the upstream sync passes" "$(is "$status:$(outvar decision)" 0:pass)"
@@ -98,9 +114,15 @@ git -C "$work/main" push --quiet "$work/origin.git" HEAD:refs/pull/7/head
 pr_head=$(git -C "$work/main" rev-parse HEAD)
 git clone --quiet -b main "$work/origin.git" "$work/ws/legion"
 jq -n '{pull_request: {title: "Change", body: "Why."}}' > "$work/event.json"
-jq -n '[{id: 1, author_association: "MEMBER", user: {login: "a"}, body: "member"},
+echo write > "$work/access-a"
+echo read > "$work/access-b"
+echo admin > "$work/access-d"
+jq -n '[{id: 1, author_association: "CONTRIBUTOR", user: {login: "a"}, body: "member"},
   {id: 2, author_association: "NONE", user: {login: "b"}, body: "outsider"},
-  {id: 3, author_association: "NONE", user: {login: "github-actions[bot]"}, body: "workflow"}]' > "$work/gh-answer"
+  {id: 3, author_association: "NONE", user: {login: "github-actions[bot]"}, body: "workflow"},
+  {id: 4, author_association: "MEMBER", user: {login: "c"}, body: "unreadable"},
+  {id: 5, author_association: "NONE", user: {login: "b"}, body: "outsider again"},
+  {id: 6, author_association: "NONE", user: {login: "d"}, body: "member, read last"}]' > "$work/gh-answer"
 cd "$work/ws/legion"
 run prepare PR_NUMBER=7 HEAD_SHA="$pr_head" GITHUB_WORKSPACE="$work/ws/legion" GITHUB_EVENT_PATH="$work/event.json"
 cd "$script_dir"
@@ -111,7 +133,7 @@ check "the head's .claude directory is removed" "$(is "$([ -e "$work/ws/fork-rev
 check "a symlink in the head is a file holding its target" \
   "$(is "$([ -L "$work/ws/fork-review/head/out" ] && echo link):$(cat "$work/ws/fork-review/head/out")" ":/etc/hostname")"
 check "the model reads only members' and this workflow's comments" \
-  "$(is "$(jq -r .id "$work/ws/fork-review/review-comments.jsonl" | paste -sd,)" 1,3)"
+  "$(is "$(jq -r .id "$work/ws/fork-review/review-comments.jsonl" | paste -sd,)" 1,3,6)"
 check "the pull request's text comes from the event" "$(is "$(cat "$work/ws/fork-review/pull-request.md")" $'# Change\n\nWhy.')"
 base_sha=$(git -C "$work/main" rev-parse HEAD~1)
 prompt_text=$(sed -n '/^prompt<</,/^FORK_REVIEW_/p' "$work/output")
