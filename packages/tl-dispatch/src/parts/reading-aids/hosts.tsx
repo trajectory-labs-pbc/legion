@@ -1,4 +1,4 @@
-import { type ReactNode, useLayoutEffect, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useReadMarks } from "@/data/read-marks";
 import {
@@ -7,7 +7,7 @@ import {
   loadDocumentTransport,
 } from "@/upstream/editor/frame";
 
-import { createAidedEditor, HOST_ATTRIBUTE } from "./aided-editor";
+import { createAidedEditor, HOST_ATTRIBUTE, loadHostAids } from "./aided-editor";
 import { type PartsEntry, reportingSync, usePartsOf } from "./parts-slot";
 import { visitReadMarks } from "./visit";
 
@@ -36,6 +36,10 @@ function useShownEntry(entries: readonly PartsEntry[]): PartsEntry | undefined {
 export function ReadingAidsHost({ children }: { children: ReactNode }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   useReadMarks(visitReadMarks);
+  // The aids load while the document's text and connection do, so its editor seldom waits.
+  useEffect(() => {
+    void loadHostAids();
+  }, []);
   const entries = usePartsOf(host);
   const shown = useShownEntry(entries);
   return (

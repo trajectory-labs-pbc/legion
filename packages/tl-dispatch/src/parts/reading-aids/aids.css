@@ -9,7 +9,8 @@
   user-select: none;
 }
 
-.reading-aids-parts:not(:empty) {
+/* A margin below the parts once they hold more than the outline, which is out of their flow. */
+.reading-aids-parts:has(> :not([data-reading-aids-outline])) {
   margin-block-end: calc(var(--spacing) * 6);
 }
 
@@ -135,4 +136,36 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   .reading-aids-fold-head {
     display: none;
   }
+}
+
+/* The outline, in the article's left padding, which this rule gives only while it shows: the
+   article's border box keeps its width. */
+article[aria-label="Document"]:has([data-reading-aids-outline]) {
+  padding-inline-start: calc(var(--reading-outline-width) + var(--reading-outline-gap));
+}
+
+/* Placed against `.milkdown .editor.ProseMirror`, which proof-editor's lib.css positions: as high as
+   the text, so its list sticks in view to the text's end. */
+.reading-aids-outline {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: calc(100% + var(--reading-outline-gap));
+  inline-size: var(--reading-outline-width);
+}
+
+/* Below the panel's inset and, with the sidebar folded, its stuck top row, as the margin sheet is. */
+.reading-aids-outline-list {
+  --outline-above: calc(var(--panel-inset, 0px) + var(--panel-row, 0px));
+  position: sticky;
+  inset-block-start: calc(var(--outline-above) + var(--spacing) * 4);
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(
+    100dvh -
+    var(--outline-above) -
+    var(--panel-inset, 0px) -
+    var(--spacing) *
+    8
+  );
+  overflow-y: auto;
 }

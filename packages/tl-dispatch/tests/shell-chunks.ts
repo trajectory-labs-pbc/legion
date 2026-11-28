@@ -11,8 +11,13 @@ export function chunksArrive(...loads: (() => Promise<unknown>)[]): Promise<void
   });
 }
 
-/** The issue page's chunk: upstream's issue page inside the reading aids' host. */
-export const issuePageArrives = () => chunksArrive(() => import("@/features/issue/page"));
+/** The issue page's chunk, upstream's issue page inside the reading aids' host, and the aids
+ *  the host starts loading as it mounts. */
+export const issuePageArrives = () =>
+  chunksArrive(
+    () => import("@/features/issue/page"),
+    () => import("@/parts/reading-aids/aided-editor").then(({ loadHostAids }) => loadHostAids())
+  );
 
 /** The chunks the shell itself draws lazily: upstream's margin and the account's menu. */
 export const shellChunksArrive = () =>
