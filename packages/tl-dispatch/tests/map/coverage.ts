@@ -2,12 +2,12 @@ import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
 import { pages } from "@/app/routes";
-import type { Page } from "@/pages/page";
+import type { Page } from "@/navigation/page";
 import { sharedViews, shellViews, widgetViews } from "@/views";
 import { type Files, filesWith, importsOf, resolutionCache } from "../imports";
 import { PACKAGE_ROOT, SRC_DIR, sourceFiles, UPSTREAM_WEB } from "../source";
 import { literal, parseScript } from "../typescript";
-import { pageFile, upstreamScripts } from "./source";
+import { pageRoots, upstreamScripts } from "./source";
 
 export interface Owner {
   name: string;
@@ -37,13 +37,13 @@ export interface Coverage {
 /** Each page, the shell, each widget and each shared list, with the view files it owns. */
 export function owners(): Owner[] {
   return [
-    // By id, as the page files sort: the first owner of a file decides where it is shared.
+    // By id, as the route files sort: the first owner of a file decides where it is shared.
     ...[...pages]
       .sort((a, b) => (a.id < b.id ? -1 : 1))
       .map((page) => ({
         name: `page:${page.id}`,
         globs: page.views,
-        list: `src/pages/${page.id}.tsx views`,
+        list: `src/features/${page.id}/route.tsx views`,
         server: page.server,
       })),
     { name: "shell", globs: shellViews, list: "src/views.ts shellViews" },
@@ -90,12 +90,12 @@ function ownersOf(
   return { owners: [...new Set(deciding.map((entry) => entry.owner))], hits };
 }
 
-/** The owner of a file of this app: its page, for a page file and the folder of its name, else the shell. */
-export function ownOwner(file: string, pageFiles: readonly { file: string; id: string }[]): string {
-  const page = pageFiles.find(
-    (entry) => file === entry.file || file.startsWith(`${entry.file.replace(/\.tsx?$/, "")}/`)
+/** The owner of a file of this app: its page, for its feature or upstream view; else the shell. */
+export function ownOwner(file: string, ids: readonly string[]): string {
+  const id = ids.find((id) =>
+    pageRoots(id).some((root) => file === `${root}.tsx` || file.startsWith(`${root}/`))
   );
-  return page ? `page:${page.id}` : "shell";
+  return id === undefined ? "shell" : `page:${id}`;
 }
 
 /**
@@ -181,7 +181,7 @@ export function importGraph(
 ): Map<string, string[]> {
   const files = filesWith(overlay);
   const cache = resolutionCache();
-  const own = pages.map((page) => ({ file: pageFile(page.id), id: page.id }));
+  const own = pages.map((page) => page.id);
   const scripts = new Set([
     ...upstreamScripts(join(UPSTREAM_WEB, "features")),
     ...sourceFiles()

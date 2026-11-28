@@ -11,9 +11,8 @@ import {
   PlusIcon,
   SearchIcon,
 } from "lucide-react";
-
+import { navCommandDefinitions } from "./destinations";
 import { COMMAND_GROUPS } from "./groups";
-import { navCommandDefinitions } from "./nav";
 import { type CommandContext, type CommandIdOf, createCatalog } from "./schema";
 
 /**

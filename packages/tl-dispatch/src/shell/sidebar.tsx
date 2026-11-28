@@ -5,16 +5,14 @@ import { textVariants } from "@legion/ui/lib/typography";
 import { cn } from "@legion/ui/lib/utils";
 import { PinIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { navCommandName } from "@/commands/destinations";
 import { HotkeyTooltip, LabelTooltip } from "@/commands/hotkey-tooltip";
-import { navCommandName } from "@/commands/nav";
 import { useCommand } from "@/commands/use-command";
 import { unreadRepliesLabel, usePinnedAgent } from "@/data/agent-pins";
 import type { AuthenticatedUser } from "@/data/session";
 import { ReadFailure } from "@/features/read-failure";
 import { PageLink } from "@/navigation/page-link";
-import { agents } from "@/pages/agents";
-import { issue } from "@/pages/issue";
-import { project } from "@/pages/project";
+import { routes } from "@/navigation/routes";
 import { AgentName } from "@/upstream/widgets/agent-name";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
@@ -47,7 +45,7 @@ function PinnedAgentRow({
         render={
           <PageLink
             onClick={onNavigate}
-            page={agents.routes.live}
+            page={routes.agents.live}
             params={{ sessionId: agent.sessionId }}
             replace={replace}
           />
@@ -80,7 +78,7 @@ function ItemRows({
 }: {
   items: readonly SidebarItem[];
   onNavigate: (() => void) | undefined;
-  page: typeof issue.routes.issue | typeof project.routes.overview;
+  page: typeof routes.issue.issue | typeof routes.project.overview;
 }) {
   return (
     <ul className="flex flex-col gap-0.5">
@@ -203,11 +201,11 @@ export function SidebarView({
         )}
       </SidebarSection>
       <SidebarSection heading="Pinned" noun="pinned issues" read={data.pinnedIssues}>
-        {(items) => <ItemRows items={items} onNavigate={onNavigate} page={issue.routes.issue} />}
+        {(items) => <ItemRows items={items} onNavigate={onNavigate} page={routes.issue.issue} />}
       </SidebarSection>
       <SidebarSection heading="Projects" noun="projects" read={data.projects}>
         {(items) => (
-          <ItemRows items={items} onNavigate={onNavigate} page={project.routes.overview} />
+          <ItemRows items={items} onNavigate={onNavigate} page={routes.project.overview} />
         )}
       </SidebarSection>
     </nav>

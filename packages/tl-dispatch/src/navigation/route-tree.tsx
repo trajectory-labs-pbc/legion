@@ -63,7 +63,7 @@ export function RouteProvider({
 }
 
 /** The route tree of the app's pages; outside the `RouteProvider` it throws. */
-function useRouteTree<Page, Layout>(): RouteTree<Page, Layout> {
+export function useRouteTree<Page = unknown, Layout = unknown>(): RouteTree<Page, Layout> {
   const tree = useContext(TreeContext);
   if (tree === undefined) throw new Error("a route is read outside the app's RouteProvider");
   return tree as RouteTree<Page, Layout>;

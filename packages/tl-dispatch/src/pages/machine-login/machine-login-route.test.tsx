@@ -1,20 +1,15 @@
 import { expect, spyOn, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { api } from "@/upstream/api";
-import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { renderApp } from "../../../tests/app";
 import { MachineLoginRoute } from "./machine-login-route";
 
 function renderRoute(): HTMLElement {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <MemoryNavigationProvider path="/credentials/machine">
-      <QueryClientProvider client={queryClient}>
-        <MachineLoginRoute />
-      </QueryClientProvider>
-    </MemoryNavigationProvider>
-  ).container;
+  return renderApp(<MachineLoginRoute />, { path: "/credentials/machine", client: queryClient })
+    .container;
 }
 
 test("MLR-01 a Dispatch without the device grant shows the fork's not-found page", async () => {

@@ -16,6 +16,9 @@ export const RULES = [
   "imports-are-readable",
   "upstream-app-never-loads",
   "views-are-marked",
+  "only-the-app-imports-routes",
+  "pages-load-lazily",
+  "routes-draw-nothing",
 ] as const;
 
 export type Rule = (typeof RULES)[number];
@@ -39,8 +42,13 @@ export const ROWS = [
   [{ layer: "parts", paths: ["src/parts/*"] }],
   [{ layer: "features", paths: ["src/features/*"] }],
   [{ layer: "shell", paths: ["src/shell"] }],
-  // Until the features move: each page file of src/pages, the parts in its folder included.
-  [{ layer: "routes", paths: ["src/features/*/route.tsx", "src/pages"] }],
+  // Until the folders move: the machine login and not-found folders of src/pages.
+  [
+    {
+      layer: "routes",
+      paths: ["src/features/*/route.tsx", "src/features/*/route.ts", "src/pages"],
+    },
+  ],
   [{ layer: "app", paths: ["src/app"] }],
 ] as const;
 
@@ -61,8 +69,6 @@ export const ROOT_FILES: readonly string[] = ["src/main.tsx", "src/views.ts", "s
 const PAGE_VIEW_READERS: readonly Reader[] = [
   "src/features/<page>/route.tsx",
   "src/features/<page>/page.tsx",
-  // Until the features move.
-  "src/pages/<page>.tsx",
 ];
 
 /**
@@ -95,6 +101,31 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   // The composition root: only the entry starts it, and a test may draw it.
   "src/app": ["src/main.tsx"],
   "src/*.css": ["src/main.tsx", "src/styles.css"],
+};
+
+/**
+ * The page modules that load before first paint, each with its reason: a page is eager because
+ * its route imports its `page.tsx` statically, and an upstream view because its eager page
+ * imports it. Every other page and upstream view loads with `import()`.
+ */
+export const EAGER: Readonly<Record<string, string>> = {
+  "src/features/inbox/page.tsx": "the home page draws at first paint, with no loading fallback",
+  "src/upstream/views/inbox/inbox.tsx": "the home page draws it at first paint",
+};
+
+/**
+ * What a route file may import for its values, each with its reason; it may also import the pages
+ * `EAGER` names. A folder covers the files under it.
+ */
+export const ROUTE_IMPORTS: Readonly<Record<string, string>> = {
+  "src/navigation": "the route's addresses, pageRoute and Redirect",
+  "src/data/prefetch.ts": "prefetchOf, which starts the page's first reads",
+  "src/loading/lazy-named.ts": "the lazy element of the page",
+  "src/upstream/queries.ts": "the page's first reads",
+  "src/upstream/widgets/live-views.tsx": "LiveViewRoute draws nothing: the shell mounts live views",
+  "src/pages/machine-login/machine-login-route.tsx":
+    "drawn at first paint before the features move",
+  "src/pages/not-found/not-found.tsx": "drawn at first paint before the features move",
 };
 
 /** The files outside src/upstream that may import upstream's code, each with its reason. */
@@ -146,25 +177,6 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/commands/engine-stack.test.ts": ["(not a literal)"],
     "src/commands/hotkey-tooltip.test.tsx": ["(not a literal)"],
   },
-  "imports-only-above": {
-    "src/shell/account-menu.tsx": ["@/pages/people"],
-    "src/shell/app-name.tsx": ["@/pages/inbox"],
-    "src/shell/compact-header.tsx": ["@/pages/agents", "@/pages/inbox"],
-    "src/shell/nav-pages.ts": [
-      "@/pages/agents",
-      "@/pages/delivery",
-      "@/pages/inbox",
-      "@/pages/machines",
-      "@/pages/priorities",
-      "@/pages/settings",
-    ],
-    "src/shell/sidebar.tsx": ["@/pages/agents", "@/pages/issue", "@/pages/project"],
-    "src/shell/use-shell-overlays.ts": [
-      "@/pages/inbox",
-      "@/pages/machine-login",
-      "@/pages/project",
-    ],
-  },
   "library-owners": {
     "src/pages/machine-login/machine-login-route.tsx": ["@tanstack/react-query"],
     "src/pages/machine-login/machine-logins.tsx": ["@tanstack/react-query"],
@@ -172,13 +184,10 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/pages/machine-login/use-revoke.ts": ["@tanstack/react-query"],
   },
   "seam-readers": {
-    "src/pages/agents.tsx": [
-      "@/upstream/queries",
-      "@/upstream/routes",
-      "@/upstream/widgets/live-views",
-    ],
-    "src/pages/inbox.tsx": ["@/upstream/queries", "@/upstream/routes", "@/upstream/shell"],
-    "src/pages/issue.tsx": ["@/upstream/queries"],
+    "src/features/agents/route.tsx": ["@/upstream/queries", "@/upstream/widgets/live-views"],
+    "src/features/inbox/route.tsx": ["@/upstream/queries"],
+    "src/features/issue/route.tsx": ["@/upstream/queries"],
+    "src/features/priorities/route.tsx": ["@/upstream/queries"],
     "src/pages/machine-login/decision-buttons.tsx": [
       "@/upstream/api",
       "@/upstream/contract",
@@ -215,8 +224,5 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
       "@/upstream/writes",
     ],
     "src/pages/not-found/not-found.tsx": ["@/upstream/shell"],
-    "src/pages/page.ts": ["@/upstream/routes"],
-    "src/pages/people.tsx": ["@/upstream/routes"],
-    "src/pages/priorities.tsx": ["@/upstream/queries"],
   },
 };

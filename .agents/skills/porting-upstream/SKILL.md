@@ -22,7 +22,7 @@ tl-dispatch draws upstream's pages until it rebuilds them. A rebuilt page no lon
 1. Read the failing gate's message in the sync pull request. Note the upstream file and this app's page.
 2. Find the upstream commits: `git log --oneline main..fork-sync -- packages/dispatch/web/src/<file>`. Read each: `git show --stat <sha>`, then `git show <sha> -- <file>` for each view file.
 3. Decide to port or not by the list above. If the commit both restyles and changes behaviour, port the behaviour only.
-4. Find this app's files for the page: its page file in `src/pages/` and its folder `src/pages/<page>/`. The page file's `views` names the upstream files it replaces.
+4. Find this app's files for the page: its folder `src/features/<page>/` and its upstream view `src/upstream/views/<page>`. The route file's `views` names the upstream files it replaces.
 5. Make the change in this app's components. Use `packages/ui` and the design rules (`.agents/skills/ui-design-system/SKILL.md`), not upstream's class strings or markup.
 6. Reach upstream code through the seam, `src/upstream/`: add the name to the seam file of its subject, and never import `@upstream-dispatch/...` outside `src/upstream/`, `tests/upstream.ts` and `e2e/`. An upstream rename then breaks in one folder. A component that draws DOM goes in a `views/` or `widgets/` file as an `upstreamView(...)` call. `tests/layering.test.ts` holds both rules (`tests/layers.md`).
 7. Give each new behaviour a parity ID, a row in the page's list under `packages/tl-dispatch/tests/parity`, and a test. Port upstream's own test for it, with the ID at the start of its name (`test("MLP-07 a stopped approve says it may have been made", ...)`). See `.agents/skills/react-quality/SKILL.md`.

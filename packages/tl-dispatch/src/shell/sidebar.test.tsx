@@ -1,16 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
-import { NAV_DESTINATIONS } from "@/commands/nav";
+import { NAV_DESTINATIONS, type NavName } from "@/commands/destinations";
 import type { AuthenticatedUser } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
-import { render, settle, sleep, tooltipOf } from "../../tests/react";
+import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
-import { NAV_PAGES } from "./nav-pages";
 import { Sidebar, SidebarView } from "./sidebar";
 import type { SectionRead, SidebarData } from "./sidebar-data";
 
@@ -105,29 +103,15 @@ const faultOf = (retry: () => void) => ({ retrying: false, retry });
 const failedRead = (retry: () => void) => ({ rows: undefined, fault: faultOf(retry) });
 const PROJECT = { key: "CORE", text: "Core", openAsks: 0, current: false };
 
-const destination = (name: string, count?: SidebarData["destinations"][number]["count"]) => {
-  const found = NAV_DESTINATIONS.find((d) => d.name === name);
-  if (found === undefined) throw new Error(`no ${name}`);
-  return {
-    name: found.name,
-    label: found.label,
-    icon: found.icon,
-    page: NAV_PAGES[found.name],
-    current: false,
-    count,
-  };
+const destination = (name: NavName, count?: SidebarData["destinations"][number]["count"]) => {
+  const { label, icon, route } = NAV_DESTINATIONS[name];
+  return { name, label, icon, page: route, current: false, count };
 };
 
 function mountView(data: SidebarData) {
   // A pinned agent's row reads the agents for its name.
   holdShellReads();
-  const view = render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryNavigationProvider path="/">
-        <SidebarView data={data} onNavigate={undefined} peek={false} />
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
-  );
+  const view = renderApp(<SidebarView data={data} onNavigate={undefined} peek={false} />);
   mounted.push(view);
   return view.container;
 }
@@ -135,10 +119,15 @@ function mountView(data: SidebarData) {
 describe("the sidebar", () => {
   test("draws a 28 px row per nav destination, with its address and icon", () => {
     const rows = rowsOf(mount("/"));
-    expect(rows.map((row) => row.label)).toEqual(NAV_DESTINATIONS.map((d) => d.label));
-    expect(rows.map((row) => row.href)).toEqual(
-      NAV_DESTINATIONS.map((d) => NAV_PAGES[d.name].path)
-    );
+    expect(rows.map((row) => [row.label, row.href])).toEqual([
+      ["Inbox", "/"],
+      ["Agents", "/agents"],
+      ["Priorities", "/priorities"],
+      ["Delivery", "/delivery"],
+      ["Pipeline", "/pipeline"],
+      ["Machines", "/machines"],
+      ["Settings", "/settings"],
+    ]);
     for (const { row } of rows) expect(row.className).toContain("h-control-sm");
   });
 

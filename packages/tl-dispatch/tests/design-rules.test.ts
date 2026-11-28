@@ -229,18 +229,18 @@ const PLACED: readonly [string, string, readonly string[]][] = [
 ];
 
 const controlPath = (index: number, extension: string) =>
-  `src/${extension === "css" ? "shell" : "pages"}/control-${index}.${extension}`;
+  `src/${extension === "css" ? "shell" : "features/x"}/control-${index}.${extension}`;
 
 let found: DesignViolation[] = [];
 const rulesOf = (path: string) =>
   found.filter((violation) => violation.file === path).map((violation) => violation.rule);
 
 const MAPS_UPSTREAM = {
-  path: "src/pages/x.tsx",
+  path: "src/features/x/x.tsx",
   text: 'export const page = { server: "upstream" };\n<p className="text-sky-700" />;',
 };
 const LINES = {
-  path: "src/pages/lines.tsx",
+  path: "src/features/x/lines.tsx",
   text: `"${"✓".repeat(10)}";\n<p className="text-sky-700" />\n;`,
 };
 

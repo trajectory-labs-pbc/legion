@@ -4,13 +4,15 @@ import {
   type PointerEvent,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
 } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { usePrefetchClient } from "@/data/prefetch";
 
-import { type PageRoute, type PageSearch, type Prefetch, pageHref } from "./page-route";
-import { isParamsOf, type ParamsProp } from "./path";
+import { type PageSearch, type Prefetch, pageHref, type RoutePath } from "./page-route";
+import { fillPath, isParamsOf, type ParamsProp } from "./path";
+import { useRouteTree } from "./route-tree";
 
 /** How long the pointer rests on a link before its page's reads start. */
 export const PREFETCH_INTENT_MS = 100;
@@ -56,25 +58,24 @@ function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): Pref
 
 type PageLinkProps<Path extends string, Search extends string> = Omit<ComponentProps<"a">, "href"> &
   ParamsProp<Path> & {
-    page: PageRoute<Path, Search>;
+    page: RoutePath<Path, Search>;
     search?: PageSearch<Search>;
     replace?: boolean;
   };
 
-/** The page's first reads for these params, or none when it declares none. */
-function readsOf<Path extends string>(
-  page: PageRoute<Path, string>,
-  params: Readonly<Record<string, string | undefined>> | undefined
-): (() => readonly Prefetch[]) | undefined {
-  const { prefetch } = page;
-  if (prefetch === undefined) return undefined;
-  return () => {
-    const given = params ?? {};
-    return isParamsOf(page.path, given) ? prefetch.call(page, given) : [];
-  };
+/** The first reads of the route the router opens at `pathname`, or none when it declares none. */
+function useReadsAt(pathname: string): (() => readonly Prefetch[]) | undefined {
+  const tree = useRouteTree();
+  return useMemo(() => {
+    const found = tree.pageAt(pathname);
+    const prefetch = found?.route.prefetch;
+    if (found === undefined || prefetch === undefined) return undefined;
+    const { route, params } = found;
+    return () => (isParamsOf(route.path, params) ? prefetch.call(route, params) : []);
+  }, [tree, pathname]);
 }
 
-/** A link to a page, typed from its route, which starts the page's reads on intent. */
+/** A link to a page, typed from its route, which starts the reads of its route on intent. */
 export function PageLink<Path extends string, Search extends string>({
   page,
   params,
@@ -86,7 +87,7 @@ export function PageLink<Path extends string, Search extends string>({
   onBlur,
   ...rest
 }: PageLinkProps<Path, Search>) {
-  const intent = usePrefetchIntent(readsOf(page, params));
+  const intent = usePrefetchIntent(useReadsAt(fillPath(page.path, params ?? {})));
   return (
     <Link
       {...rest}
@@ -117,6 +118,6 @@ export function Redirect<Path extends string, Search extends string>({
   page,
   params,
   search,
-}: ParamsProp<Path> & { page: PageRoute<Path, Search>; search?: PageSearch<Search> }) {
+}: ParamsProp<Path> & { page: RoutePath<Path, Search>; search?: PageSearch<Search> }) {
   return <Navigate replace to={pageHref(page, params, search)} />;
 }

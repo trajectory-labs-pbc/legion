@@ -2,8 +2,7 @@ import { Button } from "@legion/ui/components/button";
 import { NavRow, NavSurface } from "@legion/ui/components/nav";
 import { ReadFailure } from "@/features/read-failure";
 import { PageLink } from "@/navigation/page-link";
-import { agents } from "@/pages/agents";
-import { inbox } from "@/pages/inbox";
+import { routes } from "@/navigation/routes";
 import { AppName } from "./app-name";
 import { useInboxRowCount } from "./inbox-count";
 import { PeekButton } from "./peek-button";
@@ -33,7 +32,7 @@ export function CompactHeader({
         <NavRow
           aria-current={onInbox ? "page" : undefined}
           className="shrink-0"
-          render={<PageLink page={inbox.routes.home} />}
+          render={<PageLink page={routes.inbox.home} />}
           title={inboxCount.label}
         >
           Inbox
@@ -42,7 +41,7 @@ export function CompactHeader({
         {(agentsCount.count ?? 0) === 0 ? null : (
           <NavRow
             className="shrink-0"
-            render={<PageLink page={agents.routes.list} />}
+            render={<PageLink page={routes.agents.list} />}
             title={agentsCount.label}
           >
             Agents

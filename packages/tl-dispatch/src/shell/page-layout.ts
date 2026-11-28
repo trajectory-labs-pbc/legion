@@ -1,4 +1,7 @@
+import type { Page } from "@/navigation/page";
+import type { PageRoute, RoutePath } from "@/navigation/page-route";
 import { useCurrentRoute as useRoute } from "@/navigation/route-tree";
+import type { routes } from "@/navigation/routes";
 
 /** How the shell frames a page. Every field is off when left out. */
 export interface PageLayout {
@@ -23,6 +26,29 @@ export interface PageLayout {
   /** The session whose live view the page brings to the front. */
   readonly liveView?: string;
 }
+
+type Routes = typeof routes;
+
+/** The id `routes` files the addresses `R` under. */
+type IdOf<R> = {
+  [Id in keyof Routes]: [Routes[Id]] extends [R] ? ([R] extends [Routes[Id]] ? Id : never) : never;
+}[keyof Routes];
+
+/**
+ * A page of the app, typed from its addresses in `routes`: a route it misses, adds or puts on
+ * another address fails tsc.
+ */
+export type AppPage<R extends Readonly<Record<string, RoutePath>>> = Omit<
+  Page<PageLayout>,
+  "id" | "routes"
+> & {
+  id: IdOf<R>;
+  routes: {
+    readonly [Name in keyof R]: R[Name] extends RoutePath<infer Path, infer Search>
+      ? PageRoute<Path, Search, PageLayout>
+      : never;
+  };
+};
 
 /** The page and route the address opens, with the shell's frame options. */
 export const useCurrentRoute = () => useRoute<PageLayout>();

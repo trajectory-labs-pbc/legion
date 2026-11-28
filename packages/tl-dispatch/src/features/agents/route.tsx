@@ -1,11 +1,10 @@
 import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute } from "@/navigation/page-route";
+import { routes } from "@/navigation/routes";
+import type { AppPage } from "@/shell/page-layout";
 import { userAgentStateQuery } from "@/upstream/queries";
-import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH } from "@/upstream/routes";
 import { LiveViewRoute } from "@/upstream/widgets/live-views";
-
-import type { Page } from "./page";
 
 const AgentsPage = lazyNamed(() => import("@/upstream/views/agents/agents"), "AgentsPage");
 const BroadcastsPage = lazyNamed(
@@ -23,15 +22,15 @@ export const agents = {
   server: "upstream",
   routes: {
     list: pageRoute({
-      path: "/agents",
+      ...routes.agents.list,
       element: <AgentsPage />,
       prefetch: () => [prefetchOf(userAgentStateQuery())],
     }),
-    broadcasts: pageRoute({ path: "/agents/broadcasts", element: <BroadcastsPage /> }),
-    broadcast: pageRoute({ path: "/agents/broadcasts/:id", element: <BroadcastPage /> }),
+    broadcasts: pageRoute({ ...routes.agents.broadcasts, element: <BroadcastsPage /> }),
+    broadcast: pageRoute({ ...routes.agents.broadcast, element: <BroadcastPage /> }),
     // Draws nothing: the shell mounts live views outside the routes.
-    live: pageRoute({ path: AGENT_LIVE_PATH, element: <LiveViewRoute /> }),
-    artifact: pageRoute({ path: AGENT_ARTIFACT_PATH, element: <AgentArtifactPage /> }),
+    live: pageRoute({ ...routes.agents.live, element: <LiveViewRoute /> }),
+    artifact: pageRoute({ ...routes.agents.artifact, element: <AgentArtifactPage /> }),
   },
   views: ["features/agents/**"],
-} satisfies Page;
+} satisfies AppPage<typeof routes.agents>;

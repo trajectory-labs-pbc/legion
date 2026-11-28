@@ -25,7 +25,7 @@ Ask these questions in order, and stop at the first yes.
 10. Is it the route tree, the providers or the start? It goes to `src/app`.
 
 Until the migration moves them, some files sit in a layer that is not their folder's; the table names each one with the step that moves it.
-Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; and `src/features/read-failure.tsx`, in `data`.
+Today these are the `machine-login` and `not-found` folders of `src/pages`, in the layer of the route files; and `src/features/read-failure.tsx`, in `data`.
 
 ## Every file has a layer (`every-file-has-a-layer`)
 
@@ -61,7 +61,7 @@ A test imports upstream through the seam, or through `tests/upstream.ts`, the on
 ## Each seam file has its readers (`seam-readers`)
 
 `READERS` in the table gives the readers of each seam file, as the spec's seam table does, so a seam file serves one subject to the layers that need it.
-A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`, and until the features move by its file in `src/pages`.
+A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`.
 A page with more than one view gets the folder, with one file for each view: an `import()` of a file loads every view it gives, so each lazy chunk has its own file.
 `src/app` also reads the data seam files that a provider needs, and `write-kinds.ts`, which registers upstream's kinds of writes.
 `mark.tsx` is read by the seam files, and for `ForkView` by the layers that pass fork elements into a marked component.
@@ -124,6 +124,20 @@ The test fails when an import breaks a rule and is not in the list, and when an 
 A file that moves keeps its entries under its new path.
 A new entry shows in the pull request's diff of the table, and the reviewer refuses it.
 
-## Rules that come with the features move
+## Only the app imports a route file (`only-the-app-imports-routes`)
 
-The features move adds the rules of the route files to the table: only `src/app` imports a route file, a route file loads its page lazily, and a route file draws nothing.
+A route file, `src/features/<page>/route.tsx` (or `route.ts`), puts the page's element on its routes, and only `src/app` imports it, to make the route tree; a test may import it too.
+The shell and a feature link to a page through `src/navigation/routes.ts`, which holds each route's address, so no file needs another page's route file.
+A route file imports no other route file.
+
+## A route file loads its page lazily (`pages-load-lazily`)
+
+A page's `page.tsx` is imported only by its own `route.tsx`, and only with `import()`, so no page goes into the entry chunk; a test may import it directly.
+A type-only import loads nothing, so the rule does not count it.
+The exceptions are in `EAGER`, each with its reason: the Inbox is the home page, so its route imports its `page.tsx` statically and it draws at first paint with no loading fallback.
+A route file loads each upstream view with `import()` for the same reason; the page's `page.tsx` may import its upstream view directly, since the page itself loads lazily.
+
+## A route file draws nothing (`routes-draw-nothing`)
+
+A route file draws no element of its own (a lowercase JSX tag), and it imports a value only from what `ROUTE_IMPORTS` in `tests/layers.table.ts` names, each with its reason, and from the pages `EAGER` names: navigation, `prefetchOf`, `lazyNamed`, upstream's queries and the live views' route.
+So it imports no file of the UI package, no icon, no part, no other feature and no file of its own folder but an eager page: the page it loads draws, and the route file holds only the page's frame options, its prefetch and its lazy element.

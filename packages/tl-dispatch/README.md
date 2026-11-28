@@ -9,14 +9,14 @@ replaces them one page at a time.
 | --- | --- |
 | `src/upstream` | The seam: the one folder that imports upstream's code, one file for each subject, each a re-export by name, besides `mark.tsx` and the side-effect `write-kinds.ts`; each component a `views/` or `widgets/` file gives draws inside the mark, or is a name `UNMARKED` lists; `tests/upstream.ts` is the tests' door to upstream's test helpers |
 | `src/commands` | The command catalog, compiled to upstream's key engine, and the components that read it |
-| `src/navigation` | The router: typed links, hooks and the route tree |
+| `src/navigation` | The router: each page's addresses (`routes.ts`), typed links, hooks and the route tree |
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
 | `src/browser` | The browser's storage (`storage.ts`, the one file that reads or writes it) and the unload prompt (`unload.ts`) |
 | `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
-| `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name |
+| `src/pages` | The parts of the two pages this app serves, machine login and not found, until they move to their features |
 | `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
-| `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
+| `src/features` | Each page's folder, with its route file (`route.tsx`) and, where this app draws the page, its `page.tsx`; and, until they move, the domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
 `tests/layers.table.ts` holds the layers and their rules as data, with the list of the imports
 that break a rule today, and `tests/layers.md` gives the reason for each rule and the questions
@@ -85,7 +85,8 @@ engine and the command store. Everything else reads the store:
 The files of `src/commands`, one role each:
 
 - `app-catalog.ts`: the app's commands (`APP_CONTEXTS`, `appCatalog`, `CommandId`).
-- `groups.ts`: the sheet's groups. `nav.ts`: the sidebar's destinations and their `G` chords.
+- `groups.ts`: the sheet's groups. `destinations.ts`: the sidebar's destinations, their routes and
+  their `G` chords.
   `upstream-labels.ts`: the sheet's labels for upstream's bindings.
 - `schema.ts`: what a command, a context and a catalog are; `createCatalog` checks a catalog.
 - `keys.ts`: the checks the catalog runs on a key. `key-chips.ts`: the chips a key shows as.
@@ -107,16 +108,17 @@ the network returns.
 
 ## Navigation
 
-Each page file names its routes with `pageRoute`, which keeps the path and search keys as
-literal types. Paths are written in navigation's own grammar, which `src/navigation/path.ts`
+`src/navigation/routes.ts` names each page's addresses with `routePath`, which keeps the path
+and search keys as literal types, and each route file (`src/features/<page>/route.tsx`) puts the
+page's lazy element on them with `pageRoute`. Paths are written in navigation's own grammar, which `src/navigation/path.ts`
 alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of the address.
 `src/navigation` builds everything else from them:
 
 - `pageHref(route, params?, search?)`, `<PageLink page params? search>`, `<Redirect>`,
   `usePageNavigate()`, `usePageParams(route)`, `usePageSearch(route)` and `useCurrentRoute()`, each
   typed from the route's path. `params` is required only where the path binds a `:name`.
-- `<PageLink>` starts the route's `prefetch` reads when the pointer rests on it for 100 ms or it
-  takes focus. The pointer leaving before then starts nothing. A read that started runs to its
+- `<PageLink>` starts the `prefetch` reads of the route its address opens in the app's route
+  tree when the pointer rests on it for 100 ms or it takes focus. The pointer leaving before then starts nothing. A read that started runs to its
   answer, since upstream's reads cannot be stopped and the page that opens uses it.
 - `route-tree.tsx` builds a route tree from the pages it is handed, through `routerPath`.
 
@@ -130,7 +132,8 @@ shows. Where upstream's parsers decide, the layout is a function of the address.
 `src/shell/page-layout.ts`. `src/app/routes.ts` lists the pages, and the app's providers hand
 them to `RouteProvider`. The shell reads the address only through the layout
 `useCurrentRoute()` returns. `src/app/routes.test.tsx` holds every declaration to upstream's
-route rules.
+route rules. A route file ends `satisfies AppPage<typeof routes.<id>>`, so tsc fails a page that
+misses, adds or moves a route of the addresses `src/navigation/routes.ts` gives its links.
 
 ### Changing the router
 
@@ -149,7 +152,7 @@ A move to another router (TanStack Router, say) changes these files of this pack
 - The tests under `src/navigation` that call the router (`hooks.test.tsx` reads
   `useNavigationType`).
 
-The page files, `page-route.ts`, `path.ts`, the shell and `tests/layering.ts` (whose rule names
+The route files, `page-route.ts`, `path.ts`, the shell and `tests/layering.ts` (whose rule names
 both routers) stay as they are.
 
 That holds for this package only. More than a hundred of upstream's files import React Router,

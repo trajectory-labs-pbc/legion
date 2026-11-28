@@ -1,17 +1,17 @@
-import { agents } from "@/pages/agents";
-import { credentials } from "@/pages/credentials";
-import { delivery } from "@/pages/delivery";
-import { projectDocument } from "@/pages/document";
-import { inbox } from "@/pages/inbox";
-import { issue } from "@/pages/issue";
-import { machineLogin } from "@/pages/machine-login";
-import { machines } from "@/pages/machines";
-import { notFound } from "@/pages/not-found";
-import { type Page, upstreamLayout } from "@/pages/page";
-import { people } from "@/pages/people";
-import { priorities } from "@/pages/priorities";
-import { project } from "@/pages/project";
-import { settings } from "@/pages/settings";
+import { agents } from "@/features/agents/route";
+import { delivery } from "@/features/delivery/route";
+import { projectDocument } from "@/features/document/route";
+import { inbox } from "@/features/inbox/route";
+import { issue } from "@/features/issue/route";
+import { machineLogin } from "@/features/machine-login/route";
+import { machines } from "@/features/machines/route";
+import { notFound } from "@/features/not-found/route";
+import { people } from "@/features/people/route";
+import { priorities } from "@/features/priorities/route";
+import { project } from "@/features/project/route";
+import { settings } from "@/features/settings/route";
+import { type Page, upstreamLayout } from "@/navigation/page";
+import type { PageLayout } from "@/shell/page-layout";
 
 /** Each page of the app, from its route file. */
 const routeFiles = [
@@ -22,17 +22,16 @@ const routeFiles = [
   priorities,
   project,
   projectDocument,
-  credentials,
   machineLogin,
   settings,
   delivery,
   people,
   notFound,
-] as const satisfies readonly Page[];
+] as const satisfies readonly Page<PageLayout>[];
 
 /** The route map: every page and the routes it serves. A route of a page upstream draws takes
  *  upstream's frame, unless it declares its own. */
-export const pages: readonly Page[] = routeFiles.map((page: Page) =>
+export const pages: readonly Page<PageLayout>[] = routeFiles.map((page: Page<PageLayout>) =>
   page.server === "fork"
     ? page
     : {

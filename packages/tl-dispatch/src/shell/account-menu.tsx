@@ -10,7 +10,7 @@ import { ChevronsUpDownIcon, UserIcon } from "lucide-react";
 import { commandStore } from "@/commands/command-store";
 import { useCommand } from "@/commands/use-command";
 import { PageLink } from "@/navigation/page-link";
-import { people } from "@/pages/people";
+import { routes } from "@/navigation/routes";
 
 /** The account's button and menu: the reader's own page, and Sign out. Sign out sits in the menu:
  *  two deliberate steps, never one stray click; it is the palette's Sign out command, run as the
@@ -48,7 +48,7 @@ export function AccountMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-(--anchor-width)" side="top">
         <DropdownMenuItem
-          render={<PageLink onClick={onNavigate} page={people.routes.person} params={{ login }} />}
+          render={<PageLink onClick={onNavigate} page={routes.people.person} params={{ login }} />}
         >
           <UserIcon aria-hidden />
           Your page
