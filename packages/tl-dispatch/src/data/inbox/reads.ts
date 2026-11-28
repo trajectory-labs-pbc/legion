@@ -20,10 +20,13 @@ export function useInboxAsks<T = InboxRow[]>(select?: (asks: InboxRow[]) => T): 
  * and while `enabled` (upstream asks nothing for a list narrowed to asks); until then it is
  * loading.
  */
-export function useInboxThreads<T = MyRepliesResponse>(
-  { enabled = true }: { enabled?: boolean } = {},
-  select?: (threads: MyRepliesResponse) => T
-): Read<T> {
+export function useInboxThreads<T = MyRepliesResponse>({
+  enabled = true,
+  select,
+}: {
+  enabled?: boolean;
+  select?: (threads: MyRepliesResponse) => T;
+} = {}): Read<T> {
   const person = isPerson(useSession());
   return useRead({ ...inboxThreadsQuery(), enabled: person && enabled }, { select });
 }

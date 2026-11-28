@@ -297,14 +297,14 @@ beforeAll(async () => {
 });
 
 describe("design rules", () => {
-  test("the app's own files keep them, the exempt files aside", async () => {
-    expect(await designViolations(sourceFiles())).toEqual([]);
-  });
-
-  // Of the UI package's files, this suite checks the stripe rule alone.
-  test("the UI package draws no coloured left border", async () => {
-    const found = await designViolations(uiSourceFiles());
-    expect(found.filter((violation) => violation.rule === RULES.stripe)).toEqual([]);
+  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule.
+  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe", async () => {
+    const found = await designViolations([...sourceFiles(), ...uiSourceFiles()]);
+    const ui = (violation: DesignViolation) => violation.file.startsWith("../ui/");
+    expect(found.filter((violation) => !ui(violation))).toEqual([]);
+    expect(found.filter((violation) => ui(violation) && violation.rule === RULES.stripe)).toEqual(
+      []
+    );
   });
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {

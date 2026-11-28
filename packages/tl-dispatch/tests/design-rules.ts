@@ -16,7 +16,7 @@ import {
   UI_STYLESHEET,
   UPSTREAM_WEB,
 } from "./source";
-import { parseScript } from "./typescript";
+import { literal, parseScript } from "./typescript";
 
 export interface DesignViolation {
   file: string;
@@ -170,6 +170,7 @@ function varNames(value: string): string[] {
 /** The colours a left edge may take: the theme's neutral borders, or none. */
 const NEUTRAL_EDGE = new Set(["--border", "--sidebar-border", "--input"]);
 const LEFT_EDGE = /^border-(left|inline-start|inline)(-color)?$/;
+const LEFT_COLOUR = /^border-(left|inline-start|inline)-color$/;
 const LEFT_WIDTH = /^border-(left|inline-start|inline)-width$/;
 
 /** Whether an edge's colour, or a border shorthand's, is other than a neutral border or none. */
@@ -320,12 +321,17 @@ function drawsStripe(words: readonly string[], stripes: StripeParts): boolean {
   return has(stripes.leftWidths) && has(stripes.edgeColours) && !has(stripes.neutralLefts);
 }
 
-/** Compiles every class the files hold, with Tailwind and the app's theme, and checks the CSS. */
+/** Compiles every class the files hold, with Tailwind and the app's theme, and checks the CSS.
+ *  Gives the stripe parts too, which the script rule reads. */
 async function classViolations(
   files: readonly SourceFile[],
-  tokens: ThemeTokens,
-  stripes: StripeParts
-): Promise<DesignViolation[]> {
+  tokens: ThemeTokens
+): Promise<{ violations: DesignViolation[]; stripes: StripeParts }> {
+  const stripes: StripeParts = {
+    leftWidths: new Set(),
+    edgeColours: new Set(),
+    neutralLefts: new Set(),
+  };
   const scanner = new Scanner({ sources: [] });
   const classes = new Map<string, Where[]>();
   for (const file of files) {
@@ -352,7 +358,7 @@ async function classViolations(
       if (property === "border-color" && colouredEdge(property, value)) {
         stripes.edgeColours.add(name);
       }
-      if (/-color$/.test(property) && LEFT_EDGE.test(property) && !colouredEdge(property, value)) {
+      if (LEFT_COLOUR.test(property) && !colouredEdge(property, value)) {
         stripes.neutralLefts.add(name);
       }
     }
@@ -370,7 +376,7 @@ async function classViolations(
       }
     }
   }
-  return violations;
+  return { violations, stripes };
 }
 
 function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViolation[] {
@@ -494,24 +500,13 @@ function isClassExpression(node: ts.Node): boolean {
   );
 }
 
-function insideClassExpression(node: ts.Node): boolean {
-  for (let parent = node.parent; parent !== undefined; parent = parent.parent) {
-    if (isClassExpression(parent)) return true;
-  }
-  return false;
-}
-
 /** The file's string constants by name, as `const ACCENT = "border-primary"` gives one. */
 function stringConstants(source: ts.SourceFile): Map<string, string> {
   const constants = new Map<string, string>();
   const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer !== undefined &&
-      ts.isStringLiteralLike(node.initializer)
-    ) {
-      constants.set(node.name.text, node.initializer.text);
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const text = literal(node.initializer);
+      if (text !== undefined) constants.set(node.name.text, text);
     }
     ts.forEachChild(node, visit);
   };
@@ -520,14 +515,15 @@ function stringConstants(source: ts.SourceFile): Map<string, string> {
 }
 
 /** The words of a class expression: its literals, and the file's constants that it names. */
-function expressionWords(
-  node: ts.Node,
-  literals: readonly { word: string }[],
-  constants: ReadonlyMap<string, string>
-): string[] {
-  const words = literals.map(({ word }) => word);
+function expressionWords(node: ts.Node, constants: ReadonlyMap<string, string>): string[] {
+  const words: string[] = [];
   const visit = (child: ts.Node) => {
-    const text = ts.isIdentifier(child) ? constants.get(child.text) : undefined;
+    const text =
+      ts.isStringLiteralLike(child) || ts.isTemplateLiteralToken(child)
+        ? child.text
+        : ts.isIdentifier(child)
+          ? constants.get(child.text)
+          : undefined;
     if (text !== undefined) words.push(...text.split(/\s+/));
     ts.forEachChild(child, visit);
   };
@@ -583,19 +579,15 @@ function scriptViolations(
     if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
   };
 
-  const constants = stringConstants(source);
+  // Only a file that names a left-width class can draw a stripe.
+  const mayStripe = [...stripes.leftWidths].some((name) => file.text.includes(name));
+  const constants = mayStripe ? stringConstants(source) : new Map<string, string>();
+  // Inside a class expression, the expression is judged whole; outside, each literal is.
+  let inClass = false;
   const visit = (node: ts.Node) => {
-    if (isClassExpression(node) && !insideClassExpression(node)) {
-      const words = classWords(node);
-      // A literal that draws a stripe alone is refused below, once.
-      const alone = words.some(
-        ({ at }) =>
-          (ts.isStringLiteralLike(at) || ts.isTemplateLiteralToken(at)) &&
-          drawsStripe(at.text.split(/\s+/), stripes)
-      );
-      if (!alone && drawsStripe(expressionWords(node, words, constants), stripes)) {
-        refuse(node, node.getText(), RULES.stripe);
-      }
+    const opens = mayStripe && !inClass && isClassExpression(node);
+    if (opens && drawsStripe(expressionWords(node, constants), stripes)) {
+      refuse(node, node.getText(), RULES.stripe);
     }
     if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
       const utilities = node.text.split(/\s+/).map(utilityOf);
@@ -605,7 +597,7 @@ function scriptViolations(
       ) {
         refuse(node, node.text, RULES.round);
       }
-      if (drawsStripe(node.text.split(/\s+/), stripes)) {
+      if (mayStripe && !inClass && drawsStripe(node.text.split(/\s+/), stripes)) {
         refuse(node, node.text, RULES.stripe);
       }
     }
@@ -690,7 +682,9 @@ function scriptViolations(
         }
       }
     }
+    if (opens) inClass = true;
     ts.forEachChild(node, visit);
+    if (opens) inClass = false;
   };
   visit(source);
 
@@ -846,13 +840,10 @@ export async function designViolations(
   const scripts = checked.filter((file) => /\.[cm]?[jt]sx?$/.test(file.path));
   const disk = filesWith(ownFiles(files));
   const cache = resolutionCache();
-  const stripes: StripeParts = {
-    leftWidths: new Set(),
-    edgeColours: new Set(),
-    neutralLefts: new Set(),
-  };
+  const classes = await classViolations(scripts, tokens);
+  const { stripes } = classes;
   const violations = [
-    ...(await classViolations(scripts, tokens, stripes)),
+    ...classes.violations,
     ...stylesheets.flatMap((file) => stylesheetViolations(file, tokens)),
     ...scripts.flatMap((file) => {
       const lines = importsOf(join(PACKAGE_ROOT, file.path), disk, cache)

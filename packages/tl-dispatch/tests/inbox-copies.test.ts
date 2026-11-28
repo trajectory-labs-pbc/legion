@@ -3,7 +3,7 @@ import ts from "typescript";
 
 import * as seam from "@/upstream/logic/inbox";
 
-import { filesUnder, PACKAGE_ROOT, type SourceFile, TEST } from "./source";
+import { type SourceFile, sourceFiles } from "./source";
 import { parseScript } from "./typescript";
 
 // The page imports upstream's Inbox logic and copies none of it (spec R13): a fork function,
@@ -44,8 +44,9 @@ describe("no copy of upstream's Inbox logic", () => {
   const names = new Set(Object.keys(seam));
 
   test("the Inbox's files, the parts and the Inbox's data declare no name of the seam's", () => {
-    const files = READERS.flatMap((dir) => filesUnder(PACKAGE_ROOT, dir)).filter(
-      (file) => !TEST.test(file.path) && !file.path.endsWith(".css")
+    const files = sourceFiles().filter(
+      (file) =>
+        READERS.some((dir) => file.path.startsWith(`${dir}/`)) && !file.path.endsWith(".css")
     );
     expect(copies(files, names)).toEqual([]);
   });

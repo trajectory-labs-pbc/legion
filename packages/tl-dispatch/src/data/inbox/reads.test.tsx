@@ -53,6 +53,10 @@ async function refreshIntoFailure<T>(useHook: () => Read<T>): Promise<Read<T>> {
 
 const asks = [INBOX_ASKS.withOptions, INBOX_ASKS.noOptions];
 
+/** The reads of the reader's threads among `asked`. */
+const repliesAsked = (asked: readonly string[]) =>
+  asked.filter((url) => pathOf(url) === "/api/v1/me/replies");
+
 describe("the Inbox's reads", () => {
   test("a failed refresh of each read keeps its data and says why", async () => {
     answerReads(
@@ -65,7 +69,9 @@ describe("the Inbox's reads", () => {
     );
     const results = {
       asks: await refreshIntoFailure(() => useInboxAsks((rows) => rows.map((row) => row.id))),
-      threads: await refreshIntoFailure(() => useInboxThreads({}, (page) => page.rows?.length)),
+      threads: await refreshIntoFailure(() =>
+        useInboxThreads({ select: (page) => page.rows?.length })
+      ),
       credentials: await refreshIntoFailure(() =>
         useCredentialRequests((answer) => answer?.pending?.length)
       ),
@@ -100,7 +106,7 @@ describe("the Inbox's reads", () => {
       () =>
         asksRead.read().state === "ready" && client.getQueryState(sessionKey)?.status === "error"
     );
-    expect(asked.filter((url) => pathOf(url) === "/api/v1/me/replies")).toEqual([]);
+    expect(repliesAsked(asked)).toEqual([]);
     expect(threads.read().state).toBe("loading");
     expect(unread.read().state).toBe("loading");
   });
@@ -110,7 +116,7 @@ describe("the Inbox's reads", () => {
     const off = mountRead(() => useInboxThreads({ enabled: false }));
     const on = mountRead(() => useInboxThreads());
     await waitFor(() => on.read().state === "ready");
-    expect(asked.filter((url) => pathOf(url) === "/api/v1/me/replies")).toHaveLength(1);
+    expect(repliesAsked(asked)).toHaveLength(1);
     expect(off.read().state).toBe("loading");
   });
 });
