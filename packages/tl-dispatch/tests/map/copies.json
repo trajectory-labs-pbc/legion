@@ -543,5 +543,17 @@
     "sha256": "e0418ea525539709400505eadcb567a262c24a74b3ef3547509f3685cc242ad3",
     "outcome": "ported",
     "reason": "useUnreadThreadTotal gives the same read as a Read, so a failed refresh keeps the number and says why"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/inbox/Inbox.tsx",
+    "part": "emptyStateMessage",
+    "copy": "src/features/inbox/empty-list.ts",
+    "also": [
+      "src/data/inbox/empty-list.ts"
+    ],
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "f24e33200f3bd75aa83448b8711c80b67a71b9e7941ce7d49733fcecda285a7a",
+    "outcome": "ported",
+    "reason": "The Inbox's empty list says what upstream's does, with the spec's sentence and action for each case, and a field filter also reads as a filter."
   }
 ]

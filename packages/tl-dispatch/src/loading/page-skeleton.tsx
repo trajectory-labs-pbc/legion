@@ -16,6 +16,9 @@ function useAfter(ms: number): boolean {
   return after;
 }
 
+/** Whether a view that is still loading may draw its skeleton yet (rule ES4). */
+export const useSkeletonDue = (): boolean => useAfter(SKELETON_DELAY_MS);
+
 /** A page that is not an issue's, as boxes: a title and list rows. */
 export function PageSkeleton({ label }: { label: string }): ReactNode {
   return (
@@ -32,5 +35,5 @@ export function PageSkeleton({ label }: { label: string }): ReactNode {
 
 /** What shows while a page that is not an issue's loads, after a moment. */
 export function PageFallback(): ReactNode {
-  return useAfter(SKELETON_DELAY_MS) ? <PageSkeleton label="Loading the page" /> : null;
+  return useSkeletonDue() ? <PageSkeleton label="Loading the page" /> : null;
 }
