@@ -11,7 +11,8 @@ const NOW = new Date("2026-11-20T12:00:00Z");
 const base = {
   id: "row",
   at: new Date("2026-11-20T10:00:00Z"),
-  priority: 1,
+  // P0 is a level apart from High, so the bars show the urgency, not the priority.
+  priority: 0,
 } as const;
 const ASK: InboxRowFacts = {
   ...base,
@@ -53,7 +54,7 @@ describe("a row of the Inbox", () => {
   test("an ask shows its urgency bars, names the priority, and has no unread dot", () => {
     const { row } = draw(ASK);
     expect(row?.className).toContain("h-list-row-2");
-    const bars = screen.getByRole("img", { name: "Urgency: High, priority P1" });
+    const bars = screen.getByRole("img", { name: "Urgency: High, priority P0" });
     expect(bars.getAttribute("data-level")).toBe("3");
     expect(screen.queryByRole("img", { name: "Unread" })).toBeNull();
   });
@@ -69,7 +70,7 @@ describe("a row of the Inbox", () => {
       fireEvent.mouseEnter(trigger);
       fireEvent.mouseMove(trigger);
       act(() => jest.advanceTimersByTime(600));
-      expect(screen.getByText("Urgency: High, priority P1")).toBeDefined();
+      expect(screen.getByText("Urgency: High, priority P0")).toBeDefined();
     } finally {
       jest.useRealTimers();
     }
@@ -85,9 +86,12 @@ describe("a row of the Inbox", () => {
     expect(screen.queryByRole("img", { name: "Unread" })).toBeNull();
   });
 
-  test("the title is at weight 500, line two holds the preview and the time", () => {
-    draw(thread(false));
-    expect(title().closest('[class*="font-medium"]')).not.toBeNull();
+  test("an ask's title is at weight 500, line two holds the preview and the time", () => {
+    draw(ASK);
+    // The nearest element that sets the title's type: no part between sets another.
+    let typed: HTMLElement | null = title();
+    while (typed !== null && !/\b(font|text)-/.test(typed.className)) typed = typed.parentElement;
+    expect(typed?.className).toContain("font-medium");
     expect(screen.getByText("Should the importer retry a failed batch?")).toBeDefined();
     expect(screen.getByText("2h").closest("time")?.getAttribute("datetime")).toBe(
       base.at.toISOString()
@@ -109,7 +113,7 @@ describe("a row of the Inbox", () => {
     const { row } = draw(
       ASK,
       <RowSelectBox
-        name="Ship the importer"
+        rowTitle="Ship the importer"
         onCheckedChange={(checked) => {
           marked = checked;
         }}

@@ -1,12 +1,12 @@
 import type { AskUrgency, IssuePriority } from "@/upstream/contract";
 import {
+  askUrgency,
   type InboxListRow,
   type InboxRowType,
   rowId,
   rowLastActivityAt,
   rowPriority,
   rowType,
-  rowUrgency,
   TYPE_LABELS,
   URGENCY_LABELS,
 } from "@/upstream/logic/inbox";
@@ -35,7 +35,7 @@ interface RowBase {
 /** What a row of the Inbox shows, read from upstream's row. An ask has an urgency and no unread
  *  mark; a thread has an unread mark and no urgency. */
 export type InboxRowFacts = RowBase &
-  ({ kind: "ask"; urgency: RowUrgency | null } | { kind: "thread"; unread: boolean });
+  ({ kind: "ask"; urgency: RowUrgency } | { kind: "thread"; unread: boolean });
 
 const actorOf = (author: { kind: string; id: string }): RowActor =>
   author.kind === "user" ? { agent: false, id: author.id } : { agent: true };
@@ -57,11 +57,11 @@ export function rowFacts(row: InboxListRow): InboxRowFacts {
       unread: row.thread.unread,
     };
   }
-  const urgency = rowUrgency(row);
+  const urgency = askUrgency(row.ask.urgency);
   return {
     ...base,
     kind: "ask",
     actor: actorOf(row.ask.author),
-    urgency: urgency === null ? null : { value: urgency, label: URGENCY_LABELS[urgency] },
+    urgency: { value: urgency, label: URGENCY_LABELS[urgency] },
   };
 }

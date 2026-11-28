@@ -44,7 +44,7 @@ export const RULES = {
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
   rowHeight:
-    "a part of a list row takes no height class but the row tokens: `h-list-row-1` or `h-list-row-2`",
+    "a part of a list row takes no height class but the row tokens: `h-list-row-1` or `h-list-row-2` (a glyph or an avatar keeps its `size-N`)",
   type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:

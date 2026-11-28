@@ -62,10 +62,10 @@ function UrgencyBars({
 /** The selection box, which takes the avatar's place on hover, on focus and while any row is
  *  selected (LR6). */
 export function RowSelectBox({
-  name,
+  rowTitle,
   ...props
-}: Omit<ComponentProps<typeof Checkbox>, "aria-label"> & { name: string }): ReactNode {
-  return <Checkbox aria-label={`Select ${name}`} {...props} />;
+}: Omit<ComponentProps<typeof Checkbox>, "aria-label"> & { rowTitle: string }): ReactNode {
+  return <Checkbox aria-label={`Select ${rowTitle}`} {...props} />;
 }
 
 /**
@@ -81,7 +81,8 @@ export function InboxRowView({
   ...props
 }: Omit<
   ComponentProps<typeof ListRow>,
-  "title" | "description" | "leading" | "end" | "descriptionEnd"
+  // The row's height is the block's token: no caller's class or style replaces it.
+  "title" | "description" | "leading" | "end" | "descriptionEnd" | "className" | "style"
 > & {
   facts: InboxRowFacts;
   /** The owning issue's key, or the document's name. */
@@ -98,7 +99,7 @@ export function InboxRowView({
       description={preview}
       descriptionEnd={<Time now={now} value={facts.at} />}
       end={
-        facts.kind === "ask" && facts.urgency !== null ? (
+        facts.kind === "ask" ? (
           <UrgencyBars priority={facts.priority} urgency={facts.urgency} />
         ) : undefined
       }

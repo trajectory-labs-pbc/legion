@@ -300,6 +300,7 @@ const PLACED: readonly [string, string, readonly string[]][] = [
     [RULES.rowHeight],
   ],
   ["src/features/x/row.tsx", '<span className="min-h-10" />;', [RULES.rowHeight]],
+  ["../ui/src/blocks/list-row.tsx", '<div className="h-14" />;', [RULES.rowHeight]],
   [
     "src/shell/row-tokens.tsx",
     '<ListRow className="h-list-row-2" title="t" />;\n<GroupHeader className="h-list-row-1" />;',
@@ -339,12 +340,14 @@ beforeAll(async () => {
 });
 
 describe("design rules", () => {
-  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule.
-  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe", async () => {
+  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule
+  // and the row heights.
+  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe and keeps its row tokens", async () => {
     const found = await designViolations([...sourceFiles(), ...uiSourceFiles()]);
     const ui = (violation: DesignViolation) => violation.file.startsWith("../ui/");
     expect(found.filter((violation) => !ui(violation))).toEqual([]);
-    expect(found.filter((violation) => ui(violation) && violation.rule === RULES.stripe)).toEqual(
+    const uiRules: readonly string[] = [RULES.stripe, RULES.rowHeight];
+    expect(found.filter((violation) => ui(violation) && uiRules.includes(violation.rule))).toEqual(
       []
     );
   });
