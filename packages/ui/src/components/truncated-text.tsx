@@ -5,6 +5,8 @@ const TEXT = "block w-full truncate text-left";
 
 /** Text cut to its box, shown in full in a tooltip. While the text is cut it is a button, so the
  *  keyboard reaches it and opens the tooltip too; text that fits is plain text, with no tooltip.
+ *  The button's pointer target is 24 px tall. A span inside it cuts the text, so the button clips
+ *  nothing, not its pseudo-element either.
  *  In a table cell, give the cell `max-w-0` and a share of the width, so the text takes what the
  *  other columns leave. */
 function TruncatedText({ text }: { text: string }) {
@@ -30,16 +32,17 @@ function TruncatedText({ text }: { text: string }) {
     <Tooltip>
       <TooltipTrigger
         key={text}
-        ref={measure}
         data-slot="truncated-text"
         render={
           <button
-            className={`${TEXT} rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`}
+            className="relative block w-full min-w-0 rounded-sm after:absolute after:inset-x-0 after:top-1/2 after:h-6 after:-translate-y-1/2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             type="button"
           />
         }
       >
-        {text}
+        <span className={TEXT} ref={measure}>
+          {text}
+        </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-(--available-width) wrap-anywhere">{text}</TooltipContent>
     </Tooltip>
