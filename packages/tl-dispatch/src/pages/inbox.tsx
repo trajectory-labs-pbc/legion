@@ -5,12 +5,13 @@ import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink, Redirect } from "@/navigation/page-link";
 import { pageRoute } from "@/navigation/page-route";
+import type { PageLayout } from "@/shell/page-layout";
 import { inboxQuery } from "@/upstream/queries";
 import { ANSWERS_PATH } from "@/upstream/routes";
 import { READING_PANE_QUERY, useDocumentTitle, useMediaQuery } from "@/upstream/shell";
 import { Inbox } from "@/upstream/views/inbox/inbox";
 
-import type { Page, PageLayout } from "./page";
+import type { Page } from "./page";
 
 const AnswersPage = lazyNamed(() => import("@/upstream/views/inbox/answers"), "AnswersPage");
 

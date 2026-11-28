@@ -1,5 +1,3 @@
-import { useAgentPinWrite, useLiveViewPins, usePinsMigration } from "@/data/agent-pins";
-import { useRecordRecents } from "@/data/recents";
 import type { AuthenticatedUser } from "@/data/session";
 
 import { CompactHeader } from "./compact-header";
@@ -8,6 +6,7 @@ import { MainRegion } from "./main-region";
 import { MarginRegion } from "./margin-region";
 import { NavigationDrawer } from "./navigation-drawer";
 import { NavigationPanel } from "./navigation-panel";
+import { ShellBackground } from "./shell-background";
 import { ShellDialogs } from "./shell-dialogs";
 import { ShellFrame } from "./shell-frame";
 import { ShellProviders } from "./shell-providers";
@@ -18,11 +17,8 @@ import { useShellLayout } from "./use-shell-layout";
 import { useShellOverlays } from "./use-shell-overlays";
 import { useSignOut } from "./use-sign-out";
 
-/** The frame around every page: its providers, the layout's regions and the page outlet. */
+/** The frame around every page: the layout's regions and the page outlet. */
 export function AppShell({ user }: { user: AuthenticatedUser }) {
-  useRecordRecents();
-  useLiveViewPins();
-  usePinsMigration(user.login, useAgentPinWrite());
   const signOut = useSignOut(user.login);
   const shell = useShellLayout();
   const { preferences } = shell;
@@ -78,27 +74,20 @@ export function AppShell({ user }: { user: AuthenticatedUser }) {
           openerRef={overlays.openerRef}
           sidebarFolded={preferences.sidebarHidden && !shell.inDrawer}
         >
-          <MainRegion
-            fillsViewport={shell.fillsViewport}
-            hasMargin={shell.hasMargin}
-            issueFrame={shell.issueFrame}
-            liveView={shell.liveView}
-            mainRef={shell.mainRef}
-            marginHidden={preferences.marginHidden}
-            pageFallback={shell.pageFallback}
-            pathname={shell.pathname}
-            sidebarHidden={preferences.sidebarHidden}
-          />
+          <MainRegion shell={shell} />
           <MarginRegion pathname={shell.pathname} preferences={preferences} />
         </ContentPanel>
         <ShellDialogs
           closeCreate={overlays.closeCreate}
-          closeInboxDrawer={overlays.closeInboxDrawer}
           closeSearch={overlays.closeSearch}
           createOpen={overlays.createOpen}
-          inboxDrawerOpen={overlays.inboxDrawerOpen}
           searchOpen={overlays.searchOpen}
           shortcuts={overlays.shortcuts}
+        />
+        <ShellBackground
+          closeInboxDrawer={overlays.closeInboxDrawer}
+          inboxDrawerOpen={overlays.inboxDrawerOpen}
+          login={user.login}
         />
         <SignOutQuestion
           onConfirm={signOut.confirm}

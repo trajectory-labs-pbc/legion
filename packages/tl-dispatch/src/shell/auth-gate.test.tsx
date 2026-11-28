@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { http, type RequestHandler } from "msw";
 import { sessionKey } from "@/data/session";
 import type { DispatchEvent } from "@/upstream/contract";
 import type { EventPages } from "@/upstream/live";
 import { writesOf } from "@/upstream/writes";
+import { renderApp } from "../../tests/app";
 import { fakeLive } from "../../tests/live";
-import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdReads, json } from "../../tests/network";
-import { render, settle } from "../../tests/react";
+import { settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { answerDraft, answerRequests, setAnswerDraft } from "../../tests/upstream";
 import { pressWrite, reader } from "../../tests/writes";
@@ -23,14 +23,8 @@ afterEach(() => {
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 function mount(client = newClient()) {
-  const view = render(
-    <QueryClientProvider client={client}>
-      {/* An address whose page has no chunk, so none arrives while a test waits or after it. */}
-      <MemoryNavigationProvider path="/no-such-page">
-        <AuthGate />
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
-  );
+  // An address whose page has no chunk, so none arrives while a test waits or after it.
+  const view = renderApp(<AuthGate />, { path: "/no-such-page", client });
   cleanups.push(() => view.unmount());
   return view.container;
 }

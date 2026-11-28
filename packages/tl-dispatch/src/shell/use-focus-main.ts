@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef } from "react";
 
-import type { PageLayout } from "@/pages/page";
+import type { PageLayout } from "./page-layout";
 
 /** One page for focus: an issue's tabs are one page, and so are a project's views. */
 export function pageIdentityOf(layout: PageLayout, pathname: string): string {

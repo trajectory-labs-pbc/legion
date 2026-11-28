@@ -143,10 +143,14 @@ function libraryRules(from: Place, pkg: string): [Rule, string][] {
   ).map((library) => ["library-owners", library.reason]);
 }
 
-/** A seam file and a root file are read only by the readers that the table gives them. */
+/**
+ * A seam file and a root file are read only by the readers that the table gives them, and so is
+ * the app by a file of no layer (the layers' order rules hold the rest).
+ */
 function readerRules(from: Place, to: Place): [Rule, string][] {
   const seam = to.layer === "upstream";
-  if (!(isRootFile(to.path) || (seam && from.layer !== "upstream")) || (seam && from.test)) {
+  const app = to.layer === "app" && from.layer === undefined;
+  if (!(isRootFile(to.path) || app || (seam && from.layer !== "upstream")) || (seam && from.test)) {
     return [];
   }
   const found = readersAt(to.path);

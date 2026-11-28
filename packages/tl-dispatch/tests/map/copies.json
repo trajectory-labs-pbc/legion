@@ -82,7 +82,8 @@
     "copy": "src/shell/auth-gate.tsx",
     "also": [
       "src/shell/signed-in-parts.tsx",
-      "src/data/sign-ins.ts"
+      "src/data/sign-ins.ts",
+      "src/shell/shell-background.tsx"
     ],
     "commit": "2bec2c65756d2170256166f56eb1743213c4aa1d",
     "sha256": "8ad293a3407793cca7c2baff2ae50d57bf104536ce00eaffc20024971e3ef358"
@@ -123,13 +124,19 @@
     "file": "packages/dispatch/web/src/app.tsx",
     "part": "AppShell",
     "copy": "src/shell/app-shell.tsx",
+    "also": [
+      "src/shell/shell-background.tsx"
+    ],
     "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
     "sha256": "e4bf9ee5c39fa96656899884693071701c0b5809710db4934be66cd0c97c5497"
   },
   {
     "file": "packages/dispatch/web/src/main.tsx",
     "part": "*",
-    "copy": "src/start.tsx",
+    "copy": "src/app/start.tsx",
+    "also": [
+      "src/main.tsx"
+    ],
     "commit": "733bac8101c2769d9ef715c4c28feca38d1e75be",
     "sha256": "33f395a3b807c3c23669e7549d3cbcc81c2985bcfb68baddf2cb46361166b11c"
   },

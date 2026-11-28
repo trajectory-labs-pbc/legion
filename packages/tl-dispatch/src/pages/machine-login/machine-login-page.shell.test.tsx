@@ -1,11 +1,10 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell } from "@/shell/app-shell";
 import { api } from "@/upstream/api";
 import { KeymapProvider } from "@/upstream/shell";
-import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { renderApp } from "../../../tests/app";
 import { holdShellReads } from "../../../tests/network";
 import { shellChunksArrive } from "../../../tests/shell-chunks";
 
@@ -26,14 +25,11 @@ test("opened by G N from another page, the page gives its code field the focus",
     () => capabilities.mockRestore(),
     () => logins.mockRestore()
   );
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryNavigationProvider path="/no-such-page">
-        <KeymapProvider>
-          <AppShell user={{ kind: "user", login: "reader", event_head: "0" }} />
-        </KeymapProvider>
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
+  renderApp(
+    <KeymapProvider>
+      <AppShell user={{ kind: "user", login: "reader", event_head: "0" }} />
+    </KeymapProvider>,
+    { path: "/no-such-page" }
   );
   await shellChunksArrive();
   const user = userEvent.setup();

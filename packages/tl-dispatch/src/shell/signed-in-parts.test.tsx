@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useContext } from "react";
-import { TextAskBlockCard, TextAskCard, useRegistryPolling } from "@/upstream/shell";
+import { TextAskBlockCard, TextAskCard } from "@/upstream/shell";
 
 import { GlobalCommands } from "../../tests/global-shell";
-import { answerShellReads, json, waitFor } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { SignedInParts } from "./signed-in-parts";
 
@@ -44,18 +43,5 @@ describe("SignedInParts", () => {
     }
     mount(<Post />);
     expect(seen.card).toBe(TextAskBlockCard);
-  });
-
-  test("SHL-9 a part that shows agents has the registry read", async () => {
-    const { asked } = answerShellReads((url) =>
-      url.endsWith("/api/v1/agents") ? json([]) : undefined
-    );
-    function RegistryReader() {
-      useRegistryPolling(true);
-      return null;
-    }
-    mount(<RegistryReader />);
-    await waitFor(() => asked.length === 1);
-    expect(asked[0]).toEndWith("/api/v1/agents");
   });
 });

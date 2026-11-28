@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import { NAV_DESTINATIONS } from "@/commands/nav";
 import type { AuthenticatedUser } from "@/upstream/contract";
+import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
 import { MemoryNavigationProvider } from "../../tests/navigation";
@@ -76,13 +77,12 @@ function mount(
 ) {
   if (answer === undefined) holdShellReads();
   else answered = answerShellReads(answer).asked;
-  const view = render(
-    <QueryClientProvider client={client}>
-      <MemoryNavigationProvider path={path}>
-        {commands ? <Commands onPeek={onPeek} /> : null}
-        <Sidebar peek={peek} user={user as AuthenticatedUser} />
-      </MemoryNavigationProvider>
-    </QueryClientProvider>
+  const view = renderApp(
+    <>
+      {commands ? <Commands onPeek={onPeek} /> : null}
+      <Sidebar peek={peek} user={user as AuthenticatedUser} />
+    </>,
+    { path, client }
   );
   mounted.push(view);
   return view.container;

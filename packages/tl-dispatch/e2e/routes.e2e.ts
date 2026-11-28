@@ -1,4 +1,4 @@
-// Opens each route of the route map (src/pages/index.ts) against records this run seeds, and
+// Opens each route of the route map (src/app/routes.ts) against records this run seeds, and
 // fails on a route whose mark (route-marks.ts) does not show, that lands on another address or
 // misses a read its row names, or that logs a console error.
 import { randomUUID } from "node:crypto";
