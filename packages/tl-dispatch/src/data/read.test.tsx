@@ -113,13 +113,23 @@ describe("useRead", () => {
     expect(Reflect.get(read(), "retry")).toBeUndefined();
   });
 
-  test("a 409 is a failure that can be tried again", async () => {
-    answerProjects(refused(409));
+  test("a 400 is invalid, with no Retry", async () => {
+    answerProjects(refused(400));
     const { read } = mountNames();
     await until(() => read().state === "error");
-    expect(Reflect.get(read(), "refusal")).toBeUndefined();
-    expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+    expect(read()).toMatchObject({ state: "error", refusal: "invalid" });
+    expect(Reflect.get(read(), "retry")).toBeUndefined();
   });
+
+  for (const status of [408, 409, 429]) {
+    test(`a ${status} is a failure that can be tried again`, async () => {
+      answerProjects(refused(status));
+      const { read } = mountNames();
+      await until(() => read().state === "error");
+      expect(Reflect.get(read(), "refusal")).toBeUndefined();
+      expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+    });
+  }
 
   test("the rolling-release 404 is a failure that can be tried again", async () => {
     const rolling = answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE);

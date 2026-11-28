@@ -70,6 +70,10 @@ for (const [name, errors, line, retry] of [
     LOAD,
     true,
   ],
+  ["a 408", [answered(408)], LOAD, true],
+  ["a 429", [answered(429)], LOAD, true],
+  ["a 400", [answered(400)], LOAD, false],
+  ["a 400 beside a 404", [answered(400), answered(404)], "Could not find the rows.", false],
   ["a 403", [answered(403)], "You cannot see the rows.", false],
   ["a 404", [answered(404)], "Could not find the rows.", false],
   ["a 404 beside a 403", [answered(404), answered(403)], "You cannot see the rows.", false],
@@ -86,10 +90,11 @@ test("read-failure: the retry policy never asks a refused read again by itself",
   const errors = [
     answered(500),
     answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE),
+    answered(400),
     answered(403),
     answered(404),
   ];
-  expect(errors.map((error) => readRetry(0, error))).toEqual([true, true, false, false]);
+  expect(errors.map((error) => readRetry(0, error))).toEqual([true, true, false, false, false]);
 });
 
 test("read-failure: a refused read keeps its refusal, with no Retry, while it is asked again", async () => {

@@ -32,7 +32,13 @@ export function useReadFailure(
     (read, index) => failures[index] !== undefined && read?.fetchStatus !== "idle"
   );
   if (!failures.includes("retryable")) {
-    return { refusal: failures.includes("forbidden") ? "forbidden" : "not-found", retrying };
+    // A 403 wins, then a 404.
+    const refusal = failures.includes("forbidden")
+      ? "forbidden"
+      : failures.includes("not-found")
+        ? "not-found"
+        : "invalid";
+    return { refusal, retrying };
   }
   // A failure that trying again can clear wins, so its Retry shows.
   return {
@@ -56,10 +62,11 @@ export function refreshFailureOf(read: UseQueryResult<unknown>): ShownFault | un
 /** What a failed read says of `noun`. */
 export function lineOf(fault: ShownFault, noun: string): string {
   if (fault.refresh === true) {
-    if (fault.refusal === undefined) return `Could not refresh ${noun}.`;
+    if (fault.refusal === undefined || fault.refusal === "invalid")
+      return `Could not refresh ${noun}.`;
     return `Could not refresh ${noun}: ${fault.refusal === "forbidden" ? "access refused" : "not found"}.`;
   }
-  if (fault.refusal === undefined) return `Could not load ${noun}.`;
+  if (fault.refusal === undefined || fault.refusal === "invalid") return `Could not load ${noun}.`;
   return fault.refusal === "forbidden" ? `You cannot see ${noun}.` : `Could not find ${noun}.`;
 }
 
