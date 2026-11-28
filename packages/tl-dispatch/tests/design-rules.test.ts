@@ -122,6 +122,28 @@ const REFUSED: readonly [string, string, string][] = [
   ],
   ["tsx", '<p className="[border-left:3px_solid_var(--primary)]">', "coloured left border"],
   ["css", ".row { border-left: 3px solid var(--primary); }", "coloured left border"],
+  // A left width alone takes the text's colour; a neutral colour of another variant leaves it.
+  ["tsx", '<p className="border-l-4 pl-3">', "coloured left border"],
+  ["tsx", '<p className="border-l-4 border-primary dark:border-l-border">', "coloured left border"],
+  ["tsx", '<p className="has-[>svg]:border-l-4 border-primary">', "coloured left border"],
+  ["tsx", 'const row = clsx("border-l-2", on && "border-primary");', "coloured left border"],
+  [
+    "tsx",
+    'const TONE = { danger: "border-danger" };\n<p className={cn("border-l-4", TONE.danger)} />;',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the text is a control file's source, whose template the rule reads
+    'const ACCENT = "border-primary";\nconst x = textVariants({ className: `border-l-2 ${ACCENT}` });',
+    "coloured left border",
+  ],
+  ["css", ".row { border-left-width: 4px; border-color: var(--primary); }", "coloured left border"],
+  [
+    "css",
+    ".row { border: solid var(--primary); border-width: 0 0 0 4px; }",
+    "coloured left border",
+  ],
   ["css", ".row { border-inline-start-color: var(--danger); }", "coloured left border"],
 ];
 
@@ -165,6 +187,13 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<p className="border-l-4 border-primary border-l-border">'],
   ["tsx", '<p className={cn("border-l-2", on && "border-border")} />'],
   ["css", ".row { border-left: 1px solid var(--border); }"],
+  // A neutral left edge, half of an element's classes in a constant, the theme's width token in a
+  // shorthand, a coloured whole box, and a neutral left colour of the width's own variant.
+  ["tsx", '<p className="border-l-2 border-border">'],
+  ["tsx", 'const EDGE = "border-l-2";'],
+  ["css", ".row { border-left: var(--border-width) solid var(--border); }"],
+  ["css", ".box { border-width: var(--border-width); border-color: var(--primary); }"],
+  ["tsx", '<p className="md:border-l-4 md:border-l-border border-primary">'],
 ];
 
 /** Controls whose path decides: each file, its text, and the rules it breaks, none if allowed. */

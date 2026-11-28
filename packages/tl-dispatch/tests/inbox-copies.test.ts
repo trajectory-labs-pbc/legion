@@ -15,8 +15,14 @@ const READERS = ["src/features/inbox", "src/parts", "src/data/inbox"];
 /** The name a node declares as a function, a constant or a method, if any. */
 function declaredName(node: ts.Node): string | undefined {
   if (ts.isFunctionDeclaration(node)) return node.name?.text;
-  if (ts.isVariableDeclaration(node) || ts.isMethodDeclaration(node)) {
-    return ts.isIdentifier(node.name) ? node.name.text : undefined;
+  if (ts.isMethodDeclaration(node)) return ts.isIdentifier(node.name) ? node.name.text : undefined;
+  // A constant is a copy at the top of a file; a local that takes a seam's name, as `group`, is not.
+  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+    const value = node.initializer;
+    const topLevel = ts.isSourceFile(node.parent.parent.parent);
+    const callable =
+      value !== undefined && (ts.isArrowFunction(value) || ts.isFunctionExpression(value));
+    return topLevel || callable ? node.name.text : undefined;
   }
   if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
     const value = node.initializer;
@@ -60,7 +66,7 @@ describe("no copy of upstream's Inbox logic", () => {
       { path: "src/features/inbox/y.tsx", text: "const SNOOZE_PRESETS = [];" },
       {
         path: "src/parts/y/y.ts",
-        text: "const rows = { sortRows() {}, group: () => 1, other: 0 };",
+        text: "const rows = { sortRows() {}, group: () => 1, rowId: 0 };\nfunction View() { const isMine = true; }",
       },
     ];
     expect(copies(files, names)).toEqual([

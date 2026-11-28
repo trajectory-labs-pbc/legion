@@ -13,7 +13,7 @@ import {
 import { mount } from "../../../tests/mount";
 import { answerReads, json, readFailed, waitFor } from "../../../tests/network";
 import { settle } from "../../../tests/react";
-import { signedInClient } from "../../../tests/writes";
+import { reader, signedInClient } from "../../../tests/writes";
 import type { Read } from "../read";
 import {
   useCredentialRequests,
@@ -91,12 +91,13 @@ describe("the Inbox's reads", () => {
     expect(read.state === "ready" && read.refreshError).toBeInstanceOf(Error);
   });
 
-  test("the thread reads ask nothing while no one is signed in", async () => {
+  test.each([
+    ["no one is signed in", () => json({ code: "UNAUTHORIZED", error: "unauthorized" }, 401)],
+    ["an agent is signed in", () => json({ ...reader, kind: "agent" })],
+  ])("the thread reads ask nothing while %s", async (_, whoami) => {
     const answer = inboxReads({ replies: () => [UNREAD_THREAD] });
     const { asked } = answerReads(INBOX_READS, (url) =>
-      pathOf(url) === "/auth/whoami"
-        ? json({ code: "UNAUTHORIZED", error: "unauthorized" }, 401)
-        : answer(url)
+      pathOf(url) === "/auth/whoami" ? whoami() : answer(url)
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const threads = mountRead(() => useInboxThreads(), client);
@@ -104,7 +105,9 @@ describe("the Inbox's reads", () => {
     const asksRead = mountRead(() => useInboxAsks(), client);
     await waitFor(
       () =>
-        asksRead.read().state === "ready" && client.getQueryState(sessionKey)?.status === "error"
+        asksRead.read().state === "ready" &&
+        client.getQueryState(sessionKey)?.fetchStatus === "idle" &&
+        client.getQueryState(sessionKey)?.status !== "pending"
     );
     expect(repliesAsked(asked)).toEqual([]);
     expect(threads.read().state).toBe("loading");

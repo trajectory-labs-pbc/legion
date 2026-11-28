@@ -174,12 +174,21 @@ const LEFT_EDGE = /^border-(left|inline-start|inline)(-color)?$/;
 const LEFT_COLOUR = /^border-(left|inline-start|inline)-color$/;
 const LEFT_WIDTH = /^border-(left|inline-start|inline)-width$/;
 
-/** Whether an edge's colour, or a border shorthand's, is other than a neutral border or none. */
+/** Whether an edge's colour, or a border shorthand's, is other than a neutral border or none. A
+ *  shorthand's `*-width` token is its width, as `var(--border-width)` is. */
 function colouredEdge(property: string, value: string): boolean {
   if (value === "transparent") return false;
-  const names = varNames(value).filter((name) => !name.startsWith("--tw-"));
-  if (names.length === 0) return property.endsWith("-color");
+  const names = varNames(value).filter((name) => !/^--tw-|-width$/.test(name));
+  if (names.length === 0) return property.endsWith("-color") || /currentcolor/i.test(value);
   return names.some((name) => !NEUTRAL_EDGE.has(name));
+}
+
+/** Whether a `border-width` value gives the left edge a width the right edge lacks. */
+function leftWidthOf(value: string): boolean {
+  const sides = value.trim().split(/\s+/);
+  const left = sides[sides.length === 1 ? 0 : sides.length === 4 ? 3 : 1];
+  const right = sides[sides.length === 1 ? 0 : 1];
+  return left !== undefined && left !== right && !/^0(px)?$/.test(left);
 }
 
 function radiusAllowed(
@@ -307,19 +316,38 @@ function lineIndex(text: string): (position: number) => number {
   };
 }
 
-/** The classes that draw a left edge, those that colour every edge, and those that give the left
- *  edge a neutral colour: a class list with the first two and not the third draws a stripe, as
- *  `border-l-4 border-primary` does. */
+/** The classes that draw a left edge, those that colour every edge, those that give the left
+ *  edge a neutral colour and those that give every edge one. */
 interface StripeParts {
   leftWidths: Set<string>;
   edgeColours: Set<string>;
   neutralLefts: Set<string>;
+  neutralEdges: Set<string>;
 }
 
-/** Whether `words`, the classes of one element, draw a stripe from the parts. */
-function drawsStripe(words: readonly string[], stripes: StripeParts): boolean {
-  const has = (set: Set<string>) => words.some((word) => set.has(word));
-  return has(stripes.leftWidths) && has(stripes.edgeColours) && !has(stripes.neutralLefts);
+/** A class's variants: `md:hover:border-l-4` gives `md:hover:`. */
+function variantOf(word: string): string {
+  const at = word.lastIndexOf(utilityOf(word));
+  return at > 0 ? word.slice(0, at).replace(/!$/, "") : "";
+}
+
+/**
+ * Whether `words`, the classes of one element, draw a stripe. A left width draws one beside a
+ * colour for every edge, unless a neutral left colour of its variant, or of none, overrides it.
+ * With `bare`, a left width with no neutral colour draws one too: the edge then takes the text's
+ * colour, as nothing in the app gives it the border's (the UI package's parts take it from
+ * `data-slot`).
+ */
+function drawsStripe(words: readonly string[], stripes: StripeParts, bare = false): boolean {
+  return words.some((width) => {
+    if (!stripes.leftWidths.has(width)) return false;
+    const variant = variantOf(width);
+    const covers = (set: Set<string>) =>
+      words.some((word) => set.has(word) && [variant, ""].includes(variantOf(word)));
+    if (covers(stripes.neutralLefts)) return false;
+    if (words.some((word) => stripes.edgeColours.has(word))) return true;
+    return bare && !covers(stripes.neutralEdges);
+  });
 }
 
 /** Compiles every class the files hold, with Tailwind and the app's theme, and checks the CSS.
@@ -332,6 +360,7 @@ async function classViolations(
     leftWidths: new Set(),
     edgeColours: new Set(),
     neutralLefts: new Set(),
+    neutralEdges: new Set(),
   };
   const scanner = new Scanner({ sources: [] });
   const classes = new Map<string, Where[]>();
@@ -354,12 +383,20 @@ async function classViolations(
     const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
     const { property, value, context } = declaration;
     // What a class sets on its children, as `divide-x` does, is not the element's own edge. A
-    // media query's `>` (`md:` is `@media (width >= 48rem)`) names no child.
-    const onChildren = context.some((prelude) => !prelude.startsWith("@") && prelude.includes(">"));
+    // media query's `>` (`md:` is `@media (width >= 48rem)`), an escaped one in a class name and
+    // one inside `:has()` name no child.
+    const onChildren = context.some(
+      (prelude) =>
+        !prelude.startsWith("@") &&
+        prelude
+          .replace(/\\./g, "")
+          .replace(/:has\([^)]*\)/g, "")
+          .includes(">")
+    );
     if (name !== undefined && !onChildren) {
       if (LEFT_WIDTH.test(property) && !/^0(px)?$/.test(value)) stripes.leftWidths.add(name);
-      if (property === "border-color" && colouredEdge(property, value)) {
-        stripes.edgeColours.add(name);
+      if (property === "border-color") {
+        (colouredEdge(property, value) ? stripes.edgeColours : stripes.neutralEdges).add(name);
       }
       if (LEFT_COLOUR.test(property) && !colouredEdge(property, value)) {
         stripes.neutralLefts.add(name);
@@ -382,9 +419,44 @@ async function classViolations(
   return { violations, stripes };
 }
 
+/** The declarations of each rule of a stylesheet that give a left edge a width and every edge a
+ *  colour, with no neutral left colour: the stripe `border-left-width: 4px; border-color: …`
+ *  draws. */
+function stylesheetStripes(declarations: readonly CssDeclaration[]): CssDeclaration[] {
+  const rules = new Map<string, CssDeclaration[]>();
+  for (const declaration of declarations) {
+    const key = declaration.context.join("\n");
+    const rule = rules.get(key) ?? [];
+    if (rule.length === 0) rules.set(key, rule);
+    rule.push(declaration);
+  }
+  return [...rules.values()].flatMap((rule) => {
+    const width = rule.find(
+      ({ property, value }) =>
+        (LEFT_WIDTH.test(property) && !/^0(px)?$/.test(value)) ||
+        (property === "border-width" && leftWidthOf(value))
+    );
+    const coloured = rule.some(
+      ({ property, value }) =>
+        (property === "border-color" || property === "border") && colouredEdge(property, value)
+    );
+    const neutral = rule.some(
+      ({ property, value }) => LEFT_COLOUR.test(property) && !colouredEdge(property, value)
+    );
+    return width !== undefined && coloured && !neutral ? [width] : [];
+  });
+}
+
 function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViolation[] {
   const parsed = parseCss(file.text);
-  const violations: DesignViolation[] = [];
+  const violations: DesignViolation[] = stylesheetStripes(parsed.declarations).map(
+    ({ property, value, line }) => ({
+      file: file.path,
+      line,
+      text: `${property}: ${value}`,
+      rule: RULES.stripe,
+    })
+  );
   for (const declaration of parsed.declarations) {
     for (const rule of declarationProblems(declaration, tokens)) {
       violations.push({
@@ -495,7 +567,9 @@ const CLASS_CALLS = new Set(["cn", "clsx", "cva", "cx", "twMerge"]);
 
 /** A `className` attribute or a class call: the classes of one element. */
 function isClassExpression(node: ts.Node): boolean {
-  if (ts.isJsxAttribute(node)) return node.name.getText() === "className";
+  if (ts.isJsxAttribute(node) || ts.isPropertyAssignment(node)) {
+    return node.name.getText() === "className";
+  }
   return (
     ts.isCallExpression(node) &&
     ts.isIdentifier(node.expression) &&
@@ -503,12 +577,20 @@ function isClassExpression(node: ts.Node): boolean {
   );
 }
 
-/** The file's string constants by name, as `const ACCENT = "border-primary"` gives one. */
+/** The file's string constants by name, as `const ACCENT = "border-primary"` gives one. An object
+ *  or an array gives the strings it holds, as `const TONE = { danger: "border-danger" }` does. */
 function stringConstants(source: ts.SourceFile): Map<string, string> {
   const constants = new Map<string, string>();
   const visit = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      const text = literal(node.initializer);
+      const value = node.initializer;
+      const text =
+        value !== undefined &&
+        (ts.isObjectLiteralExpression(value) || ts.isArrayLiteralExpression(value))
+          ? classWords(value)
+              .map(({ word }) => word)
+              .join(" ")
+          : literal(value);
       if (text !== undefined) constants.set(node.name.text, text);
     }
     ts.forEachChild(node, visit);
@@ -585,11 +667,13 @@ function scriptViolations(
   // Only a file that names a left-width class can draw a stripe.
   const mayStripe = [...stripes.leftWidths].some((name) => file.text.includes(name));
   const constants = mayStripe ? stringConstants(source) : new Map<string, string>();
+  // The UI package's parts take the border's colour from `data-slot`; the app's elements do not.
+  const bare = !file.path.startsWith("../");
   // Inside a class expression, the expression is judged whole; outside, each literal is.
   let inClass = false;
   const visit = (node: ts.Node) => {
     const opens = mayStripe && !inClass && isClassExpression(node);
-    if (opens && drawsStripe(expressionWords(node, constants), stripes)) {
+    if (opens && drawsStripe(expressionWords(node, constants), stripes, bare)) {
       refuse(node, node.getText(), RULES.stripe);
     }
     if (ts.isStringLiteralLike(node) || ts.isTemplateLiteralToken(node)) {
