@@ -28,8 +28,10 @@ name: Fork review
 #
 # A diff already reviewed is not reviewed again. After posting a review, `review` saves its verdict
 # to the cache under a key of the pull request's diff and main's reviewer files. `model` finds the
-# key and reports the same verdict with no model call, so a title or body edit, or a rebase that
-# keeps the diff, neither costs a run nor draws a new verdict. The cache is main's: this event
+# key and reports the same verdict with no model call, so a title or body edit, or a rebase over
+# commits that touch none of the pull request's files, neither costs a run nor draws a new verdict.
+# A run that records nothing (no review, or a refused inline comment) leaves the next run to the
+# model. The cache is main's: this event
 # reads it, and only the `review` job writes it (`cache-mode: write-only`). That job runs main's
 # scripts and saves one verdict word, which `decide` checks on restore. No branch's workflow can
 # write main's cache; a push, schedule or dispatch run on main can. An evicted key costs one more

@@ -136,6 +136,20 @@ key_after() {
   outvar key
 }
 check "a change to main elsewhere keeps the key" "$(is "$(key_after other docs/other.md)" "$key")"
+# rebase_head: the pull request's commit replayed on main's tip, pushed as pull request 7's head.
+rebase_head() {
+  git -C "$work/ws/legion" worktree add --quiet --detach "$work/rebased" HEAD
+  git -C "$work/rebased" -c user.name=t -c user.email=t@t cherry-pick --quiet "$pr_head" > /dev/null
+  git -C "$work/rebased" push --quiet --force "$work/origin.git" HEAD:refs/pull/7/head
+  git -C "$work/rebased" rev-parse HEAD
+  git -C "$work/ws/legion" worktree remove --force "$work/rebased"
+}
+prepare_at "$(rebase_head)"
+check "a rebase over commits that touch none of its files keeps the key" "$(is "$(outvar key)" "$key")"
+key_after "hello" a.txt > /dev/null
+prepare_at "$(rebase_head)"
+check "a rebase over a change to one of its files makes a new key" "$(is "$([ "$(outvar key)" = "$key" ] && echo same)" "")"
+git -C "$work/main" push --quiet --force "$work/origin.git" "$pr_head:refs/pull/7/head"
 new_key=$(key_after rules packages/daemon/internal/prompts/roles/reviewer.md)
 check "a change to the reviewer rules makes a new key" \
   "$(is "$(grep -c '^fork-review-7-' <<< "$new_key"):$([ "$new_key" = "$key" ] && echo same)" 1:)"
