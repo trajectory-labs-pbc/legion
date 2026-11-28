@@ -57,6 +57,15 @@ describe("sidebar folds", () => {
     expect(window.localStorage.getItem(`${OLDER}Agents`)).toBe("true");
   });
 
+  test("a page load moves the old folds before the store reads them", async () => {
+    window.localStorage.setItem(`${OLDER}Agents`, "true");
+    // A query makes the loader run the module afresh, as a page load does.
+    const specifier = "./sidebar-folds?load";
+    const loaded: typeof import("./sidebar-folds") = await import(specifier);
+    expect(loaded.sidebarFolds.getState().folded).toEqual(["Agents"]);
+    expect(window.localStorage.getItem(`${OLDER}Agents`)).toBeNull();
+  });
+
   test("once the store has a key, the old keys are left alone", () => {
     setFolded("Projects", true);
     window.localStorage.setItem(`${OLDER}Agents`, "true");

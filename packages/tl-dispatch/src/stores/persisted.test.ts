@@ -26,9 +26,15 @@ const stored = (key: string) => JSON.parse(window.localStorage.getItem(key) ?? "
 
 describe("persistedStore", () => {
   test("a store is kept under the fork's prefix, with its version", () => {
-    const { key, store } = counterStore();
+    const name = `test.counter.${made}`;
+    const { store } = counterStore();
     store.setState({ count: 3 });
-    expect(stored(key)).toEqual({ state: { count: 3 }, version: 1 });
+    expect(stored(`tl-dispatch.${name}`)).toEqual({ state: { count: 3 }, version: 1 });
+  });
+
+  test("a store reads, when it is made, what an earlier load kept", () => {
+    keep(forkKey(`test.counter.${made}`), 5, 1);
+    expect(counterStore().store.getState().count).toBe(5);
   });
 
   test("a store reads what an earlier load kept", () => {

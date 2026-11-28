@@ -54,7 +54,7 @@ export function persistedStore<State extends object>(options: StoreOptions<State
     })
   );
   window.addEventListener("storage", (event) => {
-    if (event.key === name || event.key === null) void store.persist.rehydrate();
+    if (event.key === name) void store.persist.rehydrate();
   });
   resets.push(() => {
     store.setState(store.getInitialState(), true);
