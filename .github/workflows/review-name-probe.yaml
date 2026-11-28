@@ -1,8 +1,17 @@
 name: review-name-probe
 on: pull_request
-permissions: {}
+permissions:
+  contents: read
+  pull-requests: read
 jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - run: echo pass
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        run: |
+          echo "association: $ASSOCIATION"
+          echo "permission: $(gh api "repos/$GITHUB_REPOSITORY/collaborators/$AUTHOR/permission" --jq .permission)"
+          echo "outsider: $(gh api "repos/$GITHUB_REPOSITORY/collaborators/octocat/permission" --jq .permission)"
