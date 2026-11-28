@@ -88,8 +88,19 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
       });
     }
   }
-  await page.emulateMedia({ colorScheme: "light" });
+  // Later open, under the pointer: the band's hover and the snoozed row.
   await page.setViewportSize({ height: 900, width: 1440 });
+  await fold.click();
+  await fold.hover();
+  for (const colorScheme of SCHEMES) {
+    await page.emulateMedia({ colorScheme });
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`inbox-preview-later-open-1440-${colorScheme}.png`),
+    });
+  }
+  await fold.click();
+  await page.emulateMedia({ colorScheme: "light" });
 
   actions = await paletteActions(page, "preview");
   await expect(actions.getByRole("option", { name: "Preview the new Inbox" })).toHaveCount(0);
