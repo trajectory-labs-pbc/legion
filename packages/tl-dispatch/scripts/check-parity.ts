@@ -252,6 +252,10 @@ function namesUnder(root: string, wanted?: readonly string[]): string[] {
     .flatMap(({ path, text }) => testNames(parseScript(path, text)));
 }
 
+/** The names of a package's tests: its unit tests and its browser tests. */
+export const packageTestNames = (root: string): string[] =>
+  ["src", "tests", "scripts", "e2e"].flatMap((dir) => namesUnder(join(root, dir)));
+
 export interface Facts {
   /** The names of this package's tests. */
   tests: readonly string[];
@@ -340,7 +344,7 @@ function checkPackage(): { lists: ParityList[]; problems: string[] } {
   const { lists, problems } = readLists();
   const inside = notesOf(lists, "inside");
   const facts: Facts = {
-    tests: ["src", "tests", "scripts", "e2e"].flatMap((dir) => namesUnder(join(PACKAGE_ROOT, dir))),
+    tests: packageTestNames(PACKAGE_ROOT),
     // Upstream has thousands of tests: read only the files that may hold an "inside" row's.
     upstreamTests: new Set(
       inside.length > 0

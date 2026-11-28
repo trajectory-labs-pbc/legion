@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { git } from "../tests/git";
 import { parseScript } from "../tests/typescript";
 import {
   type Facts,
   inBranch,
   type ParityList,
+  packageTestNames,
   parityProblems,
   parseList,
   testNames,
@@ -188,5 +192,24 @@ describe("the parity script", () => {
   test("finds a commit in HEAD's history, and not one this clone does not have", () => {
     expect(inBranch(git(["rev-parse", "HEAD"]).out.trim())).toBe(true);
     expect(inBranch("0".repeat(40))).toBe(false);
+  });
+});
+
+describe("the package's browser tests", () => {
+  test("an ID whose only test is under e2e/inbox/ has its test, and loses it with the file", () => {
+    const root = mkdtempSync(join(tmpdir(), "parity-e2e-"));
+    try {
+      mkdirSync(join(root, "e2e/inbox"), { recursive: true });
+      const e2e = join(root, "e2e/inbox/links.e2e.ts");
+      writeFileSync(e2e, 'test("SHL-1 opens the list from its link", async () => {});');
+      const given = () => facts({ tests: [...packageTestNames(root), "SHL-2 asks first"] });
+      expect(check([list()], given())).toEqual([]);
+      rmSync(e2e);
+      expect(check([list()], given())).toEqual([
+        "tests/parity/shell.md: SHL-1 is in the rebuilt region Sign-in and no test name starts with SHL-1",
+      ]);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 });

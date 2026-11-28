@@ -83,6 +83,8 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/write-kinds.ts": ["data", "app"],
   "src/upstream/data-hooks.ts": ["data", "app"],
   "src/upstream/logic/*.ts": ["data"],
+  // The Inbox's logic reaches its views through the Inbox's own reads and writes.
+  "src/upstream/logic/inbox.ts": ["src/data/inbox"],
   "src/upstream/routes.ts": ["navigation"],
   "src/upstream/keys.ts": ["commands"],
   "src/upstream/shell.tsx": ["shell", "parts", "features", "loading", "app", "src/main.tsx"],

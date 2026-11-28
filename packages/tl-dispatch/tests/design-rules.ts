@@ -53,6 +53,7 @@ export const RULES = {
   session: "only `src/data/session.ts` reads the signed-in person",
   globalAlias:
     "name the browser's globals through `window`, `self` or `globalThis`, so the door rules see them",
+  stripe: "no coloured left border: a left edge takes the neutral border colour (rule SU2)",
 } as const;
 
 // ---- Declarations, from the compiled classes and from the app's own stylesheets ----
@@ -290,10 +291,28 @@ function lineIndex(text: string): (position: number) => number {
   };
 }
 
+/** The colours a left edge may take: the theme's neutral borders, or none. */
+const NEUTRAL_EDGE = new Set([
+  "var(--border)",
+  "var(--sidebar-border)",
+  "var(--input)",
+  "transparent",
+]);
+const LEFT_COLOUR = /^border-(left|inline-start|inline)-color$/;
+const LEFT_WIDTH = /^border-(left|inline-start|inline)-width$/;
+
+/** The classes that draw a left edge, and those that colour every edge: one of each in a class
+ *  list draws a stripe too, as `border-l-4 border-primary` does. */
+interface StripeParts {
+  leftWidths: Set<string>;
+  edgeColours: Set<string>;
+}
+
 /** Compiles every class the files hold, with Tailwind and the app's theme, and checks the CSS. */
 async function classViolations(
   files: readonly SourceFile[],
-  tokens: ThemeTokens
+  tokens: ThemeTokens,
+  stripes: StripeParts
 ): Promise<DesignViolation[]> {
   const scanner = new Scanner({ sources: [] });
   const classes = new Map<string, Where[]>();
@@ -314,6 +333,14 @@ async function classViolations(
     const name = sourceClass(declaration.context, classes);
     const circle = name !== undefined && utilityOf(name) === "rounded-full";
     const problems = declarationProblems(declaration, tokens, { circle, fromClass: true });
+    const { property, value } = declaration;
+    const coloured = !NEUTRAL_EDGE.has(value);
+    if (LEFT_COLOUR.test(property) && coloured) problems.push(RULES.stripe);
+    if (name !== undefined && LEFT_WIDTH.test(property) && !/^0(px)?$/.test(value)) {
+      stripes.leftWidths.add(name);
+    }
+    if (name !== undefined && property === "border-color" && coloured)
+      stripes.edgeColours.add(name);
     if (problems.length === 0) continue;
     const where =
       name === undefined ? [{ file: "(compiled CSS)", line: 0 }] : (classes.get(name) ?? []);
@@ -472,7 +499,8 @@ function refuserOf(file: SourceFile, source: ts.SourceFile, violations: DesignVi
 function scriptViolations(
   file: SourceFile,
   source: ts.SourceFile,
-  upstreamThemeLines: readonly number[]
+  upstreamThemeLines: readonly number[],
+  stripes: StripeParts
 ): DesignViolation[] {
   const violations: DesignViolation[] = upstreamThemeLines.map((line) => ({
     file: file.path,
@@ -494,6 +522,13 @@ function scriptViolations(
         !utilities.some((utility) => /^size-\d+(\.\d+)?$/.test(utility))
       ) {
         refuse(node, node.text, RULES.round);
+      }
+      const words = node.text.split(/\s+/);
+      if (
+        words.some((word) => stripes.leftWidths.has(word)) &&
+        words.some((word) => stripes.edgeColours.has(word))
+      ) {
+        refuse(node, node.text, RULES.stripe);
       }
     }
     if (ts.isObjectLiteralExpression(node) && isStyleObject(node)) {
@@ -733,15 +768,16 @@ export async function designViolations(
   const scripts = checked.filter((file) => /\.[cm]?[jt]sx?$/.test(file.path));
   const disk = filesWith(ownFiles(files));
   const cache = resolutionCache();
+  const stripes: StripeParts = { leftWidths: new Set(), edgeColours: new Set() };
   const violations = [
-    ...(await classViolations(scripts, tokens)),
+    ...(await classViolations(scripts, tokens, stripes)),
     ...stylesheets.flatMap((file) => stylesheetViolations(file, tokens)),
     ...scripts.flatMap((file) => {
       const lines = importsOf(join(PACKAGE_ROOT, file.path), disk, cache)
         .filter((entry) => entry.file?.startsWith(UPSTREAM_THEME) === true)
         .map((entry) => entry.line);
       const source = parseScript(file.path, file.text);
-      return [...scriptViolations(file, source, lines), ...doorViolations(file, source)];
+      return [...scriptViolations(file, source, lines, stripes), ...doorViolations(file, source)];
     }),
   ];
   const seen = new Set<string>();

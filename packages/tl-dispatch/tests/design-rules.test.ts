@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
 import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
-import { sourceFiles } from "./source";
+import { sourceFiles, uiSourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
 const REFUSED: readonly [string, string, string][] = [
@@ -99,6 +99,11 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
   ["css", ".x { animation: spin 1s; }", "motion"],
   ["css", ".x { @apply bg-sky-700; }", "@apply"],
+  ["tsx", '<p className="border-l border-l-primary">', "coloured left border"],
+  ["tsx", '<p className="border-s-2 border-s-danger">', "coloured left border"],
+  ["tsx", '<p className="border-x border-x-primary">', "coloured left border"],
+  ["tsx", '<p className="border-l-4 border-primary">', "coloured left border"],
+  ["tsx", 'const ROW = "md:border-l-2 rounded-md md:border-danger";', "coloured left border"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -131,6 +136,10 @@ const ALLOWED: readonly [string, string][] = [
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
   // A stylesheet answers upstream's markup, so it may set type; a class may not.
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
+  // A left edge in the neutral colour, a whole box in a colour, and a left edge of no width.
+  ["tsx", '<p className="border-l-2 border-border border-l-transparent">'],
+  ["tsx", '<p className="border border-primary">'],
+  ["tsx", '<p className="border-l-0 border-primary">'],
 ];
 
 /** Controls whose path decides: each file, its text, and the rules it breaks, none if allowed. */
@@ -229,6 +238,12 @@ const PLACED: readonly [string, string, readonly string[]][] = [
   ["src/shell/onunload.tsx", "window.onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/bare-onunload.tsx", "onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/frame-onunload.tsx", "frame.contentWindow.onbeforeunload = ask;", [RULES.unload]],
+  // The stripe rule reads the UI package's files too.
+  [
+    "../ui/src/components/stripe.tsx",
+    '<p className="border-l border-l-primary" />;',
+    [RULES.stripe],
+  ],
 ];
 
 const controlPath = (index: number, extension: string) =>
@@ -259,6 +274,12 @@ beforeAll(async () => {
 describe("design rules", () => {
   test("the app's own files keep them, the exempt files aside", async () => {
     expect(await designViolations(sourceFiles())).toEqual([]);
+  });
+
+  // Of the UI package's files, this suite checks the stripe rule alone.
+  test("the UI package draws no coloured left border", async () => {
+    const found = await designViolations(uiSourceFiles());
+    expect(found.filter((violation) => violation.rule === RULES.stripe)).toEqual([]);
   });
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {
