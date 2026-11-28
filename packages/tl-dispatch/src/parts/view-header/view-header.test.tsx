@@ -8,7 +8,7 @@ import { type PageRoute, pageRoute, routePath } from "@/navigation/page-route";
 import { PageRoutes, RouteProvider } from "@/navigation/route-tree";
 import { mount } from "../../../tests/mount";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
-import { ViewHeader } from ".";
+import { ViewHeader } from "./view-header";
 
 const HOME = routePath({ path: "/" });
 const ANSWERS = routePath({ path: "/answers" });
@@ -59,15 +59,17 @@ const current = () =>
     .map((link) => link.textContent);
 
 describe("ViewHeader", () => {
-  test("INB-22 draws the title, the count and the page's views as tabs, the shown one current", () => {
+  test("draws the title, the count and the page's views as tabs, the shown one current", () => {
     drawAt("/");
+    const header = screen.getByRole("banner");
     expect(screen.getByRole("heading", { level: 1, name: "Inbox" })).toBeDefined();
+    expect(header.querySelector('[data-slot="count"]')?.textContent).toBe("3");
     expect(screen.getByRole("navigation", { name: "Inbox views" })).toBeDefined();
     expect(tab("Answered by you").getAttribute("href")).toBe("/answers");
     expect(current()).toEqual(["Inbox"]);
   });
 
-  test("INB-22 a click on a tab opens its view, and Enter on a focused tab opens the other", async () => {
+  test("a click on a tab opens its view, and Enter on a focused tab opens the other", async () => {
     drawAt("/");
     await userEvent.click(tab("Answered by you"));
     expect(screen.getByText("The answers")).toBeDefined();

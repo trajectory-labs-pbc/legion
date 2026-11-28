@@ -2,7 +2,7 @@ import type { CredentialPendingResponse } from "@/upstream/contract";
 import { awaitsDecision, capSearchQuery, searchWords } from "@/upstream/logic/inbox";
 import type { Read } from "../read";
 
-export { isOwnList } from "@/upstream/logic/inbox";
+export { type InboxRoute, isOwnList } from "@/upstream/logic/inbox";
 
 /** The words the search box narrows the list by, as upstream reads `?q=`. */
 export const searchWordsOf = (q: string | undefined): readonly string[] =>

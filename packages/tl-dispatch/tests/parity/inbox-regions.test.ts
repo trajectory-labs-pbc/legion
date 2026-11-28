@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { inbox } from "@/features/inbox/route";
+import type { Page } from "@/navigation/page";
 import { replacedViews } from "@/views";
 import { parseList } from "../../scripts/check-parity";
 import { BREAKS } from "../layers.table";
@@ -29,6 +30,8 @@ interface Region {
 }
 
 interface Facts {
+  /** What the parity file itself gets wrong, so that no region's check is skipped. */
+  listProblems: string[];
   regions: Region[];
   /** The files the list names as no region's view file. */
   noRegionViews: string[];
@@ -49,9 +52,15 @@ const quoted = (line: string | undefined) =>
 const lineAfter = (section: string, label: string) =>
   section.split("\n").find((line) => line.startsWith(`${label}:`));
 
-/** The regions of the list and the files it names as no region's. */
-function parseRegions(text: string): Pick<Facts, "regions" | "noRegionViews" | "ids"> {
-  const { regions: rebuilt, items } = parseList(LIST, text).parsed;
+/** A region's line names its files with backticks, or says none. */
+const namesOrNone = (line: string | undefined) =>
+  line !== undefined && (line.endsWith(": none.") || quoted(line).length > 0);
+
+/** The regions of the list, the files it names as no region's, and what it gets wrong. */
+function parseRegions(
+  text: string
+): Pick<Facts, "listProblems" | "regions" | "noRegionViews" | "ids"> {
+  const { parsed, problems: listProblems } = parseList(LIST, text);
   const regions: Region[] = [];
   let noRegionViews: string[] = [];
   for (const section of text.split(/^## /m).slice(1)) {
@@ -62,24 +71,38 @@ function parseRegions(text: string): Pick<Facts, "regions" | "noRegionViews" | "
     }
     const name = /^\d+\. (.+)$/.exec(heading)?.[1];
     if (name === undefined) continue;
+    if (!parsed.regions.has(name)) {
+      listProblems.push(
+        `${LIST}: the heading ${heading} names no region of its Region | Rebuilt table`
+      );
+    }
+    for (const label of ["View files", "Pinned by name"]) {
+      if (!namesOrNone(lineAfter(section, label))) {
+        listProblems.push(
+          `${LIST}: region ${heading} needs a line "${label}:" with names in backticks, or none.`
+        );
+      }
+    }
     regions.push({
       heading,
-      rebuilt: rebuilt.get(name) === true,
+      rebuilt: parsed.regions.get(name) === true,
       views: quoted(lineAfter(section, "View files")),
       pinned: [
         ...(lineAfter(section, "Pinned by name") ?? "").matchAll(/`([^`]+)` in `([^`]+)`/g),
       ].map(([, part = "", file = ""]) => ({ part, file })),
     });
   }
-  return { regions, noRegionViews, ids: items.map((item) => item.id) };
+  return { listProblems, regions, noRegionViews, ids: parsed.items.map((item) => item.id) };
 }
 
 function readFacts(): Facts {
+  // The route's `satisfies` keeps its literal; widen it to every server a page can name.
+  const server: Page["server"] = inbox.server;
   return {
     ...parseRegions(readFileSync(join(PACKAGE_ROOT, LIST), "utf8")),
     replaced: replacedViews,
     pins: readPins(),
-    forkServes: inbox.server === "fork",
+    forkServes: server === "fork",
     upstreamViews: existsSync(UPSTREAM_VIEWS) ? readdirSync(UPSTREAM_VIEWS).sort() : [],
     breaks: Object.values(BREAKS).flatMap((files) => Object.keys(files ?? {})),
   };
@@ -89,9 +112,9 @@ const upstreamFile = (file: string) => `${relative(REPO_ROOT, UPSTREAM_WEB)}/${f
 
 /** Each way the rebuild disagrees with the parity file. */
 function regionProblems(facts: Facts): string[] {
-  const problems: string[] = [];
+  const problems = [...facts.listProblems];
   const replaced = new Set(facts.replaced);
-  const numbers = facts.ids.map((id) => Number(id.replace(/^INB-/, "")));
+  const numbers = facts.ids.flatMap((id) => /^INB-(\d+)$/.exec(id)?.[1] ?? []).map(Number);
   for (let n = 1; n <= Math.max(0, ...numbers); n++) {
     if (!numbers.includes(n)) {
       problems.push(`${LIST} has no row INB-${n}: a row that the page drops stays, with its mark`);
@@ -227,6 +250,26 @@ describe("the Inbox's regions", () => {
       "features/inbox/PaneDocument.tsx is in replacedViews, and tests/parity/inbox.md names it as no region's view file",
       "features/inbox/mark-all.ts is in replacedViews, and it is no view file: logic files and app.tsx are not views",
       "app.tsx is in replacedViews, and it is no view file: logic files and app.tsx are not views",
+    ]);
+  });
+
+  test("a region line without backticks, or a heading the table lacks, is named", () => {
+    const listText = readFileSync(join(PACKAGE_ROOT, LIST), "utf8");
+    const bare = listText.replace(
+      "View files: `features/inbox/BulkBar.tsx`.",
+      "View files: features/inbox/BulkBar.tsx."
+    );
+    expect(bare).not.toBe(listText);
+    expect(parseRegions(bare).listProblems).toEqual([
+      'tests/parity/inbox.md: region 9. Selection and the bulk bar needs a line "View files:" with names in backticks, or none.',
+    ]);
+    const renamed = listText.replace(
+      "## 9. Selection and the bulk bar\n",
+      "## 9. Selection and bulk bars\n"
+    );
+    expect(renamed).not.toBe(listText);
+    expect(parseRegions(renamed).listProblems).toEqual([
+      "tests/parity/inbox.md: the heading 9. Selection and bulk bars names no region of its Region | Rebuilt table",
     ]);
   });
 

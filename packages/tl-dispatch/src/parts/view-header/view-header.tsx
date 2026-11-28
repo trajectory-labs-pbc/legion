@@ -15,13 +15,11 @@ export interface ViewTab {
 export function ViewHeader({
   title,
   count,
-  start,
   tabs = [],
   end,
 }: {
   title: string;
   count?: number;
-  start?: ReactNode;
   tabs?: readonly ViewTab[];
   end?: ReactNode;
 }): ReactNode {
@@ -29,7 +27,6 @@ export function ViewHeader({
     <HeaderRow
       count={count}
       end={end}
-      start={start}
       tabs={
         tabs.length === 0 ? undefined : (
           <nav aria-label={`${title} views`} className="flex items-center gap-1">

@@ -6,18 +6,15 @@ const ROWS = [0, 1, 2, 3];
 /** How long a page may take before its skeleton shows, so a quick one draws none. */
 const SKELETON_DELAY_MS = 200;
 
-/** Whether `ms` have passed since the caller mounted. */
-function useAfter(ms: number): boolean {
+/** Whether a view that is still loading may draw its skeleton yet (rule ES4). */
+export function useSkeletonDue(): boolean {
   const [after, setAfter] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setAfter(true), ms);
+    const timer = setTimeout(() => setAfter(true), SKELETON_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [ms]);
+  }, []);
   return after;
 }
-
-/** Whether a view that is still loading may draw its skeleton yet (rule ES4). */
-export const useSkeletonDue = (): boolean => useAfter(SKELETON_DELAY_MS);
 
 /** A page that is not an issue's, as boxes: a title and list rows. */
 export function PageSkeleton({ label }: { label: string }): ReactNode {

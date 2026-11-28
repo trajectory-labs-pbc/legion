@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { CredentialPendingResponse } from "@/upstream/contract";
+import type { CredentialPendingResponse, CredentialPendingRow } from "@/upstream/contract";
 import { PENDING_CREDENTIAL_REQUEST } from "../../../tests/inbox";
 import type { Read } from "../read";
 import { credentialsHoldEmptyList } from "./empty-list";
@@ -12,7 +12,7 @@ const ready = (
   data: { pending },
   refreshError: undefined,
 });
-const expired = { ...PENDING_CREDENTIAL_REQUEST, state: "expired" };
+const expired: CredentialPendingRow = { ...PENDING_CREDENTIAL_REQUEST, state: "expired" };
 
 describe("the credential requests and the empty list", () => {
   test("INB-34 a list that loads, failed or waits on a decision holds the empty list", () => {

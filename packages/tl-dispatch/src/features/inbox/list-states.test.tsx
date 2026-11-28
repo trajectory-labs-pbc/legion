@@ -18,7 +18,7 @@ const draw = (read: Read<unknown>, empty?: string) =>
   );
 
 describe("the Inbox list's states", () => {
-  test("INB-28 a list that loads draws nothing for 200 ms, then still rows labelled Loading your inbox", async () => {
+  test("a list that loads draws nothing for 200 ms, then still rows labelled Loading your inbox", async () => {
     await onFakeClock(async () => {
       const view = draw({ state: "loading" });
       await tick(150);
@@ -31,7 +31,7 @@ describe("the Inbox list's states", () => {
     });
   });
 
-  test("INB-29 a failed read says Could not load your inbox., and its Retry reads again", async () => {
+  test("a failed read says Could not load your inbox., and its Retry reads again", async () => {
     const retry = mock(() => {});
     draw({ state: "error", error: new Error("down"), retrying: false, retry });
     const alert = screen.getByRole("alert");
@@ -41,7 +41,7 @@ describe("the Inbox list's states", () => {
     expect(screen.queryByText("rows")).toBeNull();
   });
 
-  test("INB-29 a read Dispatch refused offers no Retry", () => {
+  test("a read Dispatch refused offers no Retry", () => {
     draw({ state: "error", error: new Error("no"), retrying: false, refusal: "forbidden" });
     expect(screen.getByRole("alert").textContent).toContain("Could not load your inbox.");
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
@@ -53,6 +53,15 @@ describe("the Inbox list's states", () => {
     expect(screen.queryByText("rows")).toBeNull();
     empty.unmount();
     draw(READY);
+    expect(screen.getByText("rows")).toBeDefined();
+  });
+
+  test("an empty list of null keeps the rows", () => {
+    mount(
+      <InboxListBoundary empty={null} read={READY}>
+        <p>rows</p>
+      </InboxListBoundary>
+    );
     expect(screen.getByText("rows")).toBeDefined();
   });
 });

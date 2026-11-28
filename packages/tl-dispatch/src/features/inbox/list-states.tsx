@@ -2,6 +2,7 @@ import { ReadBoundary } from "@legion/ui/blocks/read-boundary";
 import { ErrorState, LoadingState } from "@legion/ui/blocks/states";
 import { Button } from "@legion/ui/components/button";
 import { Skeleton } from "@legion/ui/components/skeleton";
+import { isDrawn } from "@legion/ui/lib/utils";
 import type { ReactNode } from "react";
 
 import type { Read, ReadFault } from "@/data/read";
@@ -10,7 +11,7 @@ import { useSkeletonDue } from "@/loading/page-skeleton";
 const ROWS = [0, 1, 2, 3, 4, 5];
 
 /** The list while it loads: nothing for a moment, then still two-line rows (INB-28). */
-export function InboxLoading(): ReactNode {
+function InboxLoading(): ReactNode {
   if (!useSkeletonDue()) return null;
   return (
     <LoadingState label="Loading your inbox">
@@ -25,7 +26,7 @@ export function InboxLoading(): ReactNode {
 }
 
 /** The list's failed read, announced, with its Retry when another read can help (INB-29). */
-export function InboxFailed({ fault }: { fault: ReadFault }): ReactNode {
+function InboxFailed({ fault }: { fault: ReadFault }): ReactNode {
   return (
     <ErrorState
       action={
@@ -42,8 +43,8 @@ export function InboxFailed({ fault }: { fault: ReadFault }): ReactNode {
 }
 
 /**
- * The list's part for its read: loading, failed, `empty` when it is drawn, else the rows. An
- * `empty` of undefined is a list with rows, or one that does not say it is empty (INB-34).
+ * The list's part for its read: loading, failed, `empty` when it draws something, else the rows.
+ * No `empty` is a list with rows, or one that does not say it is empty (INB-34).
  */
 export function InboxListBoundary({
   read,
@@ -59,9 +60,9 @@ export function InboxListBoundary({
       ? "loading"
       : read.state === "error"
         ? "failed"
-        : empty === undefined
-          ? "ready"
-          : "empty";
+        : isDrawn(empty)
+          ? "empty"
+          : "ready";
   return (
     <ReadBoundary
       empty={empty}

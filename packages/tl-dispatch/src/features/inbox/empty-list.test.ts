@@ -71,13 +71,13 @@ describe("what an empty Inbox list says", () => {
       sentence: "Open asks for each person show here.",
       clearsFilters: false,
     });
-    const signedOut = {
+    const signedOut = emptyList({
       address: {},
       viewer: undefined,
       agentName: undefined,
       credentialsHold: false,
-    };
-    expect(emptyList(signedOut)?.title).toBe("Nothing needs anyone");
+    });
+    expect(signedOut?.title).toBe("Nothing needs anyone");
   });
 
   test("INB-34 the credential requests hold the filtered, own and everyone lists", () => {

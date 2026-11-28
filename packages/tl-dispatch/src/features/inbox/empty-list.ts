@@ -1,14 +1,7 @@
-import { isOwnList, searchWordsOf } from "@/data/inbox/empty-list";
+import { type InboxRoute, isOwnList, searchWordsOf } from "@/data/inbox/empty-list";
 
-/** The fields of the Inbox's address that decide what an empty list says; upstream's route has each. */
-export interface EmptyListAddress {
-  readonly q?: string;
-  readonly show?: "dismissed";
-  readonly agent?: string;
-  /** Absent is the reader's own list, empty is everyone, and a value names a person or `unassigned`. */
-  readonly assignees?: readonly string[];
-  readonly filters?: Readonly<Partial<Record<string, readonly string[]>>>;
-}
+/** The fields of the Inbox's address that decide what an empty list says. */
+export type EmptyListAddress = Pick<InboxRoute, "q" | "show" | "agent" | "assignees" | "filters">;
 
 /** What an empty list shows: upstream's title, one sentence, and whether Clear filters is its action. */
 export interface EmptyList {
@@ -16,6 +9,12 @@ export interface EmptyList {
   readonly sentence: string;
   readonly clearsFilters: boolean;
 }
+
+const said = (title: string, sentence: string, clearsFilters = false): EmptyList => ({
+  title,
+  sentence,
+  clearsFilters,
+});
 
 /**
  * What the list says when it has no row, as the spec's table "Empty lists" gives it; nothing while
@@ -36,48 +35,30 @@ export function emptyList({
   agentName: string | undefined;
   credentialsHold: boolean;
 }): EmptyList | undefined {
+  // Absent is the reader's own list, empty is everyone, and a value names a person or `unassigned`.
   const selection = address.assignees ?? (viewer === undefined ? [] : [viewer]);
   const own = viewer !== undefined && isOwnList(selection, viewer);
   const fieldFiltered = Object.values(address.filters ?? {}).some((values) => values?.length);
   const filtered = fieldFiltered || (selection.length > 0 && !own);
   if (searchWordsOf(address.q).length > 0) {
-    return {
-      title: "Nothing matches this text",
-      sentence: "No row holds the text in the search box.",
-      clearsFilters: filtered || address.agent !== undefined,
-    };
+    return said(
+      "Nothing matches this text",
+      "No row holds the text in the search box.",
+      filtered || address.agent !== undefined
+    );
   }
   if (address.show === "dismissed") {
-    return {
-      title: "Nothing dismissed",
-      sentence: "Threads that you dismiss show here.",
-      clearsFilters: false,
-    };
+    return said("Nothing dismissed", "Threads that you dismiss show here.");
   }
   if (address.agent !== undefined) {
-    return {
-      title: `No open asks from ${agentName ?? address.agent}`,
-      sentence: "New asks from this agent show here.",
-      clearsFilters: true,
-    };
+    const name = agentName ?? address.agent;
+    return said(`No open asks from ${name}`, "New asks from this agent show here.", true);
   }
   if (credentialsHold) return undefined;
   if (filtered) {
-    return {
-      title: "Nothing matches this filter",
-      sentence: "No row matches the filters that you chose.",
-      clearsFilters: true,
-    };
+    return said("Nothing matches this filter", "No row matches the filters that you chose.", true);
   }
   return own
-    ? {
-        title: "Nothing needs you",
-        sentence: "New asks and replies for you show here.",
-        clearsFilters: false,
-      }
-    : {
-        title: "Nothing needs anyone",
-        sentence: "Open asks for each person show here.",
-        clearsFilters: false,
-      };
+    ? said("Nothing needs you", "New asks and replies for you show here.")
+    : said("Nothing needs anyone", "Open asks for each person show here.");
 }
