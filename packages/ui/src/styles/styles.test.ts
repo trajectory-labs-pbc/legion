@@ -7,6 +7,9 @@ import { Glob } from "bun";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
 
+import { type HeadingSize, headingVariants, type TextSize, textVariants } from "../lib/typography";
+import { cn } from "../lib/utils";
+
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 
 const src = join(import.meta.dirname, "..");
@@ -593,6 +596,48 @@ describe("the theme", () => {
     }
     expect(THEMES.light.get("scrim")).toBe("#000");
     expect(THEMES.dark.get("scrim")).toBe("rgb(0 0 0 / 0.6)");
+  });
+
+  it("smooths text once, on the root", () => {
+    const smoothing: string[] = [];
+    generated.walkDecls(/font-smoothing$/, (decl) => {
+      smoothing.push(`${where(decl)} { ${decl.prop}: ${decl.value} }`);
+    });
+    expect(smoothing).toEqual([
+      "@layer base > html { -webkit-font-smoothing: antialiased }",
+      "@layer base > html { -moz-osx-font-smoothing: grayscale }",
+    ]);
+  });
+
+  it("sets no `text-wrap` but `text-wrap-style`, so a `truncate` beside a recipe holds", () => {
+    const wraps = new Set<string>();
+    generated.walkDecls(/^text-wrap/, (decl) => {
+      wraps.add(`${decl.prop}: ${decl.value}`);
+    });
+    expect([...wraps].sort()).toEqual(["text-wrap-style: balance", "text-wrap-style: pretty"]);
+    // Every size, so a new one fails to compile here until it is listed.
+    const headings = {
+      page: headingVariants({ size: "page", tone: "muted" }),
+      section: headingVariants({ size: "section", tone: "muted" }),
+      group: headingVariants({ size: "group", tone: "muted" }),
+      label: headingVariants({ size: "label", tone: "muted" }),
+    } satisfies Record<HeadingSize, string>;
+    const texts = {
+      body: textVariants({ size: "body", tone: "muted", weight: "medium" }),
+      caption: textVariants({ size: "caption", tone: "muted", weight: "medium" }),
+      // Its own weight is part of its size.
+      figure: textVariants({ size: "figure", tone: "muted" }),
+    } satisfies Record<TextSize, string>;
+    const recipes = [
+      ...Object.values(headings).map((recipe) => [recipe, "wrap-balance"] as const),
+      ...Object.values(texts).map((recipe) => [recipe, "wrap-pretty"] as const),
+    ];
+    for (const [recipe, wrap] of recipes) {
+      const classes = recipe.split(" ");
+      expect(classes).toContain(wrap);
+      expect(classes.filter((name) => /^!?whitespace-/.test(utilityOf(name)))).toEqual([]);
+      expect(cn(recipe, "truncate")).toBe(`${recipe} truncate`);
+    }
   });
 
   it.each(

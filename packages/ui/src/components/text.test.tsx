@@ -8,7 +8,7 @@ describe("Text", () => {
     render(<Text>Body</Text>);
     const text = screen.getByText("Body");
     expect(text.tagName).toBe("SPAN");
-    expect(text.className).toBe("text-sm");
+    expect(text.className).toBe("wrap-pretty text-sm");
   });
 
   it("takes its size, tone and weight from the type scale", () => {
@@ -21,6 +21,7 @@ describe("Text", () => {
       "font-medium",
       "text-muted-foreground",
       "text-xs",
+      "wrap-pretty",
     ]);
   });
 

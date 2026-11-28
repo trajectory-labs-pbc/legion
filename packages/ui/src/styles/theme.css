@@ -256,9 +256,23 @@
 }
 
 @layer base {
+  /* Text is smoothed once, from the root: thin, even strokes in light and dark. */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   /* Icons draw their lines at the theme's stroke, unless one sets its own (lucide writes 2 when
      none is given). */
   svg.lucide[stroke-width="2"] {
     stroke-width: var(--icon-stroke);
   }
+}
+
+/* The wrap style alone: `text-balance` and `text-pretty` also set the wrap mode, so they undo a
+   `truncate` beside them. The type recipes and the tooltip use these. */
+@utility wrap-balance {
+  text-wrap-style: balance;
+}
+@utility wrap-pretty {
+  text-wrap-style: pretty;
 }

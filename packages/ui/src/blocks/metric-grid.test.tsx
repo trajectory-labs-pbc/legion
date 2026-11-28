@@ -83,6 +83,7 @@ describe("MetricFigure", () => {
       "font-semibold",
       "tabular-nums",
       "text-base",
+      "wrap-pretty",
     ]);
     expect(screen.getByText("median").className).toContain("text-muted-foreground");
   });

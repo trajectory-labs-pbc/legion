@@ -1,6 +1,6 @@
 ---
 name: react-quality
-description: "Use when you write or review TypeScript or React code in packages/tl-dispatch or packages/ui: the code bar for casts, refs, context values, typed maps, comments and parity tests, each rule with a bad and a good example."
+description: "Use when you write or review TypeScript or React code in packages/tl-dispatch or packages/ui: the code bar for casts, refs, context values, typed maps, comments, parity tests, and timers and listeners, each rule with a bad and a good example."
 ---
 
 # The code bar
@@ -117,6 +117,36 @@ test("MLP-02 a refused lookup shows the server's reason under the field", async 
 ```
 
 A port of an upstream test keeps upstream's assertion and adds the ID. A new parity item gets the number after the highest one in the page's list, and its row in the same change.
+
+## 8. A component's timers and listeners live in a named hook or a ref callback
+
+A component starts no timer and adds no listener or observer in a bare effect: it calls a named hook that also cleans up, or uses a ref callback that returns its cleanup.
+
+```tsx
+// Bad
+function PageFallback() {
+  const [after, setAfter] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAfter(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
+  return after ? <PageSkeleton label="Loading the page" /> : null;
+}
+
+// Good
+function useAfter(ms: number): boolean {
+  const [after, setAfter] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setAfter(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return after;
+}
+
+function PageFallback() {
+  return useAfter(200) ? <PageSkeleton label="Loading the page" /> : null;
+}
+```
 
 ## Checks
 

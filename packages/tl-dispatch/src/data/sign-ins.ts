@@ -67,6 +67,7 @@ export function useSignedInStores(session: Read<AuthenticatedUser>): string | un
     if (!signedOut) return;
     forgetReads(queryClient);
   }, [queryClient, signedOut]);
+  // Listens before the signed-in effect below, which can make the writes sign a person out.
   useEffect(
     () => writesOf(queryClient).onSignedOut((person) => draftStoresSignedOut(queryClient, person)),
     [queryClient]

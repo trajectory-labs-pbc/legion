@@ -273,7 +273,7 @@ export const MachineLogins = memo(function MachineLogins({
             )}
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <p className={textVariants({ className: "text-pretty", tone: "muted" })}>
+            <p className={textVariants({ tone: "muted" })}>
               Every machine and every pod logged in as you, and every service's login. A pod logs in
               as you when the broker's BROKER_POD_OPERATORS maps the pod's Kubernetes account to
               you. The list shows a login while it is unexpired or a session it started still runs:
