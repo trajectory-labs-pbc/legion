@@ -1,4 +1,4 @@
-import { join, posix, sep } from "node:path";
+import { join, posix, relative, sep } from "node:path";
 import ts from "typescript";
 
 import {
@@ -141,6 +141,13 @@ function readable(entry: Import): string | undefined {
   return entry.resolved ? undefined : "the specifier resolves to no file and no package";
 }
 
+/** A file of the UI package by the name the app imports it as: `@legion/ui/components/x`. */
+const uiName = (file: string) =>
+  `@legion/ui/${relative(join(UI_PACKAGE, "src"), file)
+    .split(sep)
+    .join("/")
+    .replace(/\.[jt]sx?$/, "")}`;
+
 function libraryRules(from: Place, named: string): [Rule, string][] {
   return LIBRARIES.filter(
     (library) =>
@@ -258,7 +265,8 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
   const broken: [Rule, string][] = [];
   const unreadable = readable(entry);
   if (unreadable !== undefined) broken.push(["imports-are-readable", unreadable]);
-  const named = entry.pkg ?? entry.file;
+  const named =
+    entry.pkg ?? (entry.file?.startsWith(UI_PACKAGE + sep) ? uiName(entry.file) : entry.specifier);
   if (named !== undefined) broken.push(...libraryRules(from, named));
   broken.push(...routeImportRules(from, entry));
   if (entry.file === undefined || entry.file.startsWith(UI_PACKAGE + sep)) return broken;

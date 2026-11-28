@@ -1,6 +1,8 @@
 import type { AskUrgency, IssuePriority } from "@/upstream/contract";
 import {
   askUrgency,
+  dimensionValue,
+  dimensionValueLabel,
   type InboxListRow,
   type InboxRowType,
   rowId,
@@ -17,6 +19,12 @@ export interface RowUrgency {
   label: string;
 }
 
+/** The owning issue's priority, with its word: P0 to P3, or No priority. */
+export interface RowPriority {
+  value: IssuePriority | null;
+  label: string;
+}
+
 /** Who wrote the row: a person, by their id, or an agent, which has no face. */
 export type RowActor = { agent: true } | { agent: false; id: string };
 
@@ -28,8 +36,7 @@ interface RowBase {
   /** When the row was last written in. */
   at: Date;
   actor: RowActor;
-  /** The owning issue's priority. */
-  priority: IssuePriority | null;
+  priority: RowPriority;
 }
 
 /** What a row of the Inbox shows, read from upstream's row. An ask has an urgency and no unread
@@ -47,7 +54,11 @@ export function rowFacts(row: InboxListRow): InboxRowFacts {
     type,
     kindLabel: TYPE_LABELS[type],
     at: new Date(rowLastActivityAt(row)),
-    priority: rowPriority(row),
+    priority: {
+      value: rowPriority(row),
+      // The viewer names only a row's assignee, never its priority.
+      label: dimensionValueLabel("priority", dimensionValue(row, "priority", "")),
+    },
   };
   if (row.kind === "thread") {
     return {

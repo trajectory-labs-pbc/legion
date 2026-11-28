@@ -8,6 +8,7 @@ import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale"
 import { type CssDeclaration, importedPath, parseCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
+import { openingOf } from "./map/source";
 import {
   APP_STYLESHEET,
   PACKAGE_ROOT,
@@ -642,10 +643,7 @@ const ROW_FILE =
 const ROW_TAGS = new Set(["ListRow", "GroupHeader"]);
 const ROW_HEIGHT = /^(min-h|max-h|h)-(.+)$/;
 const ROW_TOKENS = new Set(["list-row-1", "list-row-2"]);
-const isRowElement = (node: ts.Node) =>
-  ts.isJsxElement(node)
-    ? ROW_TAGS.has(node.openingElement.tagName.getText())
-    : ts.isJsxSelfClosingElement(node) && ROW_TAGS.has(node.tagName.getText());
+const isRowElement = (node: ts.Node) => ROW_TAGS.has(openingOf(node)?.tagName.getText() ?? "");
 
 type Refuse = (node: ts.Node, text: string, rule: string) => void;
 

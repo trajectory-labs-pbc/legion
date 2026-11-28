@@ -12,7 +12,7 @@ const base = {
   id: "row",
   at: new Date("2026-11-20T10:00:00Z"),
   // P0 is a level apart from High, so the bars show the urgency, not the priority.
-  priority: 0,
+  priority: { value: 0, label: "P0" },
 } as const;
 const ASK: InboxRowFacts = {
   ...base,
@@ -54,7 +54,7 @@ describe("a row of the Inbox", () => {
   test("an ask shows its urgency bars, names the priority, and has no unread dot", () => {
     const { row } = draw(ASK);
     expect(row?.className).toContain("h-list-row-2");
-    const bars = screen.getByRole("img", { name: "Urgency: High, priority P0" });
+    const bars = screen.getByRole("img", { name: "Urgency: High · P0" });
     expect(bars.getAttribute("data-level")).toBe("3");
     expect(screen.queryByRole("img", { name: "Unread" })).toBeNull();
   });
@@ -70,7 +70,7 @@ describe("a row of the Inbox", () => {
       fireEvent.mouseEnter(trigger);
       fireEvent.mouseMove(trigger);
       act(() => jest.advanceTimersByTime(600));
-      expect(screen.getByText("Urgency: High, priority P0")).toBeDefined();
+      expect(screen.getByText("Urgency: High · P0")).toBeDefined();
     } finally {
       jest.useRealTimers();
     }

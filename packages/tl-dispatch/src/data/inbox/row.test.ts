@@ -18,6 +18,13 @@ describe("a row's facts", () => {
     expect(facts.at.toISOString()).toBe(new Date(INBOX_ASKS.withOptions.created_at).toISOString());
   });
 
+  test("a row's priority carries the Filter's word for it", () => {
+    const of = (priority: InboxRow["priority"]) =>
+      rowFacts({ kind: "ask", ask: { ...INBOX_ASKS.withOptions, priority } }).priority;
+    expect(of(1)).toEqual({ value: 1, label: "P1" });
+    expect(of(null)).toEqual({ value: null, label: "No priority" });
+  });
+
   test("an ask with a reply shows the reply's writer beside the reply's time", () => {
     const at = "2026-11-20T11:55:00Z";
     const ask: InboxRow = {

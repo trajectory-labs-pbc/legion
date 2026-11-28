@@ -7,7 +7,7 @@ import { isDrawn } from "@legion/ui/lib/utils";
 import { Bot, Check, CircleHelp, Diamond, type LucideIcon, Reply, Sparkles } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-import type { InboxRowFacts, RowUrgency } from "@/data/inbox/row";
+import type { InboxRowFacts, RowPriority, RowUrgency } from "@/data/inbox/row";
 import { PriorityBars } from "@/parts/priority";
 
 const KIND_ICONS: Record<InboxRowFacts["type"], LucideIcon> = {
@@ -46,9 +46,9 @@ function UrgencyBars({
   priority,
 }: {
   urgency: RowUrgency;
-  priority: InboxRowFacts["priority"];
+  priority: RowPriority;
 }): ReactNode {
-  const label = `Urgency: ${urgency.label}, ${priority === null ? "no priority" : `priority P${priority}`}`;
+  const label = `Urgency: ${urgency.label} · ${priority.label}`;
   return (
     <Tooltip>
       {/* Above the content's click area, so the pointer reaches the tooltip. */}
