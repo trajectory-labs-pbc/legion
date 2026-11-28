@@ -94,12 +94,16 @@ const LIST_KINDS = new Set(["bullet_list", "ordered_list"]);
 export const NEW: Verdict = { kind: "new" };
 export const UNCHANGED: Verdict = { kind: "unchanged" };
 
+/** A block's text as the aids read it, a space between its children. */
+export const textOf = (node: ProseMirrorNode): string =>
+  node.textBetween(0, node.content.size, " ");
+
 function itemOf(node: ProseMirrorNode): BaselineItem {
   return {
     kind: node.type.name,
     text: node.textContent,
     id: blockIdOf(node) ?? undefined,
-    shown: node.textBetween(0, node.content.size, " "),
+    shown: textOf(node),
   };
 }
 

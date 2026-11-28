@@ -1,6 +1,21 @@
-// The decision keys on each host: they wrap, keep the address and leave the focus where keys act.
+// The aids' keys on each host: where they act, and where they do nothing.
+import { createNamedVersion } from "../../../dispatch/e2e/api";
+import { documentEditor, placeCaret } from "../../../dispatch/e2e/editor";
+import { navigateInApp } from "../../../dispatch/e2e/sends";
+import { AGENT } from "../flows";
 import { expect, type Page, test } from "../test";
-import { openHost, PARTS, shownParts } from "./hosts";
+import { REVISE_REQUIREMENT, seedEditedSpec, TYPED_READ } from "./baseline-seed";
+import {
+  countsLine,
+  FIRST,
+  HOST,
+  head,
+  openHost,
+  PARTS,
+  SECOND,
+  seedHost,
+  shownParts,
+} from "./hosts";
 import {
   type Decision,
   decisionBlock,
@@ -10,6 +25,26 @@ import {
   readFirstListed,
   seedDecided,
 } from "./read-first-seed";
+
+/** A document with a requirement and a check, and the text `seedHost` comments on. */
+const TYPED = [
+  FIRST,
+  "",
+  SECOND,
+  "",
+  ":::requirement{#r1}",
+  "The requirement.",
+  ":::",
+  "",
+  ":::check{#c1}",
+  "The check.",
+  ":::",
+  "",
+].join("\n");
+
+/** Whether each foldable block is open, in document order. */
+const opened = (page: Page) =>
+  Promise.all(["r1", "c1"].map((id) => head(page, id).getAttribute("aria-expanded")));
 
 /** Presses `key` and waits until `decision` is in view with the focus on the host. */
 async function pressTo(page: Page, key: string, decision: Decision): Promise<void> {
@@ -85,11 +120,111 @@ test("aids-keys: Next and Previous decision are in the ? sheet and in the palett
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
 
-  await page.keyboard.press("Control+k");
+  await page.keyboard.press("ControlOrMeta+k");
   const palette = page.getByRole("dialog", { name: "Search" });
   await palette.getByRole("combobox", { name: "Search" }).fill("decision");
   await expect(palette.getByRole("option", { name: /Previous decision/ })).toBeVisible();
   await palette.getByRole("option", { name: /Next decision/ }).click();
   await expect(decisionBlock(page, decisions[0].id)).toBeInViewport();
   await expect.poll(() => focusOnHost(page)).toBe(true);
+});
+
+for (const kind of HOST_KINDS) {
+  test(`aids-keys: z on the ${kind} host acts twice in a row from the host element, a part and a fold head, and types in the text`, async ({
+    page,
+  }) => {
+    const { path } = await seedHost(page, kind, TYPED);
+    await openHost(page, path);
+    await expect.poll(() => opened(page)).toEqual(["false", "false"]);
+    const control = countsLine(page).getByRole("button", { name: "Fold or open blocks" });
+    await expect(control).toBeVisible();
+    await expect(countsLine(page).locator("kbd")).toHaveText(/^z$/i);
+
+    await page.locator(HOST).focus();
+    await page.keyboard.press("z");
+    await expect.poll(() => opened(page)).toEqual(["true", "true"]);
+    await page.keyboard.press("z");
+    await expect.poll(() => opened(page)).toEqual(["false", "false"]);
+
+    // The part case: a click on the text of Read first.
+    await focusParts(page);
+    await page.keyboard.press("z");
+    await expect.poll(() => opened(page)).toEqual(["true", "true"]);
+
+    // The fold-head case.
+    await head(page, "c1").focus();
+    await page.keyboard.press("z");
+    await expect.poll(() => opened(page)).toEqual(["false", "false"]);
+    await expect(head(page, "c1")).toBeFocused();
+
+    await placeCaret(page, "after", FIRST);
+    await page.keyboard.press("z");
+    await expect(documentEditor(page)).toContainText(`${FIRST}z`);
+    expect(await opened(page)).toEqual(["false", "false"]);
+  });
+}
+
+test("aids-keys: the changed case: z opens every fold, then folds each block but the one a change touched", async ({
+  page,
+}) => {
+  const { path } = await seedEditedSpec(page, TYPED_READ, REVISE_REQUIREMENT);
+  await openHost(page, path);
+  await expect.poll(() => opened(page)).toEqual(["true", "false"]);
+  await page.locator(HOST).focus();
+  await page.keyboard.press("z");
+  await expect.poll(() => opened(page)).toEqual(["true", "true"]);
+  await page.keyboard.press("z");
+  await expect.poll(() => opened(page)).toEqual(["true", "false"]);
+});
+
+test("aids-keys: the shortcuts sheet lists z, and z acts neither under the sheet nor under ?v=", async ({
+  page,
+}) => {
+  const { artifactId, path } = await seedHost(page, "spec", TYPED);
+  await createNamedVersion(artifactId, "The first version.", AGENT);
+  await openHost(page, path);
+  await page.locator(HOST).focus();
+  await page.keyboard.press("?");
+  const sheet = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  await expect(sheet).toContainText("Fold or open blocks");
+  await page.keyboard.press("z");
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  expect(await opened(page)).toEqual(["false", "false"]);
+
+  await page.getByRole("combobox", { name: "Version" }).selectOption("1");
+  await expect(page.getByTestId("version-view")).toContainText(FIRST);
+  await expect.poll(() => shownParts(page)).toBe(0);
+  await page.keyboard.press("z");
+  await navigateInApp(page, path);
+  await expect.poll(() => shownParts(page)).toBe(1);
+  expect(await opened(page)).toEqual(["false", "false"]);
+});
+
+test("aids-keys: z types in a text field and folds nothing", async ({ page }) => {
+  const { path } = await seedHost(page, "spec", TYPED);
+  await openHost(page, path);
+  const card = page.locator("[data-margin-item]").first();
+  await card.getByRole("button", { expanded: false }).click();
+  const composer = card.getByRole("form", { name: "Comment composer" });
+  const field = composer.getByRole("textbox", { name: "Reply" });
+  await field.click();
+  await page.keyboard.press("z");
+  await expect(field).toHaveValue("z");
+  expect(await opened(page)).toEqual(["false", "false"]);
+});
+
+test("aids-keys: the palette lists the fold action, and picking it folds as z does", async ({
+  page,
+}) => {
+  const { path } = await seedHost(page, "spec", TYPED);
+  await openHost(page, path);
+  await page.locator(HOST).focus();
+  await page.keyboard.press("ControlOrMeta+k");
+  const palette = page.getByRole("dialog", { name: "Search" });
+  await palette.getByRole("combobox", { name: "Search" }).fill("Fold or open");
+  const option = palette.getByRole("option", { name: /Fold or open blocks/ });
+  await expect(option).toHaveCount(1);
+  await option.click();
+  await expect.poll(() => opened(page)).toEqual(["true", "true"]);
 });

@@ -21,3 +21,4 @@ export {
 export { specBlockMarks } from "@upstream-dispatch/features/doc/spec-marks";
 export { EDITOR_BOX_ATTRIBUTE } from "@upstream-dispatch/features/issue-page/node-caret";
 export { blockFragment } from "@upstream-dispatch/features/refs/block-reference";
+export { firstHighlightTerm } from "@upstream-dispatch/features/search/search-model";

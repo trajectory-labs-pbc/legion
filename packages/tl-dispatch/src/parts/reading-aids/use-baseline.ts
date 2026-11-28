@@ -28,7 +28,7 @@ export type Baseline =
     };
 
 export interface BaselineRead {
-  /** A ready baseline's identity changes only when the baseline does: a new choice or its text. */
+  /** A ready baseline's identity changes only with a new choice, its text or a new visit. */
   readonly baseline: Baseline;
   /** The version the open request named, when the document changed since. */
   readonly changedSince: number | undefined;
@@ -84,17 +84,16 @@ export function useBaseline(document: AidedDocument): BaselineRead {
   );
   const asksFault = useReadFailure(asks);
   const shown = version === undefined ? undefined : versionRead.data;
-  const fixedKind = fixed?.kind;
-  const fixedVersion = fixed?.version;
+  // A new visit's fixed choice is a new object, so the marks answer the new visit too.
   const ready = useMemo((): Baseline | undefined => {
     if (shown?.text === undefined) return undefined;
-    const kind = fixedKind !== undefined && shown.version === fixedVersion ? fixedKind : "chosen";
+    const kind = fixed && shown.version === fixed.version ? fixed.kind : "chosen";
     return {
       baseline: shown.text,
       choice: { kind, version: shown.version },
       state: "ready",
     };
-  }, [fixedKind, fixedVersion, shown]);
+  }, [fixed, shown]);
 
   function baselineNow(): Baseline {
     if (version !== undefined) {

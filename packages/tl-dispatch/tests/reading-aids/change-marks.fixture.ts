@@ -1,4 +1,5 @@
 // An approval's two versions: 7 blocks changed in 5 of 7 sections, one a list of 6,100 characters.
+import type { EditorView } from "@milkdown/kit/prose/view";
 
 /** `count` distinct words joined by spaces. */
 const words = (count: number, prefix: string) =>
@@ -43,3 +44,12 @@ export const APPROVED = plan(false);
 export const REVISED = plan(true);
 /** The titles of the sections that changed, in the document's order. */
 export const CHANGED_SECTIONS = ["Goals", "Problem", "Design", "Rollout", "Risks"];
+
+/** The removed or rewritten fold whose earlier text is `earlier`. */
+export function foldOf(view: EditorView, earlier: string): HTMLElement {
+  const fold = [...view.dom.querySelectorAll<HTMLElement>(".reading-aids-change-fold")].find(
+    (each) => each.querySelector(".reading-aids-earlier")?.textContent === earlier
+  );
+  if (fold === undefined) throw new Error(`no fold for ${earlier}`);
+  return fold;
+}
