@@ -20,11 +20,11 @@ output() { # output NAME VALUE: one line of the step's outputs
   printf '%s=%s\n' "$1" "$2" >> "${GITHUB_OUTPUT:?}"
 }
 
-# permission LOGIN: LOGIN's access to this repository. A member is a person with write, maintain or
-# admin access. The event's author_association is not read: it shows a private member of the
-# organization as CONTRIBUTOR.
+# permission LOGIN: LOGIN's access to this repository as admin, write, read or none (maintain reads
+# as write). A member has admin or write access. The event's author_association is not read: it
+# shows a private member of the organization as NONE.
 permission() {
-  gh api "repos/${GITHUB_REPOSITORY:?}/collaborators/$1/permission" --jq .permission
+  gh api "repos/${GITHUB_REPOSITORY:?}/collaborators/$1/permission" --jq .permission < /dev/null
 }
 
 # The files on main that decide a review. A change to one makes every diff new again.
@@ -52,8 +52,8 @@ gate() {
     reason="an upstream sync pull request: upstream reviewed its code before it merged"
   elif ! access=$(permission "$author"); then
     decision=fail
-    reason="the access of $author to this repository could not be read, so no review runs; re-run the job"
-  elif [[ $access =~ ^(admin|maintain|write)$ ]]; then
+    reason="the access of $author to this repository could not be read (an API error, or no such account), so no review runs"
+  elif [[ $access =~ ^(admin|write)$ ]]; then
     decision=review
     reason="the author is a member of the repository ($access access)"
   else
@@ -118,10 +118,10 @@ trusted() {
   local items login access allowed=("github-actions[bot]")
   items=$(gh api --paginate "$1" | jq -c '.[]')
   while IFS= read -r login; do
-    if access=$(permission "$login" 2> /dev/null) && [[ $access =~ ^(admin|maintain|write)$ ]]; then
+    if access=$(permission "$login") && [[ $access =~ ^(admin|write)$ ]]; then
       allowed+=("$login")
     fi
-  done < <(jq -r '.user.login' <<< "$items" | sort -u)
+  done < <(jq -r '.user.login // empty | select(. != "github-actions[bot]")' <<< "$items" | sort -u)
   jq -c --args ".user.login as \$u | select(\$ARGS.positional | index(\$u)) | $2" "${allowed[@]}" <<< "$items"
 }
 

@@ -65,11 +65,15 @@ payload() {
 
 echo "gate"
 echo admin > "$work/access-person"
+echo write > "$work/access-writer"
 echo read > "$work/access-outsider"
 # The event shows a private member of the organization as CONTRIBUTOR.
 payload person CONTRIBUTOR feat/x fork/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
 check "a member's pull request is reviewed, whatever the event's association" "$(is "$status:$(outvar decision)" 0:review)"
+payload writer NONE feat/x fork/legion
+run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
+check "an author with write access is reviewed" "$(is "$(outvar decision)" review)"
 payload outsider MEMBER feat/x outsider/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
 check "an outside author's pull request is refused" "$(is "$status:$(outvar decision)" 0:fail)"
@@ -112,9 +116,13 @@ git clone --quiet -b main "$work/origin.git" "$work/ws/legion"
 jq -n '{pull_request: {title: "Change", body: "Why."}}' > "$work/event.json"
 echo write > "$work/access-a"
 echo read > "$work/access-b"
+echo admin > "$work/access-d"
 jq -n '[{id: 1, author_association: "CONTRIBUTOR", user: {login: "a"}, body: "member"},
   {id: 2, author_association: "NONE", user: {login: "b"}, body: "outsider"},
-  {id: 3, author_association: "NONE", user: {login: "github-actions[bot]"}, body: "workflow"}]' > "$work/gh-answer"
+  {id: 3, author_association: "NONE", user: {login: "github-actions[bot]"}, body: "workflow"},
+  {id: 4, author_association: "MEMBER", user: {login: "c"}, body: "unreadable"},
+  {id: 5, author_association: "NONE", user: {login: "b"}, body: "outsider again"},
+  {id: 6, author_association: "NONE", user: {login: "d"}, body: "member, read last"}]' > "$work/gh-answer"
 cd "$work/ws/legion"
 run prepare PR_NUMBER=7 HEAD_SHA="$pr_head" GITHUB_WORKSPACE="$work/ws/legion" GITHUB_EVENT_PATH="$work/event.json"
 cd "$script_dir"
@@ -125,7 +133,7 @@ check "the head's .claude directory is removed" "$(is "$([ -e "$work/ws/fork-rev
 check "a symlink in the head is a file holding its target" \
   "$(is "$([ -L "$work/ws/fork-review/head/out" ] && echo link):$(cat "$work/ws/fork-review/head/out")" ":/etc/hostname")"
 check "the model reads only members' and this workflow's comments" \
-  "$(is "$(jq -r .id "$work/ws/fork-review/review-comments.jsonl" | paste -sd,)" 1,3)"
+  "$(is "$(jq -r .id "$work/ws/fork-review/review-comments.jsonl" | paste -sd,)" 1,3,6)"
 check "the pull request's text comes from the event" "$(is "$(cat "$work/ws/fork-review/pull-request.md")" $'# Change\n\nWhy.')"
 base_sha=$(git -C "$work/main" rev-parse HEAD~1)
 prompt_text=$(sed -n '/^prompt<</,/^FORK_REVIEW_/p' "$work/output")
