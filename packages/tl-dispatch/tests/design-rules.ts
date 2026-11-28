@@ -116,7 +116,7 @@ const NAME_VALUES = new Set([
 const SKIPPED = /^@(keyframes|property)\b|^@layer properties$/;
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
-  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end|start|end|before|after)|(column-|row-)?rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
+  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end|start|end|before|after)|border-image(-source)?|(column-|row-)?rule|text-decoration|text-stroke|text-emphasis|filter|backdrop-filter)$|shadow|gradient/;
 const FOCUS_PROPERTY = new Set([
   "outline-color",
   "--tw-outline-color",
@@ -124,6 +124,8 @@ const FOCUS_PROPERTY = new Set([
   "--tw-ring-offset-color",
   "--tw-inset-ring-color",
 ]);
+/** A CSS property without its vendor prefix. */
+const unprefixed = (property: string) => property.replace(/^-(webkit|moz|ms)-/, "");
 const TEXT_PROPERTY = new Set(["color", "-webkit-text-fill-color"]);
 const MOTION_PROPERTY = /^(transition|animation)(-|$)|^(transform|translate|scale|rotate)$/;
 /** `value` with every parenthesised group taken out, nested ones too. */
@@ -197,7 +199,7 @@ export function declarationProblems(
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
-  if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
+  if (COLOUR_PROPERTY.test(unprefixed(property)) || TEXT_PROPERTY.has(property)) {
     const names = varNames(value);
     if (names.some((name) => !name.startsWith("--tw-") && !tokens.colours.has(name))) {
       problems.push(RULES.outside);
@@ -369,6 +371,7 @@ function styleKind(property: string): string | undefined {
   if (/^(animation|transition)/.test(property)) return "motion";
   if (property === "scale") return "a scale";
   if (property === "cursor") return "a cursor";
+  if (property === "all") return "every property";
   return undefined;
 }
 
@@ -378,7 +381,7 @@ function styleRule(property: string): string | undefined {
     return `a custom property, which can override a theme token ${RULES.style}`;
   }
   if (WRAP_OR_SMOOTHING.test(property)) return RULES.wrap;
-  const what = styleKind(property.replace(/^-(webkit|moz|ms)-/, ""));
+  const what = styleKind(unprefixed(property));
   return what === undefined ? undefined : `${what} ${RULES.style}`;
 }
 
@@ -475,6 +478,11 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
+  // `el.style`, through parentheses and `!`.
+  const isStyle = (node: ts.Expression): boolean =>
+    ts.isParenthesizedExpression(node) || ts.isNonNullExpression(node)
+      ? isStyle(node.expression)
+      : /\.style$/.test(node.getText());
   // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` (or `ms-`,
   // which sets nothing) is then read as its prefix, as Chromium reads it.
   const styleKey = (
@@ -484,7 +492,7 @@ function scriptViolations(
       key.includes("-") ? key : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
     ).replace(/^(webkit|ms)-/, "-$1-")
   ) => {
-    const rule = styleRule(property);
+    const rule = key === "cssText" ? RULES.styleProp : styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
   };
 
@@ -527,15 +535,14 @@ function scriptViolations(
     }
     if (
       ts.isBinaryExpression(node) &&
-      (node.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
-        node.operatorToken.kind === ts.SyntaxKind.PlusEqualsToken)
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
     ) {
       const target = node.left;
-      if (ts.isPropertyAccessExpression(target) && /\.style$/.test(target.expression.getText())) {
-        if (target.name.text === "cssText") refuse(node, target.getText(), RULES.styleProp);
-        else styleKey(node, target.name.text);
+      if (ts.isPropertyAccessExpression(target) && isStyle(target.expression)) {
+        styleKey(node, target.name.text);
       }
-      if (ts.isElementAccessExpression(target) && /\.style$/.test(target.expression.getText())) {
+      if (ts.isElementAccessExpression(target) && isStyle(target.expression)) {
         const key = target.argumentExpression;
         if (ts.isStringLiteralLike(key)) styleKey(node, key.text);
         else refuse(node, target.getText(), RULES.styleProp);
