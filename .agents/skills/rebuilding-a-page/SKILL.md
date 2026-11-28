@@ -11,20 +11,16 @@ During its rebuild, a page has one element from its first pull request: the fork
 
 ## What this skill assumes
 
-This skill describes the app after the migration's five steps and after the Inbox's first pull requests. Until then, these do not exist yet:
+The app has the migration's layout: the folders `src/features/<page>/`, `src/parts/<name>/` and `src/app/<file>`, the seam (`src/upstream/<file>`) and its upstream mark, the read and write hooks (`src/data/<resource>.ts`), the browser layer, and the layering table with its list of breaks and `tests/layers.md`. The `read-boundary`, `states`, `view-header`, `list-row` and `selection-bar` blocks and the toast component are in `packages/ui`. These do not exist yet:
 
 | Item | Arrives with |
 | --- | --- |
-| The folders `src/features/<page>/`, `src/parts/<name>/`, `src/app/<file>`, and the route files with their `linkForms` | The migration's features move |
-| The seam (`src/upstream/<file>`) and its upstream mark | The migration's seam step |
-| The read and write hooks (`src/data/<resource>.ts`) and the browser layer | The migration's data foundation |
-| The layering table, its list of breaks, and the file that explains each rule | The migration's first step |
 | `PrimaryAction` and `expectOnePrimary` | The Inbox's ask body pull request |
-| The shared list part, `ViewHeader`, the toast store, and the `read-boundary`, `states`, `view-header`, `list-row` and `selection-bar` blocks | The Inbox's pull requests that first use them |
+| The shared list part, which registers a list's keys (the `list-row` block draws one row) | The Inbox's pull request that first uses it |
+| The toast store, mounted in the shell | The Inbox's pull request that first shows a toast |
+| A route file's `linkForms` | The first pull request whose fork-served page reads a query key or a fragment (`tests/map/links.ts`) |
 
 If an item that a region needs is missing, do not build it inside the page: wait for it, or build it where its own pull request puts it.
-
-Until the features move, `.agents/skills/navigation/SKILL.md`, `.agents/skills/commands/SKILL.md` and `.agents/skills/porting-upstream/SKILL.md` name today's layout (`src/pages`, and one `upstream.ts` for each page). For a rebuilt page, use the layout in this skill. The features move rewrites those skills.
 
 ## Read first
 
@@ -61,11 +57,11 @@ One pull request is about 400 changed lines, tests not counted.
 ```text
 src/features/<page>/
   route.tsx        frame options, prefetch, one lazy element. Only src/app imports it. It draws nothing.
-  page.tsx         the page's element. Only route.tsx imports it, and only lazily.
+  page.tsx         the page's element. Only route.tsx imports it: lazily, unless the layering table's EAGER names it.
   index.ts         only when the shell or another feature uses a small part of the page
   <part>.tsx       one file for each part of the page, with its test beside it
 src/data/<resource>.ts            the read and write hooks that the page uses
-src/upstream/views/<page>.tsx     upstream's page and its regions not yet rebuilt; the last pull request deletes it
+src/upstream/views/<page>         upstream's page and its regions not yet rebuilt, a file or a folder; the last pull request deletes it
 src/upstream/logic/<feature>.ts   upstream's logic that the page needs; only src/data imports it
 src/parts/<name>/                 a connected part that two or more features use
 ```
@@ -74,7 +70,7 @@ src/parts/<name>/                 a connected part that two or more features use
 - Upstream's logic (a hook, a query, the write store) is imported through the seam, never copied.
 - A test fakes only the network. A test of a feature never mocks a module of the data layer.
 
-The layering test and the design-rule test hold these rules and the others of the layers. The layering table's explanation file gives the reason of each rule and the questions that place a new file.
+The layering test and the design-rule test hold these rules and the others of the layers. `tests/layers.md` gives the reason of each rule and the questions that place a new file.
 
 ## The view map and the copies
 
@@ -87,11 +83,11 @@ The pull request that rebuilds a region adds each upstream view file of the regi
 
 Each form that submits, each dialog with an action, and each ask body has exactly one filled button, of variant `default` or `destructive`, and that button shows its key with `Kbd`. Use `PrimaryAction`. Every other button uses another variant. A dialog with no action passes. The test setup calls `expectOnePrimary` before it removes each rendered tree, and the helper fails when one of those surfaces has not exactly one such button.
 
-"Needs you" has one mark and one wording: use `NeedsYouMark` (today in `src/features/needs-you`; after the features move, in `src/parts/<name>/`).
+"Needs you" has one mark and one wording: use `NeedsYouMark` from `src/parts/needs-you`.
 
 ## Shared parts
 
-`.agents/skills/ui-design-system/SKILL.md` ("Components: use, change or add") says what a part needs. After the features move, a connected part that two or more features use goes in `src/parts/<name>/`, and one that only one feature uses stays in that feature's folder. For a page rebuild, two more rules hold:
+`.agents/skills/ui-design-system/SKILL.md` ("Components: use, change or add") says what a part needs. A connected part that two or more features use goes in `src/parts/<name>/`, and one that only one feature uses stays in that feature's folder. For a page rebuild, two more rules hold:
 
 1. Build a shared part in the pull request of the first page that uses it, so a reviewer sees it on a real page. Add no option, prop or abstraction that no caller uses.
 2. A prop name of `packages/ui` holds no domain word: a part takes a kind or a level, not an issue status. The table from the domain value to the props is in one folder, `src/parts/<name>/`.
@@ -110,7 +106,7 @@ It shows each of these:
 
 - Each region is marked "yes", and no row is `untested` or `After next sync`.
 - The route file says that the fork serves the page, and its `views` names each file, with no glob.
-- `src/upstream/views/<page>.tsx` is deleted.
+- `src/upstream/views/<page>`, its file or folder, is deleted.
 - No file of the page is in the layering table's list of breaks.
 - `bun run check:entry-budget` passes: the page stays out of the entry chunk.
 - For the Inbox: the preview's two commands and its stored choice are removed.
