@@ -58,9 +58,10 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-// Only a row's leading icon carries the mark; a mark elsewhere drops a plain row's room.
+// Only a row's leading icon is marked inline-start. A marked row or a checkbox row gives every
+// unmarked row and label in its menu the icon's room; a mark elsewhere drops a plain row's room.
 const ICON_ROOM_CLASS =
-  "in-[[role=menu]:has(:is([data-icon=inline-start],[role=menuitemcheckbox]))]:not-has-[[data-icon=inline-start]]:ps-8";
+  "in-[[role=menu]:has([data-icon=inline-start],[role=menuitemcheckbox])]:not-has-[[data-icon=inline-start]]:ps-8";
 
 const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} ${ICON_ROOM_CLASS} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
 
