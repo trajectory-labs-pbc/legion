@@ -258,6 +258,8 @@ check "a pull request retargeted to main is reviewed" "$(contains "$wf" 'types: 
 check "an edit waits for the review in flight" "$(contains "$wf" "cancel-in-progress: .{{ github.event.action != 'edited' }}")"
 check "the model runs only when decide says review" \
   "$(is "$(grep -c "if: steps.decide.outputs.decision == 'review'" "$workflow")" 2)"
+check "only the review job may write the cache" \
+  "$(is "$(grep -c '^    cache-mode: read$' "$workflow"):$(grep -c '^    cache-mode: write-only$' "$workflow")" 1:1)"
 check "only a posted review saves its verdict" "$(contains "$wf" "if: .{{ !cancelled() && hashFiles('fork-review-verdict') != '' }}")"
 check "the model has no shell, no skill and cannot write" "$(contains "$wf" '--disallowedTools "Bash,Skill,Edit,Write,')"
 check "the model reads only the two directories it is given" \

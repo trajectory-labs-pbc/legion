@@ -29,9 +29,11 @@ name: Fork review
 # A diff already reviewed is not reviewed again. After posting a review, `review` saves its verdict
 # to the cache under a key of the pull request's diff and main's reviewer files. `model` finds the
 # key and reports the same verdict with no model call, so a title or body edit, or a rebase that
-# keeps the diff, neither costs a run nor draws a new verdict. A cache written on this event is in
-# main's scope, which no branch's workflow can write; any code that runs on main can. An evicted
-# key costs one more review.
+# keeps the diff, neither costs a run nor draws a new verdict. The cache is main's: this event
+# reads it, and only the `review` job writes it (`cache-mode: write-only`). That job runs main's
+# scripts and saves one verdict word, which `decide` checks on restore. No branch's workflow can
+# write main's cache; a push, schedule or dispatch run on main can. An evicted key costs one more
+# review.
 #
 # No `workflow_call` trigger: the federation rule cannot tell a caller's run from this file's own.
 #
@@ -53,6 +55,8 @@ permissions: {}
 jobs:
   model:
     runs-on: ubuntu-24.04
+    # It restores one verdict word, which `decide` checks, and runs nothing from the cache.
+    cache-mode: read
     timeout-minutes: 45
     permissions:
       contents: read
@@ -153,6 +157,7 @@ jobs:
     needs: model
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
+    cache-mode: write-only
     timeout-minutes: 10
     permissions:
       contents: read
