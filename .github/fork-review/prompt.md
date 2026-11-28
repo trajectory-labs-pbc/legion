@@ -34,7 +34,7 @@ Rate each finding with the deep review's scale: Minor changes no behaviour, hide
 - A clear fix in a file this pull request touches is at least Medium, as the reviewer rules say.
 - A code-quality finding that blocks under that skill's approval bar is Medium.
 - A false statement in a doc or in the pull request body, a contradiction, or an instruction a reader would follow wrongly is Medium. A wording preference is no finding.
-- The `review` check fails when any finding is Medium or High, and passes otherwise.
+- The `review` check fails when any finding is High. A Medium finding opens a thread, which must be resolved before the pull request merges.
 
 ## Your answer
 

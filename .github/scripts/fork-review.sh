@@ -23,6 +23,10 @@ output() { # output NAME VALUE: one line of the step's outputs
 # The author associations whose pull requests, reviews and comments count as a member's.
 members='["OWNER","MEMBER","COLLABORATOR"]'
 
+# The files on main that decide a review. A change to one makes every diff new again.
+reviewer_paths=(.github/fork-review .github/scripts/fork-review.sh .github/workflows/fork-review.yaml
+  packages/daemon/internal/prompts/roles skills/thermonuclear-deep-review skills/thermonuclear-code-quality)
+
 # The sync pull request carries upstream's merged code, so it passes with no model call. Its
 # author is the sync App, whose login no person can take, and its head is fork-sync here. A commit a
 # person pushes there is read by the core approval, which main's ruleset requires from someone
@@ -66,6 +70,9 @@ prepare() {
   base=$(git merge-base HEAD "$head")
   git diff "$base" "$head" > "$dir/diff.patch"
   git log --format='%H %s' "$base..$head" > "$dir/commits.txt"
+  # A review that passed this pull request's same diff under the same reviewer files stands: the
+  # workflow saves this key to main's cache after a pass, and only main's workflows write there.
+  output key "fork-review-pass-$pr-$({ git ls-tree -r HEAD -- "${reviewer_paths[@]}"; cat "$dir/diff.patch"; } | sha256sum | cut -c1-64)"
   jq -r '"# " + .pull_request.title + "\n\n" + (.pull_request.body // "")' "${GITHUB_EVENT_PATH:?}" > "$dir/pull-request.md"
   trusted "repos/$repository/pulls/$pr/reviews" '{user: .user.login, state, commit_id, body}' > "$dir/reviews.jsonl"
   trusted "repos/$repository/pulls/$pr/comments" '{id, in_reply_to_id, user: .user.login, path, line, body}' > "$dir/review-comments.jsonl"
@@ -116,21 +123,19 @@ scan() {
     | ($review.findings | type == "array")
       and all($review.findings[]; . as $f | ($p.findings.items.properties.severity.enum | index($f.severity)) and ($f.line | type == "number"))
   ' > /dev/null 2>&1 || fail "the model returned no review in the schema's shape"
-  # Main's ruleset requires every review thread resolved before a merge, so only a new Medium or
-  # High finding opens a thread. A Minor finding, and one an earlier comment of this workflow
-  # already raised, is a line of the body. `folded` is the body with every finding in it, for when
-  # GitHub refuses an inline comment.
-  # The check fails on any Medium or High finding.
+  # The check fails on a High finding. A new Medium or High finding opens a thread, which main's
+  # ruleset requires resolved before a merge. A Minor finding, and one an earlier comment of this
+  # workflow already raised, is a line of the body. `folded` is the body with every finding in it,
+  # for when GitHub refuses an inline comment.
   jq -c --arg head "$head" '
-    def blocking: .severity != "Minor";
-    (if any(.findings[]; blocking) then "CHANGES" else "APPROVE" end) as $verdict
-    | def inline: blocking and .earlier_comment_id == null;
+    (if any(.findings[]; .severity == "High") then "CHANGES" else "APPROVE" end) as $verdict
+    | def inline: .severity != "Minor" and .earlier_comment_id == null;
     def item: "- **\(.severity)** `\(.path):\(.line)`\(if .earlier_comment_id then " (still stands, comment \(.earlier_comment_id))" else "" end): \(.body)";
     . as $r
     | def body($findings): [
         "Verdict: \($verdict) at \($head)", $r.summary,
         (if $findings == [] then empty else "Findings without a thread:\n\n" + ($findings | map(item) | join("\n")) end),
-        "---\nUpstream'"'"'s reviewer rules, run by `.github/workflows/fork-review.yaml`. A Medium or High finding fails the `review` check."
+        "---\nUpstream'"'"'s reviewer rules, run by `.github/workflows/fork-review.yaml`. A High finding fails the `review` check; a Medium finding opens a thread to resolve before merge."
       ] | join("\n\n");
     {
       verdict: $verdict,
@@ -174,7 +179,7 @@ post() {
       | gh api -X POST "repos/$repository/pulls/$pr/reviews" --input - > /dev/null
   fi
   verdict=$(jq -r .verdict <<< "$review")
-  [ "$verdict" = APPROVE ] || fail "the review at $head has a Medium or High finding (verdict $verdict)"
+  [ "$verdict" = APPROVE ] || fail "the review at $head has a High finding (verdict $verdict)"
   echo "APPROVE at $head"
 }
 

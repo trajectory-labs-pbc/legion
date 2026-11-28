@@ -113,6 +113,21 @@ check "the prompt names the head, base, number and directory" \
   "$(is "$(contains "$prompt_text" "#7 of this repository at head \`$pr_head\`, against its merge base \`$base_sha\`"):$(contains "$prompt_text" "\`$work/ws/fork-review\`")" true:true)"
 check "the prompt keeps no placeholder" "$(is "$(contains "$prompt_text" '@[A-Z_]*@')" false)"
 check "the schema is one line of JSON" "$(jq -e .properties.findings <<< "$(outvar schema)" > /dev/null && echo true || echo false)"
+key=$(outvar key)
+check "the key names the pull request and a hash" "$(is "$(grep -cE '^fork-review-pass-7-[0-9a-f]{64}$' <<< "$key")" 1)"
+# key_after <commit message> <path>: the key once main gains a file at the path.
+key_after() {
+  rm -rf "$work/ws/fork-review"
+  mkdir -p "$(dirname "$work/ws/legion/$2")"
+  echo "$1" > "$work/ws/legion/$2"
+  git -C "$work/ws/legion" add -A
+  git -C "$work/ws/legion" -c user.name=t -c user.email=t@t commit --quiet -m "$1"
+  (cd "$work/ws/legion" && run prepare PR_NUMBER=7 HEAD_SHA="$pr_head" GITHUB_WORKSPACE="$work/ws/legion" GITHUB_EVENT_PATH="$work/event.json")
+  outvar key
+}
+check "a change to main elsewhere keeps the key" "$(is "$(key_after other docs/other.md)" "$key")"
+check "a change to the reviewer rules makes a new key" \
+  "$(is "$([ "$(key_after rules packages/daemon/internal/prompts/roles/reviewer.md)" = "$key" ] && echo same)" "")"
 
 echo "scan"
 terms=$'acmecorp\nkey:ACME'
@@ -129,9 +144,12 @@ check "a Minor finding is a line of the body, not a thread" \
   "$(is "$(jq -r '.comments | length' <<< "$review_out"):$(contains "$(jq -r .body <<< "$review_out")" 'Minor\*\* `a.go:3`')" 0:true)"
 scan_with '{"summary":"Fine.","findings":[{"path":"a.go","line":3,"severity":"Medium","body":"The error is dropped."}]}'
 check "the folded body carries the finding that has a thread" "$(contains "$(jq -r .folded <<< "$review_out")" 'Medium\*\* `a.go:3`: The error is dropped.')"
-check "a Medium finding makes the verdict CHANGES" "$(is "$(jq -r .verdict <<< "$review_out")" CHANGES)"
+check "a Medium finding keeps the verdict APPROVE" "$(is "$(jq -r .verdict <<< "$review_out")" APPROVE)"
 check "a new Medium finding opens a thread on its line" \
   "$(is "$(jq -c '.comments[0] | [.path, .line, .side]' <<< "$review_out")" '["a.go",3,"RIGHT"]')"
+scan_with '{"summary":"Bad.","findings":[{"path":"a.go","line":3,"severity":"High","body":"The token leaks."}]}'
+check "a High finding makes the verdict CHANGES and opens a thread" \
+  "$(is "$(jq -r '"\(.verdict):\(.comments | length)"' <<< "$review_out")" CHANGES:1)"
 scan_with '{"summary":"Still.","findings":[{"path":"a.go","line":3,"severity":"High","body":"Still dropped.","earlier_comment_id":42}]}'
 check "a finding an earlier comment raised opens no second thread" \
   "$(is "$(jq -r '.comments | length' <<< "$review_out"):$(contains "$(jq -r .body <<< "$review_out")" 'still stands, comment 42')" 0:true)"
@@ -183,6 +201,12 @@ check "no other workflow can call this one" "$(is "$(contains "$wf" 'workflow_ca
 check "the workflow runs main's copy, not the pull request's" \
   "$(is "$(contains "$wf" '^  pull_request_target:'):$(contains "$wf" '^  pull_request:')" true:false)"
 check "the review job runs whatever the model job did" "$(contains "$wf" 'if: \${{ !cancelled() }}')"
+check "a pull request retargeted to main is reviewed" "$(contains "$wf" 'types: \[opened, synchronize, reopened, edited\]')"
+check "an edit waits for the review in flight" "$(contains "$wf" "cancel-in-progress: .{{ github.event.action != 'edited' }}")"
+check "the model runs only when no earlier pass has the key" \
+  "$(is "$(grep -c "if: steps.gate.outputs.decision == 'review' && steps.earlier.outputs.cache-hit != 'true'" "$workflow")" 2)"
+check "only a review that passed saves its key" \
+  "$(is "$(grep -c "if: needs.model.outputs.decision == 'review'" "$workflow")" 2)"
 check "the model has no shell, no skill and cannot write" "$(contains "$wf" '--disallowedTools "Bash,Skill,Edit,Write,')"
 check "the model reads only the two directories it is given" \
   "$(is "$(contains "$wf" 'allowedTools "Agent,Read(/[$][{][{] github.workspace [}][}]/[*][*]),Read(/[$][{][{] steps.prepare.outputs.dir [}][}]/[*][*])"'):$(contains "$wf" 'Read,Grep')" true:false)"
