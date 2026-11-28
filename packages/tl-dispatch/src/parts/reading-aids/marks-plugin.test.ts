@@ -8,6 +8,7 @@ import {
   APPROVED,
   CHANGED_ITEM,
   CHANGED_SECTIONS,
+  foldOf,
   NEW_ITEMS,
   REVISED,
   said,
@@ -113,15 +114,6 @@ function labels(view: EditorView): string[] {
         : texts.get(id);
     return `${element.getAttribute(CHANGE_ATTRIBUTE)}: ${text}`;
   });
-}
-
-/** The removed or rewritten fold whose earlier text is `earlier`. */
-function foldOf(view: EditorView, earlier: string): HTMLElement {
-  const fold = [...view.dom.querySelectorAll<HTMLElement>(".reading-aids-change-fold")].find(
-    (each) => each.querySelector(".reading-aids-earlier")?.textContent === earlier
-  );
-  if (fold === undefined) throw new Error(`no fold for ${earlier}`);
-  return fold;
 }
 
 const words = (view: EditorView, selector: "ins" | "del") =>

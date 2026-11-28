@@ -20,6 +20,13 @@ export const HOST = "[data-reading-aids-host]";
 /** The parts' root of the page's document editor, which `editor-aids.ts` marks. */
 export const partsRoot = (page: Page) => documentEditor(page).locator(PARTS);
 
+/** The counts line, which holds the aids' controls. */
+export const countsLine = (page: Page) => partsRoot(page).locator("[data-reading-aids-counts]");
+
+/** The fold head's button of the block `blockId`, which `fold-head.ts` marks. */
+export const head = (page: Page, blockId: string) =>
+  page.locator(`[data-reading-aids-fold-head="${blockId}"] button`);
+
 /** How many parts' roots the page shows, anywhere: a hidden editor's root is not shown. */
 export const shownParts = (page: Page) =>
   page

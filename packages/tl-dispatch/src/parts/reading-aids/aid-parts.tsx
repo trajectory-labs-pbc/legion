@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { type AidedDocument, useAidedDocument } from "@/data/document-reads";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
+import { FoldsControl, useBlockFolds } from "./block-folds-part";
 import { CountsLine } from "./counts-line";
 import { moveToBlock } from "./moves";
 import type { PartsProps } from "./parts-slot";
@@ -18,6 +19,7 @@ function AidCommands({ actions }: { actions: AidActions }): null {
 
 function DocumentParts({ document, entry, shown }: PartsProps & { document: AidedDocument }) {
   useMeasuredRender();
+  const folds = useBlockFolds(entry, document.artifactId);
   const readFirst = useReadFirst(entry, document);
   const baseline = useBaseline(document);
   const marks = useChangeMarks(entry.editor.view, baseline.baseline);
@@ -29,10 +31,16 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
   return (
     <>
       <ReadFirst document={document} state={readFirst} />
-      <CountsLine marks={marks} moveTo={moveToSection} read={baseline} />
+      <CountsLine
+        controls={folds.toggleFolds === undefined ? null : <FoldsControl />}
+        marks={marks}
+        moveTo={moveToSection}
+        read={baseline}
+      />
       {shown ? (
         <AidCommands
           actions={{
+            ...folds,
             nextDecision: step && (() => step(1)),
             previousDecision: step && (() => step(-1)),
           }}

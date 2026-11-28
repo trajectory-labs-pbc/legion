@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { documentEditor, selectEditorText, typeAtEnd } from "../../../dispatch/e2e/editor";
 import { expect, test } from "../test";
 import { compareWith, revisitSpec, seedReadThenRevised, sinceText } from "./baseline-seed";
-import { openHost, SECOND, seedHost } from "./hosts";
+import { head, openHost, SECOND, seedHost } from "./hosts";
 import { readFirst, readFirstListed, seedDecided } from "./read-first-seed";
 
 const SCREENSHOTS = fileURLToPath(new URL("../screenshots/", import.meta.url));
@@ -21,6 +21,32 @@ const MARKED = [
   REMOVED,
   "The last paragraph stays too.",
 ].join("\n\n");
+
+/** A spec with a requirement, a check and a plan task, each folded to its head at the open. */
+const FOLDS = [
+  "# Release checklist",
+  "",
+  "What the release must hold before it ships.",
+  "",
+  ":::requirement{#r1}",
+  "**R1.** Each upload keeps its original file name.",
+  "",
+  "A renamed file is stored under the name the reader gave it, and the original name stays in its record.",
+  ":::",
+  "",
+  ":::check{#c1}",
+  "Upload a file, rename it, and read its record: the original name is there.",
+  ":::",
+  "",
+  ":::plan_task{#t1}",
+  "**T1.** Store the original name beside each upload.",
+  "",
+  "Add the column, fill it on upload, and show it in the record.",
+  ":::",
+  "",
+  SECOND,
+  "",
+].join("\n");
 
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(colorScheme, () => {
@@ -89,6 +115,40 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(editor.getByText("Rewritten: hide the earlier text")).toBeVisible();
       await page.mouse.move(0, 0);
       await page.screenshot({ path: `${SCREENSHOTS}change-marks-open-${colorScheme}.png` });
+    });
+
+    test(`screenshots: folded heads, an open block and a head at a Tab stop, ${colorScheme}`, async ({
+      page,
+    }) => {
+      const { path } = await seedHost(page, "spec", FOLDS);
+      await openHost(page, path);
+      await expect(head(page, "t1")).toHaveAttribute("aria-expanded", "false");
+      await page.screenshot({
+        animations: "disabled",
+        path: `${SCREENSHOTS}folds-folded-${colorScheme}.png`,
+      });
+      await head(page, "r1").click();
+      await expect(head(page, "r1")).toHaveAttribute("aria-expanded", "true");
+      await page.mouse.move(0, 0);
+      await page.screenshot({
+        animations: "disabled",
+        path: `${SCREENSHOTS}folds-open-${colorScheme}.png`,
+      });
+      // A key moves the focus, so the head shows its focus outline.
+      await head(page, "r1").focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(head(page, "r1")).toBeFocused();
+      const original = await head(page, "r1").elementHandle();
+      if (original === null) throw new Error("the head has no button");
+      // Hiding the caret writes a style on upstream's block header, whose redraw takes the head.
+      await page.screenshot({
+        animations: "disabled",
+        caret: "initial",
+        path: `${SCREENSHOTS}folds-focus-${colorScheme}.png`,
+      });
+      await expect(head(page, "r1")).toBeFocused();
+      expect(await original.evaluate((button) => button.isConnected)).toBe(true);
     });
   });
 }

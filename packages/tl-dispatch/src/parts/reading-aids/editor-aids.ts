@@ -2,31 +2,25 @@
 import "./aids.css";
 
 import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
-import { Decoration, DecorationSet, type EditorView } from "@milkdown/kit/prose/view";
+import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import type { EditorHandle } from "@/upstream/editor/frame";
 import { FORK_VIEW_ATTRIBUTE } from "@/upstream/mark";
 
 import { AidParts } from "./aid-parts";
+import { blockFoldsOf, blockFoldsPlugins } from "./block-folds";
 import type { Comparer } from "./comparer";
 import { docChangesPlugin } from "./editor-doc";
-import { changeMarksPlugin } from "./marks-plugin";
+import { changedBlockIds, changeMarksPlugin, watchChanges } from "./marks-plugin";
 import { unwatchHeight, watchHeight } from "./parts-height";
 import { partsSlot } from "./parts-slot";
 
 /** The key of the parts plugin: an editor that holds it has the aids. */
 const aidsKey = new PluginKey("reading-aids");
 
-/** The meta of a transaction that asks each fold to open the block it names, by id. */
-export const REVEAL_BLOCK = "revealBlock";
-
 export const PARTS_ATTRIBUTE = "data-reading-aids-parts";
 
+export { revealBlock } from "./folds";
 export { besideChangeMarks, showsChangeMarks, watchChanges } from "./marks-plugin";
-
-/** Asks each fold of the aids to open the block `blockId`. */
-export function revealBlock(view: EditorView, blockId: string): void {
-  if (!view.isDestroyed) view.dispatch(view.state.tr.setMeta(REVEAL_BLOCK, blockId));
-}
 
 /** The parts' root: outside the text, not editable, and found by no block or mark lookup. */
 function partsRoot(): HTMLElement {
@@ -92,6 +86,13 @@ export function installAids(
     partsPlugin(host, editor, documentRef, least),
     docChangesPlugin(),
     changeMarksPlugin(startComparer),
+    ...blockFoldsPlugins(view, documentRef),
   ];
   view.updateState(view.state.reconfigure({ plugins: view.state.plugins.concat(aids) }));
+  // The blocks the first comparison draws as changed start open.
+  const folds = blockFoldsOf(view);
+  watchChanges(view, () => {
+    const changed = changedBlockIds(view);
+    if (changed !== undefined) folds.setTouched(changed);
+  });
 }
