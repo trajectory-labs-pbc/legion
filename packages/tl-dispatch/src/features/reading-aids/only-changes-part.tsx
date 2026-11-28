@@ -18,7 +18,8 @@ export function useOnlyChanges(
   // A new visit, after a sign-out, takes its choice too.
   const visit = useVisit(artifactId).onlyChanges;
   useLayoutEffect(() => {
-    only.attach(visit);
+    const timer = setTimeout(() => only.attach(visit), 100);
+    return () => clearTimeout(timer);
   }, [only, visit]);
 
   const term = useHighlightTerm();
