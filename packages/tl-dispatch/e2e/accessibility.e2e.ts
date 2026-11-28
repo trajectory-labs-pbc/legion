@@ -391,7 +391,8 @@ const signedOutRegions: readonly Region[] = [
   },
 ];
 
-/** The pages the fork draws, each read at every width with upstream's views hidden. */
+/** The pages the fork draws, each read at every width with upstream's views and what a region
+ *  leaves out hidden. */
 const forkPages: readonly Region[] = [
   { ...onInbox, name: "Inbox's frame", selector: SHELL },
   machineLoginListed,
@@ -596,8 +597,8 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   return unmarked;
 }
 
-/** Hides upstream's views and what `region` leaves out, so the width check reads only the fork's
- *  layout. */
+/** Hides upstream's views and what `region` leaves out, so the width check measures the fork's
+ *  boxes in a layout without them. */
 async function hideLeftOut(page: Page, region: Region): Promise<void> {
   await page.addStyleTag({
     content: `${leftOut(region).join(", ")} { display: none !important; }`,
@@ -687,7 +688,7 @@ async function resize(
  *  scrolls or clips content wider than itself (`wideBoxes`). */
 function fitEach(list: readonly Region[]): void {
   for (const region of list) {
-    test(`the ${region.name} fits 390, 768 and 1440 px, and no box in it is too narrow`, async ({
+    test(`the ${region.name} fits 390, 768 and 1440 px, and \`wideBoxes\` names no box in it`, async ({
       page,
     }) => {
       await openRegion(page, { ...region, viewport: PHONE });
