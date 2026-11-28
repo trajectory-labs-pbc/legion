@@ -7,18 +7,15 @@ import { type ReadFault, type Refusal, refusalOf, useKeptFailures } from "@/data
 import { useFocusHandOff } from "@/upstream/data-hooks";
 
 /** A failed read as a part shows it; `refresh` when it failed under the rows it still shows. */
-export type ShownFault = ReadFault & { readonly refresh?: true };
+type ShownFault = ReadFault & { readonly refresh?: true };
 
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
 
 /**
- * The reads that failed with nothing to show, if any; the failure stays while their Retry runs.
- * A refetch clears the error of a read with no data until it answers, so a read keeps the failure
- * this component saw while it is out again, however often it failed meanwhile. A read this
- * component never saw fail is loading while it is out, so a failure from before it mounted shows
- * only once the read answers again. Every render passes the same reads in the same places, each
- * place always the same query, `undefined` for a read left out: what was seen is kept by place.
+ * The reads that failed with nothing to show, if any; the failure stays while their Retry runs,
+ * kept by place through `useKeptFailures`. Every render passes the same reads in the same places,
+ * each place always the same query, `undefined` for a read left out.
  */
 export function useReadFailure(
   ...reads: readonly (UseQueryResult<unknown> | undefined)[]
