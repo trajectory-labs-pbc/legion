@@ -9,8 +9,9 @@ import { warmMarkdownRenderer } from "@upstream-dispatch/features/refs/markdown-
 import * as Y from "yjs";
 
 import { aidedEditor, HOST_ATTRIBUTE } from "./aided-editor";
+import { foldOf } from "./change-marks.fixture";
 import { against, inProcessEditorIn } from "./comparer-fixtures";
-import { installAids, PARTS_ATTRIBUTE, REVEAL_BLOCK } from "./editor-aids";
+import { installAids, PARTS_ATTRIBUTE } from "./editor-aids";
 import {
   blockIdsOf,
   destroyEditors,
@@ -21,6 +22,8 @@ import {
   rootIn,
   SPEC,
 } from "./editor-fixtures";
+import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
+import { REVEAL_BLOCK } from "./folds";
 import { compareWith } from "./marks-plugin";
 import { partsSlot } from "./parts-slot";
 
@@ -195,4 +198,19 @@ test("change-marks the handle's block marks leave out upstream's changed-since-r
 
   compareWith(handle.view, undefined);
   await waitFor(() => expect(draws(second, changed)).toBe(true));
+});
+
+test("a block removed just above a requirement stands above the requirement's head, not between the head and its text", async () => {
+  const handle = await inProcessEditorIn(rootIn(HOST_ATTRIBUTE), SPEC);
+  const requirement = [":::requirement{#r1}", "**R1.** The requirement.", ":::"].join("\n");
+  handle.setMarkdown(`Kept above.\n\n${requirement}\n`);
+  const removed = "A paragraph that the reader's baseline had.";
+  compareWith(
+    handle.view,
+    against({ markdown: `Kept above.\n\n${removed}\n\n${requirement}\n`, tree: undefined })
+  );
+  const fold = await waitFor(() => foldOf(handle.view, removed));
+  const head = handle.view.dom.querySelector(`[${FOLD_HEAD_ATTRIBUTE}="r1"]`);
+  if (head === null) throw new Error("the requirement has no head");
+  expect(fold.compareDocumentPosition(head) & fold.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

@@ -30,6 +30,8 @@ export interface DrawnChanges extends Against {
 
 interface MarksState {
   readonly against: Against | undefined;
+  /** Each block drawn, with the verdict it is drawn with. */
+  readonly blocks: readonly MarkedBlock[];
   readonly compared: Compared | undefined;
   readonly decorations: DecorationSet;
   readonly drawn: DrawnChanges | undefined;
@@ -48,6 +50,7 @@ const marksKey = new PluginKey<MarksState>("reading-aids-marks");
 const EMPTY: MarksState = {
   against: undefined,
   attempt: 0,
+  blocks: [],
   compared: undefined,
   decorations: DecorationSet.empty,
   drawn: undefined,
@@ -134,7 +137,7 @@ function draw(
 ): MarksState {
   const { compared } = state;
   if (compared === undefined)
-    return { ...state, decorations: DecorationSet.empty, drawn: undefined };
+    return { ...state, blocks: [], decorations: DecorationSet.empty, drawn: undefined };
   const decorations: Decoration[] = [];
   const blocks: MarkedBlock[] = [];
   const present = new Set<string>();
@@ -176,6 +179,7 @@ function draw(
     sameSummary(last.summary, summary);
   return {
     ...state,
+    blocks,
     decorations: DecorationSet.create(doc, decorations),
     drawn: kept ? last : { baseline, choice, summary },
   };
@@ -209,11 +213,26 @@ export function compareWith(view: EditorView, against: Against | undefined): voi
       shown.baseline === against.baseline &&
       sameChoice(shown.choice, against.choice));
   if (!same) dispatchMeta(view, { against, kind: "baseline" });
+  // A caller of the same baseline, such as a new visit, hears what the marks show.
+  else notify(view);
 }
 
 /** The counts of the marks drawn and their baseline: the last one's while a new one compares. */
 export const drawnChanges = (view: EditorView): DrawnChanges | undefined =>
   marksKey.getState(view.state)?.drawn;
+
+/** The blocks drawn as changed, by id; undefined until the shown baseline's comparison answers. */
+export function changedBlocks(view: EditorView): ReadonlySet<string> | undefined {
+  const state = marksKey.getState(view.state);
+  if (state?.compared === undefined || state.compared.baseline !== state.against?.baseline) {
+    return undefined;
+  }
+  return new Set(
+    state.blocks.flatMap(({ id, verdict }) =>
+      id === undefined || verdict.kind === "unchanged" ? [] : [id]
+    )
+  );
+}
 
 /** Why the comparison against `baseline` drew no marks, if it failed. */
 export function comparisonFailure(

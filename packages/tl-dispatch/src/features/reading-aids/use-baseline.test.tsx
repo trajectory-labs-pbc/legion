@@ -293,6 +293,19 @@ describe("the baseline", () => {
     expect(visitOf(document.artifactId).compareWith).toBeUndefined();
   });
 
+  test("a sign-out gives the next visit a ready baseline of its own, of the same text and choice", async () => {
+    const document = aDocument(false);
+    const visit = page(document, {
+      asks: [[approvalAsk(at(document.artifactId, 16), { approved: 8 })]],
+    });
+    visit.mount();
+    expect(await line("Since v8, the last approved version")).toBeDefined();
+    const before = visit.read()?.baseline;
+    act(() => writesOf(visit.queryClient).signedOut("alice"));
+    await waitFor(() => expect(visit.read()?.baseline).not.toBe(before));
+    expect(visit.read()?.baseline).toEqual(before);
+  });
+
   test("a pick from the keyboard keeps the focus on Compare with while the version loads", async () => {
     const document = aDocument(false);
     const visit = page(document, { asks: [[]], held: [4] });

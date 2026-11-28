@@ -13,6 +13,12 @@ export interface Visit {
   baseline?: BaselineChoice | null;
   /** The version the reader picked under "Compare with". */
   readonly compareWith?: number;
+  /** The reader's fold choices, the `?q=` term last applied, and the blocks the first comparison touched. */
+  readonly blockFolds: {
+    readonly choices: Map<string, boolean>;
+    term?: string;
+    touched?: ReadonlySet<string>;
+  };
 }
 
 /** The name of upstream's read of the reader's read mark of a document. */
@@ -20,6 +26,7 @@ export const READ_MARK = "document-read";
 
 const visits = new Map<string, Visit>();
 const listeners = new Set<() => void>();
+const forgetListeners = new Set<() => void>();
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
@@ -34,7 +41,7 @@ function notify(): void {
 export function visitOf(artifactId: string): Visit {
   let visit = visits.get(artifactId);
   if (visit === undefined) {
-    visit = {};
+    visit = { blockFolds: { choices: new Map() } };
     visits.set(artifactId, visit);
   }
   return visit;
@@ -44,6 +51,11 @@ export function visitOf(artifactId: string): Visit {
 export const useVisit = (artifactId: string): Visit =>
   useSyncExternalStore(subscribe, () => visitOf(artifactId));
 
+/** Runs `listener` each time the visits are forgotten. */
+export function onForget(listener: () => void): void {
+  forgetListeners.add(listener);
+}
+
 function update(artifactId: string, change: Partial<Visit>): void {
   visits.set(artifactId, { ...visitOf(artifactId), ...change });
   notify();
@@ -51,6 +63,7 @@ function update(artifactId: string, change: Partial<Visit>): void {
 
 function forget(): void {
   visits.clear();
+  for (const listener of forgetListeners) listener();
   notify();
 }
 
