@@ -20,19 +20,34 @@ export interface ParsedCss {
   statements: CssStatement[];
 }
 
+/** An at-rule's prelude, its name in lower case; an `@property` name is read as a declaration's. */
+function atRulePrelude(at: AtRule): string {
+  const name = at.name.toLowerCase();
+  const params = name === "property" ? unescapeCss(at.params).toLowerCase() : at.params;
+  return `@${name} ${params}`.trim();
+}
+
 /** The preludes of the blocks around a node, outermost first, with whitespace collapsed. */
 function contextOf(node: Node): string[] {
   const context: string[] = [];
   for (let at = node.parent; at !== undefined; at = at.parent) {
     const prelude =
-      at instanceof Rule
-        ? at.selector
-        : at instanceof AtRule
-          ? `@${at.name} ${at.params}`.trim()
-          : undefined;
+      at instanceof Rule ? at.selector : at instanceof AtRule ? atRulePrelude(at) : undefined;
     if (prelude !== undefined) context.unshift(prelude.replace(/\s+/g, " "));
   }
   return context;
+}
+
+/** A CSS identifier with its escapes read: `\6c ayer` gives `layer`. An escape that names no
+ *  character (0, a surrogate, past U+10FFFF) gives U+FFFD, as CSS reads it. */
+export function unescapeCss(name: string): string {
+  return name
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) => {
+      const code = Number.parseInt(hex, 16);
+      const none = code === 0 || (code >= 0xd800 && code <= 0xdfff) || code > 0x10ffff;
+      return String.fromCodePoint(none ? 0xfffd : code);
+    })
+    .replace(/\\(.)/g, "$1");
 }
 
 /** Reads a stylesheet into its declarations and its at-rule statements, nesting included. */
@@ -42,7 +57,7 @@ export function parseCss(text: string): ParsedCss {
   const statements: CssStatement[] = [];
   root.walkDecls((decl) => {
     declarations.push({
-      property: decl.prop.toLowerCase(),
+      property: unescapeCss(decl.prop).toLowerCase(),
       value: decl.important ? `${decl.value} !important` : decl.value,
       context: contextOf(decl),
       line: decl.source?.start?.line ?? 0,

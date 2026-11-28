@@ -16,7 +16,7 @@ function DropdownMenuTrigger<Payload = unknown>(props: MenuPrimitive.Trigger.Pro
 
 /** Class names for a menu's popup, shared with the context menu. */
 const menuPopupClass = cn(
-  "z-50 max-h-(--available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 shadow-popover text-popover-foreground outline-hidden",
+  "z-overlay max-h-(--available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 shadow-popover text-popover-foreground outline-hidden",
   popupMotion
 );
 
@@ -32,11 +32,11 @@ function DropdownMenuContent({
   children,
   ...props
 }: DropdownMenuContentProps) {
-  // z-50 on the portal puts Base UI's modal backdrop over a sheet's scrim below.
+  // z-overlay on the portal puts Base UI's modal backdrop over a sheet's scrim below.
   return (
-    <MenuPrimitive.Portal className="relative z-50">
+    <MenuPrimitive.Portal className="relative z-overlay">
       <MenuPrimitive.Positioner
-        className="isolate z-50 outline-hidden"
+        className="isolate z-overlay outline-hidden"
         side={side}
         align={align}
         sideOffset={sideOffset}
@@ -58,7 +58,7 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
+const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} data-[disabled]:pointer-events-none data-[disabled]:opacity-disabled data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
 
 const DESTRUCTIVE_CLASS =
   "data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger-tint data-[variant=destructive]:data-highlighted:text-danger data-[variant=destructive]:*:[svg]:text-danger!";
@@ -216,7 +216,7 @@ function DropdownMenuSubContent({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        className="isolate z-50 outline-hidden"
+        className="isolate z-overlay outline-hidden"
         side={side}
         align={align}
         sideOffset={sideOffset}

@@ -23,7 +23,7 @@ export function StatusCorner({
   const connection = useLiveSocketPill();
   return (
     <div
-      className="pointer-events-none fixed right-4 bottom-[max(var(--foot-floor),calc(var(--foot-banner-inset,0px)_+_1rem))] z-50 flex w-[min(28rem,calc(100vw-2rem))] flex-col items-end gap-2 [--foot-floor:5rem] xl:[--foot-floor:0px] *:pointer-events-auto"
+      className="pointer-events-none fixed right-4 bottom-[max(var(--foot-floor),calc(var(--foot-banner-inset,0px)_+_1rem))] z-overlay flex w-[min(28rem,calc(100vw-2rem))] flex-col items-end gap-2 [--foot-floor:5rem] xl:[--foot-floor:0px] *:pointer-events-auto"
       ref={corner}
     >
       <PendingWritesIndicator />

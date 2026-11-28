@@ -1,18 +1,17 @@
 import { readFileSync } from "node:fs";
-import { extname, join, resolve, sep } from "node:path";
+import { extname, join, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import ts from "typescript";
 
 import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale";
-import { type CssDeclaration, importedPath, parseCss } from "./css";
+import { type CssDeclaration, parseCss, unescapeCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
 import {
   APP_STYLESHEET,
   PACKAGE_ROOT,
   type SourceFile,
-  SRC_DIR,
   UI_STYLESHEET,
   UPSTREAM_WEB,
 } from "./source";
@@ -36,6 +35,12 @@ export const RULES = {
   motion: "motion only under `motion-safe:`, inside `prefers-reduced-motion: no-preference`",
   scale: "nothing scales, on a press or otherwise: motion is an opacity fade",
   fade: "a transition moves opacity alone: a row's hover and highlight change at once",
+  layer:
+    "a layer names its theme token (`z-raised`, `z-overlay`, or `var()` of the theme's `--layer-*` in a stylesheet), never a number",
+  duration:
+    "a fade's length names its theme token (`duration-popup`, `duration-modal`, or `var()` of the theme's `--duration-*` in a stylesheet), never a number or the `transition` shorthand",
+  themeOnly:
+    "a layer, a fade's length (`--default-transition-duration` too), the disabled opacity and every theme key in the namespaces their classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`) are declared in the theme alone (`packages/ui/src/styles/theme.css`), and no reset clears one (`--z-*: initial`, or `--z-index-overlay-*` inside a namespace)",
   cursor:
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
@@ -65,18 +70,25 @@ export interface ThemeTokens {
   radii: ReadonlySet<string>;
   /** Each corner token's value: the theme's `rounded-*` classes compile to these. */
   radiusValues: ReadonlySet<string>;
+  /** Each layer token's name (`--layer-*`) and each fade length's (`--duration-*`). */
+  layers: ReadonlySet<string>;
+  durations: ReadonlySet<string>;
 }
 
 /** The colours of the theme and of the app's own stylesheets, and the theme's corners. The UI
  *  package's own test holds each of the theme's corner tokens to a step of `--radius`, so this
- *  check takes them as they are; a corner token the app declares is no corner. */
+ *  check takes them as they are; a corner, a layer or a fade's length the app declares is none. */
 export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
   const colours = new Set<string>();
   const radii = new Set<string>();
   const radiusValues = new Set<string>();
+  const layers = new Set<string>();
+  const durations = new Set<string>();
   for (const css of [theme, ...own]) {
     for (const { property, value, context } of parseCss(css).declarations) {
-      if (/^--radius(-|$)/.test(property)) {
+      if (/^--(layer|duration)-/.test(property)) {
+        if (css === theme) (property.startsWith("--layer-") ? layers : durations).add(property);
+      } else if (/^--radius(-|$)/.test(property)) {
         if (css === theme) {
           radii.add(property);
           radiusValues.add(property === "--radius" ? "var(--radius)" : value);
@@ -89,7 +101,7 @@ export function themeTokens(theme: string, ...own: string[]): ThemeTokens {
         colours.add(property);
     }
   }
-  return { colours, radii, radiusValues };
+  return { colours, radii, radiusValues, layers, durations };
 }
 
 const NAMED_COLOURS = new Set(
@@ -112,7 +124,7 @@ const NAME_VALUES = new Set([
   "counter-increment",
   "list-style-type",
 ]);
-const SKIPPED = /^@(keyframes|property)\b|^@layer properties$/;
+const SKIPPED = /^@(keyframes|property)\b/;
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
   /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end)|column-rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
@@ -145,6 +157,32 @@ const TYPE_PROPERTY = new Set(["font-size", "font-weight", "line-height", "lette
 const typeSet = (property: string, value: string) =>
   TYPE_PROPERTY.has(property) ||
   (property === "text-transform" && /^(uppercase|lowercase)$/.test(value));
+/** What a `transition-*` class compiles its length to: the `duration-*` class's, or the default. */
+const DEFAULT_DURATION = /^var\(--tw-duration, var\(--default-transition-duration(, 150ms)?\)\)$/;
+/** The variables the theme alone declares, and the theme keys their classes resolve through: a
+ *  name ending in `-` is a namespace, any other one name. */
+const THEME_ONLY = [
+  "--layer-",
+  "--duration-",
+  "--z-index-",
+  "--transition-duration-",
+  "--disabled-opacity",
+  "--default-transition-duration",
+  "--opacity-disabled",
+];
+/** Whether `name` is the theme's alone, or is a reset (`--z-*: initial`) that clears one: Tailwind
+ *  clears every key that starts with the reset's stem. */
+function isThemeOnly(name: string): boolean {
+  const reset = name.endsWith("-*") ? name.slice(0, -2) : undefined;
+  return THEME_ONLY.some(
+    (key) =>
+      (key.endsWith("-") ? name.startsWith(key) : name === key) ||
+      (reset !== undefined && key.startsWith(reset))
+  );
+}
+/** Whether `value` is `var(...)` of one of `names`, with no fallback and nothing around it. */
+const namesOne = (value: string, names: ReadonlySet<string>) =>
+  names.has(/^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1] ?? "");
 /** A transition that names a scale, alone or inside a transform. */
 const SCALES = /(^|[\s,])(scale|transform)([\s,]|$)/;
 
@@ -175,23 +213,38 @@ function radiusAllowed(
   if (value === "calc(infinity * 1px)") return circle;
   // The theme's corners compile inline, to the value of their token.
   if (radiusValues.has(value)) return true;
-  // Or it names one corner token, with no fallback and nothing around it.
-  const name = /^var\(\s*(--[\w-]+)\s*\)$/.exec(value)?.[1];
-  return name !== undefined && radii.has(name);
+  // Or it names one corner token.
+  return namesOne(value, radii);
 }
 
 /**
  * The rules one declaration breaks. `circle` is set for the CSS of `rounded-full` alone, whose
  * size the script rule checks; no other class or stylesheet sets an infinite radius. `fromClass`
- * is set for a class's CSS, which may not set type; a stylesheet may.
+ * is set for compiled CSS: a class may not set type, and Tailwind's own `@layer properties` block
+ * (the `--tw-*` initial values on `*, ::before, ::after, ::backdrop`) is skipped.
  */
 export function declarationProblems(
   declaration: Pick<CssDeclaration, "property" | "value" | "context">,
   tokens: ThemeTokens,
   { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
-  const { property, value, context } = declaration;
-  if (context.some((prelude) => SKIPPED.test(prelude))) return [];
+  const { property, context } = declaration;
+  // The important mark changes no rule: `!z-overlay` is `z-overlay`.
+  const value = declaration.value.replace(/\s*!important$/, "");
+  // `@property` gives a variable its initial value, so a theme token's is the theme's alone, and
+  // a skipped block declares one no more freely than any other.
+  const themeOnly =
+    isThemeOnly(property) ||
+    context.some((prelude) => isThemeOnly(/^@property (.+)$/.exec(prelude)?.[1] ?? ""));
+  // A class under `[@layer_properties]:` lands in the same layer, so only Tailwind's block skips.
+  const tailwindInitial =
+    fromClass &&
+    context[0] === "@layer properties" &&
+    context.at(-1) === "*, ::before, ::after, ::backdrop" &&
+    property.startsWith("--tw-");
+  if (tailwindInitial || context.some((prelude) => SKIPPED.test(prelude))) {
+    return themeOnly ? [RULES.themeOnly] : [];
+  }
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
   if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
@@ -225,35 +278,27 @@ export function declarationProblems(
   }
   if (!fades(property, value)) problems.push(RULES.fade);
   if (property === "cursor" && /\bpointer\b/.test(value)) problems.push(RULES.cursor);
+  if (property === "z-index" && !namesOne(value, tokens.layers)) problems.push(RULES.layer);
+  if (
+    property === "transition" ||
+    (/^(transition-duration|--tw-duration)$/.test(property) &&
+      !DEFAULT_DURATION.test(value) &&
+      !namesOne(value, tokens.durations))
+  ) {
+    problems.push(RULES.duration);
+  }
+  if (themeOnly) problems.push(RULES.themeOnly);
   if (fromClass && typeSet(property, value)) problems.push(RULES.type);
   return problems;
 }
 
-/**
- * What the app's entry stylesheet loads, as references: Tailwind, upstream's theme and plugins,
- * and ours, so a class compiles here exactly as in the build, with nothing else emitted.
- */
-function compilerInput(): string {
-  const imports = parseCss(readFileSync(APP_STYLESHEET, "utf8"))
-    .statements.filter((statement) => statement.name === "import")
-    .map((statement) => resolve(SRC_DIR, importedPath(statement.prelude) ?? ""));
-  return [
-    ...imports.map((path) => `@import ${JSON.stringify(path)} reference;`),
-    "@tailwind utilities;",
-  ].join("\n");
-}
-
-function unescapeClass(name: string): string {
-  return name
-    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16))
-    )
-    .replace(/\\(.)/g, "$1");
-}
+/** The app's entry stylesheet as a reference, so a class compiles to its value in the build; a
+ *  plain `@theme` key's `var()` carries that value as a fallback, as a reference emits no theme. */
+const COMPILER_INPUT = `@import ${JSON.stringify(APP_STYLESHEET)} reference;\n@tailwind utilities;`;
 
 /** The declarations `classes` compile to, with Tailwind and the app's theme, as the build does. */
 export async function compiledDeclarations(classes: readonly string[]): Promise<CssDeclaration[]> {
-  const compiler = await compile(compilerInput(), { base: PACKAGE_ROOT, onDependency: () => {} });
+  const compiler = await compile(COMPILER_INPUT, { base: PACKAGE_ROOT, onDependency: () => {} });
   return parseCss(compiler.build([...classes])).declarations;
 }
 
@@ -264,7 +309,7 @@ function sourceClass(
 ): string | undefined {
   for (const prelude of [...context].reverse()) {
     for (const match of prelude.matchAll(/\.((?:\\[0-9a-f]{1,6}\s?|\\.|[\w-])+)/gi)) {
-      const name = unescapeClass(match[1] as string);
+      const name = unescapeCss(match[1] as string);
       if (classes.has(name)) return name;
     }
   }
@@ -384,6 +429,7 @@ function styleKeyKind(key: string): string | undefined {
   if (/^(min|max)?(height|blockSize)$/i.test(camel)) return "a height";
   if (/^(animation|transition)/i.test(camel)) return "motion";
   if (camel === "scale") return "a scale";
+  if (camel === "zIndex") return "a layer";
   if (camel === "cursor") return "a cursor";
   return undefined;
 }

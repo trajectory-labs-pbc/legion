@@ -22,7 +22,7 @@ function HoverCardContent({
   return (
     <PreviewCardPrimitive.Portal>
       <PreviewCardPrimitive.Positioner
-        className="isolate z-50"
+        className="isolate z-overlay"
         side={side}
         align={align}
         sideOffset={sideOffset}
@@ -31,7 +31,7 @@ function HoverCardContent({
         <PreviewCardPrimitive.Popup
           data-slot="hover-card-content"
           className={cn(
-            "z-50 w-64 rounded-md border bg-popover p-3 shadow-popover text-popover-foreground outline-hidden",
+            "z-overlay w-64 rounded-md border bg-popover p-3 shadow-popover text-popover-foreground outline-hidden",
             popupMotion,
             className
           )}

@@ -41,11 +41,11 @@ function ContextMenuContent({
   ...props
 }: ContextMenuPrimitive.Popup.Props &
   Pick<ContextMenuPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset">) {
-  // z-50 on the portal puts Base UI's modal backdrop over a sheet's scrim below.
+  // z-overlay on the portal puts Base UI's modal backdrop over a sheet's scrim below.
   return (
-    <ContextMenuPrimitive.Portal className="relative z-50">
+    <ContextMenuPrimitive.Portal className="relative z-overlay">
       <ContextMenuPrimitive.Positioner
-        className="isolate z-50 outline-hidden"
+        className="isolate z-overlay outline-hidden"
         side={side}
         align={align}
         sideOffset={sideOffset}

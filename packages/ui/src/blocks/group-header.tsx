@@ -26,7 +26,7 @@ function GroupHeader({
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 flex h-list-row-1 shrink-0 items-center gap-2 bg-muted px-3",
+        "sticky top-0 z-raised flex h-list-row-1 shrink-0 items-center gap-2 bg-muted px-3",
         className
       )}
       data-slot="group-header"

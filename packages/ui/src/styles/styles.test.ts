@@ -6,6 +6,7 @@ import { Scanner } from "@tailwindcss/oxide";
 import { Glob } from "bun";
 import postcss, { AtRule, type Node, type Root, Rule } from "postcss";
 import ts from "typescript";
+import { buttonVariants } from "../components/button";
 
 // The design rules, checked on the CSS Tailwind generates from the stylesheet and the sources.
 
@@ -68,12 +69,15 @@ const NO_SHADOW = new Set(["none", "initial", "0 0 #0000"]);
 const SHADOW_STACK =
   "var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)";
 const INSET_EDGE = "inset 0 0 0 1px var(--tw-inset-ring-color, currentcolor)";
-const DURATIONS = new Set([
-  "150ms",
-  "200ms",
-  "initial",
-  "var(--tw-duration, var(--default-transition-duration))",
-]);
+// A fade's length and a layer name a token the theme declares on :root; a `transition-*`
+// class's own length is the duration class's, or the default.
+const DURATIONS = new Set(["initial", "var(--tw-duration, var(--default-transition-duration))"]);
+// The variables the theme's :root alone declares, and the names it gives them.
+const ROOT_ONLY = /^--(layer|duration)-|^--disabled-opacity$/;
+const ROOT_TOKENS = new Set<string>();
+postcss.parse(readFileSync(join(src, "styles/theme.css"), "utf8")).walkDecls(ROOT_ONLY, (decl) => {
+  if (where(decl) === ":root") ROOT_TOKENS.add(decl.prop);
+});
 const MOTION_SAFE = "@media (prefers-reduced-motion: no-preference)";
 // Round is calc(infinity * 1px); every other corner is --radius, one of its steps, or a role
 // token that names a step (`--radius-badge` is `var(--radius-sm)`).
@@ -94,6 +98,13 @@ function designProblems(css: Root): string[] {
   const say = (node: Node, text: string, why: string) => {
     problems.push(`${where(node)} { ${text} }: ${why}`);
   };
+  /** Whether `value` is `var(...)` of a token of the theme's :root whose name starts with `prefix`. */
+  const namesRoot = (value: string, prefix: string) => {
+    const name = value.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "";
+    return name.startsWith(prefix) && ROOT_TOKENS.has(name);
+  };
+  // Each token of the theme's :root is declared there once, and nowhere else.
+  const declared = new Set<string>();
 
   css.walkDecls((decl) => {
     const { prop, value } = decl;
@@ -120,7 +131,21 @@ function designProblems(css: Root): string[] {
     if (prop === "transition-duration" || prop === "--tw-duration") {
       // A swipe moves with the finger, so nothing fades while it lasts.
       const swipe = value === "0ms" && where(decl).includes("[data-swiping]");
-      if (!DURATIONS.has(value) && !swipe) say(decl, text, "a duration outside 150 to 200 ms");
+      if (!DURATIONS.has(value) && !namesRoot(value, "--duration-") && !swipe) {
+        say(decl, text, "a duration that names no theme token");
+      }
+    }
+    if (/^--duration-/.test(prop) && value !== "150ms" && value !== "200ms") {
+      say(decl, text, "a duration outside 150 to 200 ms");
+    }
+    if (prop === "z-index" && !namesRoot(value, "--layer-")) {
+      say(decl, text, "a layer that names no theme token");
+    }
+    if (ROOT_ONLY.test(prop)) {
+      if (where(decl) !== ":root" || !ROOT_TOKENS.has(prop) || declared.has(prop)) {
+        say(decl, text, "a theme token declared outside the theme's :root");
+      }
+      declared.add(prop);
     }
     if (prop === "--default-transition-duration" && value !== "150ms") {
       say(decl, text, "a duration outside 150 to 200 ms");
@@ -251,8 +276,33 @@ describe("the generated CSS", () => {
       "styles/globals.css",
       "styles/theme.css",
     ]);
-    expect(generated.toString()).toContain(".motion-safe\\:duration-150");
+    expect(generated.toString()).toContain(".motion-safe\\:duration-popup");
     expect(generated.toString()).toContain(".data-highlighted\\:inset-ring");
+  });
+
+  it("gives each layer, fade and the disabled look the value of its token on :root", async () => {
+    const css = await generate({
+      extra: ["z-raised", "z-overlay", "duration-popup", "duration-modal", "opacity-disabled"],
+    });
+    const declared = (selector: string, prop: string): string | undefined => {
+      let found: string | undefined;
+      css.walkRules((rule) => {
+        if (rule.selector !== selector) return;
+        rule.walkDecls(prop, (decl) => {
+          found = decl.value;
+        });
+      });
+      return found;
+    };
+    const onRoot = (value: string | undefined) =>
+      declared(":root", value?.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "");
+    expect([
+      onRoot(declared(".z-raised", "z-index")),
+      onRoot(declared(".z-overlay", "z-index")),
+      onRoot(declared(".duration-popup", "transition-duration")),
+      onRoot(declared(".duration-modal", "transition-duration")),
+      onRoot(declared(".opacity-disabled", "opacity")),
+    ]).toEqual(["10", "50", "150ms", "200ms", "50%"]);
   });
 
   it("keeps every design rule", () => {
@@ -288,9 +338,44 @@ const MUTATIONS: readonly (readonly [string, Mutation, string])[] = [
   ["a transform transition", { extra: ["motion-safe:transition-transform"] }, "other than opacity"],
   ["the default transition", { extra: ["motion-safe:transition"] }, "other than opacity"],
   ["a transition in CSS", { css: `${globalsText}\n.x { transition: opacity 1s; }` }, "shorthand"],
-  ["a long fade", { extra: ["duration-300"] }, "a duration outside 150 to 200 ms"],
-  ["a short fade", { extra: ["duration-100"] }, "a duration outside 150 to 200 ms"],
+  ["a fade by number", { extra: ["motion-safe:duration-150"] }, "a duration that names no theme"],
+  [
+    "a fade's length in CSS",
+    { css: `${globalsText}\n.x { transition-duration: 150ms; }` },
+    "a duration that names no theme token",
+  ],
+  [
+    "a fade token past the range",
+    { css: globalsText.replace(/--duration-modal: [^;]+;/, "--duration-modal: 300ms;") },
+    "a duration outside 150 to 200 ms",
+  ],
   ["a delay", { extra: ["delay-75"] }, "a delay"],
+  ["a layer by number", { extra: ["z-50"] }, "a layer that names no theme token"],
+  [
+    "a layer declared again",
+    { css: `${globalsText}\n.x { --layer-overlay: 9999; }` },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
+    "a layer the theme lacks, declared on another :root",
+    { css: `${globalsText}\n:root { --layer-toast: 100; }`, extra: ["z-(--layer-toast)"] },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
+    "a layer declared again on another :root",
+    { css: `${globalsText}\n:root { --layer-overlay: 9999; }` },
+    "a theme token declared outside the theme's :root",
+  ],
+  [
+    "a layer the theme lacks",
+    { extra: ["z-(--layer-bogus)"] },
+    "a layer that names no theme token",
+  ],
+  [
+    "a fade the theme lacks",
+    { extra: ["motion-safe:duration-(--duration-slow)"] },
+    "a duration that names no theme token",
+  ],
   ["a fade that ignores reduced motion", { extra: ["transition-opacity"] }, "reduced-motion"],
   ["an animation", { extra: ["motion-safe:animate-pulse"] }, "an animation"],
   ["a corner from the default theme", { extra: ["rounded-2xl"] }, "a corner outside the theme"],
@@ -356,6 +441,11 @@ const MARKED: readonly (readonly [string, string])[] = [
 // A list row draws its focus outline inside itself, so its list does not clip it (FO2).
 const INSET_FOCUS_PATHS = ["blocks/list-row.tsx"];
 
+// What a disabled variant may set besides the disabled opacity. The primary button also takes
+// the muted pair: at half opacity alone its fill reads brighter than the button beside it in dark.
+const DISABLED_LOOK = ["opacity-disabled", "pointer-events-none", "cursor-not-allowed"];
+const PRIMARY_DISABLED = ["disabled:bg-muted", "disabled:text-muted-foreground"];
+
 // The list parts that take the highlight from the shared class strings.
 const HIGHLIGHTED = [
   "components/combobox.tsx",
@@ -385,6 +475,34 @@ describe("the components", () => {
         `${path}: ${token}`
       ).toBe(true);
       expect(tokensOf(path), `${path}: ${token}`).toContain(`${variantsOf(token)}outline-focus`);
+    }
+  });
+
+  it("dim a disabled part with the disabled token, and change nothing else about its look", () => {
+    const bare = (token: string) => utilityOf(token).replace(/^!|!$/g, "");
+    const disabled = everyToken.filter(({ token }) =>
+      variantsOf(token)
+        .split(":")
+        .some((variant) => variant.includes("disabled") && !variant.startsWith("not-"))
+    );
+    expect(
+      disabled.filter(({ token }) => bare(token) === "opacity-disabled").length
+    ).toBeGreaterThan(10);
+    expect(
+      disabled.filter(
+        ({ path, token }) =>
+          !DISABLED_LOOK.includes(bare(token)) &&
+          !(path === "components/button.tsx" && PRIMARY_DISABLED.includes(token))
+      )
+    ).toEqual([]);
+    const primary = buttonVariants({ variant: "default" }).split(" ");
+    const button = tokensOf("components/button.tsx");
+    // The base and the size classes, which every variant takes, hold neither.
+    const shared = buttonVariants({ variant: null }).split(" ");
+    for (const each of PRIMARY_DISABLED) {
+      expect(primary, each).toContain(each);
+      expect(shared, each).not.toContain(each);
+      expect(button.filter((token) => token === each).length, each).toBe(1);
     }
   });
 

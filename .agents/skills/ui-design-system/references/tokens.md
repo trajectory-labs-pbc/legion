@@ -6,7 +6,7 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 
 - Monochrome. Colour shows meaning only: a failed state, a state that waits on a person, a passed state, and a destructive action.
 - Corners are steps of one `--radius` (8 px): sm 4, md 6, lg 8 and xl 12 px; `--radius-badge` names sm. In tl-dispatch only a dot or an avatar is round (`rounded-full` with a `size-*`); see SU6.
-- Every colour, corner, shadow, row height and stroke is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
+- Every colour, corner, shadow, row height, stroke, layer, fade length and the disabled look is a token in `packages/ui/src/styles/theme.css`. A page or a stylesheet names the token and never writes a literal.
 - Geist for text (`font-sans`), Geist Mono for code values (`font-mono`).
 - Focus is a 2 px outline, offset 2 px, in `--focus` (`outline-focus`). Nothing else draws focus.
 - Dark follows the operating system.
@@ -35,6 +35,24 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | `border` | Dividers, the content panel's edge, an overlay's edge, the line under a table's header. |
 | `input` | The edge of a control: input, select, checkbox, outline button. It reaches 3:1 on the page, a card and `muted`. |
 | `sidebar-border` | The sidebar's dividers. |
+
+## Layers, fades and the disabled look
+
+Each value is a variable on `:root`; the class names it.
+
+| Token | Class | Use |
+| --- | --- | --- |
+| `--layer-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow, a list row's left edge (its leading part and select box), a list's selection bar. |
+| `--layer-overlay` (50) | `z-overlay` | Over the page: a popover, a hover card, a menu, a select or combobox list, a tooltip, a dialog, a sheet, a drawer, a scrim, a toast, the skip link. |
+| `--duration-popup` (150 ms) | `duration-popup` | The fade of a popover, a menu or a tooltip (`popupMotion`). |
+| `--duration-modal` (200 ms) | `duration-modal` | The fade of a dialog, a sheet, a drawer or a scrim (`modalPopupMotion`). |
+| `--disabled-opacity` (50%) | `opacity-disabled` | A disabled control, under its disabled variant (`disabled:`, `data-disabled:`, ...). |
+
+- A layer or a fade's length is never a number (`z-50`, `duration-150`) and never the `transition` shorthand. A stylesheet names the variable: `z-index: var(--layer-overlay)`. Only `packages/ui/src/styles/theme.css` declares these variables, and only these names exist. Nothing else sets `--default-transition-duration` either, so a `transition-*` class with no `duration-*` keeps Tailwind's 150 ms. `packages/ui`'s style test and tl-dispatch's design-rule test both refuse a number, the shorthand, a name the theme does not declare, and a declaration of one of these variables outside the theme. tl-dispatch's test also refuses, outside the theme, any key in the namespaces these classes resolve through (`--z-index-*`, `--transition-duration-*`, `--opacity-disabled`), new or not, and a declaration of any of these names in any block, `@theme`, `@property`, `@keyframes` and `@layer properties` included. It refuses a reset that clears one of them too (`--opacity-*`, `--z-*`, `--*`, or `--z-index-overlay-*` inside a namespace), since Tailwind clears every key that starts with the reset's stem, and it reads an `@property` rule whatever the case of its at-rule name (`@PROPERTY`), with the variable's name unescaped and lower-cased as a declaration's name is. A stylesheet's `@layer properties` block is checked like any other, and so is a class under `[@layer_properties]:`; only Tailwind's own block in the compiled CSS, the `--tw-*` initial values on `*, ::before, ::after, ::backdrop`, is skipped.
+- The one exception is the drawer: while a finger drags it, `data-swiping:duration-0` stops its fade.
+- The fade's curve is Tailwind's default.
+- A disabled control dims to `opacity-disabled`. Its variant may also set `pointer-events-none` or `cursor-not-allowed`, and nothing else. The primary button also takes `bg-muted` and `text-muted-foreground` when disabled: at half opacity alone its fill reads brighter than the button beside it in dark. Only `packages/ui`'s style test checks the disabled look. tl-dispatch's `repaint.css` gives upstream's disabled primary button the same muted pair, and keeps upstream's disabled pager button at full opacity with the faint text, so that its edge stays.
+- `cn` does not know these classes, so it does not merge them: a `className` of `z-*`, `duration-*` or `opacity-*` on a part that sets one of them adds a second class and does not replace it.
 
 ## Text
 

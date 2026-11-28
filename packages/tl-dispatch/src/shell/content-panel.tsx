@@ -76,7 +76,7 @@ export function ContentPanel({
           <div aria-hidden ref={mark} />
           {/* A sticky row for Show sidebar. Its strip is drawn only while it is stuck. */}
           <div
-            className="sticky top-(--panel-inset) z-10 flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg md:data-stuck:rounded-t-none before:absolute before:-inset-x-(--border-width) before:bottom-full before:hidden before:h-(--panel-inset) before:border-b before:border-border before:bg-background data-stuck:before:block"
+            className="sticky top-(--panel-inset) z-raised flex h-(--panel-row) shrink-0 items-center border-b border-border bg-card px-2 md:rounded-t-lg md:data-stuck:rounded-t-none before:absolute before:-inset-x-(--border-width) before:bottom-full before:hidden before:h-(--panel-inset) before:border-b before:border-border before:bg-background data-stuck:before:block"
             data-stuck={stuck || undefined}
             data-testid="panel-header"
             ref={row}

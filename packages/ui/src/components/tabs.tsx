@@ -67,7 +67,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground",
         "group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start",
         "hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-        "data-disabled:pointer-events-none data-disabled:opacity-50",
+        "data-disabled:pointer-events-none data-disabled:opacity-disabled",
         "data-active:text-foreground group-data-[variant=default]/tabs-list:data-active:bg-background",
         "group-data-[variant=default]/tabs-list:data-active:inset-ring group-data-[variant=default]/tabs-list:data-active:inset-ring-muted-foreground",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",

@@ -58,7 +58,7 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-background outline-hidden",
+          "fixed z-overlay flex flex-col gap-4 bg-background outline-hidden",
           modalPopupMotion,
           SIDE_CLASS[side],
           coveredClass,

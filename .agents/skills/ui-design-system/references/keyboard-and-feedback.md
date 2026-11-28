@@ -56,9 +56,9 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 ## Motion (MO)
 
-**MO1** Row hover and highlight change with no transition, in and out. Linear: the hover with no fade-out. Check: reviewer; (new) the MO2 test.
+**MO1** Row hover and highlight change with no transition, in and out. Linear: the hover with no fade-out. Check: the design-rule tests refuse a transition of anything but opacity.
 
-**MO2** Motion is a fade of 150 to 200 ms, opacity only: about 150 ms for a popover, menu or tooltip, about 200 ms for a dialog, sheet or peek. An exit is a fade no longer than the entry. Check: `packages/ui`'s style test holds it for the components. In tl-dispatch, (new) a design-rule test for durations and animated properties; it must refuse `motion-safe:transition-colors`, which the design-rule test accepts today.
+**MO2** Motion is a fade of 150 to 200 ms, opacity only: `duration-popup` (150 ms) for a popover, menu or tooltip, `duration-modal` (200 ms) for a dialog, sheet or peek. An exit is a fade no longer than the entry. Check: `packages/ui`'s style test holds it for the components. In tl-dispatch, the design-rule test refuses a transition of anything but opacity, `motion-safe:transition-colors` too, and each fade length and declaration that tokens.md's "Layers, fades and the disabled look" lists as refused.
 
 **MO3** No stagger on lists, no blur, no move or scale when an overlay opens, no scale on press, no bounce, no pulse or shimmer. Linear: removed its pulsing animation. Check: reviewer.
 

@@ -30,7 +30,7 @@ function TooltipContent({
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
-        className="isolate z-50"
+        className="isolate z-overlay"
         side={side}
         align={align}
         sideOffset={sideOffset}
@@ -39,7 +39,7 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "z-50 w-fit rounded-md border bg-popover shadow-popover px-2.5 py-1.5 text-xs text-balance text-popover-foreground",
+            "z-overlay w-fit rounded-md border bg-popover shadow-popover px-2.5 py-1.5 text-xs text-balance text-popover-foreground",
             popupMotion,
             className
           )}

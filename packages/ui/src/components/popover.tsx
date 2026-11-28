@@ -29,11 +29,11 @@ function PopoverContent({
     PopoverPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
-  // z-50 on the portal puts Base UI's modal backdrop over a sheet's scrim below.
+  // z-overlay on the portal puts Base UI's modal backdrop over a sheet's scrim below.
   return (
-    <PopoverPrimitive.Portal className="relative z-50">
+    <PopoverPrimitive.Portal className="relative z-overlay">
       <PopoverPrimitive.Positioner
-        className="isolate z-50"
+        className="isolate z-overlay"
         side={side}
         align={align}
         sideOffset={sideOffset}
@@ -43,7 +43,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-50 w-72 rounded-md border bg-popover p-4 shadow-popover text-popover-foreground outline-hidden",
+            "z-overlay w-72 rounded-md border bg-popover p-4 shadow-popover text-popover-foreground outline-hidden",
             popupMotion,
             className
           )}

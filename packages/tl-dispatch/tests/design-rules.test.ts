@@ -1,6 +1,13 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
+import {
+  compiledDeclarations,
+  type DesignViolation,
+  declarationProblems,
+  designViolations,
+  RULES,
+  themeTokens,
+} from "./design-rules";
 import { sourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -47,6 +54,74 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<button className="motion-safe:transition-[color,scale]">', "nothing scales"],
   ["tsx", '<button className="motion-safe:transition">', "nothing scales"],
   ["tsx", '<a className="motion-safe:transition-colors">', "opacity alone"],
+  ["tsx", '<div className="z-50">', "a layer names its theme token"],
+  ["css", ".x { z-index: 50; }", "a layer names its theme token"],
+  ["tsx", "<p style={{ zIndex: 50 }} />", "a layer set in a style"],
+  ["tsx", '<div className="z-(--layer-bogus)">', "a layer names its theme token"],
+  [
+    "tsx",
+    '<div className="motion-safe:duration-(--duration-slow)">',
+    "a fade's length names its theme token",
+  ],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-bogus); } }",
+    "a fade's length names its theme token",
+  ],
+  ["tsx", '<div className="[--layer-overlay:9999] z-overlay">', "declared in the theme alone"],
+  ["css", ":root { --layer-overlay: 9999; }", "declared in the theme alone"],
+  ["css", ":root { --duration-popup: 2s; }", "declared in the theme alone"],
+  ["css", ":root { --default-transition-duration: 2s; }", "declared in the theme alone"],
+  [
+    "tsx",
+    '<div className="[--default-transition-duration:2s] motion-safe:transition-opacity">',
+    "declared in the theme alone",
+  ],
+  ["tsx", '<a className="[@layer_properties]:ring-[red]">', "focus"],
+  [
+    "css",
+    "@layer properties { *, ::before, ::after, ::backdrop { --tw-ring-color: red; } }",
+    "focus",
+  ],
+  ["css", "@theme inline { --opacity-disabled: 1; }", "declared in the theme alone"],
+  ["css", "@theme inline { --z-index-top: 9999; }", "declared in the theme alone"],
+  ["css", "@theme inline { --transition-duration-slow: 2s; }", "declared in the theme alone"],
+  ["css", "@theme { --z-index-overlay-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --opacity-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --z-*: initial; }", "declared in the theme alone"],
+  ["css", "@theme { --*: initial; }", "declared in the theme alone"],
+  [
+    "css",
+    "@property --\\6c ayer-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
+    "declared in the theme alone",
+  ],
+  [
+    "css",
+    "@PROPERTY --LAYER-overlay { syntax: '*'; inherits: false; initial-value: 9999; }",
+    "declared in the theme alone",
+  ],
+  ["css", "@keyframes k { to { --layer-overlay: 9999; } }", "declared in the theme alone"],
+  ["css", ":root { --\\6c ayer-overlay: 9999; }", "declared in the theme alone"],
+  [
+    "tsx",
+    '<div className="motion-safe:transition-opacity motion-safe:duration-150">',
+    "a fade's length names its theme token",
+  ],
+  [
+    "tsx",
+    '<div className="motion-safe:[transition:opacity_1s]">',
+    "a fade's length names its theme token",
+  ],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity var(--duration-popup); } }",
+    "a fade's length names its theme token",
+  ],
+  [
+    "css",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-duration: 150ms; } }",
+    "a fade's length names its theme token",
+  ],
   ["tsx", '<a className="transition-colors">', "opacity alone"],
   ["tsx", '<a className="motion-safe:transition-[background-color]">', "opacity alone"],
   [
@@ -120,10 +195,20 @@ const ALLOWED: readonly [string, string][] = [
   ],
   ["tsx", '<div className="motion-safe:animate-spin motion-safe:transition-opacity">'],
   ["tsx", '<div className="motion-safe:transition-[opacity] motion-safe:transition-none">'],
-  ["css", "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms; } }"],
+  ["tsx", '<div className="z-raised focus:z-overlay">'],
+  ["tsx", '<div className="!z-overlay">'],
+  ["tsx", '<div className="!rounded-sm">'],
+  ["tsx", '<div className="motion-safe:!transition-opacity">'],
+  ["tsx", '<a className="outline-hidden focus-visible:outline-2 focus-visible:!outline-focus">'],
+  [
+    "tsx",
+    '<div className="motion-safe:transition-opacity motion-safe:duration-popup md:motion-safe:duration-modal">',
+  ],
+  ["css", ".x { z-index: var(--layer-overlay); }"],
+  ["css", "@theme { --color-brand-*: initial; }"],
   [
     "css",
-    "@media (prefers-reduced-motion: no-preference) { .x { transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms var(--ease, ease-in); } }",
+    "@media (prefers-reduced-motion: no-preference) { .x { transition-property: opacity; transition-duration: var(--duration-modal); } }",
   ],
   ["tsx", '<a href="#b-r1">'],
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
@@ -273,14 +358,52 @@ describe("design rules", () => {
     expect(clean).toEqual([]);
   });
 
-  test("takes corners from the theme alone: a corner token the app declares is none", () => {
+  test("compiles each layer, fade and the disabled look to its theme token", async () => {
+    const classes = [
+      "z-raised",
+      "z-overlay",
+      "duration-popup",
+      "duration-modal",
+      "opacity-disabled",
+    ];
+    const compiled = (await compiledDeclarations(classes))
+      .filter(({ property }) => ["z-index", "transition-duration", "opacity"].includes(property))
+      .map(({ property, value }) => `${property}: ${value}`);
+    expect(compiled.sort()).toEqual([
+      "opacity: var(--disabled-opacity)",
+      "transition-duration: var(--duration-modal)",
+      "transition-duration: var(--duration-popup)",
+      "z-index: var(--layer-overlay)",
+      "z-index: var(--layer-raised)",
+    ]);
+  });
+
+  test("takes corners, layers and fades from the theme alone: one the app declares is none", () => {
     const tokens = themeTokens(
-      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); }",
-      ":root { --radius-card: 3px; --brand: var(--primary); }"
+      ":root { --radius: 8px; --radius-sm: calc(var(--radius) * 0.5); --layer-top: 10; --duration-quick: 150ms; }",
+      ":root { --radius-card: 3px; --brand: var(--primary); --layer-app: 20; --duration-app: 1s; }"
     );
     expect([...tokens.radii]).toEqual(["--radius", "--radius-sm"]);
     expect([...tokens.radiusValues]).toEqual(["var(--radius)", "calc(var(--radius) * 0.5)"]);
+    expect([...tokens.layers]).toEqual(["--layer-top"]);
+    expect([...tokens.durations]).toEqual(["--duration-quick"]);
     expect(tokens.colours.has("--brand")).toBe(true);
+  });
+
+  // No class compiles into these blocks, so each checks one condition of the skip directly.
+  test.each([
+    [
+      "z-index",
+      "50",
+      ["@layer properties", "@supports x", "*, ::before, ::after, ::backdrop"],
+      "a layer names its theme token",
+    ],
+    ["--tw-ring-color", "red", ["@media x", "*, ::before, ::after, ::backdrop"], "focus"],
+  ] as const)("refuses a class's (fromClass) %s: %s in %j: not a --tw-* initial value on Tailwind's block", (property, value, context, rule) => {
+    const problems = declarationProblems({ property, value, context }, themeTokens(""), {
+      fromClass: true,
+    });
+    expect(problems.join("\n")).toContain(rule);
   });
 
   test("a file is exempt only by the list: a file that says it maps upstream is checked", () => {

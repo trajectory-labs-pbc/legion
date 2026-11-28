@@ -49,7 +49,7 @@ function ToggleGroupItem({
       data-size={itemSize}
       className={cn(
         toggleVariants({ variant: itemVariant, size: itemSize }),
-        "min-w-0 shrink-0 rounded-none px-3 focus:z-10",
+        "min-w-0 shrink-0 rounded-none px-3 focus:z-raised",
         "first:rounded-l-md last:rounded-r-md data-[variant=outline]:border-l-0 data-[variant=outline]:first:border-l",
         className
       )}

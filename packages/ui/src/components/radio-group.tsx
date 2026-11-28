@@ -20,7 +20,7 @@ function RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Props) {
       className={cn(
         "relative flex aspect-square size-4 shrink-0 items-center justify-center rounded-full border border-input bg-field data-checked:border-primary",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
-        "data-disabled:cursor-not-allowed data-disabled:opacity-50",
+        "data-disabled:cursor-not-allowed data-disabled:opacity-disabled",
         "aria-invalid:border-danger",
         className
       )}
