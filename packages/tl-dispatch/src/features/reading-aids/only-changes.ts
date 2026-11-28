@@ -173,7 +173,7 @@ function createOnlyChanges(view: EditorView, documentRef: string) {
     changed();
   });
   const only: OnlyChanges = {
-    folded: () => visit.made?.folded ?? NONE,
+    folded: () => new Set(visit.made?.folded ?? NONE),
     open: (blockIds) => {
       // The rest of a part the reader reached opens once this transaction is drawn.
       if (unfold(blockIds)) queueMicrotask(() => redrawFolds(view));
@@ -240,7 +240,7 @@ function linesPlugin(
         const folded = foldedNow(foldsKey, state);
         if (folded === value.folded && !transaction.docChanged) return value;
         return measured(transaction.docChanged ? "folds" : "redraw", () => {
-          if (folded !== value.folded) return drawn(state.doc, folded);
+          if (folded.size > 0) return drawn(state.doc, folded);
           // A remote edit replaces the whole document, which drops every line: they draw again.
           let dropped = false;
           const lines = value.lines.map(transaction.mapping, state.doc, {
