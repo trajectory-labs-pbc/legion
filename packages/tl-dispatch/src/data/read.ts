@@ -54,11 +54,14 @@ export interface ReadOptions<TQueryFnData, T> {
  * Whether a failed read is refused, which decides whether it offers Retry. The 404 the client
  * answers once a route stayed missing through its retries is no refusal: while a release rolls
  * out, another process can answer it. A read's 409 keeps its Retry: the conflict rule is for
- * writes. A 408 and a 429 keep it too: the server may answer once it is less busy.
+ * writes. A 408 and a 429 keep it too: the server may answer once it is less busy. A 400
+ * `INVALID_QUERY` keeps it as well: while a release rolls out, an older process refuses a query
+ * value a newer build sends (`replies.go`'s `parseThreadKinds`), and another process can answer it.
  */
 export function refusalOf(error: unknown): Refusal | undefined {
   if (!(error instanceof ApiError)) return undefined;
   if (error.message === NO_ROUTE_ROLLING_RELEASE_MESSAGE) return undefined;
+  if (error.status === 400 && error.code === "INVALID_QUERY") return undefined;
   if (error.status === 400) return "invalid";
   if (error.status === 403) return "forbidden";
   return error.status === 404 ? "not-found" : undefined;
