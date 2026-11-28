@@ -1,6 +1,7 @@
 // Upstream's server reads, as query options.
 export {
   inboxQuery,
+  inboxThreadsQuery,
   issueQuery,
   myRepliesCountQuery,
   prioritiesQuery,

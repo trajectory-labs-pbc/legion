@@ -480,6 +480,9 @@
     "file": "packages/dispatch/web/src/features/credentials/pending.ts",
     "part": "useCredentialRequests",
     "copy": "src/data/inbox-count.ts",
+    "also": [
+      "src/data/inbox/reads.ts"
+    ],
     "commit": "d317f2181ba777fbfc136d441c06ab6ccb9a3806",
     "sha256": "e98c84ce3987cb21a5abcd2408b81ff0e979d5961914a4d17c2ff774b4e4c0e9"
   },
@@ -522,5 +525,23 @@
     "sha256": "6ea23d1895fdb70cb566b034aa5fd11596fa33194ea4cf979b0e5cefebf8b436",
     "outcome": "closed",
     "reason": "The shell's sidebar replaces this file whole. Upstream's change rewords the Priorities row's hover detail, which the shell's sidebar does not draw."
+  },
+  {
+    "file": "packages/dispatch/web/src/hooks/useIsHuman.ts",
+    "part": "useIsHuman",
+    "copy": "src/data/session.ts",
+    "commit": "70d1e7d117a1caa04e5b39e9f2f73eb816a9cb11",
+    "sha256": "eb1c761b6b6e77a96e0f6f2e10f01dc7c3b6616b9f1c3b8879ac3770f3256ca1",
+    "outcome": "ported",
+    "reason": "isPerson in src/data/session.ts answers the same check for a session read, which the fork's data reads take"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/inbox/useInboxCount.ts",
+    "part": "useUnreadThreadCount",
+    "copy": "src/data/inbox/reads.ts",
+    "commit": "cbedd441e29239a0381d2c9ba9046e3c5a6d6180",
+    "sha256": "e0418ea525539709400505eadcb567a262c24a74b3ef3547509f3685cc242ad3",
+    "outcome": "ported",
+    "reason": "useUnreadThreadTotal gives the same read as a Read, so a failed refresh keeps the number and says why"
   }
 ]

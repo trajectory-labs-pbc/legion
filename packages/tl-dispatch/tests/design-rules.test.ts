@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
 import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
-import { sourceFiles } from "./source";
+import { sourceFiles, uiSourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
 const REFUSED: readonly [string, string, string][] = [
@@ -99,6 +99,52 @@ const REFUSED: readonly [string, string, string][] = [
   ["css", ".x { outline: 2px solid var(--chart-5); }", "focus"],
   ["css", ".x { animation: spin 1s; }", "motion"],
   ["css", ".x { @apply bg-sky-700; }", "@apply"],
+  ["tsx", '<p className="border-l border-l-primary">', "coloured left border"],
+  ["tsx", '<p className="border-s-2 border-s-danger">', "coloured left border"],
+  ["tsx", '<p className="border-x border-x-primary">', "coloured left border"],
+  ["tsx", '<p className="border-l-4 border-primary">', "coloured left border"],
+  ["tsx", 'const ROW = "md:border-l-2 rounded-md md:border-danger";', "coloured left border"],
+  [
+    "tsx",
+    '<p className={cn("border-l-4 pl-2", on && "border-primary")} />',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the text is a control file's source, whose template the rule reads
+    'const ACCENT = "border-primary";\n<p className={`border-l-2 pl-2 ${ACCENT}`} />;',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    'const row = cva("border-l-4", { variants: { tone: { danger: "border-danger" } } });',
+    "coloured left border",
+  ],
+  ["tsx", '<p className="[border-left:3px_solid_var(--primary)]">', "coloured left border"],
+  ["css", ".row { border-left: 3px solid var(--primary); }", "coloured left border"],
+  // A left width alone takes the text's colour; a neutral colour of another variant leaves it.
+  ["tsx", '<p className="border-l-4 pl-3">', "coloured left border"],
+  ["tsx", '<p className="border-l-4 border-primary dark:border-l-border">', "coloured left border"],
+  ["tsx", '<p className="has-[>svg]:border-l-4 border-primary">', "coloured left border"],
+  ["tsx", 'const row = clsx("border-l-2", on && "border-primary");', "coloured left border"],
+  [
+    "tsx",
+    'const TONE = { danger: "border-danger" };\n<p className={cn("border-l-4", TONE.danger)} />;',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the text is a control file's source, whose template the rule reads
+    'const ACCENT = "border-primary";\nconst x = textVariants({ className: `border-l-2 ${ACCENT}` });',
+    "coloured left border",
+  ],
+  ["css", ".row { border-left-width: 4px; border-color: var(--primary); }", "coloured left border"],
+  [
+    "css",
+    ".row { border: solid var(--primary); border-width: 0 0 0 4px; }",
+    "coloured left border",
+  ],
+  ["css", ".row { border-inline-start-color: var(--danger); }", "coloured left border"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -131,6 +177,23 @@ const ALLOWED: readonly [string, string][] = [
   ["css", ":root { --input: color-mix(in srgb, var(--foreground) 48%, var(--background)); }"],
   // A stylesheet answers upstream's markup, so it may set type; a class may not.
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
+  // A left edge in the neutral colour, a whole box in a colour, and a left edge of no width.
+  ["tsx", '<p className="border-l-2 border-border border-l-transparent">'],
+  ["tsx", '<p className="border border-primary">'],
+  ["tsx", '<p className="border-l-0 border-primary">'],
+  // Dividers between children, a coloured box whose left edge is neutral, a neutral shorthand.
+  ["tsx", '<div className="flex divide-x border border-primary">'],
+  ["tsx", '<div className="flex divide-y divide-primary border-l-2 border-border">'],
+  ["tsx", '<p className="border-l-4 border-primary border-l-border">'],
+  ["tsx", '<p className={cn("border-l-2", on && "border-border")} />'],
+  ["css", ".row { border-left: 1px solid var(--border); }"],
+  // A neutral left edge, half of an element's classes in a constant, the theme's width token in a
+  // shorthand, a coloured whole box, and a neutral left colour of the width's own variant.
+  ["tsx", '<p className="border-l-2 border-border">'],
+  ["tsx", 'const EDGE = "border-l-2";'],
+  ["css", ".row { border-left: var(--border-width) solid var(--border); }"],
+  ["css", ".box { border-width: var(--border-width); border-color: var(--primary); }"],
+  ["tsx", '<p className="md:border-l-4 md:border-l-border border-primary">'],
 ];
 
 /** Controls whose path decides: each file, its text, and the rules it breaks, none if allowed. */
@@ -229,6 +292,12 @@ const PLACED: readonly [string, string, readonly string[]][] = [
   ["src/shell/onunload.tsx", "window.onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/bare-onunload.tsx", "onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/frame-onunload.tsx", "frame.contentWindow.onbeforeunload = ask;", [RULES.unload]],
+  // The stripe rule reads the UI package's files too.
+  [
+    "../ui/src/components/stripe.tsx",
+    '<p className="border-l border-l-primary" />;',
+    [RULES.stripe],
+  ],
 ];
 
 const controlPath = (index: number, extension: string) =>
@@ -257,8 +326,14 @@ beforeAll(async () => {
 });
 
 describe("design rules", () => {
-  test("the app's own files keep them, the exempt files aside", async () => {
-    expect(await designViolations(sourceFiles())).toEqual([]);
+  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule.
+  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe", async () => {
+    const found = await designViolations([...sourceFiles(), ...uiSourceFiles()]);
+    const ui = (violation: DesignViolation) => violation.file.startsWith("../ui/");
+    expect(found.filter((violation) => !ui(violation))).toEqual([]);
+    expect(found.filter((violation) => ui(violation) && violation.rule === RULES.stripe)).toEqual(
+      []
+    );
   });
 
   test("each exempt file still breaks a rule, so a rebuilt one leaves the list", async () => {

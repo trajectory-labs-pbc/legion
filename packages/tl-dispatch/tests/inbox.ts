@@ -13,7 +13,7 @@ const ASKED_AT = "2026-11-25T08:00:00Z";
 const ANSWERED_AT = "2026-11-25T09:00:00Z";
 const READ_AT = "2026-11-25T10:00:00Z";
 
-const pathOf = (url: string) => new URL(url, "http://x").pathname;
+export const pathOf = (url: string) => new URL(url, "http://x").pathname;
 
 /** An open ask on the issue CORE-1, which the reader holds, so the ask waits on the reader. */
 const readersAsk = (overrides: Partial<InboxRow>, assignee: string = reader.login) =>
