@@ -41,6 +41,8 @@ name: Fork review
 #
 # Do not re-run a job with debug logging: the action then prints the model's whole session,
 # before the scan, in this public log.
+# Do not re-run a failed `review` job: it posts the same review and its threads a second time.
+# Push a change to get a new review.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]

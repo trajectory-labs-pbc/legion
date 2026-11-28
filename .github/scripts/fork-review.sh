@@ -195,8 +195,8 @@ post() {
   err=$(mktemp)
   if ! jq -c --arg head "$head" '{commit_id: $head, event: "COMMENT", body, comments}' <<< "$review" \
     | gh api -X POST "repos/$repository/pulls/$pr/reviews" --input - > /dev/null 2> "$err"; then
-    # GitHub refuses the whole review when one comment's line is outside the diff, so the
-    # findings go into the body instead, which the scan read whole.
+    # GitHub refuses the whole review with an HTTP 422 when, for one, a comment's line is outside the
+    # diff, so the findings go into the body instead, which the scan read whole.
     grep -q 'HTTP 422' "$err" || { cat "$err" >&2; fail "GitHub refused the review"; }
     jq -c --arg head "$head" '{commit_id: $head, event: "COMMENT", body: .folded}' <<< "$review" \
       | gh api -X POST "repos/$repository/pulls/$pr/reviews" --input - > /dev/null
