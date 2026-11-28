@@ -61,9 +61,9 @@ add the theme again at the same ref: a component can name a token that an older 
   the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`,
   which a record's property row also takes), a small control (`h-control-sm`), a list row of one
   line (`h-list-row-1`, 36 px, which a group header also takes) and of two lines (`h-list-row-2`,
-  56 px), the icon stroke (`--icon-stroke`), the two layers (`z-raised`, `z-overlay`), the two
-  fade lengths (`duration-popup`, `duration-modal`) and the disabled look (`opacity-disabled`).
-  The style test holds these four heights and no other.
+  56 px), and the icon stroke (`--icon-stroke`). The style test holds these four heights and no other.
+  The theme also names the two layers (`z-raised`, `z-overlay`), the two fade lengths
+  (`duration-popup`, `duration-modal`) and the disabled look (`opacity-disabled`).
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, layers and fade lengths named by the tokens the theme declares on
