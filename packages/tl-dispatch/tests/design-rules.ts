@@ -638,7 +638,7 @@ const inScale = (kind: string, value: string) =>
 
 // A list row's parts: the row blocks' files, a feature's row files, and what a `ListRow` or a
 // `GroupHeader` element holds.
-const ROW_FILE =
+export const ROW_FILE =
   /^(\.\.\/ui\/src\/blocks\/(list-row|group-header)|src\/features\/[^/]+\/row(-[^/]+)?)\.tsx$/;
 const ROW_TAGS = new Set(["ListRow", "GroupHeader"]);
 const ROW_HEIGHT = /^(min-h|max-h|h)-(.+)$/;

@@ -1,6 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
+import {
+  type DesignViolation,
+  designViolations,
+  ROW_FILE,
+  RULES,
+  themeTokens,
+} from "./design-rules";
 import { sourceFiles, uiSourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -346,6 +352,8 @@ describe("design rules", () => {
     const found = await designViolations([...sourceFiles(), ...uiSourceFiles()]);
     const ui = (violation: DesignViolation) => violation.file.startsWith("../ui/");
     expect(found.filter((violation) => !ui(violation))).toEqual([]);
+    // A row block that moves leaves the rule's reach, so the rule must still find both.
+    expect(uiSourceFiles().filter((file) => ROW_FILE.test(file.path)).length).toBe(2);
     const uiRules: readonly string[] = [RULES.stripe, RULES.rowHeight];
     expect(found.filter((violation) => ui(violation) && uiRules.includes(violation.rule))).toEqual(
       []
