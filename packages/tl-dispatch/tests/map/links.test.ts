@@ -5,6 +5,7 @@ import { DISPATCH_HREF_REFERENCES } from "@legion/contracts";
 import ts from "typescript";
 
 import { pages } from "@/pages/index";
+import { SRC_DIR } from "../source";
 import { parseScript } from "../typescript";
 import {
   forkRoutes,
@@ -15,7 +16,7 @@ import {
   SERVER_HREFS,
   upstreamRoutes,
 } from "./links";
-import { forkSrc, tagName, upstreamAppFile } from "./source";
+import { tagName, upstreamAppFile } from "./source";
 
 const upstream = upstreamRoutes();
 const fork = forkRoutes();
@@ -53,7 +54,7 @@ describe("links", () => {
   });
 
   test("each page file is in the route map, named by its page's id", () => {
-    const files = readdirSync(join(forkSrc, "pages"))
+    const files = readdirSync(join(SRC_DIR, "pages"))
       .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name))
       .filter((name) => name !== "index.ts" && name !== "page.ts");
     expect(pages.map((page) => `${page.id}.tsx`).sort()).toEqual(files.sort());

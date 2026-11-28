@@ -4,8 +4,8 @@ import { pages } from "@/pages/index";
 import type { Page } from "@/pages/page";
 import { sharedViews, shellViews, widgetViews } from "@/views";
 import { type Files, filesWith, importsOf, resolutionCache } from "../imports";
-import { PACKAGE_ROOT, sourceFiles, UPSTREAM_WEB } from "../source";
-import { forkSrc, pageFile, upstreamScripts } from "./source";
+import { PACKAGE_ROOT, SRC_DIR, sourceFiles, UPSTREAM_WEB } from "../source";
+import { pageFile, upstreamScripts } from "./source";
 
 export interface Owner {
   name: string;
@@ -132,7 +132,7 @@ export function importGraph(): Map<string, string[]> {
   ];
   const graph = new Map<string, string[]>();
   for (const file of scripts) {
-    const ref = file.startsWith(forkSrc) ? ownOwner(file, own) : relative(UPSTREAM_WEB, file);
+    const ref = file.startsWith(SRC_DIR) ? ownOwner(file, own) : relative(UPSTREAM_WEB, file);
     for (const target of loadedFiles(file, files, cache)) {
       const loaded = relative(UPSTREAM_WEB, target);
       if (loaded.startsWith("features/")) graph.set(loaded, [...(graph.get(loaded) ?? []), ref]);

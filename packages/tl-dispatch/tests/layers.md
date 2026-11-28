@@ -1,0 +1,116 @@
+# The layers
+
+`tests/layers.table.ts` holds the rules as data, and `tests/layering.test.ts` checks each import of the app and of its tests against them.
+This file gives the reason for each rule.
+A pull request that changes a rule changes the table and this file together.
+The test fails when a rule of the table has no heading here that names it.
+
+The test resolves each import as the build does: the tsconfig paths, the Vite alias, then the packages.
+Thus a relative path or an alias cannot avoid a rule.
+A type-only import is read too, because a lower layer that names a type of a higher one depends on it.
+
+## Placing a new file
+
+Ask these questions in order, and stop at the first yes.
+
+1. Does it draw from props alone, with no data, no router and no app file? It goes to `packages/ui`.
+2. Does it read or write the browser's storage, or set the unload prompt? It goes to `src/browser`.
+3. Does it only re-export upstream's code by name? It goes to `src/upstream`.
+4. Is it a hook through which a view reads or writes server data? It goes to `src/data`.
+5. Is it a command, the router or a chunk loader? It goes to `src/commands`, `src/navigation` or `src/loading`.
+6. Is it a connected part that more than one feature uses? It goes to `src/parts/<name>`.
+7. Is it a view of one page? It goes to `src/features/<page>`.
+8. Is it the frame around each page? It goes to `src/shell`.
+9. Is it a page's frame options, prefetch and lazy element? It is the page's `route.tsx`.
+10. Is it the route tree, the providers or the start? It goes to `src/app`.
+
+Until the migration moves them, some files sit in a layer that is not their folder's; the table names each one with the step that moves it.
+Today these are `src/pages` (its `machine-login` folder included), in the layer of the route files; `src/writes` and `src/features/read-failure.tsx`, in `data`; and `src/start.tsx`, in `app`.
+
+## Every file has a layer (`every-file-has-a-layer`)
+
+Each file under `src/` is in a row of the table, or is one of the root files: `main.tsx`, the entry that only `index.html` loads; `views.ts`, the lists of the view map; and the stylesheets.
+A new folder that no row names has no rules, so the test refuses each of its files, its tests included, until a row names it.
+A feature and a part are folders: a loose file directly under `src/features` or `src/parts`, an `index.ts` there included, is in no layer.
+
+## A layer imports only the layers above it (`imports-only-above`)
+
+`ROWS` in the table lists the layers from the top.
+A file imports its own layer and the layers above it, and the UI package counts as above every layer.
+Thus a change to a layer touches only the layers below it, and no lower layer names a type of a higher one.
+The shell sits below the features so that it can draw their small parts, and the route files sit below the shell because they import its `PageLayout`.
+
+A test file under `src/` is in the layer of the file it tests; a test directly under `src/` whose file has no layer is in `tests`.
+A file under `tests/` is in the layer `tests`, which may import each layer of the app.
+Only a test imports a file of `tests/`, or any other file of the package outside `src/`, such as `vite.config.ts` or a script.
+
+## One row: commands, navigation and loading (`one-row`)
+
+The three folders of one row do not import each other, with two exceptions for `src/commands`: it imports `src/loading`, and the one file `src/navigation/routes.ts`, which holds the route paths.
+A command takes callbacks named for what it does, so it needs no router; `src/navigation` imports neither of the other two.
+
+## Only the seam imports upstream (`only-the-seam-imports-upstream`)
+
+Only `src/upstream` imports upstream's code: upstream's web app, its contracts and its document editor.
+The seam is then the list of what the fork depends on, and an upstream change that breaks the fork breaks it in one folder.
+A test imports upstream through the seam, or through `tests/upstream.ts`, the one door for upstream's test helpers and the modules only tests read.
+`src/styles.css` imports upstream's stylesheet, because a stylesheet re-exports nothing; the table names it as a door with its reason.
+
+## Each seam file has its readers (`seam-readers`)
+
+`READERS` in the table gives the readers of each seam file, as the spec's seam table does, so a seam file serves one subject to the layers that need it.
+A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`.
+`src/app` also reads the data seam files that a provider needs.
+A test may read each seam file.
+The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` by no file.
+A seam file or a root file that the table does not list has no reader, so a new one comes with its row.
+
+## A library and its owners (`library-owners`)
+
+Only `src/navigation` imports the router (`react-router-dom`, or any `@tanstack/*router*`), so a router move changes one folder; the features move adds `src/app`.
+Only `src/data` and `src/app` import `@tanstack/react-query`: a view reads and writes through `src/data`.
+No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
+A test may import the router and the query library, which a page test needs to draw the page with its own client.
+
+## No import of the own index (`no-own-index`)
+
+A file of a feature or of a part imports the files of its own folder directly, never its own `index.ts`.
+The index is the folder's face to other code, and a file that imports it can make a cycle inside the folder.
+
+## The index only at the root (`index-only-at-the-root`)
+
+Only the root of a feature or of a part has an `index.ts`, so each folder has one face.
+
+## Through the index (`through-the-index`)
+
+A file outside a feature or a part, of any layer, imports it only through its `index.ts`; a test under `tests/` is the one exception.
+The page's own `route.tsx` sits in the feature's folder, so it imports the feature's files directly.
+Thus the files behind the index can change without a change to the folders that use it.
+
+## No cycles (`no-cycles`)
+
+The imports between features make no chain that returns to its start, and the same holds between parts.
+A cycle makes two features one, and the test names the folders of each cycle once.
+
+## Readable imports (`imports-are-readable`)
+
+Each import names one module that the test can resolve.
+An `import.meta.glob`, a non-literal `import()` or `require()`, and a path that resolves to no file name no module a rule can read, so the test refuses them; write the path.
+
+## Upstream's app never loads (`upstream-app-never-loads`)
+
+No file of the app or of its tests, and no file of `e2e/` or `scripts/`, reaches upstream's `app.tsx` or `main.tsx`, directly or through upstream's code.
+Upstream's app opens a second sign-in channel when it loads, and its entry loads the app.
+The test follows each import of the app through upstream's code, and names the chain at the file of the app that starts it.
+
+## Today's breaks
+
+`BREAKS` in the table lists each import that breaks a rule today, by rule, file and specifier, once for each time the file writes it.
+The test fails when an import breaks a rule and is not in the list, and when an entry of the list breaks no rule.
+A file that moves keeps its entries under its new path.
+A new entry shows in the pull request's diff of the table, and the reviewer refuses it.
+
+## Rules that come with the features move
+
+The features move adds the rules of the route files to the table: only `src/app` imports a route file, a route file loads its page lazily, and a route file draws nothing.
+It also adds `src/app` to the owners of the router.

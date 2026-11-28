@@ -13,15 +13,7 @@
         "noTsIgnore": "error"
       },
       "style": {
-        "noNonNullAssertion": "error",
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "paths": {
-              "@upstream-dispatch/app": "Upstream's app.tsx opens a second sign-in channel when it loads; copy what the shell needs."
-            }
-          }
-        }
+        "noNonNullAssertion": "error"
       }
     }
   }
