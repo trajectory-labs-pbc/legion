@@ -32,7 +32,7 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 
 | Token | Use |
 | --- | --- |
-| `border` | Dividers, the content panel's edge, an overlay's edge, a table's cells. |
+| `border` | Dividers, the content panel's edge, an overlay's edge, the line under a table's header. |
 | `input` | The edge of a control: input, select, checkbox, outline button. It reaches 3:1 on the page, a card and `muted`. |
 | `sidebar-border` | The sidebar's dividers. |
 
