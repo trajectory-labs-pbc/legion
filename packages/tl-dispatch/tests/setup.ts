@@ -19,4 +19,5 @@ beforeEach(resetWidth);
 // A store keeps its state in memory between tests; each test starts from the store's first state.
 beforeEach(() => {
   sidebarFolds.setState(sidebarFolds.getInitialState(), true);
+  sidebarFolds.persist.clearStorage();
 });

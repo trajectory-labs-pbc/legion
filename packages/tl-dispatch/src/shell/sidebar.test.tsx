@@ -313,7 +313,7 @@ describe("the sidebar", () => {
     expect(headingsOf(empty)).toEqual([]);
   });
 
-  test("every section's heading folds it, and this browser keeps the fold", () => {
+  test("every section's heading folds it, and the fold outlasts a remount", () => {
     const data: SidebarData = {
       destinations: [],
       pinnedAgents: readOf([]),
