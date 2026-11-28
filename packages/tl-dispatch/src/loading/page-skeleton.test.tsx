@@ -28,7 +28,7 @@ describe("PageFallback", () => {
     });
   });
 
-  test("SHL-43 outside act, a page whose code comes at 100 ms shows no sooner than 300 ms, and no skeleton before 200 ms", async () => {
+  test("SHL-43 outside act, a page whose code comes at 100 ms shows after about 300 ms, and no skeleton before 200 ms", async () => {
     const Page = lazy(
       () =>
         new Promise<{ default: () => ReactNode }>((resolve) =>
@@ -45,8 +45,9 @@ describe("PageFallback", () => {
     );
     const page = changes.find((change) => change.state === "page");
     const skeleton = changes.find((change) => change.state === "skeleton");
-    // React's 300 ms timer can fire a fraction of a millisecond early on this clock.
-    expect(page?.at).toBeGreaterThanOrEqual(299);
+    // Bun drops the fraction of the delay React's throttle gives setTimeout, so its timer can fire
+    // up to 1 ms early, and React commits at once when 10 ms or less of its 300 ms throttle remain.
+    expect(page?.at).toBeGreaterThanOrEqual(290);
     expect(skeleton === undefined || skeleton.at >= 200).toBe(true);
   });
 });
