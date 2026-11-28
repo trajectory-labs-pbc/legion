@@ -1,0 +1,72 @@
+name: Scratch broker walkthrough
+
+# Temporary, fork-only: records the broker walkthrough's raw footage and builds the video on a
+# runner, since the recorder needs a browser and tools the dev box lacks. Never merged.
+on:
+  push:
+    branches: [scratch-broker-walkthrough]
+
+permissions:
+  contents: read
+
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
+jobs:
+  record:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: packages/daemon/go.mod
+          go-download-base-url: https://go.dev/dl
+          token: ''
+          cache: false
+      - name: Install the recorder's tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q asciinema tmux ffmpeg
+          cargo install --locked --git https://github.com/asciinema/agg
+      - run: bun install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+        working-directory: packages/dispatch
+      - name: Record the raw footage
+        timeout-minutes: 25
+        run: bash docs/site/media/broker/walkthrough.sh
+        env:
+          DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/postgres?sslmode=disable
+      - name: Check and build the video
+        working-directory: docs/site/media/broker/walkthrough
+        run: |
+          python3 build.py --check
+          python3 build.py
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: broker-walkthrough
+          path: |
+            docs/site/media/broker/walkthrough/raw
+            docs/site/media/broker/walkthrough/build
+            docs/site/public/media/broker/walkthrough.*
+          include-hidden-files: true
+          if-no-files-found: warn
