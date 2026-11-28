@@ -48,7 +48,7 @@ A record is an issue, a document, an agent, a priority, a machine or a broadcast
 
 **FM1** Every field has a label that names it (`Label` with `htmlFor`). A placeholder only shows the value's shape, such as `XXXX-XXXX`; it is never the label. Pages: machine login, every form. Check: the machine login tests find the code field by its label; the axe run in `packages/tl-dispatch/e2e/accessibility.e2e.ts`.
 
-**FM2** A server's field error shows under its field, and the field names it while it still holds the value sent: `aria-describedby` points at the error, and `aria-invalid` marks a value the server refused. A failure that says nothing of the value, such as a 401, a 403, a 429, a 5xx or a stopped send, leaves `aria-invalid` off. Pages: machine login, every form. Check: MLP-02 and MLP-11.
+**FM2** A server's field error shows under its field, and the field names it while it still holds the value sent: `aria-describedby` points at the error, and `aria-invalid` marks a value the server refused. A failure that says nothing of the value, such as a 401, a 403, a 429, a 5xx or a stopped send, leaves `aria-invalid` off. This is where IE5's failure shows for a form's write: the write sets `inline` (upstream's keyed write option, which `WriteOptions` in `src/data/write.ts` requires), so its own place shows its failure, and a field's error shows under that field. Pages: machine login, every form. Check: MLP-02 and MLP-11.
 
 **FM3** During a submit the fields stay enabled. The pressed button shows that it is busy and keeps the focus. Another button that would write the same record waits until the write ends. Pages: machine login, every form. Check: MLP-08, MLP-09 and MLP-10.
 
