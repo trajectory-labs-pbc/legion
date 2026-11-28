@@ -4,6 +4,7 @@ import { documentEditor, placeCaret } from "../../../dispatch/e2e/editor";
 import { expect, type Page, test } from "../test";
 import { addedWords, seedEditedSpec } from "./baseline-seed";
 import { openHost, partsRoot, SECOND } from "./hosts";
+import { onlyChangesOn, onlyFolded } from "./only-changes-seed";
 
 /** The name the marks' timings are measured under. */
 const MARKS_MEASURE = "reading-aids-marks";
@@ -91,12 +92,17 @@ async function collectTimings(page: Page): Promise<() => Promise<Timing[]>> {
   };
 }
 
-/** The plugin's work for each transaction: its state's step and its update's sends after it. */
+/** The aids' work for each transaction: the marks' step, then the folds' and the marks' sends after it; a redraw of the folds with no edit is its own. */
 function perTransaction(seen: readonly Timing[]): number[] {
   const costs: number[] = [];
+  let last = "";
   for (const { detail, duration } of [...seen].sort((a, b) => a.start - b.start)) {
-    if (detail === "transaction") costs.push(duration);
-    else if (detail === "send" && costs.length > 0) costs.push((costs.pop() ?? 0) + duration);
+    // Redraws in a row join into one, which can only raise the percentile.
+    const joins =
+      detail === "send" || detail === "folds" || (detail === "redraw" && last === "redraw");
+    if (detail === "transaction" || detail === "redraw") last = detail;
+    if (joins && costs.length > 0) costs.push((costs.pop() ?? 0) + duration);
+    else if (detail === "transaction" || detail === "redraw") costs.push(duration);
   }
   return costs;
 }
@@ -109,74 +115,82 @@ function p95(values: readonly number[]): number {
   return sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)] ?? 0;
 }
 
-for (const tree of [true, false]) {
-  for (const run of [1, 2, 3]) {
-    test(`change-timing: run ${run}, a baseline ${tree ? "with" : "without"} its tree, no task of the marks over 50 ms and the plugin's 95th percentile at most 2 ms`, async ({
-      context,
-      page,
-    }) => {
-      test.setTimeout(180_000);
-      const { artifactId, path } = await seedEditedSpec(page, plan(false), [
-        ...Array.from({ length: CHANGED }, (_, index) => ({
-          find: said(index + 1, "today"),
-          op: "replace" as const,
-          with: said(index + 1, "now"),
-        })),
-        { find: LONG.join(" "), op: "replace", with: LONG_EDITED.join(" ") },
-      ]);
+/** Three runs against a baseline with its tree, three without, and three with Only changes on. */
+const RUNS = [
+  ...[true, false].flatMap((tree) => [1, 2, 3].map((run) => ({ only: false, run, tree }))),
+  ...[1, 2, 3].map((run) => ({ only: true, run, tree: true })),
+];
 
-      if (!tree) {
-        await page.route(`**/api/v1/artifacts/${artifactId}/versions/*`, async (route) => {
-          const response = await route.fetch();
-          const body: unknown = await response.json();
-          if (typeof body === "object" && body !== null)
-            Reflect.deleteProperty(body, "markdown_tree");
-          await route.fulfill({ json: body, response });
-        });
-      }
-      const timings = await collectTimings(page);
-      await openHost(page, path);
-      await expect(partsRoot(page).locator("[data-reading-aids-counts]")).toContainText(
-        `${CHANGED + 2} blocks, ${CHANGED} changed, 1 added, 1 removed`
-      );
+for (const { only, run, tree } of RUNS) {
+  test(`change-timing: run ${run}, a baseline ${tree ? "with" : "without"} its tree${only ? ", Only changes on" : ""}, no task of the marks over 50 ms and the plugin's 95th percentile at most 2 ms`, async ({
+    context,
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const { artifactId, path } = await seedEditedSpec(page, plan(false), [
+      ...Array.from({ length: CHANGED }, (_, index) => ({
+        find: said(index + 1, "today"),
+        op: "replace" as const,
+        with: said(index + 1, "now"),
+      })),
+      { find: LONG.join(" "), op: "replace", with: LONG_EDITED.join(" ") },
+    ]);
 
-      // 100 characters in a marked block, then 100 in an unmarked one.
-      await placeCaret(page, "after", said(1, "now").slice(0, -1));
-      await page.keyboard.type(TYPED);
-      await placeCaret(page, "after", unchanged(2).slice(0, -1));
-      await page.keyboard.type(TYPED);
+    if (!tree) {
+      await page.route(`**/api/v1/artifacts/${artifactId}/versions/*`, async (route) => {
+        const response = await route.fetch();
+        const body: unknown = await response.json();
+        if (typeof body === "object" && body !== null)
+          Reflect.deleteProperty(body, "markdown_tree");
+        await route.fulfill({ json: body, response });
+      });
+    }
+    const timings = await collectTimings(page);
+    await openHost(page, path);
+    await expect(partsRoot(page).locator("[data-reading-aids-counts]")).toContainText(
+      `${CHANGED + 2} blocks, ${CHANGED} changed, 1 added, 1 removed`
+    );
+    if (only) {
+      await onlyChangesOn(page);
+      await expect(onlyFolded(page)).not.toHaveCount(0);
+    }
 
-      // 200 edits from a second tab: half in a marked block, half in an unmarked one.
-      const second = await context.newPage();
-      await openHost(second, path);
-      await placeCaret(second, "after", said(40, "now").slice(0, -1));
-      await second.keyboard.type(TYPED);
-      await placeCaret(second, "after", unchanged(5).slice(0, -1));
-      await second.keyboard.type(TYPED);
+    // 100 characters in a marked block, then 100 in an unmarked one.
+    await placeCaret(page, "after", said(1, "now").slice(0, -1));
+    await page.keyboard.type(TYPED);
+    await placeCaret(page, "after", unchanged(2).slice(0, -1));
+    await page.keyboard.type(TYPED);
 
-      // The second tab's last edit has reached this tab, so each edit's work is measured.
-      await expect(documentEditor(page)).toContainText(`${unchanged(5).slice(0, -1)}${TYPED}`);
-      const edits = await timings();
-      const transactions = perTransaction(edits);
-      expect.soft(transactions.length, "transactions measured").toBeGreaterThan(400);
-      expect.soft(edits.filter(over50), "tasks over 50 ms while editing").toEqual([]);
-      expect.soft(p95(transactions), "the plugin's 95th percentile, ms").toBeLessThanOrEqual(2);
-      expect(test.info().errors).toEqual([]);
+    // 200 edits from a second tab: half in a marked block, half in an unmarked one.
+    const second = await context.newPage();
+    await openHost(second, path);
+    await placeCaret(second, "after", said(40, "now").slice(0, -1));
+    await second.keyboard.type(TYPED);
+    await placeCaret(second, "after", unchanged(5).slice(0, -1));
+    await second.keyboard.type(TYPED);
 
-      // The marks of each edited block show once its comparison ends.
-      for (const block of TYPED_IN) {
-        const marked = documentEditor(page).locator("[data-reading-aids-change]", {
-          hasText: `Block ${block} keeps`,
-        });
-        await expect.poll(() => addedWords(marked)).toBe(`now${TYPED}`);
-      }
+    // The second tab's last edit has reached this tab, so each edit's work is measured.
+    await expect(documentEditor(page)).toContainText(`${unchanged(5).slice(0, -1)}${TYPED}`);
+    const edits = await timings();
+    const transactions = perTransaction(edits);
+    expect.soft(transactions.length, "transactions measured").toBeGreaterThan(400);
+    expect.soft(edits.filter(over50), "tasks over 50 ms while editing").toEqual([]);
+    expect.soft(p95(transactions), "the plugin's 95th percentile, ms").toBeLessThanOrEqual(2);
+    expect(test.info().errors).toEqual([]);
 
-      // The use of each answer runs as the marks draw.
-      const seen = await timings();
-      console.log(
-        `change-timing run ${run}, tree ${tree}: largest task ${Math.max(...seen.map(({ duration }) => duration))} ms, 95th percentile ${p95(transactions)} ms of ${transactions.length} transactions`
-      );
-      expect(seen.filter(over50), "tasks over 50 ms").toEqual([]);
-    });
-  }
+    // The marks of each edited block show once its comparison ends.
+    for (const block of TYPED_IN) {
+      const marked = documentEditor(page).locator("[data-reading-aids-change]", {
+        hasText: `Block ${block} keeps`,
+      });
+      await expect.poll(() => addedWords(marked)).toBe(`now${TYPED}`);
+    }
+
+    // The use of each answer runs as the marks draw.
+    const seen = await timings();
+    console.log(
+      `change-timing run ${run}, tree ${tree}, only changes ${only}: largest task ${Math.max(...seen.map(({ duration }) => duration))} ms, 95th percentile ${p95(transactions)} ms of ${transactions.length} transactions`
+    );
+    expect(seen.filter(over50), "tasks over 50 ms").toEqual([]);
+  });
 }

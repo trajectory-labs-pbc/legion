@@ -83,8 +83,9 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   text-decoration-line: line-through;
 }
 
-/* A fold of earlier text under one line; a block, so a fold in an ordered list takes no number. */
-.reading-aids-change-fold {
+/* A fold of earlier text or a folded part's line; a block, so one in an ordered list takes no number. */
+.reading-aids-change-fold,
+.reading-aids-fold-line {
   display: block;
   margin: 0;
   list-style: none;
@@ -128,9 +129,15 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   white-space: normal;
 }
 
+/* A head inside a part that "Only changes" folds folds with it. */
+.reading-aids-fold-head:has(+ .reading-aids-only-changes) {
+  display: none;
+}
+
 /* A printed document shows each block whole, so a fold and its head do not print. */
 @media print {
-  .reading-aids-fold-head {
+  .reading-aids-fold-head,
+  .reading-aids-fold-line {
     display: none;
   }
 }

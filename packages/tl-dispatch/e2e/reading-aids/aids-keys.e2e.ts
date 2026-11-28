@@ -17,6 +17,13 @@ import {
   shownParts,
 } from "./hosts";
 import {
+  CHANGED,
+  onlyChangesControl,
+  onlyFolded,
+  openComparedWithFirst,
+  seedChanged,
+} from "./only-changes-seed";
+import {
   type Decision,
   decisionBlock,
   focusOnHost,
@@ -217,4 +224,72 @@ test("aids-keys: the palette lists the fold action, and picking it folds as z do
   await expect(option).toHaveCount(1);
   await option.click();
   await expect.poll(() => opened(page)).toEqual(["true", "true"]);
+});
+
+/** A quiet section after the changed one: Only changes folds its three blocks. */
+const QUIET = ["## Quiet", SECOND, "The quiet section's third block.", "Its last block."];
+
+for (const kind of ["spec", "document"] as const satisfies readonly HostKind[]) {
+  test(`aids-keys: u on the ${kind} host acts twice in a row from the host element and a part, and types in the text`, async ({
+    page,
+  }) => {
+    const { path } = await seedChanged(page, kind, QUIET);
+    await openComparedWithFirst(page, path);
+    await expect(onlyChangesControl(page)).toHaveAttribute("aria-pressed", "false");
+    await expect(partsRoot(page).locator("kbd")).toHaveText(/^u$/i);
+
+    await page.locator(HOST).focus();
+    await page.keyboard.press("u");
+    await expect(onlyFolded(page)).toHaveCount(3);
+    await expect(onlyChangesControl(page)).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("u");
+    await expect(onlyFolded(page)).toHaveCount(0);
+
+    // The part case: a click on a part's own room, beside its controls.
+    const box = await partsRoot(page).boundingBox();
+    if (box === null) throw new Error("the parts have no box");
+    await page.mouse.click(box.x + 2, box.y + box.height - 2);
+    await page.keyboard.press("u");
+    await expect(onlyFolded(page)).toHaveCount(3);
+
+    await placeCaret(page, "after", "rewords now.");
+    await page.keyboard.press("u");
+    // The struck earlier word sits between "rewords" and "now" while the marks show.
+    await expect(documentEditor(page)).toContainText("now.u");
+    await expect(onlyFolded(page)).toHaveCount(3);
+  });
+}
+
+test("aids-keys: the shortcuts sheet lists u, and u acts neither under the sheet, in a field nor under ?v=", async ({
+  page,
+}) => {
+  const { artifactId, path } = await seedChanged(page, "spec", QUIET);
+  await createNamedVersion(artifactId, "The reworded version.", AGENT);
+  await openComparedWithFirst(page, path);
+  await page.locator(HOST).focus();
+  await page.keyboard.press("?");
+  const sheet = page.getByRole("dialog", { name: "Keyboard shortcuts" });
+  await expect(sheet.getByText("Toggle only changes", { exact: true })).toBeVisible();
+  await page.keyboard.press("u");
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(onlyFolded(page)).toHaveCount(0);
+
+  const card = page.locator("[data-margin-item]").first();
+  await card.getByRole("button", { expanded: false }).click();
+  const field = card.getByRole("form", { name: "Comment composer" }).getByRole("textbox", {
+    name: "Reply",
+  });
+  await field.click();
+  await page.keyboard.press("u");
+  await expect(field).toHaveValue("u");
+  await expect(onlyFolded(page)).toHaveCount(0);
+
+  await page.getByRole("combobox", { name: "Version" }).selectOption("1");
+  await expect(page.getByTestId("version-view")).toContainText(CHANGED);
+  await expect.poll(() => shownParts(page)).toBe(0);
+  await page.keyboard.press("u");
+  await navigateInApp(page, path);
+  await expect.poll(() => shownParts(page)).toBe(1);
+  await expect(onlyFolded(page)).toHaveCount(0);
 });

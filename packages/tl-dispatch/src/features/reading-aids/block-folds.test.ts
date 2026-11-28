@@ -6,7 +6,7 @@ import * as Y from "yjs";
 
 import { HOST_ATTRIBUTE } from "./aided-editor";
 import { blockFoldsOf } from "./block-folds";
-import { destroyEditors, editorIn, linkedDocs, rootIn } from "./editor-fixtures";
+import { destroyEditors, editorIn, linkedDocs, positionIn, rootIn } from "./editor-fixtures";
 import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
 import { FOLDED_CLASS, redrawFolds, revealBlock, setFoldQuery } from "./folds";
 
@@ -59,17 +59,6 @@ const expanded = (handle: EditorHandle, blockId: string) =>
   handle.view.dom
     .querySelector(`[${FOLD_HEAD_ATTRIBUTE}="${blockId}"] button`)
     ?.getAttribute("aria-expanded");
-
-/** The position inside the paragraph that reads `text`. */
-function positionIn(handle: EditorHandle, text: string): number {
-  let found: number | undefined;
-  handle.view.state.doc.descendants((node, pos) => {
-    if (found === undefined && node.isTextblock && node.textContent === text) found = pos + 1;
-    return found === undefined;
-  });
-  if (found === undefined) throw new Error(`no paragraph reads ${text}`);
-  return found;
-}
 
 test("each requirement, check and plan task folds to its head line, and nothing else folds", async () => {
   const handle = await editor();

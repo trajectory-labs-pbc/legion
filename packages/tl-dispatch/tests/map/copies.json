@@ -526,5 +526,12 @@
     "copy": "src/features/reading-aids/mark-drawing.ts",
     "commit": "fb26c8e53a72f8abea864efc3c4f01c852eb150a",
     "sha256": "d20458ba84f2cd723e5ef8c115bcb0df4887cebca772201ea3ae210694078dee"
+  },
+  {
+    "file": "packages/dispatch/web/src/features/doc/ChangeView.tsx",
+    "part": "foldedEntries",
+    "copy": "src/features/reading-aids/only-changes-parts.ts",
+    "commit": "a1131b937962c962c88f5af30ea8e40f5fc91bdf",
+    "sha256": "572fd4415d46e774e7e87be291dc4d203c2b894aed572249b17e9dc821d5f536"
   }
 ]
