@@ -427,9 +427,10 @@ test("an input without its label inside an upstream widget's wrapper is left out
 
 // The pointer targets (PT2). The pointer reaches each small control across the 24 px square on its
 // centre, and its target meets no other control's: another small control's target, or the box of
-// any other control. A control that holds it and is not a holder meets it too. Probes hit the
-// pseudo-element that grows the target, which no bounding box reports. The four slots are PT2's
-// controls; the app draws only the truncated-text one today.
+// any other control that does not hold it. A control that holds it meets it unless it is a holder,
+// drawn or not. Probes hit the pseudo-element that grows the target, which no bounding box
+// reports. The four slots are PT2's controls other than IE1's glyphs; the app draws only the
+// truncated-text one today.
 const SMALL_CONTROLS = [
   '[data-slot="checkbox"]',
   '[data-slot="radio-group-item"]',
@@ -440,7 +441,7 @@ const NATIVE_CONTROLS = "button, input, select, textarea, summary";
 /** Every control a pointer can use: a link, a native control, an element with one of these roles,
  *  or an element whose `tabindex` is anything but `-1`. A `tabindex="-1"` element that is no link,
  *  no native control and has none of these roles (the main region, a popup) is not a control; a
- *  roving item at `tabindex="-1"` counts by its role. */
+ *  roving item at `tabindex="-1"` counts by one of these roles. */
 const CONTROLS = [
   "a[href]",
   NATIVE_CONTROLS,
@@ -496,11 +497,11 @@ async function cutRows(page: Page): Promise<Locator> {
 }
 
 /** What breaks PT2 at `control`. `misses`: each probe of its centre square that the pointer does
- *  not reach it at. `meets`: each control that holds it and is not in HOLDERS, drawn or not, and
- *  each other control whose target meets its target. Left out: what the control holds, an element
- *  not drawn (1 px or less on a side, as Base UI's focus guards are, or not visible), Base UI's
- *  hidden inputs (an input that is `aria-hidden` at `tabindex="-1"`), and the other thumbs of the
- *  same slider. */
+ *  not reach it at. `meets`: each control that holds it and is not in HOLDERS, drawn or not,
+ *  visible or not, and each other control that does not hold it whose target meets its target.
+ *  Left out: what the control holds, an element 1 px or less on a side (as Base UI's focus guards
+ *  are) or not visible, Base UI's hidden inputs (an input that is `aria-hidden` at
+ *  `tabindex="-1"`), and the other thumbs of the same slider. */
 async function targetFaults(control: Locator): Promise<{ misses: string[]; meets: string[] }> {
   await control.scrollIntoViewIfNeeded();
   return control.evaluate(
@@ -600,7 +601,7 @@ test("a small control with no band misses the pointer at its square's edges", as
   expect((await targetFaults(control)).misses.length).toBeGreaterThan(0);
 });
 
-test("a control whose box sits in a small control's target meets it, unless it is not drawn", async ({
+test("a control whose box sits in a small control's target meets it, unless it is not drawn or not visible", async ({
   page,
 }) => {
   const control = (await cutRows(page)).first();
@@ -637,7 +638,7 @@ test("Base UI's hidden input meets no target, even at upstream's 44 px floor", a
   expect(await targetFaults(control)).toEqual({ misses: [], meets: [] });
 });
 
-test('a non-control element at tabindex="-1" meets a small control\'s target only by its role', async ({
+test('an element at tabindex="-1" that is no link and no native control meets a small control\'s target only by its role', async ({
   page,
 }) => {
   const control = (await cutRows(page)).first();
@@ -665,14 +666,14 @@ test("a small control whose square meets a small control's band meets it", async
   expect(await targetFaults(control)).toEqual({ misses: [], meets: [expect.any(String)] });
 });
 
-test("a region, a group, a tab panel, a link or a tree row holds a small control, and a control that holds one meets it", async ({
+test("a region, a group, a tab panel, a link or a tree row holds a small control, and any other control that holds one meets it", async ({
   page,
 }) => {
   const checkbox = '<span data-slot="checkbox" role="checkbox" aria-checked="false"></span>';
   // The first button, the summary and the select sit at tabindex 0, and the second button has the
-  // group role, so only the native-control guard in HOLDERS keeps each from holding. The last two
-  // `role="button"` divs, one not drawn and one hidden, show that a control holding one meets
-  // before the drawn and visibility skips.
+  // group role, so only the native-control guard in HOLDERS keeps each from being a holder. The
+  // last two `role="button"` divs, one not drawn and one hidden, show that a control holding one is
+  // judged before the drawn and visibility skips.
   await page.setContent(`
     <style>[data-slot="checkbox"] { display: block; width: 16px; height: 16px; margin: 20px; }</style>
     <section aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
