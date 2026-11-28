@@ -8,7 +8,7 @@ import { type PageRoute, pageRoute, routePath } from "@/navigation/page-route";
 import { PageRoutes, RouteProvider } from "@/navigation/route-tree";
 import { mount } from "../../../tests/mount";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
-import { ViewHeader } from "./view-header";
+import { ViewHeader, ViewTabLink } from "./view-header";
 
 const HOME = routePath({ path: "/" });
 const ANSWERS = routePath({ path: "/answers" });
@@ -85,5 +85,23 @@ describe("ViewHeader", () => {
   test("draws no tab list for a view without tabs", () => {
     mount(<ViewHeader title="Agents" />);
     expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
+  test("a tab link drawn outside the header links to its view and marks it current", () => {
+    mount(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryNavigationProvider path="/">
+          <RouteProvider pages={[{ routes: { home: viewPage("home") } }]}>
+            <ViewTabLink tab={{ label: "Inbox", link: <PageLink page={HOME} />, current: true }} />
+            <ViewTabLink
+              tab={{ label: "Answered by you", link: <PageLink page={ANSWERS} />, current: false }}
+            />
+          </RouteProvider>
+        </MemoryNavigationProvider>
+      </QueryClientProvider>
+    );
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(tab("Answered by you").getAttribute("href")).toBe("/answers");
+    expect(current()).toEqual(["Inbox"]);
   });
 });

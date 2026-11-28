@@ -1,1 +1,1 @@
-export { ViewHeader, type ViewTab } from "./view-header";
+export { ViewHeader, type ViewTab, ViewTabLink } from "./view-header";

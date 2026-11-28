@@ -11,6 +11,16 @@ export interface ViewTab {
   current: boolean;
 }
 
+/** One tab: a link to its view, current while the view shows. A page may draw one outside the
+ *  header, as the Machines window strip does. */
+export function ViewTabLink({ tab }: { tab: ViewTab }): ReactNode {
+  return (
+    <NavRow aria-current={tab.current ? "page" : undefined} render={tab.link}>
+      {tab.label}
+    </NavRow>
+  );
+}
+
 /** A view's header row, with the page's views as tabs that link to each (FR3). */
 export function ViewHeader({
   title,
@@ -31,13 +41,7 @@ export function ViewHeader({
         tabs.length === 0 ? undefined : (
           <nav aria-label={`${title} views`} className="flex items-center gap-1">
             {tabs.map((tab) => (
-              <NavRow
-                aria-current={tab.current ? "page" : undefined}
-                key={tab.label}
-                render={tab.link}
-              >
-                {tab.label}
-              </NavRow>
+              <ViewTabLink key={tab.label} tab={tab} />
             ))}
           </nav>
         )
