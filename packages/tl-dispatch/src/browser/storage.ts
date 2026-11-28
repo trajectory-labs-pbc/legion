@@ -17,7 +17,8 @@ function storedKey<Param>(name: (param: Param) => string) {
 }
 
 /**
- * Upstream's keys, named and written as upstream's code does, so state moves between the apps.
+ * Upstream's keys in upstream's names, read and removed as its code does, so state moves
+ * between the apps.
  * The fork's own state is in `src/stores`.
  */
 export const upstreamKeys = {
