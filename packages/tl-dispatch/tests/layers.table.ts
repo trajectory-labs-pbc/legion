@@ -93,7 +93,7 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/widgets/*.tsx": ["parts", "features", "shell"],
   "src/upstream/views/<page>.tsx": PAGE_VIEW_READERS,
   "src/upstream/views/<page>": PAGE_VIEW_READERS,
-  "src/views.ts": ["tests/map"],
+  "src/views.ts": ["tests/map", "tests/parity"],
   // The entry runs once a process, so one test loads it.
   "src/main.tsx": ["tests/main.test.tsx"],
   // The composition root: only the entry starts it, and a test may draw it.

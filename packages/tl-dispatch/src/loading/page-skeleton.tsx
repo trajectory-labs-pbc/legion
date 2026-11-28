@@ -6,14 +6,14 @@ const ROWS = [0, 1, 2, 3];
 /** How long a page may take before its skeleton shows, so a quick one draws none. */
 const SKELETON_DELAY_MS = 200;
 
-/** Whether `ms` have passed since the caller mounted. */
-function useAfter(ms: number): boolean {
-  const [after, setAfter] = useState(false);
+/** Whether a view that is still loading may draw its skeleton yet (rule ES4). */
+export function useSkeletonDue(): boolean {
+  const [due, setDue] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setAfter(true), ms);
+    const timer = setTimeout(() => setDue(true), SKELETON_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [ms]);
-  return after;
+  }, []);
+  return due;
 }
 
 /** A page that is not an issue's, as boxes: a title and list rows. */
@@ -32,5 +32,5 @@ export function PageSkeleton({ label }: { label: string }): ReactNode {
 
 /** What shows while a page that is not an issue's loads, after a moment. */
 export function PageFallback(): ReactNode {
-  return useAfter(SKELETON_DELAY_MS) ? <PageSkeleton label="Loading the page" /> : null;
+  return useSkeletonDue() ? <PageSkeleton label="Loading the page" /> : null;
 }
