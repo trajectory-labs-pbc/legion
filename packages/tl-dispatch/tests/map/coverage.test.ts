@@ -49,7 +49,7 @@ describe("the view map", () => {
         'export { Notice } from "@upstream-dispatch/features/zz-probe/Notice";',
       ],
       [
-        join(SRC_DIR, "pages/machine-login/zz-probe.tsx"),
+        join(SRC_DIR, "features/machine-login/zz-probe.tsx"),
         'export { Notice } from "@/upstream/widgets/zz-probe";',
       ],
     ]);
@@ -76,7 +76,7 @@ describe("the view map", () => {
         'export * from "@upstream-dispatch/features/zz-probe/Notice";',
       ],
       [
-        join(SRC_DIR, "pages/machine-login/zz-probe.tsx"),
+        join(SRC_DIR, "features/machine-login/zz-probe.tsx"),
         'export { Notice } from "@/upstream/zz-probe";',
       ],
     ]);

@@ -96,6 +96,8 @@ jobs:
         run: bun run build
       - name: Check the entry chunk's size
         run: bun run check:entry-budget
+      - name: Check that no page loads before first paint
+        run: bun run check:entry-modules
       # The browser tests' local mode (e2e/playwright.config.ts): upstream's harness starts a Go
       # server on this app's build, with a Postgres from upstream's image and its fakes.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

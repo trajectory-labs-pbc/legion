@@ -1,10 +1,9 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AppShell } from "@/shell/app-shell";
 import { api } from "@/upstream/api";
 import { KeymapProvider } from "@/upstream/shell";
-import { renderApp } from "../../../tests/app";
+import { AppShell, renderApp } from "../../../tests/app";
 import { holdShellReads } from "../../../tests/network";
 import { shellChunksArrive } from "../../../tests/shell-chunks";
 

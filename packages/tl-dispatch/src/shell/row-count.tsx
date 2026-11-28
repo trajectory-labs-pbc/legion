@@ -3,7 +3,7 @@ import { Count } from "@legion/ui/components/count";
 import { CircleAlertIcon } from "lucide-react";
 import { LabelTooltip } from "@/commands/hotkey-tooltip";
 import type { RetryableFault } from "@/data/read";
-import { NeedsYouMark } from "@/features/needs-you";
+import { NeedsYouMark } from "@/parts/needs-you";
 
 /** A count beside a row; none at zero. */
 export interface RowCount {

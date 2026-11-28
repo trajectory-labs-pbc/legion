@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { readFailureOf } from "@/features/read-failure";
 import { useNeedsYouCount } from "@/upstream/data-hooks";
 import { credentialPendingQuery, inboxQuery, myRepliesCountQuery } from "@/upstream/queries";
+import { readFailureOf } from "./read-failure";
 import { useAskSessionAgain, useSession } from "./session";
 import type { ShellRead } from "./shell-read";
 

@@ -1,6 +1,6 @@
 import { Button } from "@legion/ui/components/button";
 import { NavRow, NavSurface } from "@legion/ui/components/nav";
-import { ReadFailure } from "@/features/read-failure";
+import { ReadFailure } from "@/data/read-failure";
 import { PageLink } from "@/navigation/page-link";
 import { routes } from "@/navigation/routes";
 import { AppName } from "./app-name";
