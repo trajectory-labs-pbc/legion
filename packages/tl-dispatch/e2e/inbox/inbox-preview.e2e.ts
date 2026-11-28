@@ -48,7 +48,7 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await expect(row(main(page), release)).toBeVisible();
   await expect(newView(page)).toHaveCount(0);
 
-  let actions = await paletteActions(page, "Inbox preview");
+  let actions = await paletteActions(page, "preview");
   await expect(actions.getByRole("option", { name: "Leave the Inbox preview" })).toHaveCount(0);
   await actions.getByRole("option", { name: "Preview the new Inbox" }).click();
   await expect(newView(page)).toBeVisible();
@@ -78,7 +78,7 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await page.emulateMedia({ colorScheme: "light" });
   await page.setViewportSize({ height: 900, width: 1440 });
 
-  actions = await paletteActions(page, "Inbox preview");
+  actions = await paletteActions(page, "preview");
   await expect(actions.getByRole("option", { name: "Preview the new Inbox" })).toHaveCount(0);
   await runWithKeys(page, actions.getByRole("option", { name: "Leave the Inbox preview" }));
   await expect(row(main(page), release)).toBeVisible();
