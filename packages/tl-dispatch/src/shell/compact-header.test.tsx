@@ -4,7 +4,15 @@ import type { ReactNode } from "react";
 import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { answerShellReads, json, readFailed, refusalLanded, waitFor } from "../../tests/network";
+import {
+  answerShellReads,
+  json,
+  readFailed,
+  readRefused,
+  refusalLanded,
+  type ShellAnswer,
+  waitFor,
+} from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
@@ -20,7 +28,7 @@ let answered: string[] = [];
 
 function mount(
   children: ReactNode,
-  answer: Parameters<typeof answerShellReads>[0] = () => undefined,
+  answer: (url: string) => ShellAnswer = () => undefined,
   client = new QueryClient()
 ) {
   answered = answerShellReads(answer).asked;
@@ -114,11 +122,11 @@ describe("CompactHeader", () => {
   });
 
   test("an Inbox read the server refuses or cannot find draws no line and no Retry", async () => {
-    for (const status of [403, 404]) {
+    for (const status of [403, 404] as const) {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       const header = mount(
         <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-        inboxReads({ inbox: () => json({ error: { code: "REFUSED" } }, status), unread: 3 }),
+        inboxReads({ inbox: () => readRefused(status), unread: 3 }),
         client
       );
       // The refusal landed, and the header drew what it makes of it.

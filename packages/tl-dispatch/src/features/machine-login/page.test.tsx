@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { api } from "@/upstream/api";
 import { renderApp } from "../../../tests/app";
-import { refusal } from "../../../tests/network";
+import { answered } from "../../../tests/network";
 import { MachineLoginRoute } from "./page";
 
 function renderRoute(
@@ -114,7 +114,9 @@ for (const [id, status, shown] of [
   ["MLR-07", 404, "the not-found page"],
 ] as const) {
   test(`${id} a capabilities read the server answers with a ${status} shows ${shown}`, async () => {
-    const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(refusal(status));
+    const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(
+      answered(status)
+    );
     const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
     try {
       renderRoute();
@@ -138,8 +140,7 @@ test("MLR-08 a logins list refused before the route mounts again is loading unti
   const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
     machine_code_page: true,
   });
-  const refused = () => refusal(403);
-  const logins = spyOn(api, "getMachineLogins").mockRejectedValue(refused());
+  const logins = spyOn(api, "getMachineLogins").mockRejectedValue(answered(403));
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const section = async () => within(await screen.findByRole("region", { name: "Machine logins" }));
   try {
@@ -159,7 +160,7 @@ test("MLR-08 a logins list refused before the route mounts again is loading unti
     expect(shown.queryByRole("alert")).toBeNull();
     expect(shown.queryByRole("button", { name: "Retry" })).toBeNull();
 
-    again.reject(refused());
+    again.reject(answered(403));
     expect((await shown.findByRole("alert")).textContent).toBe("You cannot see machine logins.");
   } finally {
     cleanup();

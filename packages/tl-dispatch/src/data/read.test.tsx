@@ -3,10 +3,10 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { http } from "msw";
 import { useState } from "react";
 
-import { ApiError, DispatchQueryClient, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
+import { DispatchQueryClient, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
 import { issueQuery, projectsQuery } from "@/upstream/queries";
 import { mount } from "../../tests/mount";
-import { json } from "../../tests/network";
+import { answered, json } from "../../tests/network";
 import { settle } from "../../tests/react";
 import { answerRequests, holdNotifications } from "../../tests/upstream";
 import { until } from "../../tests/wait";
@@ -105,10 +105,7 @@ describe("useRead", () => {
   });
 
   test("the rolling-release 404 is a failure that can be tried again", async () => {
-    const rolling = new ApiError(404, {
-      code: "NOT_FOUND",
-      error: NO_ROUTE_ROLLING_RELEASE_MESSAGE,
-    });
+    const rolling = answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE);
     let read: Read<unknown> = { state: "loading" };
     function Probe() {
       read = useRead({ queryKey: ["rolling"], queryFn: () => Promise.reject(rolling) });
@@ -206,8 +203,7 @@ describe("useRead", () => {
   });
 
   test("a failed read asked again keeps its failure while a second ask waits behind the first", async () => {
-    const failed = () => new ApiError(500, { code: "INTERNAL", error: "no" });
-    let answer: () => Promise<unknown> = () => Promise.reject(failed());
+    let answer: () => Promise<unknown> = () => Promise.reject(answered(500));
     const client = new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } });
     const drawn: string[] = [];
     function Probe() {
@@ -234,12 +230,12 @@ describe("useRead", () => {
     // fetch has started and cleared it.
     const held = holdNotifications();
     try {
-      await settle(async () => asked.reject(failed()));
+      await settle(async () => asked.reject(answered(500)));
       expect(held.held()).toBeGreaterThan(0);
     } finally {
       held.tell();
     }
-    await settle(async () => queued.reject(failed()));
+    await settle(async () => queued.reject(answered(500)));
     await until(() => client.getQueryState(["race"])?.fetchStatus === "idle");
     expect(drawn.length).toBeGreaterThan(mark);
     expect(drawn.slice(mark)).not.toContain("loading");

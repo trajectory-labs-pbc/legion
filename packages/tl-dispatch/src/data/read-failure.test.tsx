@@ -10,12 +10,12 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readRetry } from "@/data/read";
 import {
-  ApiError,
   DispatchQueryClient,
   NetworkError,
   NO_ROUTE_ROLLING_RELEASE_MESSAGE,
   RequestTimeoutError,
 } from "@/upstream/api";
+import { answered } from "../../tests/network";
 import { holdNotifications } from "../../tests/upstream";
 import { ReadFailure, refreshFailureOf, useReadFailure } from "./read-failure";
 
@@ -23,9 +23,6 @@ afterEach(() => {
   onlineManager.setOnline(true);
   cleanup();
 });
-
-const answered = (status: number, error = "no") =>
-  new ApiError(status, { code: status === 404 ? "NOT_FOUND" : "X", error });
 
 /** What each render of `Failure` drew: its failure, or `none`. */
 const drawn: string[] = [];

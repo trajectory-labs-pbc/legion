@@ -9,7 +9,7 @@ import { api } from "@/upstream/api";
 import type { ApproverGrantResp, LauncherCredentialResp } from "@/upstream/contract";
 import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
-import { refusal } from "../../../tests/network";
+import { answered } from "../../../tests/network";
 import {
   GrantsSection,
   keyedAttempt,
@@ -560,7 +560,7 @@ for (const [id, status, line] of [
   ["MLS-12", 403, "You cannot see machine logins."],
 ] as const) {
   test(`${id} a machine logins read the server answers with a ${status} says so with no Retry`, async () => {
-    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(refusal(status));
+    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(answered(status));
     try {
       renderPage();
       const section = within(await screen.findByRole("region", { name: "Machine logins" }));

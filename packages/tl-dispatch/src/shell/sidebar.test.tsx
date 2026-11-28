@@ -11,6 +11,7 @@ import {
   holdShellReads,
   json,
   readFailed,
+  readRefused,
   refusalLanded,
   type ShellAnswer,
   waitFor,
@@ -73,7 +74,7 @@ function mount(
     onPeek,
     peek = false,
   }: {
-    answer?: Parameters<typeof answerShellReads>[0];
+    answer?: (url: string) => ShellAnswer;
     client?: QueryClient;
     commands?: boolean;
     onPeek?: () => void;
@@ -340,8 +341,8 @@ describe("the sidebar", () => {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       answer: (url) => {
-        if (url.endsWith("/api/v1/projects")) return json({ error: { code: "FORBIDDEN" } }, 403);
-        if (url.includes("pinned=true")) return json({ error: { code: "NOT_FOUND" } }, 404);
+        if (url.endsWith("/api/v1/projects")) return readRefused(403);
+        if (url.includes("pinned=true")) return readRefused(404);
         return undefined;
       },
     });
@@ -469,11 +470,11 @@ describe("the sidebar", () => {
   });
 
   test("an inbox read the server refuses or cannot find draws no Retry, so Peek keeps the count's box", async () => {
-    for (const status of [403, 404]) {
+    for (const status of [403, 404] as const) {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       const container = mount("/agents", {
         answer: inboxReads({
-          inbox: () => json({ error: { code: "REFUSED" } }, status),
+          inbox: () => readRefused(status),
           unread: 3,
         }),
         client,
@@ -493,7 +494,7 @@ describe("the sidebar", () => {
 
   test("an inbox read refused before the sidebar mounts again draws no Retry while it is asked again", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const refused = () => json({ error: { code: "FORBIDDEN" } }, 403);
+    const refused = () => readRefused(403);
     let inbox: () => ShellAnswer = refused;
     const answer = inboxReads({ inbox: () => inbox(), unread: 3 });
     mount("/agents", { answer, client });
@@ -515,7 +516,7 @@ describe("the sidebar", () => {
   });
 
   /** Mounts the sidebar on reads `answer` gives, once the Inbox count has failed. */
-  async function mountFailedInbox(answer: Parameters<typeof answerShellReads>[0]) {
+  async function mountFailedInbox(answer: (url: string) => ShellAnswer) {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       answer,
