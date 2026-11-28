@@ -22,7 +22,7 @@ export interface ApprovalRequest {
 }
 
 /** The documents a request names: its list, or its lead fields from a server older than it. */
-function requestDocuments(ask: Ask): readonly NamedDocument[] {
+export function requestDocuments(ask: Ask): readonly NamedDocument[] {
   const approval = ask.approval;
   if (approval === undefined) return [];
   return approval.documents ?? [approval];
