@@ -1,5 +1,11 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { focusManager, notifyManager, onlineManager, QueryClient } from "@tanstack/react-query";
+import {
+  defaultScheduler,
+  focusManager,
+  notifyManager,
+  onlineManager,
+  QueryClient,
+} from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, Suspense } from "react";
@@ -14,12 +20,12 @@ import { onFakeClock, tick } from "../../../tests/upstream";
 import { MachineLoginRoute } from "./page";
 
 afterEach(() => {
-  cleanup();
-  mock.restore();
-  focusManager.setFocused(undefined);
-  onlineManager.setOnline(true);
   // Back to the synchronous scheduler the shared test setup sets.
   notifyManager.setScheduler((callback) => callback());
+  focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
+  cleanup();
+  mock.restore();
 });
 
 const newClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -309,9 +315,9 @@ test.each([
 ])("MLR-09 a failed capabilities read asked again on %s also loads the page's code that failed", async (_, askAgain) => {
   const { code } = await bothFail();
   code.state.loads = true;
-  // TanStack Query's own scheduler, so the read's start and its answer can reach React in one
-  // batch, as they can in the app.
-  notifyManager.setScheduler((callback) => setTimeout(callback, 0));
+  // TanStack Query's own default scheduler, so the read's start and its answer can reach React
+  // in one batch, as they can in the app.
+  notifyManager.setScheduler(defaultScheduler);
   act(askAgain);
   expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
   expect(screen.queryByRole("alert")).toBeNull();
