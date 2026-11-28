@@ -338,6 +338,7 @@ test("RVL-09 a loaded list whose refresh fails keeps its rows and says so, with 
 for (const [id, status, line] of [
   ["RVL-13", 403, "Could not refresh machine logins: access refused."],
   ["RVL-13", 404, "Could not refresh machine logins: not found."],
+  ["RVL-13", 400, "Could not refresh machine logins."],
 ] as const) {
   test(`${id} a loaded list whose refresh is refused with a ${status} keeps its rows and says so, with no Retry`, async () => {
     const user = userEvent.setup();

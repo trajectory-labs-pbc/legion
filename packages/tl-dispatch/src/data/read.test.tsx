@@ -121,6 +121,14 @@ describe("useRead", () => {
     expect(Reflect.get(read(), "retry")).toBeUndefined();
   });
 
+  test("a 400 INVALID_QUERY is a failure that can be tried again", async () => {
+    answerProjects(() => json({ code: "INVALID_QUERY", error: "kind takes reply and agent" }, 400));
+    const { read } = mountNames();
+    await until(() => read().state === "error");
+    expect(Reflect.get(read(), "refusal")).toBeUndefined();
+    expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+  });
+
   for (const status of [408, 409, 429]) {
     test(`a ${status} is a failure that can be tried again`, async () => {
       answerProjects(refused(status));

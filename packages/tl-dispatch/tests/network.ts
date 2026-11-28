@@ -88,6 +88,6 @@ export const refusalLanded = (client: QueryClient, status: number) =>
     .getAll()
     .some((query) => query.state.error instanceof ApiError && query.state.error.status === status);
 
-/** The client's error for a read the server answered with `status`, and `error` its words. */
-export const answered = (status: number, error = "no") =>
-  new ApiError(status, { code: codeOf(status), error });
+/** The client's error for a read the server answered with `status`, `error` its words and `code`. */
+export const answered = (status: number, error = "no", code = codeOf(status)) =>
+  new ApiError(status, { code, error });

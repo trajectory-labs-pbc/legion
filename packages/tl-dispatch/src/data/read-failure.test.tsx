@@ -90,11 +90,19 @@ test("read-failure: the retry policy never asks a refused read again by itself",
   const errors = [
     answered(500),
     answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE),
+    answered(400, "kind takes reply and agent", "INVALID_QUERY"),
     answered(400),
     answered(403),
     answered(404),
   ];
-  expect(errors.map((error) => readRetry(0, error))).toEqual([true, true, false, false, false]);
+  expect(errors.map((error) => readRetry(0, error))).toEqual([
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+  ]);
 });
 
 test("read-failure: a refused read keeps its refusal, with no Retry, while it is asked again", async () => {
