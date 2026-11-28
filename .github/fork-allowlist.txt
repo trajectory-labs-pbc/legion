@@ -21,6 +21,7 @@ registry.json
 .agents/skills/navigation/
 .agents/skills/porting-upstream/
 .agents/skills/react-quality/
+.agents/skills/rebuilding-a-page/
 .agents/skills/ui-design-system/
 
 # The fork's checks.
