@@ -47,7 +47,7 @@ export const RULES = {
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
     "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
-  storage: "only `src/browser/storage.ts` reads or writes the browser's storage",
+  storage: "only `src/stores` and `src/browser/storage.ts` read or write the browser's storage",
   unload: "only `src/browser` sets the unload prompt",
   dialog: "no native dialog: ask the reader with an `AlertDialog`",
   session: "only `src/data/session.ts` reads the signed-in person",
@@ -587,6 +587,7 @@ function scriptViolations(
 // ---- The browser's doors: the network, storage, the unload prompt, native dialogs, the session ----
 const NETWORK = new Set(["fetch", "WebSocket", "EventSource"]);
 const STORAGE = new Set(["localStorage", "sessionStorage", "indexedDB"]);
+const STORAGE_FILE = /^src\/(stores\/|browser\/storage\.ts$)/;
 const DIALOG = new Set(["confirm", "alert", "prompt"]);
 const GLOBAL_OBJECT = new Set(["window", "self", "globalThis"]);
 const SESSION = new Set(["whoAmI", "whoAmIQuery"]);
@@ -601,7 +602,7 @@ const ANYWHERE = new Set([...SESSION, "onbeforeunload"]);
  */
 function doorRule(path: string, name: string): string | undefined {
   if (NETWORK.has(name) && !/^src\/(data|upstream)\//.test(path)) return RULES.network;
-  if (STORAGE.has(name) && path !== "src/browser/storage.ts") return RULES.storage;
+  if (STORAGE.has(name) && !STORAGE_FILE.test(path)) return RULES.storage;
   if (DIALOG.has(name)) return RULES.dialog;
   if (SESSION.has(name) && path !== SESSION_FILE && !path.startsWith("src/upstream/")) {
     return RULES.session;

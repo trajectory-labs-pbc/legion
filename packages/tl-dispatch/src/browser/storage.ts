@@ -5,9 +5,8 @@ interface Format<T> {
 }
 
 const text: Format<string> = { read: (stored) => stored, write: (value) => value };
-const flag: Format<boolean> = { read: (stored) => stored === "true", write: String };
 
-/** One key this browser keeps, by its parameter; a browser that refuses storage keeps nothing. */
+/** One key of upstream's this browser keeps, by its parameter; a browser that refuses storage keeps nothing. */
 export interface StoredKey<Param, Value> {
   /** The name the value is stored under. */
   readonly name: (param: Param) => string;
@@ -17,7 +16,7 @@ export interface StoredKey<Param, Value> {
 }
 
 /** Refused storage keeps nothing, so what it would have given is nothing. */
-function quietly<T>(act: () => T): T | undefined {
+export function quietly<T>(act: () => T): T | undefined {
   try {
     return act();
   } catch {
@@ -44,20 +43,11 @@ function storedKey<Param, Value>(
   };
 }
 
-/** The prefix of each key of the fork's own, so none meets a key of upstream's. */
-export const FORK_PREFIX = "tl-dispatch.";
-
-const forkKey = <Param, Value>(name: (param: Param) => string, format: Format<Value>) =>
-  storedKey((param: Param) => `${FORK_PREFIX}${name(param)}`, format);
-
-/** Upstream's keys, named and written as upstream's code does, so state moves between the apps. */
+/**
+ * Upstream's keys, named and written as upstream's code does, so state moves between the apps.
+ * The fork's own state is in `src/stores`.
+ */
 export const upstreamKeys = {
   /** The agents a person pinned in this browser before pins moved to Dispatch, by login. */
   legacyPinnedAgents: storedKey((login: string) => `dispatch.agents.pinned:${login}`, text),
-} as const;
-
-/** The fork's own keys, each under the fork's prefix. */
-export const forkKeys = {
-  /** Whether a sidebar section is folded, by its heading. */
-  sidebarFolded: forkKey((heading: string) => `sidebar.folded.${heading}`, flag),
 } as const;
