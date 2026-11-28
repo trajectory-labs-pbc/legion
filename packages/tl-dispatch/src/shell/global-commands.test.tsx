@@ -135,7 +135,9 @@ describe("the shell's global commands", () => {
       appKeymap
         .actions()
         .map((action) => action.label)
-        .filter((label) => label.includes("new Inbox"));
+        .filter(
+          (label) => label === "Preview the new Inbox" || label === "Leave the Inbox preview"
+        );
     expect(offered()).toEqual(["Preview the new Inbox"]);
     appKeymap
       .actions()
