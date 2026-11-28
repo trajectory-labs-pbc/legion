@@ -42,7 +42,7 @@ Each value is a variable on `:root`; the class names it.
 
 | Token | Class | Use |
 | --- | --- | --- |
-| `--layer-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow, a list row's left edge (its select box), a list's selection bar. |
+| `--layer-raised` (10) | `z-raised` | Over the content beside it: a sticky header, a focused segment, a list's scroll arrow, a list row's left edge (its leading part and select box), a list's selection bar. |
 | `--layer-overlay` (50) | `z-overlay` | Over the page: a popover, a menu, a tooltip, a dialog, a sheet, a toast, the skip link. |
 | `--duration-popup` (150 ms) | `duration-popup` | The fade of a popover, a menu or a tooltip (`popupMotion`). |
 | `--duration-modal` (200 ms) | `duration-modal` | The fade of a dialog, a sheet, a drawer or a scrim (`modalPopupMotion`). |
