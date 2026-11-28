@@ -20,6 +20,12 @@ export function useAskSessionAgain(): () => void {
   return () => void client.refetchQueries({ queryKey: sessionKey, exact: true });
 }
 
+/** Whether a person is signed in, as upstream's `useIsHuman` answers: the reads only a person
+ *  makes wait for it. */
+export function isPerson(session: Read<AuthenticatedUser>): boolean {
+  return session.state === "ready" && session.data.kind === "user";
+}
+
 /** The session ended: Dispatch answered the read of who is signed in with a 401. */
 export function sessionEnded(session: Read<AuthenticatedUser>): boolean {
   if (session.state === "error") return isUnauthorized(session.error);

@@ -376,6 +376,22 @@ describe("layers", () => {
     expect(rulesOf(unlisted)).toContain("is read by no file");
   });
 
+  test("only the Inbox's data reads upstream's Inbox logic", () => {
+    const logic = file("src/upstream/logic/inbox.ts");
+    const reader = (path: string, from = "@/upstream/logic/inbox") =>
+      rulesOf([file(path, `import "${from}";`), logic]);
+    expect(reader("src/data/inbox/reads.ts")).toBe("");
+    expect(reader("src/data/inbox/reads.test.tsx")).toBe("");
+    expect(reader("src/data/session.ts")).toContain("seam-readers");
+    expect(reader("src/features/inbox/x.tsx")).toContain("seam-readers");
+    expect(reader("src/parts/needs-you/x.tsx")).toContain("seam-readers");
+    expect(
+      rulesOf([
+        file("src/features/inbox/x.tsx", 'import "@upstream-dispatch/features/inbox/grouping";'),
+      ])
+    ).toContain("only-the-seam-imports-upstream");
+  });
+
   test("the storage file reads neither the data layer nor the seam: browser is above both", () => {
     const storage = (target: string, targetFile: SourceFile) =>
       rulesOf([file("src/browser/storage.ts", `import "${target}";`), targetFile]);

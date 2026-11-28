@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNeedsYouCount } from "@/upstream/data-hooks";
 import { credentialPendingQuery, inboxQuery, myRepliesCountQuery } from "@/upstream/queries";
 import { readFailureOf } from "./read-failure";
-import { useAskSessionAgain, useSession } from "./session";
+import { isPerson, useAskSessionAgain, useSession } from "./session";
 import type { ShellRead } from "./shell-read";
 
 /** What the Inbox's number is made of. */
@@ -19,7 +19,7 @@ export interface InboxCount {
 export function useInboxCount(): ShellRead<InboxCount> {
   const inbox = useQuery(inboxQuery());
   const session = useSession();
-  const human = session.state === "ready" && session.data.kind === "user";
+  const human = isPerson(session);
   const credentials = useQuery(credentialPendingQuery());
   const replies = useQuery({ ...myRepliesCountQuery(), enabled: human });
   const waiting = useNeedsYouCount();
