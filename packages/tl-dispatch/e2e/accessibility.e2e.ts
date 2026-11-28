@@ -1,17 +1,31 @@
 // The axe run: each region the fork draws, in light and in dark, read by axe at WCAG 2.0 and 2.1
 // level A and AA, the tags upstream's accessibility.e2e.ts reads its pages at. A row fails on any
-// serious or critical finding, and accepts none. Each scan leaves out what upstream draws inside
-// the region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's
-// own axe run reads those. Fork elements passed into a marked component sit in a
-// `data-fork-view` mark inside it, which the scan reads again. The run seeds, so it is local
-// only: the deployed mode leaves this file out (modes.ts).
+// serious or critical finding, and accepts none. Each scan leaves out upstream's views inside the
+// region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's own
+// axe run reads those. Fork elements passed into a marked component sit in a `data-fork-view`
+// mark inside it, which the scan reads again. No scan and no width read runs with an upstream
+// dialog or overlay open: the new-version banner shows only after a new deploy, the chord
+// indicator only mid-chord, and a reference preview opens only on hover, keyboard focus or a caret
+// in an editor's link: no step points at a reference or puts a caret in one, and the Tab walk
+// gives the focus after both scans. The run seeds, so it is local only: the deployed mode leaves
+// this file out (modes.ts).
+//
+// Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
+// round the page back to its first stop and finds FO1's outline at every stop in the region; and
+// the pages the fork draws, at 390, 768 and 1440 px, each fits the window, and no box in it scrolls
+// or clips content wider than itself, as `wideBoxes` reads it (FR4). The walk and the width check
+// read the marks as the scan does: an element is upstream's when its nearest mark is a
+// `data-upstream-view` one, and the fork's under a nearer `data-fork-view` mark or under none.
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
 import { createAsk } from "../../dispatch/e2e/api";
-import { setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
+import type { FakeLauncherCredential } from "../../dispatch/e2e/fake-broker";
+import { setLauncherCredentials, setMachineLogins } from "../../dispatch/e2e/fake-broker-helpers";
+import { nextFrames } from "../../dispatch/e2e/frames";
 import { withIssuePage } from "../../dispatch/e2e/issue-page-option";
 import { watchTraffic } from "../../dispatch/e2e/traffic";
+import { assertPageFits } from "../../dispatch/e2e/unclipped";
 import type { RecordResponse } from "../../dispatch/web/src/api/types";
 import { AGENT, heldStatusChange, runIssue, waitForQuiet } from "./flows";
 import { SIGN_OUT } from "./modes";
@@ -19,7 +33,13 @@ import { expect, type Page, runName, test } from "./test";
 
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 const SCHEMES = ["light", "dark"] as const;
+type Scheme = (typeof SCHEMES)[number];
 const PHONE = { width: 390, height: 844 };
+/** The widths a page must fit with nothing scrolling sideways: a phone, a tablet and a desktop. */
+const WIDTHS = [PHONE, { width: 768, height: 1024 }, { width: 1440, height: 900 }] as const;
+/** More Tab presses than any region's walk takes to come back to its first stop. A walk that
+ *  passes nothing twice but never comes back fails here. */
+const MAX_TAB_PRESSES = 200;
 const ASK = `${runName} ask?`;
 const MACHINE_CODE = "WXYZ-4321";
 /** Upstream's `LIVE_SOCKET_STUCK_MS`: how long a live socket reconnects before the page says live
@@ -33,15 +53,19 @@ const SIDEBAR = '[data-testid="sidebar"]';
 const STATUS_CORNER = 'div:has(> [data-testid="connection-status"])';
 const UPSTREAM_VIEW = "[data-upstream-view]";
 const FORK_VIEW = "[data-fork-view]";
+/** Both marks: the nearest one an element sits in decides whose it is. */
+const MARKS = `${UPSTREAM_VIEW}, ${FORK_VIEW}`;
+const TOOLTIP = '[data-slot="tooltip-content"]';
 
 interface Region {
   name: string;
   /** The path to open, or how to make the record it names. */
   href: string | ((page: Page) => Promise<string>);
-  /** The region's element; axe reads only inside it. */
+  /** The region's element: axe reads only inside it, and the Tab walk counts only the stops in
+   *  it. */
   selector: string;
-  /** What axe leaves out of it beside upstream's widgets: a region another row reads, or an
-   *  upstream page. */
+  /** What each check leaves out of the region beside upstream's marked views: a region another
+   *  row reads, or an upstream page. axe and the Tab walk skip it, and the width check hides it. */
   exclude?: readonly string[];
   viewport?: { width: number; height: number };
   /** Runs before the page opens: the records it draws, and any request it must not send. */
@@ -52,17 +76,25 @@ interface Region {
   settles?: false;
   /** Opens the region once the page is drawn, and waits until it shows. */
   open?: (page: Page) => Promise<void>;
-  /** What the region must draw in each scheme, checked before that scheme's scan. */
+  /** What the region must draw in each scheme, checked before that scheme's scan and walk. */
   drawn?: (page: Page) => Promise<void>;
+  /** "none" where the region holds no control, so the walk must find no stop in it. "skip" where
+   *  it is not walked: a menu, which the arrow keys move in and Tab leaves, or a tooltip, which
+   *  shows on hover. */
+  tabStops?: "none" | "skip";
 }
 
 /** A serious or critical axe finding. */
 interface Finding {
   rule: string;
   impact: string;
-  scheme: (typeof SCHEMES)[number];
+  scheme: Scheme;
   selector: string;
 }
+
+/** What axe leaves out of `region`: each `data-upstream-view` mark, and the region's own
+ *  `exclude`. `forkViewsOf` names the fork marks in them that it reads again. */
+const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
 
 /** An open ask of the person's, so the Inbox and its counts draw a row and not an empty state. */
 async function seedAsk(page: Page): Promise<void> {
@@ -90,6 +122,23 @@ async function seedMachineLogin(): Promise<void> {
     state: "pending",
   };
   await setMachineLogins([{ code: MACHINE_CODE, record }]);
+}
+
+/** A live machine login of alice's, so the page lists it with its Revoke. */
+async function seedListedLogin(): Promise<void> {
+  const login: FakeLauncherCredential = {
+    approved_by: "alice",
+    credential_id: "cred-worker-7",
+    expired: false,
+    expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+    host: "worker-7.example.com",
+    issued_at: new Date().toISOString(),
+    listedFor: "alice",
+    person: null,
+    service: null,
+    subject: null,
+  };
+  await setLauncherCredentials([login]);
 }
 
 /** Holds every request to `url` unanswered. */
@@ -126,6 +175,39 @@ const machineLogin: Region = {
   selector: MAIN,
   ready: (page) => [heading(page, "Enter machine login code")],
 };
+const revokeButton = (page: Page) =>
+  page.getByRole("button", { name: /^Revoke the machine login for worker-7\.example\.com/ });
+const machineLoginListed: Region = {
+  ...machineLogin,
+  name: "machine login page with a login listed",
+  prepare: seedListedLogin,
+  ready: (page) => [...machineLogin.ready(page), revokeButton(page)],
+};
+const notFoundPage: Region = {
+  name: "not-found page",
+  href: `/${runName.toLowerCase()}-no-such-page`,
+  selector: MAIN,
+  ready: (page) => [heading(page, "Page not found")],
+};
+// The issue frame draws upstream's icon rail and page in the fork's frame.
+const issueFrame: Region = {
+  name: "issue frame",
+  href: issueHref("frame issue"),
+  selector: SHELL,
+  exclude: [`${MAIN} > *`],
+  prepare: issueFrameOn,
+  ready: (page) => [page.getByRole("heading", { name: `${runName} frame issue` })],
+  drawn: issueFrameDrawn,
+};
+const connectionErrorPage: Region = {
+  name: "connection error page",
+  href: "/",
+  selector: ROOT,
+  prepare: async (page) => {
+    await page.route("**/auth/whoami", (route) => route.fulfill({ status: 500 }));
+  },
+  ready: (page) => [page.getByRole("alert").filter({ hasText: "Could not reach Dispatch." })],
+};
 
 const regions: readonly Region[] = [
   // The skip link, the status corner and the content panel's frame.
@@ -135,6 +217,7 @@ const regions: readonly Region[] = [
     ...onInbox,
     name: "account menu",
     selector: '[role="menu"]',
+    tabStops: "skip",
     open: async (page) => {
       await page.getByRole("button", { name: /^Signed in as / }).click();
       await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
@@ -161,6 +244,17 @@ const regions: readonly Region[] = [
       await page.locator(MAIN).focus();
       await page.keyboard.press("?");
       await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    },
+  },
+  // The tooltip that names a control's command and its keys.
+  {
+    ...onInbox,
+    name: "key tooltip",
+    selector: TOOLTIP,
+    tabStops: "skip",
+    open: async (page) => {
+      await page.locator(SIDEBAR).getByRole("button", { name: "Hide sidebar" }).hover();
+      await expect(page.locator(TOOLTIP)).toContainText("Hide sidebar");
     },
   },
   // The question opens only over an unsent change. Nothing here answers it.
@@ -215,13 +309,10 @@ const regions: readonly Region[] = [
       await expect(page.getByText("Live updates are not reaching this page")).toBeVisible();
     },
   },
-  {
-    name: "not-found page",
-    href: `/${runName.toLowerCase()}-no-such-page`,
-    selector: MAIN,
-    ready: (page) => [heading(page, "Page not found")],
-  },
+  notFoundPage,
   machineLogin,
+  // The logins table: each row's Revoke, and its cut text, which is a button.
+  machineLoginListed,
   {
     ...machineLogin,
     name: "machine login page with a login looked up",
@@ -230,6 +321,18 @@ const regions: readonly Region[] = [
       await page.getByLabel("Code shown on the machine").fill(MACHINE_CODE);
       await page.getByRole("button", { name: "Look up" }).click();
       await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+    },
+  },
+  // Nothing here answers it.
+  {
+    ...machineLoginListed,
+    name: "revoke question",
+    selector: '[role="alertdialog"]',
+    open: async (page) => {
+      await revokeButton(page).click();
+      await expect(
+        page.getByRole("alertdialog", { name: "Revoke worker-7.example.com?" })
+      ).toBeVisible();
     },
   },
   {
@@ -249,6 +352,7 @@ const regions: readonly Region[] = [
     prepare: hold(viewChunk("machines")),
     ready: (page) => [page.getByRole("status", { name: "Loading the page" })],
     settles: false,
+    tabStops: "none",
   },
   {
     name: "issue page fallback",
@@ -257,17 +361,9 @@ const regions: readonly Region[] = [
     prepare: hold(ISSUE_CHUNK),
     ready: (page) => [page.locator(`${MAIN} [aria-busy="true"]`)],
     settles: false,
+    tabStops: "none",
   },
-  // The issue frame draws upstream's icon rail and page in the fork's frame.
-  {
-    name: "issue frame",
-    href: issueHref("frame issue"),
-    selector: SHELL,
-    exclude: [`${MAIN} > *`],
-    prepare: issueFrameOn,
-    ready: (page) => [page.getByRole("heading", { name: `${runName} frame issue` })],
-    drawn: issueFrameDrawn,
-  },
+  issueFrame,
   {
     name: "issue frame fallback",
     href: issueHref("frame fallback issue"),
@@ -279,6 +375,7 @@ const regions: readonly Region[] = [
     ready: (page) => [page.locator(`${MAIN} [aria-busy="true"]`)],
     settles: false,
     drawn: issueFrameDrawn,
+    tabStops: "none",
   },
   {
     name: "loading page",
@@ -288,16 +385,9 @@ const regions: readonly Region[] = [
     prepare: hold("**/auth/whoami"),
     ready: (page) => [page.getByRole("status", { name: "Loading Dispatch" })],
     settles: false,
+    tabStops: "none",
   },
-  {
-    name: "connection error page",
-    href: "/",
-    selector: ROOT,
-    prepare: async (page) => {
-      await page.route("**/auth/whoami", (route) => route.fulfill({ status: 500 }));
-    },
-    ready: (page) => [page.getByRole("alert").filter({ hasText: "Could not reach Dispatch." })],
-  },
+  connectionErrorPage,
 ];
 
 /** Regions only a reader nobody signed in sees. */
@@ -308,6 +398,16 @@ const signedOutRegions: readonly Region[] = [
     selector: ROOT,
     ready: (page) => [heading(page, "Make the next decision clear.")],
   },
+];
+
+/** The pages the fork draws, each read at every width with upstream's views and what a region
+ *  leaves out hidden. */
+const forkPages: readonly Region[] = [
+  { ...onInbox, name: "Inbox's frame", selector: SHELL },
+  machineLoginListed,
+  notFoundPage,
+  issueFrame,
+  connectionErrorPage,
 ];
 
 async function openRegion(page: Page, region: Region): Promise<void> {
@@ -335,11 +435,14 @@ const forkViewsOf = (region: Region) =>
     .map((selector) => `:not(${selector}, ${selector} *)`)
     .join("")}`;
 
-/** The serious and critical findings in `region`, in light and dark. */
-async function scan(page: Page, region: Region): Promise<Finding[]> {
+/** Runs `body` in light, then in dark, each once `region` is drawn in that scheme. */
+async function inEachScheme(
+  page: Page,
+  region: Region,
+  body: (scheme: Scheme) => Promise<void>
+): Promise<void> {
   // As upstream's run: no colour is read part-way through a transition after the scheme changes.
   await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
-  const findings: Finding[] = [];
   const backgrounds = new Set<string>();
   for (const scheme of SCHEMES) {
     await page.emulateMedia({ colorScheme: scheme });
@@ -347,11 +450,18 @@ async function scan(page: Page, region: Region): Promise<Finding[]> {
     backgrounds.add(
       await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor)
     );
-    const builder = new AxeBuilder({ page })
-      .include(region.selector)
-      .exclude(UPSTREAM_VIEW)
-      .withTags(AXE_TAGS);
-    for (const selector of region.exclude ?? []) builder.exclude(selector);
+    await body(scheme);
+  }
+  // A check that read one scheme twice proves nothing about the other.
+  expect(backgrounds.size, `${region.name}: light and dark draw different backgrounds`).toBe(2);
+}
+
+/** The serious and critical findings axe reports in `region`, in light and dark. */
+async function scan(page: Page, region: Region): Promise<Finding[]> {
+  const findings: Finding[] = [];
+  await inEachScheme(page, region, async (scheme) => {
+    const builder = new AxeBuilder({ page }).include(region.selector).withTags(AXE_TAGS);
+    for (const selector of leftOut(region)) builder.exclude(selector);
     // Axe refuses an include that matches nothing.
     const forkViews = forkViewsOf(region);
     if ((await page.locator(forkViews).count()) > 0) builder.include(forkViews);
@@ -372,28 +482,271 @@ async function scan(page: Page, region: Region): Promise<Finding[]> {
         findings.push({ rule: violation.id, impact, scheme, selector });
       }
     }
-  }
-  // A scan that read one scheme twice proves nothing about the other.
-  expect(backgrounds.size, `${region.name}: light and dark draw different backgrounds`).toBe(2);
+  });
   return findings;
 }
 
-function scanEach(list: readonly Region[]): void {
+/** Where the focus rests after a Tab press. */
+interface Stop {
+  /** "first" when the focus is back at the walk's first stop, "again" at another stop the walk
+   *  has passed, else null. */
+  passed: "first" | "again" | null;
+  /** The element's tag and name. */
+  name: string;
+  /** In the region, not in what it leaves out, and the fork's by its nearest mark. */
+  inRegion: boolean;
+  /** Its outline: style, width and colour. */
+  outline: string;
+  /** FO1's outline shows on it: 2 px, in the `--focus` colour, on a box that is drawn. */
+  outlined: boolean;
+}
+
+/** A Tab stop in a region that does not show FO1's outline. */
+type Unmarked = Pick<Stop, "name" | "outline"> & { scheme: Scheme };
+
+/** The `--focus` colour in the scheme shown, as the browser computes it. */
+function focusColour(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    if (getComputedStyle(document.documentElement).getPropertyValue("--focus") === "") {
+      throw new Error("the theme sets no --focus");
+    }
+    const probe = document.createElement("span");
+    probe.style.color = "var(--focus)";
+    document.body.append(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return computed;
+  });
+}
+
+/** The element that has the focus, read in the page, and marked as a stop of this walk: as its
+ *  first stop on the walk's first press. The body stands for nothing having the focus. The body
+ *  is marked only as a first stop, so a page with no stop comes round, and the focus can leave
+ *  the page more than once before Tab comes back. */
+function readStop({
+  excluded,
+  first,
+  focus,
+  marks,
+  region,
+  upstream,
+}: {
+  excluded: readonly string[];
+  first: boolean;
+  focus: string;
+  marks: string;
+  region: string;
+  upstream: string;
+}): Stop {
+  const element = document.activeElement ?? document.body;
+  const nothing = element === document.body;
+  const mark = element.getAttribute("data-tab-walk");
+  if (first || !nothing) element.setAttribute("data-tab-walk", first ? "first" : "");
+  const passed = mark === "first" ? "first" : mark === null ? null : "again";
+  if (nothing) {
+    return { passed, inRegion: false, name: "nothing", outline: "", outlined: false };
+  }
+  const label = element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40);
+  const style = getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  return {
+    passed,
+    inRegion:
+      element.closest(region) !== null &&
+      !excluded.some((selector) => element.closest(selector) !== null) &&
+      element.closest(marks)?.matches(upstream) !== true,
+    name: `${element.tagName.toLowerCase()} "${label ?? ""}"`,
+    outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`,
+    outlined:
+      style.outlineStyle !== "none" &&
+      style.outlineWidth === "2px" &&
+      style.outlineColor === focus &&
+      box.width > 0 &&
+      box.height > 0 &&
+      element.checkVisibility({ opacityProperty: true, visibilityProperty: true }),
+  };
+}
+
+/** The Tab stops in `region` that do not show FO1's outline, in light and dark. In each scheme the
+ *  walk goes round the page until Tab comes back to its first stop, and fails at any other stop
+ *  Tab comes back to first. A region with `tabStops: "none"` must have no stop at all. */
+async function walk(page: Page, region: Region): Promise<Unmarked[]> {
+  const unmarked: Unmarked[] = [];
+  await inEachScheme(page, region, async (scheme) => {
+    const focus = await focusColour(page);
+    await page.evaluate(() => {
+      for (const element of document.querySelectorAll("[data-tab-walk]")) {
+        element.removeAttribute("data-tab-walk");
+      }
+    });
+    let stops = 0;
+    for (let press = 0; ; press += 1) {
+      expect(press, `${region.name}: Tab comes back to its first stop`).toBeLessThan(
+        MAX_TAB_PRESSES
+      );
+      await page.keyboard.press("Tab");
+      await nextFrames(page);
+      const stop = await page.evaluate(readStop, {
+        first: press === 0,
+        focus,
+        excluded: region.exclude ?? [],
+        marks: MARKS,
+        region: region.selector,
+        upstream: UPSTREAM_VIEW,
+      });
+      if (stop.passed === "first") break;
+      expect(
+        stop.passed,
+        `${region.name}: Tab came back to ${stop.name} before its first stop`
+      ).toBeNull();
+      if (!stop.inRegion) continue;
+      stops += 1;
+      if (!stop.outlined) unmarked.push({ scheme, name: stop.name, outline: stop.outline });
+    }
+    if (region.tabStops === "none") {
+      expect(stops, `${region.name}: no Tab stop in the region in ${scheme}`).toBe(0);
+    } else {
+      // A walk that stopped nowhere in the region proves nothing about it.
+      expect(stops, `${region.name}: Tab stops in the region in ${scheme}`).toBeGreaterThan(0);
+    }
+  });
+  return unmarked;
+}
+
+/** Hides what the width check leaves out of `region`, so it measures the fork's boxes in a layout
+ *  without them: the region's own `exclude`, and each element whose nearest mark is upstream's and
+ *  that holds no fork mark. An upstream box that holds one stays, as the fork's elements draw in
+ *  it. The marks follow the layout, so the check hides again after each resize. */
+async function hideLeftOut(page: Page, region: Region): Promise<void> {
+  await page.evaluate(
+    ({ excluded, fork, marks, upstream }) => {
+      const attribute = "data-width-left-out";
+      if (document.getElementById(attribute) === null) {
+        const style = document.createElement("style");
+        style.id = attribute;
+        style.textContent = `[${attribute}] { display: none !important; }`;
+        document.head.append(style);
+      }
+      for (const element of document.querySelectorAll(`[${attribute}]`)) {
+        element.removeAttribute(attribute);
+      }
+      for (const element of document.body.querySelectorAll("*")) {
+        const hidden =
+          excluded.some((selector) => element.matches(selector)) ||
+          (element.closest(marks)?.matches(upstream) === true &&
+            element.querySelector(fork) === null);
+        if (hidden) element.setAttribute(attribute, "");
+      }
+    },
+    { excluded: region.exclude ?? [], fork: FORK_VIEW, marks: MARKS, upstream: UPSTREAM_VIEW }
+  );
+}
+
+/** Each box that scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
+ *  content wider than itself. A box whose `overflow-x` is `hidden`, as cut text (`truncate`) is,
+ *  is not read. FR4 lets a table's, a board's or a code block's own box, and a field, be wider
+ *  inside; the pages read here draw only a table and fields: packages/ui's Table scrolls a table
+ *  wider than its column in its own box, and Chrome clips (`input`) or scrolls (`textarea`) a
+ *  field around its own value. */
+async function wideBoxes(page: Page): Promise<string[]> {
+  return page.evaluate((allowed) => {
+    const found: string[] = [];
+    for (const box of document.body.querySelectorAll(`:not(${allowed})`)) {
+      const { overflowX } = getComputedStyle(box);
+      const does =
+        overflowX === "clip"
+          ? "clips"
+          : overflowX === "auto" || overflowX === "scroll"
+            ? "scrolls"
+            : null;
+      if (does === null || box.scrollWidth <= box.clientWidth) continue;
+      const name =
+        box.getAttribute("data-testid") ??
+        box.getAttribute("data-slot") ??
+        box.getAttribute("aria-label") ??
+        box.getAttribute("class")?.slice(0, 60);
+      found.push(
+        `${box.tagName.toLowerCase()} "${name ?? ""}" ${does} ${box.scrollWidth} px in ${box.clientWidth} px`
+      );
+    }
+    return found;
+  }, '[data-slot="table-container"], input, textarea');
+}
+
+/** Each region, opened once: axe reads it in light and dark, then Tab walks it in light and dark,
+ *  so the walk moves the focus only after both scans. */
+function checkEach(list: readonly Region[]): void {
   for (const region of list) {
-    test(`the ${region.name} has no serious or critical axe finding in light or dark`, async ({
+    const walked = region.tabStops !== "skip";
+    const walkName =
+      region.tabStops === "none"
+        ? " and no Tab stop"
+        : walked
+          ? ", and shows the focus outline at each Tab stop"
+          : "";
+    test(`the ${region.name} has no serious or critical axe finding${walkName}, in light and dark`, async ({
       page,
     }) => {
       await openRegion(page, region);
-      expect(await scan(page, region), `${region.name}: serious or critical findings`).toEqual([]);
+      expect.soft(await scan(page, region), `${region.name}: axe findings`).toEqual([]);
+      if (!walked) return;
+      expect
+        .soft(await walk(page, region), `${region.name}: Tab stops without the outline`)
+        .toEqual([]);
     });
   }
 }
 
-scanEach(regions);
+/** Resizes the page to `viewport`, and waits for the layout drawn for that width before anything
+ *  reads it. The shell draws the sidebar, or the issue frame's icon rail, only from 768 px, from
+ *  React state that follows the width, and the sidebar then fetches what it lists; the sidebar or
+ *  icon-rail count below proves that redraw. From 1280 px the frame's fill and the Inbox's reading
+ *  pane also follow React state, with nothing to count: the two frames and the quiet window cover
+ *  that redraw. A page with no shell lays out by CSS alone. */
+async function resize(
+  page: Page,
+  region: Region,
+  viewport: { width: number; height: number }
+): Promise<void> {
+  const traffic = watchTraffic(page);
+  await page.setViewportSize(viewport);
+  await nextFrames(page);
+  if ((await page.locator(SHELL).count()) > 0) {
+    await expect(
+      page.locator(`${SIDEBAR}, [data-testid="icon-rail"]`),
+      `${region.name}: the layout for ${viewport.width} px`
+    ).toHaveCount(viewport.width >= 768 ? 1 : 0);
+  }
+  if (region.settles !== false) {
+    await waitForQuiet(traffic, `${region.name}: requests settle at ${viewport.width} px`);
+  }
+}
+
+/** Each page, opened once and resized to each width: the page fits the window, and no box in it
+ *  scrolls or clips content wider than itself (`wideBoxes`). */
+function fitEach(list: readonly Region[]): void {
+  for (const region of list) {
+    test(`the ${region.name} fits 390, 768 and 1440 px, and \`wideBoxes\` names no box in it`, async ({
+      page,
+    }) => {
+      await openRegion(page, { ...region, viewport: PHONE });
+      for (const viewport of WIDTHS) {
+        await resize(page, region, viewport);
+        await hideLeftOut(page, region);
+        await assertPageFits(page);
+        expect(await wideBoxes(page), `${region.name} at ${viewport.width} px`).toEqual([]);
+      }
+    });
+  }
+}
+
+checkEach(regions);
+fitEach(forkPages);
 
 test.describe("signed out", () => {
   test.use({ signedIn: false });
-  scanEach(signedOutRegions);
+  checkEach(signedOutRegions);
+  fitEach(signedOutRegions);
 });
 
 // The run's own controls, on the machine login page: an input with no label fails the scan in the
@@ -413,7 +766,7 @@ test("an input without its label fails the scan in a fork region", async ({ page
   ]);
 });
 
-test("an input without its label inside an upstream widget's wrapper is left out", async ({
+test("an input without its label inside a `data-upstream-view` mark is left out", async ({
   page,
 }) => {
   await openRegion(page, machineLogin);
@@ -421,4 +774,139 @@ test("an input without its label inside an upstream widget's wrapper is left out
   await appendInput(page.locator(`${MAIN} > ${UPSTREAM_VIEW}`).last());
   await expect(page.locator(`${MAIN} ${UPSTREAM_VIEW} > input`)).toHaveCount(1);
   expect(await scan(page, machineLogin)).toEqual([]);
+});
+
+// The run's own controls for the walk and the widths, on the machine login page: a button with no
+// outline, a thin one or one in another colour fails the walk, and content wider than the window
+// fails the width check at each width. The buttons and the scrolling box go in the page's section,
+// which sits in a fork mark inside the main region's upstream error boundary, so the walk and the
+// width check prove they read a fork mark inside an upstream one.
+const machineLoginSection = (page: Page) => heading(page, "Enter machine login code").locator("..");
+
+test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
+  await openRegion(page, machineLogin);
+  await machineLoginSection(page).evaluate((at) => {
+    for (const [name, outline] of [
+      ["No outline", "none"],
+      ["Thin outline", "1px solid var(--focus)"],
+      ["Other colour", "2px solid rgb(0, 128, 0)"],
+    ] as const) {
+      const button = document.createElement("button");
+      button.textContent = name;
+      button.style.outline = outline;
+      at.append(button);
+    }
+  });
+  const unmarked = await walk(page, machineLogin);
+  expect(unmarked.map(({ scheme, name }) => ({ scheme, name }))).toEqual([
+    { scheme: "light", name: 'button "No outline"' },
+    { scheme: "light", name: 'button "Thin outline"' },
+    { scheme: "light", name: 'button "Other colour"' },
+    { scheme: "dark", name: 'button "No outline"' },
+    { scheme: "dark", name: 'button "Thin outline"' },
+    { scheme: "dark", name: 'button "Other colour"' },
+  ]);
+});
+
+test("a Tab loop that never comes back to the first stop fails the Tab walk", async ({ page }) => {
+  await openRegion(page, machineLogin);
+  await page.locator(MAIN).evaluate((at) => {
+    const button = (name: string) => {
+      const made = document.createElement("button");
+      made.textContent = name;
+      made.style.outline = "2px solid var(--focus)";
+      at.append(made);
+      return made;
+    };
+    const one = button("Loop one");
+    const two = button("Loop two");
+    two.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab" || event.shiftKey) return;
+      event.preventDefault();
+      one.focus();
+    });
+  });
+  await expect(walk(page, machineLogin)).rejects.toThrow(
+    'Tab came back to button "Loop one" before its first stop'
+  );
+});
+
+/** Adds content 2000 px wide and 1 px high to `parent`, wider than each width the check reads.
+ *  Content with no height adds nothing to scroll to. */
+const appendWide = (page: Page, parent: string) =>
+  page.locator(parent).evaluate((at) => {
+    const wide = document.createElement("div");
+    wide.style.cssText = "width: 2000px; height: 1px";
+    at.append(wide);
+  });
+
+test("a box that scrolls sideways fails the width check", async ({ page }) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  await machineLoginSection(page).evaluate((at) => {
+    const box = document.createElement("div");
+    box.dataset.testid = "wide-box";
+    box.style.overflowX = "auto";
+    at.append(box);
+  });
+  await appendWide(page, '[data-testid="wide-box"]');
+  await hideLeftOut(page, machineLogin);
+  expect(await wideBoxes(page)).toEqual([
+    expect.stringMatching(/^div "wide-box" scrolls 2000 px in \d+ px$/),
+  ]);
+});
+
+test("a box that scrolls sideways in an upstream widget's mark is left out of the width check", async ({
+  page,
+}) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  // The live views' mark, the last child of main, which holds no fork mark.
+  await page
+    .locator(`${MAIN} > ${UPSTREAM_VIEW}`)
+    .last()
+    .evaluate((at) => {
+      const box = document.createElement("div");
+      box.dataset.testid = "wide-upstream-box";
+      box.style.overflowX = "auto";
+      at.append(box);
+    });
+  await appendWide(page, '[data-testid="wide-upstream-box"]');
+  await hideLeftOut(page, machineLogin);
+  await expect(page.locator('[data-testid="wide-upstream-box"]')).toBeHidden();
+  expect(await wideBoxes(page)).toEqual([]);
+});
+
+test("a field's own value wider than the field passes the width check", async ({ page }) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  await page.locator(MAIN).evaluate((at) => {
+    const input = document.createElement("input");
+    input.style.width = "80px";
+    input.value = "x".repeat(200);
+    const area = document.createElement("textarea");
+    area.style.width = "80px";
+    area.wrap = "off";
+    area.value = "x".repeat(200);
+    at.append(input, area);
+  });
+  await hideLeftOut(page, machineLogin);
+  expect(await wideBoxes(page)).toEqual([]);
+});
+
+// At 390 px the page grows wider than the window. From 768 px the content panel clips it, and the
+// check names the box that clips.
+test("content wider than the window fails the width check at each width", async ({ page }) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  await appendWide(page, MAIN);
+  for (const viewport of WIDTHS) {
+    await resize(page, machineLogin, viewport);
+    await hideLeftOut(page, machineLogin);
+    if (viewport === PHONE) {
+      await expect(assertPageFits(page)).rejects.toThrow("px wide in a 390px viewport");
+      expect(await wideBoxes(page), "at 390 px").toEqual([]);
+    } else {
+      await assertPageFits(page);
+      expect(await wideBoxes(page), `at ${viewport.width} px`).toEqual([
+        expect.stringMatching(/^div "flex-1 md:overflow-clip [^"]*" clips \d+ px in \d+ px$/),
+      ]);
+    }
+  }
 });

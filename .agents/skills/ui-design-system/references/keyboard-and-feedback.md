@@ -66,9 +66,9 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 ## Focus (FO)
 
-**FO1** Focus shows as a 2 px `outline-focus` outline, only for keyboard focus (`focus-visible`), on every control, a dialog's first field included. Linear removes the outline on its quick-create dialog; this theme does not. Check: the design-rule tests.
+**FO1** Focus shows as a 2 px `outline-focus` outline, only for keyboard focus (`focus-visible`), on every control, a dialog's first field included. A menu's rows, and a Select's or a Combobox's options, are the exception: the arrow keys move a highlight over them, and they draw no outline (`ITEM_CLASS` in `packages/ui/src/components/dropdown-menu.tsx`, `listItemClass` in `packages/ui/src/lib/overlay-styles.ts`). Linear removes the outline on its quick-create dialog; this theme does not. Check: the design-rule tests; the Tab walk in `packages/tl-dispatch/e2e/accessibility.e2e.ts`, which finds this outline at each Tab stop of each fork region, in light and dark (a menu is not walked).
 
-**FO2** A focused row draws its outline inside the row (`-outline-offset-2`), so the list does not clip it. Check: reviewer.
+**FO2** A focused row or scroll box draws its outline inside its box (`-outline-offset-2`), so the list or the frame around it does not clip it. Check: reviewer.
 
 **FO3** Closing a menu, a picker, a dialog or a peek puts focus back on the control or row that opened it. Check: (new) a test per overlay.
 
