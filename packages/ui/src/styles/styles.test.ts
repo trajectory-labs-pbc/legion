@@ -353,6 +353,9 @@ const MARKED: readonly (readonly [string, string])[] = [
   ["components/toggle.tsx", "data-pressed:"],
 ];
 
+// A list row draws its focus outline inside itself, so its list does not clip it (FO2).
+const INSET_FOCUS_PATHS = ["blocks/list-row.tsx"];
+
 // The list parts that take the highlight from the shared class strings.
 const HIGHLIGHTED = [
   "components/combobox.tsx",
@@ -361,7 +364,7 @@ const HIGHLIGHTED = [
 ];
 
 describe("the components", () => {
-  it("draw focus as one solid outline in the focus colour, offset from the element", () => {
+  it("draw focus as one solid outline in the focus colour, offset from the element, or inside a list row", () => {
     expect(everyToken.filter(({ token }) => /ring-ring|outline-ring/.test(token))).toEqual([]);
     expect(
       everyToken.filter(
@@ -374,10 +377,9 @@ describe("the components", () => {
     expect(widths.length).toBeGreaterThan(10);
     for (const { path, token } of widths) {
       // A scroll container draws its ring inside its own edge.
-      const offsets = [
-        `${variantsOf(token)}outline-offset-2`,
-        `${variantsOf(token)}-outline-offset-2`,
-      ];
+      const inside = `${variantsOf(token)}-outline-offset-2`;
+      const outside = `${variantsOf(token)}outline-offset-2`;
+      const offsets = INSET_FOCUS_PATHS.includes(path) ? [inside] : [outside, inside];
       expect(
         tokensOf(path).some((each) => offsets.includes(each)),
         `${path}: ${token}`
@@ -565,6 +567,14 @@ describe("the theme's heights", () => {
 });
 
 describe("the theme", () => {
+  it("fills a row both selected and highlighted with a step unlike either alone", () => {
+    expect(generated.toString()).toContain(".data-selected\\:data-highlighted\\:bg-accent");
+    for (const tokens of Object.values(THEMES)) {
+      const fills = ["secondary", "muted", "accent"].map((token) => tokens.get(token));
+      expect(new Set(fills).size).toBe(3);
+    }
+  });
+
   it("has a pair for every text colour the components use", () => {
     const texts = new Set<string>();
     generated.walkDecls("color", (decl) => {
