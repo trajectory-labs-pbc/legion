@@ -45,9 +45,9 @@ export function sourceFiles(root = PACKAGE_ROOT): SourceFile[] {
 
 /** The UI package's scripts and stylesheets, tests left out, by path from this package's root. */
 export function uiSourceFiles(): SourceFile[] {
-  return filesUnder(join(PACKAGE_ROOT, ".."), "ui/src")
-    .filter((file) => !TEST.test(file.path))
-    .map((file) => ({ ...file, path: `../${file.path}` }));
+  return sourceFiles(join(PACKAGE_ROOT, "../ui"))
+    .filter((file) => !file.path.startsWith("src/test/"))
+    .map((file) => ({ ...file, path: `../ui/${file.path}` }));
 }
 
 /** What the layering test reads: every script and stylesheet under `src/` and `tests/`. */

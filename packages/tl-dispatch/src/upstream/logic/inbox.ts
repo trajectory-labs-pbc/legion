@@ -1,5 +1,5 @@
-// Upstream's Inbox logic, unchanged. Only src/data/inbox reads it, and no fork file declares one of
-// these names (tests/inbox-copies.test.ts).
+// Upstream's Inbox logic, unchanged. Only src/data/inbox reads it, and no file of the Inbox, the
+// parts or the Inbox's data declares one of these names (tests/inbox-copies.test.ts).
 
 export { answerAskInput } from "@upstream-dispatch/features/inbox/answer-ask";
 export {

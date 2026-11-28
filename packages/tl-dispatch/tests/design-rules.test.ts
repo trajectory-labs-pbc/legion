@@ -104,6 +104,25 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", '<p className="border-x border-x-primary">', "coloured left border"],
   ["tsx", '<p className="border-l-4 border-primary">', "coloured left border"],
   ["tsx", 'const ROW = "md:border-l-2 rounded-md md:border-danger";', "coloured left border"],
+  [
+    "tsx",
+    '<p className={cn("border-l-4 pl-2", on && "border-primary")} />',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the text is a control file's source, whose template the rule reads
+    'const ACCENT = "border-primary";\n<p className={`border-l-2 pl-2 ${ACCENT}`} />;',
+    "coloured left border",
+  ],
+  [
+    "tsx",
+    'const row = cva("border-l-4", { variants: { tone: { danger: "border-danger" } } });',
+    "coloured left border",
+  ],
+  ["tsx", '<p className="[border-left:3px_solid_var(--primary)]">', "coloured left border"],
+  ["css", ".row { border-left: 3px solid var(--primary); }", "coloured left border"],
+  ["css", ".row { border-inline-start-color: var(--danger); }", "coloured left border"],
 ];
 
 const ALLOWED: readonly [string, string][] = [
@@ -140,6 +159,12 @@ const ALLOWED: readonly [string, string][] = [
   ["tsx", '<p className="border-l-2 border-border border-l-transparent">'],
   ["tsx", '<p className="border border-primary">'],
   ["tsx", '<p className="border-l-0 border-primary">'],
+  // Dividers between children, a coloured box whose left edge is neutral, a neutral shorthand.
+  ["tsx", '<div className="flex divide-x border border-primary">'],
+  ["tsx", '<div className="flex divide-y divide-primary border-l-2 border-border">'],
+  ["tsx", '<p className="border-l-4 border-primary border-l-border">'],
+  ["tsx", '<p className={cn("border-l-2", on && "border-border")} />'],
+  ["css", ".row { border-left: 1px solid var(--border); }"],
 ];
 
 /** Controls whose path decides: each file, its text, and the rules it breaks, none if allowed. */

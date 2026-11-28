@@ -1,43 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import ts from "typescript";
+
+import * as seam from "@/upstream/logic/inbox";
 
 import { filesUnder, PACKAGE_ROOT, type SourceFile, TEST } from "./source";
 import { parseScript } from "./typescript";
 
-// The page imports upstream's Inbox logic and copies none of it (spec R13): a fork function that
-// takes the name of one of its exports is read as a copy, and the import is the fix.
+// The page imports upstream's Inbox logic and copies none of it (spec R13): a fork function,
+// constant or method that takes the name of one of its exports is read as a copy, and the import
+// is the fix. A copy under another name is for copies.json, which pins what the fork does again.
 
-const SEAM = "src/upstream/logic/inbox.ts";
 const READERS = ["src/features/inbox", "src/parts", "src/data/inbox"];
 
-/** The values the seam file gives, by name. */
-function seamValues(text: string): Set<string> {
-  const names = new Set<string>();
-  for (const statement of parseScript(SEAM, text).statements) {
-    if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) continue;
-    const clause = statement.exportClause;
-    if (clause === undefined || !ts.isNamedExports(clause)) continue;
-    for (const element of clause.elements) if (!element.isTypeOnly) names.add(element.name.text);
+/** The name a node declares as a function, a constant or a method, if any. */
+function declaredName(node: ts.Node): string | undefined {
+  if (ts.isFunctionDeclaration(node)) return node.name?.text;
+  if (ts.isVariableDeclaration(node) || ts.isMethodDeclaration(node)) {
+    return ts.isIdentifier(node.name) ? node.name.text : undefined;
   }
-  return names;
+  if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
+    const value = node.initializer;
+    return ts.isArrowFunction(value) || ts.isFunctionExpression(value) ? node.name.text : undefined;
+  }
+  return undefined;
 }
 
-/** Each function that `files` declare under one of `names`, as `path: name`. */
+/** Each name of `names` that `files` declare, as `path: name`. */
 function copies(files: readonly SourceFile[], names: ReadonlySet<string>): string[] {
   const found: string[] = [];
   for (const file of files) {
     const visit = (node: ts.Node) => {
-      const name =
-        ts.isFunctionDeclaration(node) && node.name !== undefined
-          ? node.name.text
-          : ts.isVariableDeclaration(node) &&
-              ts.isIdentifier(node.name) &&
-              node.initializer !== undefined &&
-              (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
-            ? node.name.text
-            : undefined;
+      const name = declaredName(node);
       if (name !== undefined && names.has(name)) found.push(`${file.path}: ${name}`);
       ts.forEachChild(node, visit);
     };
@@ -47,35 +40,34 @@ function copies(files: readonly SourceFile[], names: ReadonlySet<string>): strin
 }
 
 describe("no copy of upstream's Inbox logic", () => {
-  const names = seamValues(readFileSync(join(PACKAGE_ROOT, SEAM), "utf8"));
+  // A module's keys are its values: the seam's types are not among them.
+  const names = new Set(Object.keys(seam));
 
-  test("the Inbox's files, the parts and the Inbox's data declare no function of the seam's", () => {
+  test("the Inbox's files, the parts and the Inbox's data declare no name of the seam's", () => {
     const files = READERS.flatMap((dir) => filesUnder(PACKAGE_ROOT, dir)).filter(
       (file) => !TEST.test(file.path) && !file.path.endsWith(".css")
     );
     expect(copies(files, names)).toEqual([]);
   });
 
-  test("names a copied function, as a declaration or an arrow, and leaves an import alone", () => {
+  test("names a copied function, arrow, constant or method, and leaves an import alone", () => {
     expect(names.has("sortRows")).toBe(true);
     const files = [
       { path: "src/features/inbox/list.tsx", text: "function sortRows() {}" },
       { path: "src/parts/x/x.ts", text: "export const sectionOf = (row) => row;" },
       { path: "src/data/inbox/x.ts", text: 'import { group } from "@/upstream/logic/inbox";' },
       { path: "src/features/inbox/y.tsx", text: "const SNOOZE_PRESETS = [];" },
+      {
+        path: "src/parts/y/y.ts",
+        text: "const rows = { sortRows() {}, group: () => 1, other: 0 };",
+      },
     ];
     expect(copies(files, names)).toEqual([
       "src/features/inbox/list.tsx: sortRows",
       "src/parts/x/x.ts: sectionOf",
+      "src/features/inbox/y.tsx: SNOOZE_PRESETS",
+      "src/parts/y/y.ts: sortRows",
+      "src/parts/y/y.ts: group",
     ]);
-  });
-
-  test("reads the seam's values and leaves its types out", () => {
-    const seam = [
-      'export { a, type B } from "x";',
-      'export type { C } from "y";',
-      "export const d = 1;",
-    ].join("\n");
-    expect([...seamValues(seam)]).toEqual(["a"]);
   });
 });
