@@ -42,7 +42,7 @@ const headerOf = (line: string) =>
     .getByText(line)
     .closest('[data-slot="collapsible"]')
     ?.querySelector<HTMLElement>('[data-slot="group-header"]') ?? null;
-const headers = () => document.querySelectorAll('[data-slot="group-header"]');
+const headers = () => document.querySelectorAll<HTMLElement>('[data-slot="group-header"]');
 const bars = (line: string) =>
   within(
     screen.getByText(line).closest<HTMLElement>('[data-slot="list-row"]') ?? document.body

@@ -125,7 +125,7 @@ export function inboxList({
 
 /**
  * The Inbox's list for its address: the asks, and the reader's threads where the list holds
- * them. The Dismissed view is paged and comes with the list's paging, so it reads as empty here.
+ * them. The Dismissed view, which is paged, comes with the list's paging.
  */
 export function useInboxList(address: InboxListAddress): Read<InboxList> {
   const session = useSession();
@@ -138,7 +138,7 @@ export function useInboxList(address: InboxListAddress): Read<InboxList> {
   if (session.state !== "ready" || asks.state !== "ready") return { state: "loading" };
   if (threadsShown && threads.state !== "ready") return { state: "loading" };
   const list = inboxList({
-    asks: address.show === "dismissed" ? [] : asks.data,
+    asks: asks.data,
     threads: threadsShown && threads.state === "ready" ? (threads.data.rows ?? []) : [],
     address,
     viewer: session.data.login,

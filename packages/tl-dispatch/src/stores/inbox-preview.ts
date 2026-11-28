@@ -17,7 +17,6 @@ export const useInboxPreview = create<InboxPreview>()(
     name: "tl-dispatch.inbox-preview",
     version: 1,
     storage: browserStorage(),
-    partialize: ({ on }) => ({ on }),
   })
 );
 
