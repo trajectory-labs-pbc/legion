@@ -59,7 +59,7 @@ describe("a row of the Inbox", () => {
     expect(screen.queryByRole("img", { name: "Unread" })).toBeNull();
   });
 
-  test("the bars' tooltip names the urgency and the priority on hover", () => {
+  test("the bars' tooltip names the urgency and the priority on hover", async () => {
     jest.useFakeTimers();
     try {
       draw(ASK);
@@ -69,7 +69,10 @@ describe("a row of the Inbox", () => {
       fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
       fireEvent.mouseEnter(trigger);
       fireEvent.mouseMove(trigger);
-      act(() => jest.advanceTimersByTime(600));
+      // The positioner places the popup in a microtask, which the async act waits for.
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
       expect(screen.getByText("Urgency: High · P0")).toBeDefined();
     } finally {
       jest.useRealTimers();
