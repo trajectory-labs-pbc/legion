@@ -145,7 +145,7 @@ describe("the shell's global commands", () => {
       .find((action) => action.label === "Preview the new Inbox")
       ?.run();
     expect(calls).toEqual(["preview"]);
-    rerender({ previewInbox: undefined, leaveInboxPreview: log("leave") });
+    rerender({ previewInbox: undefined, leaveInboxPreview: () => calls.push("leave") });
     expect(offered()).toEqual(["Leave the Inbox preview"]);
     appKeymap
       .actions()
