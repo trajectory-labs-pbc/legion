@@ -233,6 +233,12 @@ describe("DropdownMenu's drawn rows", () => {
           </span>
           Wrapped
         </DropdownMenuItem>
+        <DropdownMenuRadioGroup value="list">
+          <DropdownMenuRadioItem value="list">
+            <CopyIcon aria-hidden data-icon="inline-start" />
+            List
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
         <DropdownMenuItem>Rename</DropdownMenuItem>
         <DropdownMenuGroup>
           <DropdownMenuLabel>Move</DropdownMenuLabel>
@@ -250,12 +256,13 @@ describe("DropdownMenu's drawn rows", () => {
         "Copy link",
         "Assign to me",
         "Wrapped",
+        "List",
         "Rename",
         "Move",
         "Move to",
         "Backlog",
       ])
-    ).toEqual([false, false, false, true, true, true, false]);
+    ).toEqual([false, false, false, false, true, true, true, false]);
   });
 
   it("keeps no room in a menu whose rows mark no icon, though its open submenu marks one", async () => {
