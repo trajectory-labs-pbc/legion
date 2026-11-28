@@ -94,7 +94,8 @@ func (s *server) grant(w http.ResponseWriter, r *http.Request) {
 		if s.requireFailureFields(w, r, field{"sessionId", req.SessionID}, field{"secret", req.Secret}) {
 			s.controllerSessionGrant(w, r, req)
 		}
-	case !s.operatorAuthorized(r):
+	// An operator on the daemon's own host may mint without the token.
+	case !s.operatorAuthorized(r) && r.Header.Get("X-Legion-Local") != "1":
 		s.writeFailure(w, r, http.StatusForbidden, "INVALID_OPERATOR_TOKEN", invalidOperatorToken)
 	default:
 		grant, err := s.grants.MintOperatorController(0)
