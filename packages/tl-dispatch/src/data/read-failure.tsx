@@ -33,12 +33,8 @@ export function useReadFailure(
   );
   if (!failures.includes("retryable")) {
     // A 403 wins, then a 404.
-    const refusal = failures.includes("forbidden")
-      ? "forbidden"
-      : failures.includes("not-found")
-        ? "not-found"
-        : "invalid";
-    return { refusal, retrying };
+    const refusal = (["forbidden", "not-found"] as const).find((kind) => failures.includes(kind));
+    return { refusal: refusal ?? "invalid", retrying };
   }
   // A failure that trying again can clear wins, so its Retry shows.
   return {
@@ -61,13 +57,15 @@ export function refreshFailureOf(read: UseQueryResult<unknown>): ShownFault | un
 
 /** What a failed read says of `noun`. */
 export function lineOf(fault: ShownFault, noun: string): string {
-  if (fault.refresh === true) {
-    if (fault.refusal === undefined || fault.refusal === "invalid")
-      return `Could not refresh ${noun}.`;
-    return `Could not refresh ${noun}: ${fault.refusal === "forbidden" ? "access refused" : "not found"}.`;
+  const refresh = fault.refresh === true;
+  switch (fault.refusal) {
+    case "forbidden":
+      return refresh ? `Could not refresh ${noun}: access refused.` : `You cannot see ${noun}.`;
+    case "not-found":
+      return refresh ? `Could not refresh ${noun}: not found.` : `Could not find ${noun}.`;
+    default:
+      return refresh ? `Could not refresh ${noun}.` : `Could not load ${noun}.`;
   }
-  if (fault.refusal === undefined || fault.refusal === "invalid") return `Could not load ${noun}.`;
-  return fault.refusal === "forbidden" ? `You cannot see ${noun}.` : `Could not find ${noun}.`;
 }
 
 /**

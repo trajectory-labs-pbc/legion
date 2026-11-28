@@ -62,4 +62,4 @@ This list holds only the items that the page's tests already named by ID, so it 
 | RVL-10 | Revoke | A revoked row hands the focus to a listed Revoke, not to a cut name drawn before it | | |
 | RVL-11 | Revoke | A revoked row hands the focus to the next row's Revoke | | |
 | RVL-12 | Revoke | The last row, once revoked, hands the focus to the row before it | | |
-| RVL-13 | Revoke | A loaded list whose refresh is refused keeps its rows and says so, with no Retry | changed | Upstream's list offers Retry for every failed refresh; a 403 or a 404 cannot change on a second ask |
+| RVL-13 | Revoke | A loaded list whose refresh is refused keeps its rows and says so, with no Retry | changed | Upstream's list offers Retry for every failed refresh; a 403, a 404 or a 400 other than `INVALID_QUERY` cannot change on a second ask |
