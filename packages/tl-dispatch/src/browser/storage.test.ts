@@ -1,18 +1,13 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { refused, withLocalStorage } from "../../tests/local-storage";
 import { upstreamKeys } from "./storage";
 
-afterEach(() => {
-  window.localStorage.clear();
-});
-
 // tests/upstream-keys.test.ts holds each key's name and its read.
 describe("storage", () => {
-  test("an upstream key reads its value, and removes it", () => {
+  test("an upstream key removes its value", () => {
     const pins = upstreamKeys.legacyPinnedAgents;
     window.localStorage.setItem(pins.name("reader"), '["s-1"]');
-    expect(pins.get("reader")).toBe('["s-1"]');
     pins.remove("reader");
     expect(window.localStorage.getItem(pins.name("reader"))).toBeNull();
   });

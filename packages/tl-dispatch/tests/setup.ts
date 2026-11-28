@@ -16,8 +16,9 @@ afterEach(() => {
 // Before, not after: a file's own afterEach that throws would skip a later reset.
 beforeEach(resetWidth);
 
-// A store keeps its state in memory between tests; each test starts from its first state.
+// Each test starts with empty storage, and a store from its first state: it keeps its state in
+// memory between tests. The reset writes the store's key, so the clear comes after it.
 beforeEach(() => {
   useUiPreferences.setState(useUiPreferences.getInitialState(), true);
-  useUiPreferences.persist.clearStorage();
+  window.localStorage.clear();
 });

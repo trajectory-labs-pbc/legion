@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { quietly } from "@/browser/storage";
 
 /**
  * What a person sets in the UI and expects after a reload: today, the sidebar's folded sections.
@@ -29,13 +30,7 @@ export const useUiPreferences = create<UiPreferences>()(
       // Reads `localStorage` on each call. `persist` catches a refused read, but not a write.
       storage: createJSONStorage(() => ({
         getItem: (key) => window.localStorage.getItem(key),
-        setItem: (key, value) => {
-          try {
-            window.localStorage.setItem(key, value);
-          } catch {
-            // Refused storage keeps the state in memory only.
-          }
-        },
+        setItem: (key, value) => quietly(() => window.localStorage.setItem(key, value)),
         removeItem: (key) => window.localStorage.removeItem(key),
       })),
     }
