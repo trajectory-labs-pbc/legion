@@ -6,6 +6,9 @@ import { useRef } from "react";
 import { type ReadFault, type Refusal, refusalOf, useKeptFailures } from "@/data/read";
 import { useFocusHandOff } from "@/upstream/data-hooks";
 
+/** A failed read as a part shows it; `refresh` when it failed under the rows it still shows. */
+export type ShownFault = ReadFault & { readonly refresh?: true };
+
 /** How a read with nothing to show last failed, as the component reading it saw. */
 type Failure = Refusal | "retryable";
 
@@ -45,7 +48,7 @@ export function useReadFailure(
 }
 
 /** A read whose refresh failed under what it shows, if so; the failure stays while its Retry runs. */
-export function refreshFailureOf(read: UseQueryResult<unknown>): ReadFault | undefined {
+export function refreshFailureOf(read: UseQueryResult<unknown>): ShownFault | undefined {
   if (!read.isRefetchError) return undefined;
   const refusal = refusalOf(read.error);
   if (refusal !== undefined) {
@@ -59,7 +62,7 @@ export function refreshFailureOf(read: UseQueryResult<unknown>): ReadFault | und
 }
 
 /** What a failed read says of `noun`. */
-export function lineOf(fault: ReadFault, noun: string): string {
+export function lineOf(fault: ShownFault, noun: string): string {
   if (fault.refresh === true) {
     if (fault.refusal === undefined) return `Could not refresh ${noun}.`;
     return `Could not refresh ${noun}: ${fault.refusal === "forbidden" ? "access refused" : "not found"}.`;
@@ -77,7 +80,7 @@ export function ReadFailure({
   noun,
   size = "compact",
 }: {
-  fault: ReadFault;
+  fault: ShownFault;
   noun: string;
   /** `default` where the failure stands for a whole page. */
   size?: "default" | "compact";

@@ -18,8 +18,6 @@ export interface RetryableFault {
   readonly retrying: boolean;
   readonly retry: () => void;
   readonly refusal?: undefined;
-  /** The read failed under data it still shows. */
-  readonly refresh?: true;
 }
 
 /** A read Dispatch refused for good: the reader may not see it, or it is gone. */
@@ -28,8 +26,6 @@ export interface RefusedFault {
   readonly retrying: boolean;
   readonly retry?: undefined;
   readonly refusal: Refusal;
-  /** The read failed under data it still shows. */
-  readonly refresh?: true;
 }
 
 export type ReadFault = RetryableFault | RefusedFault;
