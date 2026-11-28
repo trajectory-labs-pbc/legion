@@ -1,13 +1,10 @@
 import { Button } from "@legion/ui/components/button";
 import type { ReactNode } from "react";
+import { apiErrorMessage } from "@/upstream/api";
+import type { DecisionResponse, StateResponse } from "@/upstream/contract";
+import type { SubmitGuard } from "@/upstream/writes";
 import { WriteFailure } from "@/writes/write-failure";
-import {
-  apiErrorMessage,
-  type DecisionResponse,
-  type KeyedWrite,
-  type StateResponse,
-  type SubmitGuard,
-} from "./upstream";
+import type { KeyedWrite } from "./use-machine-login";
 
 /** Approve and Deny for a pending machine login; with no `approve`, only Deny shows. One decision is out at a time. */
 export function DecisionButtons({

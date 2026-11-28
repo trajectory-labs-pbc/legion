@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { onFakeClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
-
 import { render } from "../../tests/react";
+import { onFakeClock, tick } from "../../tests/upstream";
 import { PageFallback } from "./page-skeleton";
 
 const cleanups: (() => void)[] = [];

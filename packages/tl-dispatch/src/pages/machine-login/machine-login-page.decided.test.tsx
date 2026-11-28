@@ -3,10 +3,10 @@ import { expect, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
+import { api } from "@/upstream/api";
+import type { RecordResponse } from "@/upstream/contract";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { MachineLoginPage } from "./machine-login-page";
-import { api, type RecordResponse } from "./upstream";
 
 function machineRecord(decided: RecordResponse["decided"] = null): RecordResponse {
   return {

@@ -5,16 +5,19 @@ import { expect, jest, spyOn, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
-import { keyedAttempt } from "@upstream-dispatch/__tests__/keyed-attempt";
-import { userOnFakeClock } from "@upstream-dispatch/__tests__/user";
-import type { ApproverGrantResp } from "@upstream-dispatch/api/types";
-import { GrantsSection } from "@upstream-dispatch/features/credentials/GrantsSection";
+import { api } from "@/upstream/api";
+import type { ApproverGrantResp, LauncherCredentialResp } from "@/upstream/contract";
 import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
+import {
+  GrantsSection,
+  keyedAttempt,
+  realClock,
+  tick,
+  userOnFakeClock,
+} from "../../../tests/upstream";
 import { MachineLoginPage } from "./machine-login-page";
 import { MachineLogins } from "./machine-logins";
-import { api, type LauncherCredentialResp } from "./upstream";
 
 /** A row's Revoke, whose name is the row's. */
 const revoke = { name: /^Revoke the machine login for / };

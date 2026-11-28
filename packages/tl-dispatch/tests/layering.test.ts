@@ -2,7 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { againstBreaks, layerViolations, rulesWithoutHeading, upstreamAppLoads } from "./layering";
+import {
+  againstBreaks,
+  layerViolations,
+  rulesWithoutHeading,
+  unmarkedExports,
+  upstreamAppLoads,
+} from "./layering";
 import { BREAKS } from "./layers.table";
 import { filesUnder, layeringFiles, PACKAGE_ROOT, type SourceFile } from "./source";
 
@@ -217,6 +223,83 @@ describe("layers", () => {
       file("src/upstream/views/inbox/list.tsx"),
     ];
     expect(rulesOf(folder)).toBe("");
+    const inFolder = (path: string) =>
+      rulesOf([
+        file(path, 'import("@/upstream/views/agents/broadcasts");'),
+        file("src/upstream/views/agents/broadcasts.tsx"),
+      ]);
+    expect(inFolder("src/pages/agents.tsx")).toBe("");
+    expect(inFolder("src/pages/inbox.tsx")).toContain("seam-readers");
+  });
+
+  test("the mark is read by the seam and by the layers that pass fork elements into it", () => {
+    const mark = file("src/upstream/mark.tsx");
+    const reader = (path: string) => rulesOf([file(path, 'import "@/upstream/mark";'), mark]);
+    expect(reader("src/upstream/widgets/x.tsx")).toBe("");
+    expect(reader("src/shell/x.tsx")).toBe("");
+    expect(reader("src/loading/x.tsx")).toBe("");
+    expect(reader("src/features/inbox/x.tsx")).toBe("");
+    expect(reader("src/navigation/x.tsx")).toContain("seam-readers");
+    expect(reader("src/data/x.ts")).toContain("seam-readers");
+  });
+
+  test("a view or a widget gives each component inside the mark", () => {
+    const widget = (text: string, path = "src/upstream/widgets/x.tsx") =>
+      unmarkedExports({ path, text }).map((violation) => violation.specifier);
+    const marked = [
+      'import { X as UpstreamX } from "@upstream-dispatch/features/x/X";',
+      'import { upstreamView } from "@/upstream/mark";',
+      "export const X = upstreamView(UpstreamX);",
+    ].join("\n");
+    expect(widget(marked)).toEqual([]);
+    expect(widget(marked, "src/upstream/views/agents/x.tsx")).toEqual([]);
+    const unwrapped = 'export { X } from "@upstream-dispatch/features/x/X";';
+    expect(widget(unwrapped, "src/upstream/views/agents/x.tsx")).toEqual(["X"]);
+    expect(widget(unwrapped)).toEqual(["X"]);
+    expect(widget("export function X() { return null; }")).toEqual(["X"]);
+    expect(widget("export class ErrorBoundary extends Component {}")).toEqual(["ErrorBoundary"]);
+    expect(widget("export const X = memo(UpstreamX);")).toEqual(["X"]);
+    expect(widget('export * from "@upstream-dispatch/features/x/X";')).toEqual(["*"]);
+    expect(widget('export * as X from "@upstream-dispatch/features/x/X";')).toEqual(["*"]);
+    expect(widget("export default UpstreamX;")).toEqual(["default"]);
+    expect(widget("export namespace Inbox {}")).toEqual(["Inbox"]);
+    // A hook, a provider and a type draw nothing in place.
+    const passes = [
+      'export { useX, XProvider } from "@upstream-dispatch/features/x/X";',
+      'export { type XProps } from "@upstream-dispatch/features/x/X";',
+      'export type { XState } from "@upstream-dispatch/features/x/X";',
+      "export type XView = string;",
+      "export interface XRow { id: string }",
+    ].join("\n");
+    expect(widget(passes)).toEqual([]);
+    // Only the mark's upstreamView, in a const, of a component imported from upstream.
+    const upstreamX = 'import { X as UpstreamX } from "@upstream-dispatch/features/x/X";';
+    const mark = (from: string) => `import { upstreamView } from "${from}";`;
+    const wrap = "export const X = upstreamView(UpstreamX);";
+    const of = (...lines: string[]) => widget(lines.join("\n"));
+    expect(of(upstreamX, mark("../mark"), wrap)).toEqual([]);
+    expect(of(upstreamX, "const upstreamView = <T,>(c: T) => c;", wrap)).toEqual(["X"]);
+    expect(of(upstreamX, mark("./not-the-mark"), wrap)).toEqual(["X"]);
+    expect(of(upstreamX, mark("@/upstream/mark"), wrap.replace("const", "let"))).toEqual(["X"]);
+    const destructured = wrap.replace("const X", "const { X }");
+    expect(of(upstreamX, mark("@/upstream/mark"), destructured)).toEqual(["{ X }"]);
+    const fork = "function Fork() { return null; }";
+    expect(of(mark("@/upstream/mark"), fork, wrap.replace("UpstreamX", "Fork"))).toEqual(["X"]);
+    // The shell file and a test are not read.
+    expect(widget("export function X() {}", "src/upstream/shell.tsx")).toEqual([]);
+    expect(widget("export function X() {}", "src/upstream/widgets/x.test.tsx")).toEqual([]);
+  });
+
+  test("a view or a widget gives unmarked only the names the table lists", () => {
+    const context = 'export { XContext } from "@upstream-dispatch/features/x/context";';
+    const row = 'export { XRow } from "@upstream-dispatch/features/x/XRow";';
+    const listed = { XContext: "a context draws nothing", XRow: "draws a table row" };
+    const of = (text: string, unmarked: Record<string, string>) =>
+      unmarkedExports({ path: "src/upstream/widgets/x.tsx", text }, unmarked).length;
+    expect(of(context, listed)).toBe(0);
+    expect(of(context, {})).toBe(1);
+    expect(of(row, listed)).toBe(0);
+    expect(rulesOf([file("src/upstream/widgets/x.tsx", row)])).toContain("views-are-marked");
   });
 
   test("a feature or a part is imported only through its index, from any layer", () => {

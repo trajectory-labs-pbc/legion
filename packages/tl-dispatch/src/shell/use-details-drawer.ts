@@ -1,8 +1,5 @@
-import type {
-  MarginDrawer,
-  MarginDrawerPage,
-} from "@upstream-dispatch/features/issue-page/margin-slot";
 import { useMemo, useState } from "react";
+import type { MarginDrawer, MarginDrawerPage } from "@/upstream/shell";
 
 /**
  * The issue frame's Details drawer, open for one issue: opening another issue closes it. None

@@ -3,8 +3,8 @@ import { type ReactNode, useEffect } from "react";
 import { ReadFailure, readFailureOf } from "@/features/read-failure";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageFallback } from "@/loading/page-skeleton";
+import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
 import { NotFound } from "../not-found/not-found";
-import { credentialCapabilitiesQuery, machineLoginsQuery } from "./upstream";
 
 const loadPage = () => import("./machine-login-page");
 const MachineLoginPage = lazyNamed(loadPage, "MachineLoginPage");

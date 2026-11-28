@@ -1,19 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-import { formatMachineCode } from "./format-machine-code";
+import { api } from "@/upstream/api";
+import type { DecisionResponse, RecordResponse, StateResponse } from "@/upstream/contract";
+import { credentialPendingQuery, machineLoginsQuery } from "@/upstream/queries";
 import {
-  api,
-  credentialPendingQuery,
-  type DecisionResponse,
-  type KeyedWrite,
-  machineLoginsQuery,
-  type RecordResponse,
-  type StateResponse,
+  type KeyedWriteResult,
   type SubmitGuard,
   useKeyedWrite,
   useSubmitGuard,
-} from "./upstream";
+} from "@/upstream/writes";
+import { formatMachineCode } from "./format-machine-code";
+
+/** A keyed write as `useKeyedWrite` returns it. */
+export type KeyedWrite<TData, TVariables = void> = KeyedWriteResult<TData, TVariables, unknown>;
 
 /** A looked-up login as the page shows it: its record, and its decision once one is made. */
 interface MachineLoginView {

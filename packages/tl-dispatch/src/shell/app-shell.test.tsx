@@ -1,19 +1,15 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
-import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
-import { liveViewsOf } from "@upstream-dispatch/features/agent-view/live-views";
-import { readRecents } from "@upstream-dispatch/features/search/recents";
-import { userPreferenceStorageKey } from "@upstream-dispatch/features/shell/userPreference";
 import { http } from "msw";
-
 import { commandStore } from "@/commands/command-store";
+import { liveViewsOf, readRecents, userPreferenceStorageKey } from "@/upstream/data-hooks";
+import { userAgentStateQuery } from "@/upstream/queries";
 import { MemoryNavigationProvider, type Move } from "../../tests/navigation";
 import { holdReads, holdShellReads, waitFor } from "../../tests/network";
 import { render, settle, sleep } from "../../tests/react";
 import { chunksArrive, shellChunksArrive } from "../../tests/shell-chunks";
+import { answerRequests, quietConsoleError } from "../../tests/upstream";
 import { setWidth } from "../../tests/viewport";
 import { reader, signedInClient } from "../../tests/writes";
 import { AppShell } from "./app-shell";
@@ -75,8 +71,7 @@ const press = (
     );
   });
 
-const issuePageArrives = () =>
-  chunksArrive(() => import("@upstream-dispatch/features/issue-page/IssuePage"));
+const issuePageArrives = () => chunksArrive(() => import("@/upstream/views/issue"));
 
 /** Keeps the issue page's reads of AB-1 pending. */
 const holdIssueReads = () =>
@@ -295,10 +290,13 @@ describe("AppShell", () => {
       '[data-testid="desktop-margin-shell"]'
     );
     expect(column?.hidden).toBe(false);
-    // Upstream's column sits in the mark of upstream's views, which draws no box of its own.
+    // Upstream's column sits in its own mark inside the mark of upstream's error boundary, and
+    // neither draws a box.
     const mark = column?.parentElement;
+    const boundary = mark?.parentElement;
     expect(mark?.matches(".contents[data-upstream-view]")).toBe(true);
-    expect(mark?.parentElement).toBe(view.container.querySelector("main")?.parentElement);
+    expect(boundary?.matches(".contents[data-upstream-view]")).toBe(true);
+    expect(boundary?.parentElement).toBe(view.container.querySelector("main")?.parentElement);
   });
 
   /** The headings of the error fallbacks the shell draws, or those inside `within`. */

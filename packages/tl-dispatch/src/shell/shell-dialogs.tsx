@@ -1,13 +1,12 @@
-import { InboxDrawer } from "@upstream-dispatch/features/inbox/InboxDrawer";
-import { RefPreviewHost } from "@upstream-dispatch/features/refs/RefPreview";
-import { SearchPalette } from "@upstream-dispatch/features/search/SearchPalette";
 import { useEffect } from "react";
-
 import { ShortcutsSheet } from "@/commands/shortcuts-sheet";
 import type { ShortcutsSheetState } from "@/commands/use-shortcuts-sheet";
 import { lazyRegion } from "@/loading/lazy-region";
+import { InboxDrawer } from "@/upstream/widgets/inbox-drawer";
+import { RefPreviewHost } from "@/upstream/widgets/ref-preview";
+import { SearchPalette } from "@/upstream/widgets/search-palette";
 
-const loadCreate = () => import("@upstream-dispatch/features/issue/CreateIssueDialog");
+const loadCreate = () => import("@/upstream/widgets/create-issue");
 // Drawn only while open, so each open starts a fresh draft: a region, not an overlay.
 const CreateIssueDialog = lazyRegion("a new issue", loadCreate, "CreateIssueDialog");
 

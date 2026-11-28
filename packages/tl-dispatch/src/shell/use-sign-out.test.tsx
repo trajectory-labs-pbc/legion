@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
-import { answerRequests } from "@upstream-dispatch/__tests__/network";
-import { SendStoppedError } from "@upstream-dispatch/features/writes/keyed-write";
 import { http } from "msw";
-
+import { SendStoppedError } from "@/upstream/writes";
 import { render, settle } from "../../tests/react";
+import { answerRequests } from "../../tests/upstream";
 import { pressWrite } from "../../tests/writes";
 import { SignOutQuestion } from "./sign-out-question";
 import { type SignOut, unsentLabels, useSignOut } from "./use-sign-out";

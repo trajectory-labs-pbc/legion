@@ -1,12 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { api, isNoIdentity } from "@upstream-dispatch/api/client";
-import type { UnsentChange } from "@upstream-dispatch/features/shell/sign-in-channel";
-import {
-  useKeyedWrite,
-  useRefusalOfSubject,
-} from "@upstream-dispatch/features/writes/useKeyedWrite";
-import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { useState } from "react";
+import { api, isNoIdentity } from "@/upstream/api";
+import type { UnsentChange } from "@/upstream/data-hooks";
+import { useKeyedWrite, useRefusalOfSubject, writesOf } from "@/upstream/writes";
 
 import { writeFailureNote } from "@/writes/write-failure-note";
 import { forgetReads } from "./forget-reads";

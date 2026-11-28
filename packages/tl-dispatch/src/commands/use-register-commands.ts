@@ -1,10 +1,5 @@
-import {
-  appKeymap,
-  DIALOG_SCOPE,
-  type KeyBinding,
-  type KeymapScope,
-} from "@upstream-dispatch/features/shell/keymap";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { appKeymap, DIALOG_SCOPE, type KeyBinding, type KeymapScope } from "@/upstream/keys";
 
 import { contextBindings } from "./bindings";
 import { type CommandStore, commandStore } from "./command-store";

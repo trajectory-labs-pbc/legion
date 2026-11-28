@@ -1,26 +1,22 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import {
   type MarginDrawer,
   type MarginFill,
+  NOTHING_PUBLISHED,
+  type PublishedReferences,
+  type ShellNavigation,
   useFillMarginSlot,
+  useKnownReferences,
+  useMargin,
   useMarginDrawer,
   useMarginDrawsSlot,
   useMarginSlotFill,
-} from "@upstream-dispatch/features/issue-page/margin-slot";
-import {
-  type ShellNavigation,
-  useShellNavigation,
-} from "@upstream-dispatch/features/issue-page/shell-navigation";
-import { useShortcutHelpOpener } from "@upstream-dispatch/features/issue-page/shortcut-help-opener";
-import { useMargin } from "@upstream-dispatch/features/margin/margin-context";
-import {
-  NOTHING_PUBLISHED,
-  type PublishedReferences,
-  useKnownReferences,
   usePublishReferenceNames,
-} from "@upstream-dispatch/features/refs/reference-names";
-import type { ReactNode } from "react";
+  useShellNavigation,
+  useShortcutHelpOpener,
+} from "@/upstream/shell";
 
 import { render, settle } from "../../tests/react";
 import { ShellProviders } from "./shell-providers";

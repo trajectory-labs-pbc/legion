@@ -1,16 +1,15 @@
-import { prioritiesQuery } from "@upstream-dispatch/api/queries";
-
 import { lazyNamed } from "@/loading/lazy-named";
 import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { prioritiesQuery } from "@/upstream/queries";
 
 import type { Page } from "./page";
 
 const PrioritiesPage = lazyNamed(
-  () => import("@upstream-dispatch/features/priorities/PrioritiesPage"),
+  () => import("@/upstream/views/priorities/priorities"),
   "PrioritiesPage"
 );
 const PriorityPage = lazyNamed(
-  () => import("@upstream-dispatch/features/priorities/PriorityPage"),
+  () => import("@/upstream/views/priorities/priority"),
   "PriorityPage"
 );
 

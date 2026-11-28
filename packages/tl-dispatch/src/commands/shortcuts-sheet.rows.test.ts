@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DIALOG_SCOPE, type KeyBinding } from "@upstream-dispatch/features/shell/keymap";
+import { DIALOG_SCOPE, type KeyBinding } from "@/upstream/keys";
 
 import { registerContext } from "../../tests/keymap";
 import { defineActions } from "./actions";

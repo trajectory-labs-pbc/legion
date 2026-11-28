@@ -3,10 +3,7 @@ import { pageRoute } from "@/navigation/page-route";
 
 import type { Page } from "./page";
 
-const SettingsPage = lazyNamed(
-  () => import("@upstream-dispatch/features/settings/SettingsPage"),
-  "SettingsPage"
-);
+const SettingsPage = lazyNamed(() => import("@/upstream/views/settings"), "SettingsPage");
 
 export const settings = {
   id: "settings",

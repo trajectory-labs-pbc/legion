@@ -1,12 +1,8 @@
-import {
-  DispatchQueryClient,
-  queryRetry,
-  queryRetryDelay,
-} from "@upstream-dispatch/api/query-client";
-import { installChunkFailureRecovery } from "@upstream-dispatch/features/shell/DeploymentResilience";
-import { ErrorBoundary } from "@upstream-dispatch/features/shell/ErrorBoundary";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { DispatchQueryClient, queryRetry, queryRetryDelay } from "@/upstream/api";
+import { ForkView } from "@/upstream/mark";
+import { ErrorBoundary, installChunkFailureRecovery } from "@/upstream/shell";
 
 import { AuthGate } from "./shell/auth-gate";
 import { AppProviders } from "./shell/providers";
@@ -31,7 +27,9 @@ export function start(root: HTMLElement): { stop(): void } {
     <StrictMode>
       <AppProviders client={queryClient}>
         <ErrorBoundary region="Dispatch">
-          <AuthGate />
+          <ForkView>
+            <AuthGate />
+          </ForkView>
         </ErrorBoundary>
       </AppProviders>
     </StrictMode>

@@ -1,16 +1,16 @@
-import { useIssuePageChoice } from "@upstream-dispatch/features/issue-page/choice";
-import type { MarginDrawer } from "@upstream-dispatch/features/issue-page/margin-slot";
-import {
-  MD_VIEWPORT_QUERY,
-  READING_PANE_QUERY,
-  COMPACT_VIEWPORT_QUERY as UNDER_1280_QUERY,
-  useMediaQuery,
-} from "@upstream-dispatch/features/shell/useDialog";
-import { useKeyboardFit } from "@upstream-dispatch/features/shell/useKeyboardFit";
 import { type ReactNode, type RefObject, useRef } from "react";
 import { PageFallback } from "@/loading/page-skeleton";
 import { useAddress } from "@/navigation/hooks";
 import { useCurrentPage } from "@/pages/index";
+import type { MarginDrawer } from "@/upstream/shell";
+import {
+  MD_VIEWPORT_QUERY,
+  READING_PANE_QUERY,
+  COMPACT_VIEWPORT_QUERY as UNDER_1280_QUERY,
+  useIssuePageChoice,
+  useKeyboardFit,
+  useMediaQuery,
+} from "@/upstream/shell";
 import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
 import { useDetailsDrawer } from "./use-details-drawer";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";

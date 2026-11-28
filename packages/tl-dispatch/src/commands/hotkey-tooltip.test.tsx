@@ -1,10 +1,9 @@
 import { describe, expect, jest, spyOn, test } from "bun:test";
-import { realClock, tick } from "@upstream-dispatch/__tests__/fake-clock";
 import { act, createRef } from "react";
-
 import { mount } from "../../tests/mount";
 import { settle } from "../../tests/react";
 import { specsFor } from "../../tests/specs";
+import { realClock, tick } from "../../tests/upstream";
 import { appCatalog } from "./app-catalog";
 import type {
   HotkeyTooltip as HotkeyTooltipType,

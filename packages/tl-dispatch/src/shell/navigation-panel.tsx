@@ -1,8 +1,8 @@
 import { Button } from "@legion/ui/components/button";
-import type { AuthenticatedUser } from "@upstream-dispatch/api/types";
 import type { RefObject } from "react";
 import { CommandButton } from "@/commands/command-button";
 import { lazyRegion } from "@/loading/lazy-region";
+import type { AuthenticatedUser } from "@/upstream/contract";
 import { AppName } from "./app-name";
 import { Sidebar } from "./sidebar";
 

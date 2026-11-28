@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import type { MarginDrawer } from "@upstream-dispatch/features/issue-page/margin-slot";
+import type { MarginDrawer } from "@/upstream/shell";
 
 import { render, settle } from "../../tests/react";
 import { useDetailsDrawer } from "./use-details-drawer";

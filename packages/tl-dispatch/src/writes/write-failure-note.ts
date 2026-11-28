@@ -1,4 +1,4 @@
-import { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
+import { SendStoppedError, stoppedWriteNote } from "@/upstream/writes";
 
 export interface WriteFailureText {
   /** The write, as the sentence names it: `the approval`. */

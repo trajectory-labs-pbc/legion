@@ -3,8 +3,13 @@ import { readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
-import { LabelPill, StatusPill } from "@upstream-dispatch/components/Pill";
-import { UnreadDot } from "@upstream-dispatch/features/project/UnreadDot";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ts from "typescript";
+import { type CssDeclaration, parseCss, specificity, split } from "./css";
+import { upstreamScripts } from "./map/source";
+import { APP_STYLESHEET, PACKAGE_ROOT, PROOF_EDITOR_SRC, SRC_DIR, UPSTREAM_WEB } from "./source";
+import { parseScript } from "./typescript";
 import {
   ASK_BLOCK_PILL_BLOCKING_BG,
   ASK_BLOCK_PILL_HIGH_BG,
@@ -22,14 +27,17 @@ import {
   CONTROL_HOVER_ACCENT,
   type ColorPair,
   card,
+  contrastRatio,
   DANGER_HOVER_BORDER,
   DANGER_HOVER_TEXT,
   DANGER_TEXT,
   decisionUnsureBorder,
   iconRailActive,
   issueStatusScale,
+  LabelPill,
   LINK,
   LINK_HOVER,
+  type Oklch,
   PAGE_COLORS,
   pageComposer,
   pageFocusedRow,
@@ -38,6 +46,7 @@ import {
   pageOwnWordsRule,
   primaryButtonBg,
   primaryButtonDisabled,
+  StatusPill,
   SUCCESS_HOVER_TEXT,
   SUCCESS_TEXT,
   SURFACE,
@@ -48,16 +57,8 @@ import {
   TEXT_MUTED,
   TEXT_PRIMARY,
   TEXT_SECONDARY,
-} from "@upstream-dispatch/theme/classes";
-import { contrastRatio, type Oklch } from "@upstream-dispatch/theme/contrast";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import ts from "typescript";
-
-import { type CssDeclaration, parseCss, specificity, split } from "./css";
-import { upstreamScripts } from "./map/source";
-import { APP_STYLESHEET, PACKAGE_ROOT, PROOF_EDITOR_SRC, SRC_DIR, UPSTREAM_WEB } from "./source";
-import { parseScript } from "./typescript";
+  UnreadDot,
+} from "./upstream";
 
 // `src/repaint.css` maps the palette upstream's pages paint with onto the theme's tokens. These
 // tests compile the app's stylesheet as the build does, resolve each colour as the cascade does

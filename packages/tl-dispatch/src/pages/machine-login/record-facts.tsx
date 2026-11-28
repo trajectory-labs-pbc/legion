@@ -2,7 +2,8 @@ import { Heading, HeadingSection } from "@legion/ui/components/heading";
 import { textVariants } from "@legion/ui/lib/typography";
 import type { ReactNode } from "react";
 
-import { type RecordResponse, Timestamp } from "./upstream";
+import type { RecordResponse } from "@/upstream/contract";
+import { Timestamp } from "@/upstream/widgets/timestamp";
 
 const LIFETIME_UNITS: ReadonlyArray<{ seconds: number; unit: string }> = [
   { seconds: 86400, unit: "day" },

@@ -2,9 +2,9 @@ import { MessagePage } from "@legion/ui/blocks/message-page";
 import { Button } from "@legion/ui/components/button";
 import { textVariants } from "@legion/ui/lib/typography";
 import { useQueryClient } from "@tanstack/react-query";
-import { KeptWrites } from "@upstream-dispatch/features/writes/KeptWrites";
-import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import type { ReactNode } from "react";
+import { KeptWrites } from "@/upstream/widgets/kept-writes";
+import { writesOf } from "@/upstream/writes";
 
 /** The sign-in page; a lapsed session shows the writes it keeps. */
 export function SignInPage(): ReactNode {
@@ -30,9 +30,7 @@ export function SignInPage(): ReactNode {
       >
         Sign in with Google
       </Button>
-      <div className="contents" data-upstream-view>
-        <KeptWrites />
-      </div>
+      <KeptWrites />
     </MessagePage>
   );
 }

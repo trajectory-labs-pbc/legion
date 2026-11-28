@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { userAgentStateQuery } from "@upstream-dispatch/api/queries";
-import { liveViewsOf } from "@upstream-dispatch/features/agent-view/live-views";
-import { legacyPinnedAgentsKey } from "@upstream-dispatch/features/shell/userPreference";
+import { legacyPinnedAgentsKey, liveViewsOf } from "@/upstream/data-hooks";
+import { userAgentStateQuery } from "@/upstream/queries";
 
 import { holdReads } from "../../tests/network";
 import { render, settle } from "../../tests/react";

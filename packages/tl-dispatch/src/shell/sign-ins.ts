@@ -1,12 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { api, isNoIdentity } from "@upstream-dispatch/api/client";
-import { askSignInAgain } from "@upstream-dispatch/api/query-client";
-import {
-  SIGN_OUT_SETTLE_MS,
-  SignInChannel,
-  type UnsentChange,
-} from "@upstream-dispatch/features/shell/sign-in-channel";
-import { type Write, writesOf } from "@upstream-dispatch/features/writes/write-store";
+import { api, askSignInAgain, isNoIdentity } from "@/upstream/api";
+import { SIGN_OUT_SETTLE_MS, SignInChannel, type UnsentChange } from "@/upstream/data-hooks";
+import { type Write, writesOf } from "@/upstream/writes";
 
 // The channel name is upstream's, so tabs of either app hear each other.
 export const signIns = new SignInChannel(

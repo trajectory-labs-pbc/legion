@@ -59,9 +59,11 @@ A test imports upstream through the seam, or through `tests/upstream.ts`, the on
 ## Each seam file has its readers (`seam-readers`)
 
 `READERS` in the table gives the readers of each seam file, as the spec's seam table does, so a seam file serves one subject to the layers that need it.
-A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`.
-`src/app` also reads the data seam files that a provider needs.
-A test may read each seam file.
+A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, is read only by that page's `route.tsx` and `page.tsx`, and until the features move by its file in `src/pages`.
+A page with more than one view gets the folder, with one file for each view: an `import()` of a file loads every view it gives, so each lazy chunk has its own file.
+`src/app` also reads the data seam files that a provider needs, and `write-kinds.ts`, which registers upstream's kinds of writes.
+`mark.tsx` is read by the seam files, and for `ForkView` by the layers that pass fork elements into a marked component.
+A seam file may read another, and a test may read each seam file.
 The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` by no file.
 A seam file or a root file that the table does not list has no reader, so a new one comes with its row.
 
@@ -102,6 +104,16 @@ An `import.meta.glob`, a non-literal `import()` or `require()`, and a path that 
 No file of the app or of its tests, and no file of `e2e/` or `scripts/`, reaches upstream's `app.tsx` or `main.tsx`, directly or through upstream's code.
 Upstream's app opens a second sign-in channel when it loads, and its entry loads the app.
 The test follows each import of the app through upstream's code, and names the chain at the file of the app that starts it.
+
+## A view or a widget draws inside the mark (`views-are-marked`)
+
+Each component that a `views/` or `widgets/` file of the seam gives draws inside the upstream mark: `upstreamView(Component)` of `src/upstream/mark.tsx` wraps it in one `<span data-upstream-view>` that gives no box.
+The axe run and the one-primary check skip what is inside the mark, because upstream's own tests read it.
+Fork elements that a fork part passes into a marked component go inside `ForkView`, the `data-fork-view` span of the same file, so the checks read them again.
+The rule reads the file, not the component: each export is a `const` set to the mark's `upstreamView(...)` of a component imported from upstream, a hook (`use…`), a provider (`…Provider`), a type, or a name that `UNMARKED` in the table lists with its reason.
+`UNMARKED` is for a context, a component that renders nothing, and a component that draws a table row, an option, SVG, a list item or a term, which a `<span>` around it would break.
+Any other export fails, a class such as `ErrorBoundary` included, and so do `export *` and `export * as`, which name nothing the rule can read.
+`shell.tsx` gives providers, contexts and hooks beside its marked components, so the rule does not read it, and its reviewer checks each export.
 
 ## Today's breaks
 

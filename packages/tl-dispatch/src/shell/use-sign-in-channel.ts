@@ -1,8 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { askSignInAgain } from "@upstream-dispatch/api/query-client";
-import type { SignInChannel } from "@upstream-dispatch/features/shell/sign-in-channel";
-import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { useEffect } from "react";
+import { askSignInAgain } from "@/upstream/api";
+import type { SignInChannel } from "@/upstream/data-hooks";
+import { writesOf } from "@/upstream/writes";
 
 import { heldWritesOfGoneHolder, signIns, unsentChanges } from "./sign-ins";
 
