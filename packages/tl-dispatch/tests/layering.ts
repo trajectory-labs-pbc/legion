@@ -141,11 +141,11 @@ function readable(entry: Import): string | undefined {
   return entry.resolved ? undefined : "the specifier resolves to no file and no package";
 }
 
-function libraryRules(from: Place, pkg: string): [Rule, string][] {
+function libraryRules(from: Place, named: string): [Rule, string][] {
   return LIBRARIES.filter(
     (library) =>
-      library.name.test(pkg) &&
-      !(from.layer !== undefined && library.owners.includes(from.layer as Layer)) &&
+      library.name.test(named) &&
+      !library.owners.some((owner) => owner === from.layer || pattern(owner).test(from.path)) &&
       !(from.test && library.tests)
   ).map((library) => ["library-owners", library.reason]);
 }
@@ -258,7 +258,8 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
   const broken: [Rule, string][] = [];
   const unreadable = readable(entry);
   if (unreadable !== undefined) broken.push(["imports-are-readable", unreadable]);
-  if (entry.pkg !== undefined) broken.push(...libraryRules(from, entry.pkg));
+  const named = entry.pkg ?? entry.specifier;
+  if (named !== undefined) broken.push(...libraryRules(from, named));
   broken.push(...routeImportRules(from, entry));
   if (entry.file === undefined || entry.file.startsWith(UI_PACKAGE + sep)) return broken;
 

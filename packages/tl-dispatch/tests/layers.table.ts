@@ -140,10 +140,11 @@ export const UNMARKED: Readonly<Record<string, string>> = {
   LiveViewRoute: "renders null; the live view draws in MountedLiveViews",
 };
 
-/** The libraries that only their owners import. A test may import one that `tests` marks. */
+/** The libraries, and the parts of the UI package, that only their owners import. A test may
+ *  import one that `tests` marks. */
 export const LIBRARIES: readonly {
   name: RegExp;
-  owners: readonly Layer[];
+  owners: readonly Reader[];
   tests: boolean;
   reason: string;
 }[] = [
@@ -171,6 +172,13 @@ export const LIBRARIES: readonly {
     owners: [],
     tests: false,
     reason: "Base UI comes through packages/ui: import its component, or add one there",
+  },
+  {
+    name: /^@legion\/ui\/components\/bars-glyph$/,
+    owners: ["src/parts/priority"],
+    tests: false,
+    reason:
+      "only src/parts/priority draws BarsGlyph, from its one table of priorities and urgencies to levels",
   },
 ];
 

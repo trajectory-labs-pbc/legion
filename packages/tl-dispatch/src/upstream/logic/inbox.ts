@@ -20,6 +20,7 @@ export {
   markPendingAskThreadInvalidation,
   markPendingAskThreadsOnIssue,
 } from "@upstream-dispatch/features/inbox/ask-thread-freshness";
+export { URGENCY_LABELS } from "@upstream-dispatch/features/inbox/ask-urgency";
 export type {
   DraftStore,
   NotKeptReason,

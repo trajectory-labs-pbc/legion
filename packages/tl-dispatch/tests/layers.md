@@ -74,6 +74,7 @@ A seam file or a root file that the table does not list has no reader, so a new 
 Only `src/navigation` and `src/app` import the router (`react-router-dom`, or any `@tanstack/*router*`), so a router move changes two folders: the app's routes and providers sit in `src/app`, and the shell reads the address through `src/navigation`.
 Only `src/data` and `src/app` import `@tanstack/react-query`: a view reads and writes through `src/data`.
 No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
+Only `src/parts/priority` imports the UI package's `BarsGlyph`, so a priority and an urgency take their bars from its one table of levels.
 A test may import the router and the query library, which a page test needs to draw the page with its own client.
 
 ## No import of the own index (`no-own-index`)

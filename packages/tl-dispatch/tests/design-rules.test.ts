@@ -292,6 +292,19 @@ const PLACED: readonly [string, string, readonly string[]][] = [
   ["src/shell/onunload.tsx", "window.onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/bare-onunload.tsx", "onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/frame-onunload.tsx", "frame.contentWindow.onbeforeunload = ask;", [RULES.unload]],
+  // A list row's height is one of the two row tokens, on the row and on each of its parts.
+  ["src/shell/row-tall.tsx", '<ListRow className="h-[56px]" title="t" />;', [RULES.rowHeight]],
+  [
+    "src/shell/row-part.tsx",
+    '<ListRow leading={<span className="h-14" />} title="t" />;\n<div className="h-14" />;',
+    [RULES.rowHeight],
+  ],
+  ["src/features/x/row.tsx", '<span className="min-h-10" />;', [RULES.rowHeight]],
+  [
+    "src/shell/row-tokens.tsx",
+    '<ListRow className="h-list-row-2" title="t" />;\n<GroupHeader className="h-list-row-1" />;',
+    [],
+  ],
   // The stripe rule reads the UI package's files too.
   [
     "../ui/src/components/stripe.tsx",
