@@ -92,6 +92,7 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   // Later open, under the pointer: the band's hover and the snoozed row.
   await page.setViewportSize({ height: 900, width: 1440 });
   await fold.click();
+  await main(page).getByText(later.text).first().scrollIntoViewIfNeeded();
   await fold.hover();
   for (const colorScheme of SCHEMES) {
     await page.emulateMedia({ colorScheme });
