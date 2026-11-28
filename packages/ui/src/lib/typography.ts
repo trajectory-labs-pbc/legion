@@ -37,3 +37,5 @@ export const textVariants = cva("", {
   },
   defaultVariants: { size: "body" },
 });
+
+export type TextVariantProps = VariantProps<typeof textVariants>;

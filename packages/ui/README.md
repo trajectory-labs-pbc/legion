@@ -58,7 +58,9 @@ installs from the default branch, not from the ref you asked for.
   light when the OS is dark), the corners (steps of the one `--radius`, and `--radius-badge` for a
   badge), the two shadows (`shadow-popover`, `shadow-dialog`, in the scheme's `--shadow-tint`),
   the edge width (`--border-width`, which every `border` class draws), the table row (`h-row`),
-  a small control (`h-control-sm`) and the icon stroke (`--icon-stroke`).
+  a small control (`h-control-sm`), a list row of one line (`h-list-row-1`, 36 px, which a group
+  header also takes) and of two lines (`h-list-row-2`, 56 px), and the icon stroke
+  (`--icon-stroke`). The style test holds these four heights and no other.
 - `src/styles/styles.test.ts` compiles the stylesheet with Tailwind over the package's sources and
   checks the CSS it generates: no shadow but the theme's two and the 1px inset edge, opacity fades
   of 150 to 200 ms only, no pointer cursor, no arbitrary properties, one set of dark values, and
@@ -66,4 +68,5 @@ installs from the default branch, not from the ref you asked for.
   the only other radius is `rounded-full`, which a source check allows on seven parts only: the
   radio item and its dot, the switch and its thumb, the slider thumb, the avatar and the avatar
   group's count. It also checks the contrast of each text colour on each
-  surface the components draw it on, and of the focus outline and the field and state edges.
+  surface the components draw it on, of the focus outline and the field and state edges, and of a
+  priority's track against its filled bars and each row fill.
