@@ -7,7 +7,7 @@ import { answerRequests } from "./upstream";
  * answered by upstream's shell answers, or fails the test (bunfig.toml).
  */
 export function holdReads(...paths: string[]): void {
-  answerRequests(...paths.map((path) => http.get(path, () => new Promise<Response>(() => {}))));
+  answerReads(paths, () => undefined);
 }
 
 /** The reads the shell's header and sidebar make. */
@@ -29,16 +29,17 @@ export function holdShellReads(): void {
 }
 
 /**
- * Answers the shell's reads by address for the rest of the test: `answer` gives a read its
+ * Answers the reads at `paths` by address for the rest of the test: `answer` gives a read its
  * response, and a read it leaves out stays pending. `asked` lists each read as it arrives. A
  * request to any other route is still upstream's to answer, or fails the test.
  */
-export function answerShellReads(answer: (url: string) => Response | undefined): {
-  asked: string[];
-} {
+export function answerReads(
+  paths: readonly string[],
+  answer: (url: string) => Response | undefined
+): { asked: string[] } {
   const asked: string[] = [];
   answerRequests(
-    ...SHELL_READS.map((path) =>
+    ...paths.map((path) =>
       http.get(path, ({ request }) => {
         asked.push(request.url);
         return answer(request.url) ?? new Promise<Response>(() => {});
@@ -48,7 +49,18 @@ export function answerShellReads(answer: (url: string) => Response | undefined):
   return { asked };
 }
 
+/** `answerReads` for the reads of the shell's header and sidebar. */
+export const answerShellReads = (answer: (url: string) => Response | undefined) =>
+  answerReads(SHELL_READS, answer);
+
 export const json = (body: unknown, status = 200) => Response.json(body, { status });
+
+/** The server's refusal of a read that failed on its side. */
+export const readFailed = () => json({ code: "INTERNAL", error: "internal server error" }, 500);
+
+/** The server's refusal of the credential requests read while the secrets broker is down. */
+export const brokerUnreachable = () =>
+  json({ code: "AGENT_SECRETS_UNAVAILABLE", error: "the secrets broker is unreachable" }, 503);
 
 /** Waits until `done` holds, on upstream's budget, and fails the test when it never does. */
 export const waitFor = (done: () => boolean) =>

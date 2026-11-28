@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { answerShellReads, json, waitFor } from "../../tests/network";
+import { answerShellReads, json, readFailed, waitFor } from "../../tests/network";
 import { settle, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
@@ -86,7 +86,7 @@ describe("CompactHeader", () => {
       (url) =>
         url.includes("/api/v1/me/agents/state")
           ? json({ one: { unread_replies: 2 } })
-          : inboxReads(() => json(INBOX_TWO_FOR_READER), 3)(url)
+          : inboxReads({ inbox: () => INBOX_TWO_FOR_READER, unread: 3 })(url)
     );
     const agentsLink = () => header.querySelector('a[href="/agents"]');
     const mark = () => header.querySelector('[data-slot="attention-mark"]');
@@ -103,7 +103,7 @@ describe("CompactHeader", () => {
   test("with nothing waiting on the reader, the Inbox shows its unread threads, muted", async () => {
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      inboxReads(() => json([]), 3)
+      inboxReads({ unread: 3 })
     );
     const count = () => header.querySelector('a[href="/"] [data-slot="count"]');
     await waitFor(() => count() !== null);
@@ -117,7 +117,7 @@ describe("CompactHeader", () => {
     let failing = true;
     const header = mount(
       <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
-      inboxReads(() => (failing ? json({ error: { code: "INTERNAL" } }, 500) : json([])), 3),
+      inboxReads({ inbox: () => (failing ? readFailed() : []), unread: 3 }),
       new QueryClient({ defaultOptions: { queries: { retry: false } } })
     );
     const retry = () =>
