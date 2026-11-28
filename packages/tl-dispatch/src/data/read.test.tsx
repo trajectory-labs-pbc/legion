@@ -3,7 +3,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { http } from "msw";
 import { useState } from "react";
 
-import { ApiError, DispatchQueryClient } from "@/upstream/api";
+import { ApiError, DispatchQueryClient, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
 import { issueQuery, projectsQuery } from "@/upstream/queries";
 import { mount } from "../../tests/mount";
 import { json } from "../../tests/network";
@@ -102,6 +102,26 @@ describe("useRead", () => {
     await until(() => read().state === "error");
     expect(Reflect.get(read(), "refusal")).toBeUndefined();
     expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+  });
+
+  test("the rolling-release 404 is a failure that can be tried again", async () => {
+    const rolling = new ApiError(404, {
+      code: "NOT_FOUND",
+      error: NO_ROUTE_ROLLING_RELEASE_MESSAGE,
+    });
+    let read: Read<unknown> = { state: "loading" };
+    function Probe() {
+      read = useRead({ queryKey: ["rolling"], queryFn: () => Promise.reject(rolling) });
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={newClient()}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => read.state === "error");
+    expect(Reflect.get(read, "refusal")).toBeUndefined();
+    expect(Reflect.get(read, "retry")).toBeInstanceOf(Function);
   });
 
   test("a refusal holds while the read is asked again, with no Retry meanwhile", async () => {
