@@ -4,6 +4,7 @@
 // the pull request's design review reads (test-results, which CI uploads).
 import type { Locator, Page } from "@playwright/test";
 
+import { main } from "./page";
 import { expect, test } from "./seed";
 
 const WIDTHS = [1440, 1024, 390] as const;
@@ -58,11 +59,10 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await expect(newView(page)).toBeVisible();
 
   // Later starts folded; the pointer and the keyboard each open and close it.
-  const main = page.getByRole("main");
-  const fold = main.getByRole("button", { name: /^Later/ });
+  const fold = main(page).getByRole("button", { name: /^Later/ });
   await expect(fold).toHaveAttribute("aria-expanded", "false");
   await fold.click();
-  await expect(main.getByText(later.text).first()).toBeVisible();
+  await expect(main(page).getByText(later.text).first()).toBeVisible();
   await fold.press("Enter");
   await expect(fold).toHaveAttribute("aria-expanded", "false");
 

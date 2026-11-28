@@ -37,6 +37,12 @@ export const NEEDS_YOU_GROUP_KEY = "needs-you";
 export interface InboxList {
   groups: readonly InboxGroup[];
   own: boolean;
+  /** The signed-in person's login. */
+  viewer: string;
+  /** The search box's words. */
+  words: readonly string[];
+  /** The instant the list was grouped at, which its rows' ages read too. */
+  now: number;
 }
 
 /** Whether a group starts folded: Later, until the reader opens it. */
@@ -57,20 +63,18 @@ const asksOnly = ({ agent, section }: InboxListAddress) =>
  * snoozed asks last, in Later (INB-56, INB-57, INB-59).
  */
 function needsYouGroups(rows: readonly InboxListRow[], context: GroupingContext): InboxGroup[] {
-  const bands = group(rows, "waiting-on", context);
-  const first = bands.find((band) => band.key === "human");
-  const later = bands.find((band) => band.key === LATER_GROUP_KEY);
-  const elsewhere = new Set([...(first?.rows ?? []), ...(later?.rows ?? [])]);
+  const needsYou = (row: InboxListRow) => sectionOf(row, context.now) === "human";
+  const first = rows.filter(needsYou);
   return [
-    ...(first === undefined
+    ...(first.length === 0
       ? []
-      : [{ key: NEEDS_YOU_GROUP_KEY, label: context.titles.human, rows: first.rows }]),
+      : [{ key: NEEDS_YOU_GROUP_KEY, label: context.titles.human, rows: first }]),
+    // Upstream's urgency grouping puts the snoozed asks in Later, last.
     ...group(
-      rows.filter((row) => !elsewhere.has(row)),
+      rows.filter((row) => !needsYou(row)),
       "urgency",
       context
     ),
-    ...(later === undefined ? [] : [later]),
   ];
 }
 
@@ -120,6 +124,9 @@ export function inboxList({
         ? needsYouGroups(sorted, context)
         : group(sorted, address.group, context),
     own: isOwnList(selection, viewer),
+    viewer,
+    words,
+    now,
   };
 }
 

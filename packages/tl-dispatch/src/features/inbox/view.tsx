@@ -1,10 +1,9 @@
 import { EmptyState } from "@legion/ui/blocks/states";
 import type { ReactNode } from "react";
 
-import { credentialsHoldEmptyList, searchWordsOf } from "@/data/inbox/empty-list";
+import { credentialsHoldEmptyList } from "@/data/inbox/empty-list";
 import { useInboxList } from "@/data/inbox/list";
 import { useCredentialRequests } from "@/data/inbox/reads";
-import { useSession } from "@/data/session";
 import { useInboxAddress } from "@/navigation/hooks";
 import { PageLink } from "@/navigation/page-link";
 import { routes } from "@/navigation/routes";
@@ -25,14 +24,13 @@ const TABS = [
 export function InboxView(): ReactNode {
   const address = useInboxAddress();
   const list = useInboxList(address);
-  const session = useSession();
   const credentials = useCredentialRequests();
   const empty =
     list.state === "ready" && list.data.groups.length === 0
       ? emptyList({
           address,
-          words: searchWordsOf(address.q),
-          viewer: session.state === "ready" ? session.data.login : undefined,
+          words: list.data.words,
+          viewer: list.data.viewer,
           agentName: undefined,
           credentialsHold: credentialsHoldEmptyList(credentials),
         })
@@ -50,7 +48,7 @@ export function InboxView(): ReactNode {
           read={list}
         >
           {list.state === "ready" ? (
-            <InboxGroups grouping={address.group} list={list.data} now={new Date()} />
+            <InboxGroups grouping={address.group} list={list.data} />
           ) : null}
         </InboxListBoundary>
       )}

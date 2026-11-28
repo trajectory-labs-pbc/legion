@@ -25,7 +25,8 @@ function setup(overrides: Partial<GlobalActions> = {}) {
     toggleInboxDrawer: log("inbox drawer"),
     toggleSidebar: log("sidebar"),
     toggleMargin: { label: "Toggle margin", run: log("margin") },
-    inboxPreview: { on: false, turn: (on) => calls.push(`preview ${on}`) },
+    previewInbox: log("preview"),
+    leaveInboxPreview: undefined,
     ...overrides,
   };
   const view = render(<Harness actions={actions} />);
@@ -143,14 +144,14 @@ describe("the shell's global commands", () => {
       .actions()
       .find((action) => action.label === "Preview the new Inbox")
       ?.run();
-    expect(calls).toEqual(["preview true"]);
-    rerender({ inboxPreview: { on: true, turn: (on) => calls.push(`preview ${on}`) } });
+    expect(calls).toEqual(["preview"]);
+    rerender({ previewInbox: undefined, leaveInboxPreview: log("leave") });
     expect(offered()).toEqual(["Leave the Inbox preview"]);
     appKeymap
       .actions()
       .find((action) => action.label === "Leave the Inbox preview")
       ?.run();
-    expect(calls).toEqual(["preview true", "preview false"]);
+    expect(calls).toEqual(["preview", "leave"]);
   });
 
   test("Shift+M names what it opens", () => {

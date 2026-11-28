@@ -27,32 +27,31 @@ function InboxGroupHeader({ group, own }: { group: InboxGroup; own: boolean }): 
 export function InboxGroups({
   list,
   grouping,
-  now,
 }: {
   list: InboxList;
   grouping: InboxGrouping;
-  now: Date;
 }): ReactNode {
-  return list.groups.map((group) => (
-    <Collapsible defaultOpen={!foldedAtFirst(group.key)} key={group.key}>
-      <InboxGroupHeader group={group} own={list.own} />
-      <CollapsibleContent>
-        {group.rows.map((row) => {
-          const facts = rowFacts(row);
-          const { owner, title, preview } = rowText(row);
-          return (
-            <InboxRowView
-              facts={facts}
-              key={facts.id}
-              now={now}
-              owner={owner}
-              preview={preview}
-              title={title}
-              urgencyShown={!groupShowsUrgency(grouping, group.key)}
-            />
-          );
-        })}
-      </CollapsibleContent>
-    </Collapsible>
-  ));
+  const now = new Date(list.now);
+  return list.groups.map((group) => {
+    const urgencyShown = !groupShowsUrgency(grouping, group.key);
+    return (
+      <Collapsible defaultOpen={!foldedAtFirst(group.key)} key={group.key}>
+        <InboxGroupHeader group={group} own={list.own} />
+        <CollapsibleContent>
+          {group.rows.map((row) => {
+            const facts = rowFacts(row);
+            return (
+              <InboxRowView
+                facts={facts}
+                key={facts.id}
+                now={now}
+                urgencyShown={urgencyShown}
+                {...rowText(row)}
+              />
+            );
+          })}
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  });
 }
