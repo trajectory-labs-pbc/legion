@@ -92,7 +92,7 @@ function ListRow({
     >
       {hasLeading || hasSelect ? (
         // The row's left edge, padding included: the pointer on it shows the box.
-        <span className="group/list-row-start relative z-10 -ml-3 grid shrink-0 place-items-center pl-3 *:col-start-1 *:row-start-1">
+        <span className="group/list-row-start relative z-raised -ml-3 grid shrink-0 place-items-center pl-3 *:col-start-1 *:row-start-1">
           {hasLeading ? (
             <span
               className={cn(
