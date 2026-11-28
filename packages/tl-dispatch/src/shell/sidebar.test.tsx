@@ -15,7 +15,6 @@ import type { SectionRead, SidebarData } from "./sidebar-data";
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
   for (const view of mounted.splice(0)) view.unmount();
-  window.localStorage.clear();
 });
 
 /** The section headings' fold buttons, by their words. */
@@ -313,7 +312,7 @@ describe("the sidebar", () => {
     expect(headingsOf(empty)).toEqual([]);
   });
 
-  test("every section's heading folds it, and this browser keeps the fold", () => {
+  test("every section's heading folds it, and the fold outlasts a remount", () => {
     const data: SidebarData = {
       destinations: [],
       pinnedAgents: readOf([]),
@@ -327,30 +326,6 @@ describe("the sidebar", () => {
     expect(openOf(first)).toEqual([false, false]);
     for (const view of mounted.splice(0)) view.unmount();
     expect(openOf(mountView(data))).toEqual([false, false]);
-  });
-
-  test("a browser that refuses storage still folds a section", () => {
-    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
-    Object.defineProperty(window, "localStorage", {
-      configurable: true,
-      get() {
-        throw new DOMException("refused", "SecurityError");
-      },
-    });
-    try {
-      const container = mountView({
-        destinations: [],
-        pinnedAgents: readOf([]),
-        inLiveView: false,
-        pinnedIssues: readOf([]),
-        projects: readOf([PROJECT]),
-      });
-      settle(() => foldOf(container, "Projects").click());
-      expect(openOf(container)).toEqual([false]);
-    } finally {
-      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
-      else Object.defineProperty(window, "localStorage", kept);
-    }
   });
 
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {

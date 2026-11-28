@@ -14,7 +14,8 @@ A type-only import is read too, because a lower layer that names a type of a hig
 Ask these questions in order, and stop at the first yes.
 
 1. Does it draw from props alone, with no data, no router and no app file? It goes to `packages/ui`.
-2. Does it read or write the browser's storage, or set the unload prompt? It goes to `src/browser`.
+2. Does it set the unload prompt, or read or write one of upstream's storage keys? It goes to `src/browser`.
+   Is it state the fork keeps in the browser? It is a store in `src/stores`.
 3. Does it only re-export upstream's code by name? It goes to `src/upstream`.
 4. Is it a hook through which a view reads or writes server data? It goes to `src/data`.
 5. Is it a command, the router or a chunk loader? It goes to `src/commands`, `src/navigation` or `src/loading`.
@@ -43,10 +44,12 @@ A test file under `src/` is in the layer of the file it tests; a test directly u
 A file under `tests/` is in the layer `tests`, which may import each layer of the app.
 Only a test imports a file of `tests/`, or any other file of the package outside `src/`, such as `vite.config.ts` or a script.
 
-## One row: commands, navigation and loading (`one-row`)
+## One row: the layers that do not import each other (`one-row`)
 
-The three folders of one row do not import each other, with two exceptions for `src/commands`: it imports `src/loading`, and the one file `src/navigation/routes.ts`, which holds the route paths.
+The folders of one row do not import each other.
+`src/commands`, `src/navigation` and `src/loading` are one row, with two exceptions for `src/commands`: it imports `src/loading`, and the one file `src/navigation/routes.ts`, which holds the route paths.
 A command takes callbacks named for what it does, so it needs no router; `src/navigation` imports neither of the other two.
+`src/stores` shares the seam's row: a store imports only `src/browser`, the seam never imports a store, and each layer below them may import both.
 
 ## Only the seam imports upstream (`only-the-seam-imports-upstream`)
 

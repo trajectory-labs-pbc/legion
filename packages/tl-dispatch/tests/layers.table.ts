@@ -31,7 +31,10 @@ export type Rule = (typeof RULES)[number];
  */
 export const ROWS = [
   [{ layer: "browser", paths: ["src/browser"] }],
-  [{ layer: "upstream", paths: ["src/upstream"] }],
+  [
+    { layer: "upstream", paths: ["src/upstream"] },
+    { layer: "stores", paths: ["src/stores"] },
+  ],
   [{ layer: "data", paths: ["src/data"] }],
   [
     { layer: "commands", paths: ["src/commands"] },
@@ -154,6 +157,12 @@ export const LIBRARIES: readonly {
     owners: ["data", "app"],
     tests: true,
     reason: "a fork view reads and writes through src/data, never through the query library",
+  },
+  {
+    name: /^zustand(\/|$)/,
+    owners: ["stores"],
+    tests: false,
+    reason: "what the browser keeps is in src/stores; the app reads it through each store",
   },
   {
     name: /^@base-ui\//,

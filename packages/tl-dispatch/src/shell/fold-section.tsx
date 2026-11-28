@@ -1,14 +1,13 @@
 import { Button } from "@legion/ui/components/button";
 import { Heading } from "@legion/ui/components/heading";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
-import { forkKeys } from "@/browser/storage";
-
-const folds = forkKeys.sidebarFolded;
+import { type ReactNode, useId } from "react";
+import { useUiPreferences } from "@/stores/ui-preferences";
 
 /** A sidebar section under a heading that folds it; this browser keeps the fold. */
 export function FoldSection({ children, heading }: { children: ReactNode; heading: string }) {
-  const [open, setOpen] = useState(() => folds.get(heading) !== true);
+  const open = !useUiPreferences((s) => s.sidebarFolds[heading]);
+  const toggleSidebarFold = useUiPreferences((s) => s.toggleSidebarFold);
   const bodyId = useId();
   return (
     <section>
@@ -16,12 +15,7 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
         <Button
           aria-controls={open ? bodyId : undefined}
           aria-expanded={open}
-          onClick={() => {
-            const folding = open;
-            setOpen(!folding);
-            if (folding) folds.set(heading, true);
-            else folds.remove(heading);
-          }}
+          onClick={() => toggleSidebarFold(heading)}
           size="xs"
           variant="ghost"
         >
