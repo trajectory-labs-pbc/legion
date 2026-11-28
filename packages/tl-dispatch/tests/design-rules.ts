@@ -365,7 +365,7 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
 function styleKind(property: string): string | undefined {
   if (COLOUR_PROPERTY.test(property)) return "a colour";
   if (/radius$/.test(property)) return "a radius";
-  if (/^(min-|max-)?(height|block-size)$/.test(property)) return "a height";
+  if (/^(min-|max-)?(height|block-size|logical-height)$/.test(property)) return "a height";
   if (/^(animation|transition)/.test(property)) return "motion";
   if (property === "scale") return "a scale";
   if (property === "cursor") return "a cursor";
@@ -475,12 +475,13 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // A dashed key as written; a leading `webkit` as the DOM's prefix (`ms` too: it sets nothing).
+  // A dashed key as written, but Chromium reads `webkit-` as `-webkit-`; a camelCase key's leading
+  // `webkit` or `ms` is its prefix (`ms` sets nothing, so that only refuses more).
   const styleKey = (
     node: ts.Node,
     key: string,
     property = key.includes("-")
-      ? key
+      ? key.replace(/^webkit-/, "-webkit-")
       : key
           .replace(/^(webkit|ms)(?=[A-Z])/, "-$1")
           .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
