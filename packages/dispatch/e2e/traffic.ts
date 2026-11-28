@@ -73,6 +73,8 @@ export interface ApiRequests {
    *  `networkidle`, which calls a page idle after 500 ms and so stops counting before a read
    *  that waits on another read's answer has been sent. */
   quietFor(ms: number): boolean;
+  /** The requests still in flight, as `<resourceType> <method> <url>`. */
+  pending(): string[];
   /** Every request since the last `reset`, in the order the page sent them. */
   readonly requests: readonly ApiRequest[];
   reset(): void;
@@ -134,6 +136,8 @@ export function watchApiRequests(page: Page): ApiRequests {
         .map(([route, count]) => ({ count, route }))
         .sort((a, b) => b.count - a.count || a.route.localeCompare(b.route));
     },
+    pending: () =>
+      [...inFlight].map((r) => `${r.resourceType()} ${r.method()} ${r.url()}`),
     quietFor: (ms) => inFlight.size === 0 && Date.now() - lastSettledAt >= ms,
     requests,
     reset: () => {
@@ -154,10 +158,18 @@ const LOAD_QUIET_MS = 1_500;
  *  less than a read waiting on another read's answer takes under load, so what it yields is
  *  whatever had arrived by then rather than what the load costs. */
 export async function expectLoadSettled(traffic: ApiRequests): Promise<void> {
-  await expect
-    .poll(() => traffic.quietFor(LOAD_QUIET_MS), {
-      message: "the page never went quiet, so its first load has no settled cost",
-      timeout: 30_000,
-    })
-    .toBe(true);
+  try {
+    await expect
+      .poll(() => traffic.quietFor(LOAD_QUIET_MS), {
+        message: "the page never went quiet, so its first load has no settled cost",
+        timeout: 30_000,
+      })
+      .toBe(true);
+  } catch (error) {
+    const pending = traffic.pending();
+    console.log(`INFLIGHT-DIAG ${pending.length}:\n${pending.join("\n")}`);
+    throw new Error(`still in flight (${pending.length}): ${pending.join(" | ")}`, {
+      cause: error,
+    });
+  }
 }
