@@ -79,9 +79,10 @@ function ListRow({
   const hasLeading = isDrawn(leading);
   const hasSelect = isDrawn(select);
   return (
+    // Its own layer, so its left edge's lift stays under a sticky group header.
     <div
       className={cn(
-        "group/list-row relative flex w-full min-w-0 shrink-0 items-stretch gap-2 px-3",
+        "group/list-row relative isolate flex w-full min-w-0 shrink-0 items-stretch gap-2 px-3",
         twoLines ? "h-list-row-2" : "h-list-row-1",
         "data-highlighted:bg-secondary data-selected:bg-muted data-selected:data-highlighted:bg-accent",
         className

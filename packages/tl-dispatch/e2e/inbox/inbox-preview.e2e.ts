@@ -68,6 +68,21 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await expect(fold).toBeInViewport();
   await expect(newView(page)).toBeInViewport();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  // The stuck header covers the rows scrolled under it, their avatars too.
+  const uncovered = await main(page)
+    .locator('[data-slot="group-header"]')
+    .first()
+    .evaluate((header) => {
+      const box = header.getBoundingClientRect();
+      const misses: string[] = [];
+      for (let x = box.left + 2; x < box.right; x += 8) {
+        for (const y of [box.top + 2, box.top + box.height / 2, box.bottom - 2]) {
+          if (!header.contains(document.elementFromPoint(x, y))) misses.push(`${x},${y}`);
+        }
+      }
+      return misses;
+    });
+  expect(uncovered).toEqual([]);
 
   // Later starts folded; the pointer and the keyboard each open and close it.
   await expect(fold).toHaveAttribute("aria-expanded", "false");
