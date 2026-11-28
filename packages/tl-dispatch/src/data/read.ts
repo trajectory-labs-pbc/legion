@@ -102,19 +102,15 @@ export function useRead<TQueryFnData, TError, TQueryKey extends QueryKey, T = TQ
 ): Read<T, TError> {
   const query = useQuery<TQueryFnData, TError, T, TQueryKey>({ ...options, select });
   const empty = query.isPending || query.isLoadingError;
+  const retrying = query.fetchStatus !== "idle";
   const [error] = useKeptFailures([
     empty
-      ? {
-          failure: query.error ?? undefined,
-          out: query.fetchStatus !== "idle",
-          query: hashKey(options.queryKey),
-        }
+      ? { failure: query.error ?? undefined, out: retrying, query: hashKey(options.queryKey) }
       : undefined,
   ]);
   if (empty) {
     // A view that mounts on a failed read, or moves to one, saw no failure of it yet.
     if (error === undefined) return { state: "loading" };
-    const retrying = query.fetchStatus !== "idle";
     const refusal = refusalOf(error);
     return refusal === undefined
       ? { state: "error", error: query.error, retrying, retry: () => void query.refetch() }

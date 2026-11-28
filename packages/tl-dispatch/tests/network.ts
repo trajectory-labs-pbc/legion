@@ -63,9 +63,13 @@ export const json = (body: unknown, status = 200) => Response.json(body, { statu
 /** The server's refusal of a read that failed on its side. */
 export const readFailed = () => json({ code: "INTERNAL", error: "internal server error" }, 500);
 
+/** The server's code for a failure answered with `status`. */
+const codeOf = (status: number) =>
+  status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL";
+
 /** The server's refusal of a read: a 403, or a 404 of a record it does not have. */
 export const readRefused = (status: 403 | 404) =>
-  json({ code: status === 403 ? "FORBIDDEN" : "NOT_FOUND", error: "no" }, status);
+  json({ code: codeOf(status), error: "no" }, status);
 
 /** The server's refusal of the credential requests read while the secrets broker is down. */
 export const brokerUnreachable = () =>
@@ -86,7 +90,4 @@ export const refusalLanded = (client: QueryClient, status: number) =>
 
 /** The client's error for a read the server answered with `status`, and `error` its words. */
 export const answered = (status: number, error = "no") =>
-  new ApiError(status, {
-    code: status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL",
-    error,
-  });
+  new ApiError(status, { code: codeOf(status), error });
