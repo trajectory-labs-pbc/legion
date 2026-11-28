@@ -6,6 +6,20 @@ import type { Artifact, IssueDetails } from "@/upstream/contract";
 import { type ProjectDocumentRoute, parseNodeReference } from "@/upstream/logic/reading-aids";
 import { issueQuery } from "@/upstream/queries";
 
+// What Read first draws its rows with, from upstream's contract and logic.
+export type { IssueAskRow, IssueDetails } from "@/upstream/contract";
+export {
+  actorLabelText,
+  askTurnHolder,
+  askUrgency,
+  askWaitingOnPerson,
+  buildDispatchReference,
+  documentRoute,
+  type TextSource,
+  textSourceOf,
+  URGENCY_LABELS,
+} from "@/upstream/logic/reading-aids";
+
 export type AidedOwner = { kind: "issue"; key: string } | { kind: "project"; project: string };
 
 /** The document an aided editor shows, as the host page's reads name it. */

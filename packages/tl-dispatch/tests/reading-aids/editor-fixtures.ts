@@ -1,6 +1,7 @@
 // The aids' unit tests' editors: upstream's options, a root inside given elements, and two
 // documents that relay their updates.
 
+import type { EditorView } from "@milkdown/kit/prose/view";
 import * as Y from "yjs";
 import { createAidedEditor } from "@/parts/reading-aids/aided-editor";
 import type { EditorHandle, EditorOptions } from "@/upstream/editor/frame";
@@ -47,6 +48,15 @@ export async function editorIn(
   ydoc = new Y.Doc()
 ): Promise<EditorHandle> {
   return keep(await createAidedEditor(root, options(ydoc, documentRef)));
+}
+
+/** The block ids of `view`'s document, in its order. */
+export function blockIdsOf(view: EditorView): string[] {
+  const ids: string[] = [];
+  view.state.doc.descendants((node) => {
+    if (typeof node.attrs.blockId === "string") ids.push(node.attrs.blockId);
+  });
+  return ids;
 }
 
 /** Keeps `handle` for `destroyEditors`. */
