@@ -69,6 +69,8 @@ test("INB-3 /replies lands on the Inbox's reply rows, with no history entry of i
   ]);
   const traffic = watchApiRequests(page);
   await openSettings(page);
+  // Settled first, so the goto cuts off no read of the settings page.
+  await expectLoadSettled(traffic);
   await page.goto("/replies");
   await expect(row(main(page), thread)).toBeVisible();
   await expect(page).toHaveURL((url) => url.pathname === "/");
@@ -243,8 +245,9 @@ test("INB-13 ?assignee= lists the reader's own, a person's, everyone's or nobody
     for (const value of assignee) query.append("assignee", value);
     await page.goto(`/?${query}`);
     await expect(inboxHeading(page)).toBeVisible();
-    // A row that shows is waited for; one that does not needs the page to have settled.
-    if (!shows) await expectLoadSettled(traffic);
+    // Every step settles before the next one navigates: a goto that cuts off a read still in
+    // flight can leave it with no finished or failed event, and then the page never goes quiet.
+    await expectLoadSettled(traffic);
     await expect(row(main(page), mine)).toHaveCount(shows ? 1 : 0);
   };
   await listed([], true);
