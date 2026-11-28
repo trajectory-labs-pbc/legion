@@ -15,6 +15,7 @@ const ASKS = [
   ask("mine", { urgency: "high" }),
   ask("agents", { waiting_on: "agent", urgency: "blocking" }),
   ask("snoozed", { snoozed_until: "2026-11-26T09:00:00Z", urgency: "high" }),
+  ask("theirs", { waiting_on_person: "someone" }),
 ];
 const list = (address: Partial<InboxListAddress>) =>
   inboxList({

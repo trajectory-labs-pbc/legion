@@ -1,6 +1,7 @@
 // Loaded before every test file, after upstream's preloads (bunfig.toml).
 import { afterEach, beforeEach } from "bun:test";
 import { loadHotkeyTooltip } from "@/commands/hotkey-tooltip";
+import { useInboxPreview } from "@/stores/inbox-preview";
 import { useUiPreferences } from "@/stores/ui-preferences";
 import { resetWidth } from "./viewport";
 
@@ -20,5 +21,6 @@ beforeEach(resetWidth);
 // memory between tests. The reset writes the store's key, so the clear comes after it.
 beforeEach(() => {
   useUiPreferences.setState(useUiPreferences.getInitialState(), true);
+  useInboxPreview.setState(useInboxPreview.getInitialState(), true);
   window.localStorage.clear();
 });

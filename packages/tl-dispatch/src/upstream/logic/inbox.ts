@@ -12,6 +12,7 @@ export {
   setAnswerDraft,
   useAnswerDraft,
 } from "@upstream-dispatch/features/inbox/answer-drafts";
+export { askIssueKey } from "@upstream-dispatch/features/inbox/ask-name";
 export {
   beginInboxFetch,
   clearPendingAskThreadInvalidation,

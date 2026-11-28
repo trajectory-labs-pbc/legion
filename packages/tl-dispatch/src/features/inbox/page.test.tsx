@@ -11,7 +11,6 @@ import { InboxPage } from "./page";
 const mounted: { unmount(): void }[] = [];
 afterEach(() => {
   for (const view of mounted.splice(0)) view.unmount();
-  useInboxPreview.getState().turn(false);
 });
 
 describe("the Inbox page", () => {
@@ -21,7 +20,9 @@ describe("the Inbox page", () => {
     expect(document.querySelector("[data-upstream-view]")).not.toBeNull();
     expect(screen.queryByRole("navigation", { name: "Inbox views" })).toBeNull();
     act(() => useInboxPreview.getState().turn(true));
-    expect(await screen.findByRole("navigation", { name: "Inbox views" })).toBeDefined();
+    // Each read of the new list has landed once it says what an empty list says.
+    expect(await screen.findByText("Nothing needs you")).toBeDefined();
+    expect(screen.getByRole("navigation", { name: "Inbox views" })).toBeDefined();
     expect(document.querySelector("[data-upstream-view]")).toBeNull();
   });
 });

@@ -115,6 +115,8 @@ describe("the app's catalog", () => {
       "global.go-answered ",
       "global.go-machine-logins g n",
       "global.sign-out ",
+      "global.preview-inbox ",
+      "global.leave-inbox-preview ",
     ]);
   });
 

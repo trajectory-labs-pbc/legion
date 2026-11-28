@@ -66,7 +66,7 @@ export function useShellOverlays(
     };
   const inboxPreview = useInboxPreview();
   useGlobalCommands({
-    inboxPreview,
+    inboxPreview: { on: inboxPreview.on, turn: closing(inboxPreview.turn) },
     openSearch: closing(() => setSearchOpen(true)),
     toggleShortcuts: shortcuts.toggle,
     createIssue: closing(() => setCreateOpen(true)),

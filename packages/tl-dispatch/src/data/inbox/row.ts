@@ -1,5 +1,6 @@
 import type { AskUrgency, IssuePriority } from "@/upstream/contract";
 import {
+  askIssueKey,
   askUrgency,
   dimensionValue,
   dimensionValueLabel,
@@ -101,7 +102,7 @@ export function rowText(row: InboxListRow): RowText {
     const line = firstLine(question);
     const title = issue?.title ?? document?.name;
     return {
-      owner: issue?.key ?? document?.project,
+      owner: askIssueKey(row.ask) ?? document?.project,
       title: title ?? line,
       preview: title === undefined ? "" : line,
     };

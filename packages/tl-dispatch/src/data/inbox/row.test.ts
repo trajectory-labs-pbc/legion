@@ -59,7 +59,10 @@ describe("a row's words", () => {
       title: "Release train",
       preview: "Which release path?",
     });
-    const { issue: _issue, ...onNothing } = ask;
+    const { issue: _issue, ...onKeyOnly } = ask;
+    // A read without the issue object still names its issue by key, as upstream's rows do.
+    expect(rowText({ kind: "ask", ask: onKeyOnly }).owner).toBe("CORE-1");
+    const onNothing = { ...onKeyOnly, issue_key: null };
     expect(rowText({ kind: "ask", ask: onNothing })).toEqual({
       owner: undefined,
       title: "Which release path?",

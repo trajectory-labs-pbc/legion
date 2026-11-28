@@ -1,12 +1,15 @@
 import { Button } from "@legion/ui/components/button";
 import { SurfaceTitle } from "@legion/ui/components/heading";
 import type { ReactNode } from "react";
+import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink } from "@/navigation/page-link";
 import { routes } from "@/navigation/routes";
 import { useInboxPreview } from "@/stores/inbox-preview";
 import { READING_PANE_QUERY, useDocumentTitle, useMediaQuery } from "@/upstream/shell";
 import { Inbox } from "@/upstream/views/inbox/inbox";
-import { InboxView } from "./view";
+
+// Only a reader who turned the preview on loads the new Inbox's code.
+const InboxView = lazyNamed(() => import("./view"), "InboxView");
 
 /** Upstream's whole Inbox under today's header, for each person who has not turned on the preview. */
 function UpstreamInboxPage(): ReactNode {
