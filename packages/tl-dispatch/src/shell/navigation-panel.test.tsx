@@ -76,13 +76,15 @@ describe("NavigationPanel", () => {
     expect(fired).toEqual(["global.sign-out"]);
   });
 
-  test("the account's menu opens the reader's own page", async () => {
+  test("the account's menu opens the reader's own page, and marks its icon inline-start", async () => {
     const container = mount(panel({}));
     await openAccount(container);
     const page = [...document.body.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')].find(
       (item) => item.textContent === "Your page"
     );
     expect(page?.getAttribute("href")).toBe("/people/reader");
+    // The menu gives every other row the icon's room only for a marked icon.
+    expect(page?.querySelector("svg")?.getAttribute("data-icon")).toBe("inline-start");
   });
 
   test("while a sign-out is out, the account shows it is busy", () => {

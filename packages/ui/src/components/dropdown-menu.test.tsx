@@ -180,14 +180,19 @@ function loadDrawnCss(): void {
 const keepsIconRoom = (node: Element) =>
   getComputedStyle(node).paddingInlineStart === "calc(4px * 8)";
 
-/** Opens a menu holding `rows`, and says, for each row named in `names`, whether it keeps an icon's room. */
-async function roomOf(rows: ReactNode, names: readonly string[]): Promise<Record<string, boolean>> {
+/** Opens a dropdown menu holding `rows`. */
+function openMenu(rows: ReactNode): void {
   render(
     <DropdownMenu defaultOpen>
       <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
       <DropdownMenuContent>{rows}</DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+/** Opens a menu holding `rows`, and says, for each row named in `names`, whether it keeps an icon's room. */
+async function roomOf(rows: ReactNode, names: readonly string[]): Promise<Record<string, boolean>> {
+  openMenu(rows);
   return roomOfShown(names);
 }
 
@@ -200,39 +205,57 @@ async function roomOfShown(names: readonly string[]): Promise<Record<string, boo
   return Object.fromEntries(found.map(([name, node]) => [name, keepsIconRoom(node)]));
 }
 
+/** The computed style of an element that must exist. */
+function styleOf(node: Element | null | undefined, what: string): CSSStyleDeclaration {
+  if (node == null) throw new Error(`no ${what}`);
+  return getComputedStyle(node);
+}
+
+/** Which separators the open menu draws, by test id. */
+async function drawnSeparators(): Promise<(string | undefined)[]> {
+  await screen.findByRole("menu");
+  loadDrawnCss();
+  return screen
+    .getAllByRole("separator", { hidden: true })
+    .filter((separator) => getComputedStyle(separator).display !== "none")
+    .map((separator) => separator.dataset.testid);
+}
+
 describe("DropdownMenu's drawn rows", () => {
   it("draws a separator only between rows: none first, none last, one where two meet", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuSeparator data-testid="first-1" />
-          <DropdownMenuSeparator data-testid="first-2" />
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Copy</DropdownMenuLabel>
-            <DropdownMenuItem>Link</DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator data-testid="after-group" />
-          <DropdownMenuItem>Rename</DropdownMenuItem>
-          <DropdownMenuSeparator data-testid="pair-1" />
-          <DropdownMenuSeparator data-testid="pair-2" />
-          <DropdownMenuItem>Archive</DropdownMenuItem>
-          <DropdownMenuSeparator data-testid="before-group" />
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Move</DropdownMenuLabel>
-            <DropdownMenuItem>Backlog</DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator data-testid="last" />
-        </DropdownMenuContent>
-      </DropdownMenu>
+    openMenu(
+      <>
+        <DropdownMenuSeparator data-testid="first-1" />
+        <DropdownMenuSeparator data-testid="first-2" />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Copy</DropdownMenuLabel>
+          <DropdownMenuItem>Link</DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator data-testid="after-group" />
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+        <DropdownMenuSeparator data-testid="pair-1" />
+        <DropdownMenuSeparator data-testid="pair-2" />
+        <DropdownMenuItem>Archive</DropdownMenuItem>
+        <DropdownMenuSeparator data-testid="before-group" />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Move</DropdownMenuLabel>
+          <DropdownMenuItem>Backlog</DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator data-testid="last" />
+      </>
     );
-    await screen.findByRole("menu");
-    loadDrawnCss();
-    const drawn = screen
-      .getAllByRole("separator", { hidden: true })
-      .filter((separator) => getComputedStyle(separator).display !== "none")
-      .map((separator) => separator.dataset.testid);
-    expect(drawn).toEqual(["after-group", "pair-2", "before-group"]);
+    expect(await drawnSeparators()).toEqual(["after-group", "pair-2", "before-group"]);
+  });
+
+  it("draws no separator first, even right before a row", async () => {
+    openMenu(
+      <>
+        <DropdownMenuSeparator data-testid="first" />
+        <DropdownMenuItem>Rename</DropdownMenuItem>
+        <DropdownMenuItem>Archive</DropdownMenuItem>
+      </>
+    );
+    expect(await drawnSeparators()).toEqual([]);
   });
 
   it("gives every other row and each label the room when a row marks its icon inline-start, and none in its open submenu", async () => {
@@ -276,21 +299,7 @@ describe("DropdownMenu's drawn rows", () => {
         </DropdownMenuSub>
       </>
     );
-    expect(
-      await roomOf(rows, [
-        "Copy link",
-        "Assign to me",
-        "Wrapped",
-        "List",
-        "Board",
-        "Docs",
-        "Open",
-        "Rename",
-        "Move",
-        "Move to",
-        "Backlog",
-      ])
-    ).toEqual({
+    const want = {
       "Copy link": false,
       "Assign to me": false,
       Wrapped: false,
@@ -302,7 +311,8 @@ describe("DropdownMenu's drawn rows", () => {
       Move: true,
       "Move to": true,
       Backlog: false,
-    });
+    };
+    expect(await roomOf(rows, Object.keys(want))).toEqual(want);
   });
 
   it("keeps no room in a menu whose rows mark no icon, though its open submenu marks one", async () => {
@@ -317,7 +327,6 @@ describe("DropdownMenu's drawn rows", () => {
           <DropdownMenuLabel>View</DropdownMenuLabel>
           <DropdownMenuRadioGroup value="list">
             <DropdownMenuRadioItem value="list">List</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="board">Board</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
         <DropdownMenuLinkItem href="#docs">Docs</DropdownMenuLinkItem>
@@ -333,29 +342,17 @@ describe("DropdownMenu's drawn rows", () => {
         </DropdownMenuSub>
       </>
     );
-    expect(
-      await roomOf(rows, [
-        "Copy link",
-        "Rename",
-        "View",
-        "List",
-        "Board",
-        "Docs",
-        "Move to",
-        "Backlog",
-        "Done",
-      ])
-    ).toEqual({
+    const want = {
       "Copy link": false,
       Rename: false,
       View: false,
       List: false,
-      Board: false,
       Docs: false,
       "Move to": false,
       Backlog: false,
       Done: true,
-    });
+    };
+    expect(await roomOf(rows, Object.keys(want))).toEqual(want);
   });
 
   it("keeps no room in a menu whose only icon is marked inline-end", async () => {
@@ -368,7 +365,8 @@ describe("DropdownMenu's drawn rows", () => {
         <DropdownMenuItem>Rename</DropdownMenuItem>
       </>
     );
-    expect(await roomOf(rows, ["Open", "Rename"])).toEqual({ Open: false, Rename: false });
+    const want = { Open: false, Rename: false };
+    expect(await roomOf(rows, Object.keys(want))).toEqual(want);
   });
 
   it("gives a context menu's plain row the room when another row marks its icon", async () => {
@@ -385,20 +383,22 @@ describe("DropdownMenu's drawn rows", () => {
       </ContextMenu>
     );
     fireEvent.contextMenu(screen.getByText("Row"));
-    expect(await roomOfShown(["Copy link", "Rename"])).toEqual({
-      "Copy link": false,
-      Rename: true,
-    });
+    const want = { "Copy link": false, Rename: true };
+    expect(await roomOfShown(Object.keys(want))).toEqual(want);
   });
 
-  it("keeps the room on a checkbox row, for its check, and on every row and label beside it", async () => {
+  it("keeps the room on a checked checkbox row, for its check, and on every row and label beside it", async () => {
     const rows = (
       <>
-        <DropdownMenuCheckboxItem>Show done</DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem checked>Show done</DropdownMenuCheckboxItem>
         <DropdownMenuItem>Rename</DropdownMenuItem>
         <DropdownMenuGroup>
           <DropdownMenuLabel>View</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value="list">
+            <DropdownMenuRadioItem value="board">Board</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
+        <DropdownMenuLinkItem href="#docs">Docs</DropdownMenuLinkItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
@@ -407,12 +407,15 @@ describe("DropdownMenu's drawn rows", () => {
         </DropdownMenuSub>
       </>
     );
-    expect(await roomOf(rows, ["Show done", "Rename", "View", "Move to"])).toEqual({
+    const want = {
       "Show done": true,
       Rename: true,
       View: true,
+      Board: true,
+      Docs: true,
       "Move to": true,
-    });
+    };
+    expect(await roomOf(rows, Object.keys(want))).toEqual(want);
   });
 
   it("keeps a checkbox row's room for its check when the row holds a marked icon", async () => {
@@ -422,39 +425,54 @@ describe("DropdownMenu's drawn rows", () => {
         Show copies
       </DropdownMenuCheckboxItem>
     );
-    expect(await roomOf(rows, ["Show copies"])).toEqual({ "Show copies": true });
+    const want = { "Show copies": true };
+    expect(await roomOf(rows, Object.keys(want))).toEqual(want);
   });
 
-  it("draws a checkbox row's check at its start and a radio row's check at its end, with room for it", async () => {
-    render(
-      <DropdownMenu defaultOpen>
-        <DropdownMenuTrigger>Issue</DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuCheckboxItem checked>Show done</DropdownMenuCheckboxItem>
-          <DropdownMenuRadioGroup value="list">
-            <DropdownMenuRadioItem value="list">List</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+  it("places a checkbox row's check at its start, a radio row's at its end, and a shortcut and a chevron at the row's end", async () => {
+    openMenu(
+      <>
+        <DropdownMenuCheckboxItem checked>Show done</DropdownMenuCheckboxItem>
+        <DropdownMenuRadioGroup value="list">
+          <DropdownMenuRadioItem value="list">List</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuItem>
+          Rename
+          <DropdownMenuShortcut steps={[["R"]]} />
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Move to</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem>Backlog</DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </>
     );
     const checkbox = await screen.findByRole("menuitemcheckbox", { name: "Show done" });
     const radio = screen.getByRole("menuitemradio", { name: "List" });
+    const rename = screen.getByText("Rename");
+    const moveTo = screen.getByRole("menuitem", { name: "Move to" });
     loadDrawnCss();
-    const style = (node: Element | null) => (node ? getComputedStyle(node) : null);
-    const checkboxCheck = style(checkbox.firstElementChild);
-    const radioCheck = style(radio.firstElementChild);
+    const checkboxCheck = styleOf(checkbox.firstElementChild, "checkbox check");
+    const radioCheck = styleOf(radio.firstElementChild, "radio check");
+    const radioRow = styleOf(radio, "radio row");
     expect({
-      checkboxCheckStart: checkboxCheck?.insetInlineStart,
-      checkboxCheckEnd: checkboxCheck?.insetInlineEnd,
-      radioCheckStart: radioCheck?.insetInlineStart,
-      radioCheckEnd: radioCheck?.insetInlineEnd,
-      radioRowEnd: getComputedStyle(radio).paddingInlineEnd,
+      checkboxCheck: [
+        checkboxCheck.position,
+        checkboxCheck.insetInlineStart,
+        checkboxCheck.insetInlineEnd,
+      ],
+      radioCheck: [radioCheck.position, radioCheck.insetInlineStart, radioCheck.insetInlineEnd],
+      radioRow: [radioRow.position, radioRow.paddingInlineEnd],
+      shortcutStart: styleOf(rename.querySelector('[data-slot="kbd-sequence"]'), "shortcut")
+        .marginInlineStart,
+      chevronStart: styleOf(moveTo.lastElementChild, "chevron").marginInlineStart,
     }).toEqual({
-      checkboxCheckStart: "calc(4px * 2)",
-      checkboxCheckEnd: "",
-      radioCheckStart: "",
-      radioCheckEnd: "calc(4px * 2)",
-      radioRowEnd: "calc(4px * 8)",
+      checkboxCheck: ["absolute", "calc(4px * 2)", ""],
+      radioCheck: ["absolute", "", "calc(4px * 2)"],
+      radioRow: ["relative", "calc(4px * 8)"],
+      shortcutStart: "auto",
+      chevronStart: "auto",
     });
   });
 });
