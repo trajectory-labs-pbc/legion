@@ -116,7 +116,7 @@ const NAME_VALUES = new Set([
 const SKIPPED = /^@(keyframes|property)\b|^@layer properties$/;
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
-  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end)|column-rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
+  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end|start|end|before|after)|(column-|row-)?rule|text-decoration|filter|backdrop-filter)$|shadow|gradient/;
 const FOCUS_PROPERTY = new Set([
   "outline-color",
   "--tw-outline-color",
@@ -365,7 +365,7 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
 function styleKind(property: string): string | undefined {
   if (COLOUR_PROPERTY.test(property)) return "a colour";
   if (/radius$/.test(property)) return "a radius";
-  if (/^(min-|max-)?(height|block-size|logical-height)$/.test(property)) return "a height";
+  if (/^(min-|max-)?(height|block-size|logical-height|size)$/.test(property)) return "a height";
   if (/^(animation|transition)/.test(property)) return "motion";
   if (property === "scale") return "a scale";
   if (property === "cursor") return "a cursor";
@@ -475,16 +475,14 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // A dashed key as written, but Chromium reads `webkit-` as `-webkit-`; a camelCase key's leading
-  // `webkit` or `ms` is its prefix (`ms` sets nothing, so that only refuses more).
+  // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` (or `ms-`,
+  // which sets nothing) is then read as its prefix, as Chromium reads it.
   const styleKey = (
     node: ts.Node,
     key: string,
-    property = key.includes("-")
-      ? key.replace(/^webkit-/, "-webkit-")
-      : key
-          .replace(/^(webkit|ms)(?=[A-Z])/, "-$1")
-          .replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    property = (
+      key.includes("-") ? key : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    ).replace(/^(webkit|ms)-/, "-$1-")
   ) => {
     const rule = styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
@@ -527,7 +525,11 @@ function scriptViolations(
         refuse(node, node.getText(), RULES.styleProp);
       }
     }
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+    if (
+      ts.isBinaryExpression(node) &&
+      (node.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
+        node.operatorToken.kind === ts.SyntaxKind.PlusEqualsToken)
+    ) {
       const target = node.left;
       if (ts.isPropertyAccessExpression(target) && /\.style$/.test(target.expression.getText())) {
         if (target.name.text === "cssText") refuse(node, target.getText(), RULES.styleProp);

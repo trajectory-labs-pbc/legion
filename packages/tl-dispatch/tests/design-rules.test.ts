@@ -77,6 +77,10 @@ const REFUSED: readonly [string, string, string][] = [
   ["tsx", "<p style={{ webkitTransition: 'all 1s' }} />", "motion set in a style"],
   ["tsx", "<p style={{ 'webkit-transition': 'all 1s' }} />", "motion set in a style"],
   ["tsx", "<p style={{ WebkitLogicalHeight: 30 }} />", "a height set in a style"],
+  ["tsx", "<p style={{ WebkitBorderStart: '1px solid red' }} />", "a colour set in a style"],
+  ["tsx", "<p style={{ rowRule: '1px solid red' }} />", "a colour set in a style"],
+  ["tsx", "<p style={{ minSize: 30 }} />", "a height set in a style"],
+  ["tsx", "el.style.cssText += 'color: red';", "so the rule can read it"],
   ["tsx", "<p style={styles} />", "object literal"],
   ["tsx", "const panelStyle = { backgroundColor: 'red' };", "a colour set in a style"],
   ["tsx", "element.style.borderRadius = '4px';", "a radius set in a style"],
@@ -148,7 +152,8 @@ const ALLOWED: readonly [string, string][] = [
   ],
   ["tsx", '<a href="#b-r1">'],
   ["tsx", "<p style={{ top: 4, width: '50%' }} />"],
-  // Keys that set nothing: an odd-case dashed key, and a `setProperty` name with a vendor prefix but no leading dash.
+  // Keys that set nothing: an odd-case dashed key, and a `setProperty` name with a vendor
+  // prefix but no leading dash.
   ["tsx", "<p style={{ 'Box-Shadow': '0 0 1px red' }} />"],
   ["tsx", "<p style={{ '-Webkit-Transition': 'all 1s' }} />"],
   ["tsx", "el.style.setProperty('webkit-transition', 'all 1s');"],
