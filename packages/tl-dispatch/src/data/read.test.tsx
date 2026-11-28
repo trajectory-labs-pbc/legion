@@ -47,6 +47,23 @@ function mountNames(client = newClient()) {
 }
 
 describe("useRead", () => {
+  test("a read that loads and answers draws once while loading and once with its data", async () => {
+    answerProjects(() => projects("Alpha"));
+    const drawn: string[] = [];
+    function Probe() {
+      drawn.push(useRead(projectsQuery()).state);
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={newClient()}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => drawn.at(-1) === "ready");
+    await settle(async () => {});
+    expect(drawn).toEqual(["loading", "ready"]);
+  });
+
   test("a failed refresh keeps the data and says why", async () => {
     answerProjects(() => projects("Alpha"), failure);
     const { client, read } = mountNames();

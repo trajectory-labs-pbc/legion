@@ -86,7 +86,8 @@ export function useKeptFailures<F>(places: readonly FailurePlace<F>[]): readonly
     return { ...place, failure: before?.failure };
   });
   const changed = (place: FailurePlace<F>, index: number) =>
-    place?.failure !== seen[index]?.failure || place?.query !== seen[index]?.query;
+    place?.failure !== seen[index]?.failure ||
+    (place?.failure !== undefined && place.query !== seen[index]?.query);
   if (kept.some(changed)) setSeen(kept);
   return kept.map((place) => place?.failure);
 }
