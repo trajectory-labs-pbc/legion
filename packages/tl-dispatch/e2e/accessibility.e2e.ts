@@ -5,9 +5,10 @@
 // axe run reads those. Fork elements passed into a marked component sit in a `data-fork-view`
 // mark inside it, which the scan reads again. No scan and no width read runs with an upstream
 // dialog or overlay open: the new-version banner shows only after a new deploy, the chord
-// indicator only mid-chord, and a reference preview opens only on hover or keyboard focus, which
-// the Tab walk gives after both scans; the walk counts no stop in the card. The run seeds, so it
-// is local only: the deployed mode leaves this file out (modes.ts).
+// indicator only mid-chord, and a reference preview opens only on hover, keyboard focus or a caret
+// in an editor's link: no step points at a reference or puts a caret in one, and the Tab walk
+// gives the focus after both scans. The run seeds, so it is local only: the deployed mode leaves
+// this file out (modes.ts).
 //
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
