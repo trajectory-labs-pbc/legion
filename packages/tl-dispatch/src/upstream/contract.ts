@@ -13,6 +13,7 @@ export type {
   IssueAskRow,
   IssueDetails,
   LauncherCredentialResp,
+  LiveServerFrame,
   MyAnswerRow,
   MyReplyRow,
   RecordResponse,

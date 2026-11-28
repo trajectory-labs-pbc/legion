@@ -14,7 +14,8 @@ import {
   redrawFolds,
   setFoldQuery,
 } from "./folds";
-import { onForget, type Visit } from "./visit";
+import type { Visit } from "./visit";
+import { visitWiring } from "./visit-wiring";
 
 type VisitFolds = Visit["blockFolds"];
 
@@ -34,25 +35,10 @@ export interface BlockFolds extends Folds {
   subscribe(listener: () => void): () => void;
 }
 
-const byView = new WeakMap<EditorView, BlockFolds>();
-
-/** Each document's last attached visit folds, which a new editor of it starts from. */
-const byDocument = new Map<string, VisitFolds>();
-
-/** The editors whose document is not known yet, each with the reset of its own choices. */
-const unattached = new Map<EditorView, () => void>();
-
-onForget(() => {
-  byDocument.clear();
-  for (const reset of unattached.values()) reset();
-});
+const wiring = visitWiring<VisitFolds, BlockFolds>("block folds");
 
 /** The block folds of an aided editor. */
-export function blockFoldsOf(view: EditorView): BlockFolds {
-  const folds = byView.get(view);
-  if (folds === undefined) throw new Error("the editor has no block folds");
-  return folds;
-}
+export const blockFoldsOf = (view: EditorView): BlockFolds => wiring.of(view);
 
 interface FoldingBlock {
   readonly id: string;
@@ -72,34 +58,30 @@ function foldingBlocks(doc: Node): FoldingBlock[] {
 }
 
 function createBlockFolds(view: EditorView, documentRef: string) {
-  let visit: VisitFolds = byDocument.get(documentRef) ?? { choices: new Map() };
+  const known = wiring.start(documentRef);
+  let visit: VisitFolds = known ?? { choices: new Map() };
+  // Until the visit is known, the reader's choices and the first comparison join it at its attach.
+  let joins = known === undefined;
   let hasBlocks = false;
   const listeners = new Set<() => void>();
   const isFolded = (id: string) => !(visit.choices.get(id) ?? visit.touched?.has(id) ?? false);
   const changed = () => redrawFolds(view);
-  if (!byDocument.has(documentRef)) {
-    unattached.set(view, () => {
-      visit = { choices: new Map() };
-      changed();
-    });
-  }
   const folds: BlockFolds = {
     folded: (doc) => new Set(foldingBlocks(doc).flatMap(({ id }) => (isFolded(id) ? [id] : []))),
     open: (blockIds) => {
       for (const id of blockIds) visit.choices.set(id, true);
     },
     attach: (next) => {
-      byDocument.set(documentRef, next);
+      wiring.attached(documentRef, next);
       if (next === visit) return;
-      // What was chosen and compared before the visit was known joins it; a forgotten visit's does not.
-      if (unattached.has(view)) {
+      if (joins) {
         for (const [id, open] of visit.choices) {
           if (!next.choices.has(id)) next.choices.set(id, open);
         }
         next.touched ??= visit.touched;
       }
       visit = next;
-      unattached.delete(view);
+      joins = false;
       changed();
     },
     setTouched: (blockIds) => {
@@ -133,7 +115,12 @@ function createBlockFolds(view: EditorView, documentRef: string) {
     hasBlocks = next;
     for (const listener of listeners) listener();
   };
-  return { folds, publish };
+  const reset = () => {
+    visit = { choices: new Map() };
+    joins = true;
+    changed();
+  };
+  return { folds, publish, reset };
 }
 
 /** A head widget before each foldable block, keyed by its id and kind, so an edit keeps it. */
@@ -168,11 +155,6 @@ function headsPlugin(folds: BlockFolds, foldsKey: FoldsKey, publish: (has: boole
     view: (view) => {
       sync(view);
       return {
-        // Each new set of plugins destroys this view, so the drop waits for the editor's end.
-        destroy: () =>
-          queueMicrotask(() => {
-            if (view.isDestroyed || key.get(view.state) === undefined) unattached.delete(view);
-          }),
         update: (next, previous) => {
           const changed =
             key.getState(next.state) !== key.getState(previous) ||
@@ -186,8 +168,7 @@ function headsPlugin(folds: BlockFolds, foldsKey: FoldsKey, publish: (has: boole
 
 /** The block folds' plugins for `view`, whose folds `blockFoldsOf` then gives. */
 export function blockFoldsPlugins(view: EditorView, documentRef: string): Plugin[] {
-  const { folds, publish } = createBlockFolds(view, documentRef);
-  byView.set(view, folds);
+  const { folds, publish, reset } = createBlockFolds(view, documentRef);
   const { key, plugin } = foldsPlugin("reading-aids-block-folds", folds);
-  return [plugin, headsPlugin(folds, key, publish)];
+  return [wiring.add(view, folds, reset), plugin, headsPlugin(folds, key, publish)];
 }

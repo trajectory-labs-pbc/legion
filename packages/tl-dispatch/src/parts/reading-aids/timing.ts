@@ -1,4 +1,5 @@
 // The timings of the change marks' main-thread work, each a `performance.measure` under one name.
+import type { Transaction } from "@milkdown/kit/prose/state";
 import { useLayoutEffect } from "react";
 
 /** The one name every timing of the marks' work is measured under; its detail names the work. */
@@ -23,6 +24,10 @@ export function measured<T>(detail: string, work: () => T): T {
     record(detail, start);
   }
 }
+
+/** Does a fold redraw of `transaction`, timed with its edit's work or as a redraw of its own. */
+export const measuredRedraw = <T>(transaction: Transaction, work: () => T): T =>
+  measured(transaction.docChanged ? "folds" : "redraw", work);
 
 /** Times each render of the calling component, up to its layout effect. */
 export function useMeasuredRender(): void {

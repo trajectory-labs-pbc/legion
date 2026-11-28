@@ -1,20 +1,16 @@
 // Each requirement, check and plan task folds to its head line, and the reader's moves open it.
-
-import type { Locator } from "@playwright/test";
 import {
   createComment,
   createIssue,
   createIssueArtifact,
   editArtifact,
-  getArtifactBlocks,
-  getArtifactText,
 } from "../../../dispatch/e2e/api";
 import { documentEditor, marginCard, placeCaret, typeAtEnd } from "../../../dispatch/e2e/editor";
 import { navigateInApp } from "../../../dispatch/e2e/sends";
 import { AGENT, personOf, runProject } from "../flows";
 import { expect, type Page, test } from "../test";
 import { REVISE_REQUIREMENT, seedEditedSpec, TYPED_READ } from "./baseline-seed";
-import { head, openHost, uniqueName } from "./hosts";
+import { blockIdOf, bottom, head, openHost, top, uniqueName } from "./hosts";
 
 const SECOND_PARAGRAPH = "Its second paragraph, which a reference names.";
 const THIRD_PARAGRAPH =
@@ -54,15 +50,6 @@ const spec = (served: string) =>
     "A closing paragraph.",
     "",
   ].join("\n");
-
-/** The id of the block whose text is `text`, from the server's own block list. */
-async function blockIdOf(artifactId: string, text: string): Promise<string> {
-  const { markdown } = await getArtifactText(artifactId, AGENT);
-  const blocks = await getArtifactBlocks(artifactId, AGENT);
-  const block = blocks.find(({ from, to }) => markdown.slice(from, to) === text);
-  if (block === undefined) throw new Error(`no block reads ${JSON.stringify(text)}`);
-  return block.id;
-}
 
 interface Seeded {
   key: string;
@@ -130,12 +117,6 @@ async function seedSpec(page: Page): Promise<Seeded> {
 const block = (page: Page, blockId: string) =>
   documentEditor(page).locator(`[data-block-id="${blockId}"]`).first();
 
-async function top(locator: Locator): Promise<number> {
-  const box = await locator.boundingBox();
-  if (box === null) throw new Error("the element has no box");
-  return box.y;
-}
-
 test("block-folds: the head is a button whose own Enter and Space open and fold its block", async ({
   page,
 }) => {
@@ -174,10 +155,6 @@ test("block-folds: the head-line case: a folded block's first card and counters 
   }
   await expect(head(page, "r1")).toHaveAttribute("aria-expanded", "false");
 
-  const bottom = async (locator: Locator) => {
-    const box = await locator.boundingBox();
-    return box === null ? Number.NaN : box.y + box.height;
-  };
   const measure = async () => ({
     firstCard: await top(firstCard),
     firstCardBottom: await bottom(firstCard),

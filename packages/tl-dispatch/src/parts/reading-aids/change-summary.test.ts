@@ -5,6 +5,7 @@ import {
   countsText,
   type MarkedBlock,
   sameSummary,
+  shownPlural,
   summarize,
 } from "./change-summary";
 import { NEW, UNCHANGED } from "./compare";
@@ -80,4 +81,11 @@ test("change-marks each block's count: one for a change, two for a replaced bloc
     ["replaced", 2],
     ["same", 2],
   ]);
+});
+
+test("change-marks: a short label's count takes the noun for one, else its plural, and stops at 99+", () => {
+  expect(shownPlural(1, "unchanged block")).toBe("1 unchanged block");
+  expect(shownPlural(2, "unchanged block")).toBe("2 unchanged blocks");
+  expect(shownPlural(100, "change", "changes")).toBe("99+ changes");
+  expect(shownPlural(1, "open", "open")).toBe("1 open");
 });

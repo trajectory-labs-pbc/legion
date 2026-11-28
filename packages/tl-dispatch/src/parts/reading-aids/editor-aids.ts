@@ -11,6 +11,7 @@ import { blockFoldsOf, blockFoldsPlugins } from "./block-folds";
 import type { Comparer } from "./comparer";
 import { docChangesPlugin } from "./editor-doc";
 import { changedBlockIds, changeMarksPlugin, watchChanges } from "./marks-plugin";
+import { onlyChangesPlugins } from "./only-changes";
 import { partsSlot } from "./parts-slot";
 
 /** The key of the parts plugin, whose state is the parts' height: an editor that holds it has the aids. */
@@ -114,6 +115,7 @@ export function installAids(
     docChangesPlugin(),
     changeMarksPlugin(startComparer),
     ...blockFoldsPlugins(view, documentRef),
+    ...onlyChangesPlugins(editor, host, documentRef),
   ];
   view.updateState(view.state.reconfigure({ plugins: view.state.plugins.concat(aids) }));
   // The blocks the first comparison draws as changed start open.

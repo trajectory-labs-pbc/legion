@@ -60,6 +60,16 @@ export const REVISE_REQUIREMENT: Ops = [
 export const compareWith = (page: Page) =>
   partsRoot(page).getByRole("combobox", { name: "Compare with" });
 
+/** A Compare-with option: upstream's own version picker offers the same names. */
+export const versionOption = (page: Page, version: number) =>
+  page.getByRole("listbox").getByRole("option", { exact: true, name: `Version ${version}` });
+
+/** Picks `version` in Compare with. */
+export async function pickVersion(page: Page, version: number): Promise<void> {
+  await compareWith(page).click();
+  await versionOption(page, version).click();
+}
+
 /** A spec whose first open marks it read, then revised twice by the agent: by `edits`, in order. */
 export interface ReadThenRevised {
   /** The issue's other document, where a new visit opens. */

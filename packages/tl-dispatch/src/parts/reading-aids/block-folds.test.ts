@@ -1,9 +1,12 @@
 import { afterEach, beforeAll, expect, test } from "bun:test";
 import { NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
+import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import * as Y from "yjs";
 
+import { watchReadMarks } from "@/data/read-marks";
 import type { EditorHandle } from "@/upstream/editor/frame";
+import { writesOf } from "@/upstream/writes";
 import { against, inProcessEditorIn } from "../../../tests/reading-aids/comparer-fixtures";
 import {
   destroyEditors,
@@ -11,6 +14,7 @@ import {
   foldedIdsOf,
   linkedDocs,
   newDocumentRef,
+  positionIn,
   positionOf,
   rootIn,
 } from "../../../tests/reading-aids/editor-fixtures";
@@ -21,7 +25,7 @@ import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
 import { redrawFolds, revealBlock, setFoldQuery } from "./folds";
 import { CHANGE_ATTRIBUTE } from "./mark-drawing";
 import { setMarksBaseline } from "./marks-plugin";
-import { visitOf } from "./visit";
+import { visitOf, visitReadMarks } from "./visit";
 
 beforeAll(async () => {
   await warmMarkdownRenderer();
@@ -63,17 +67,6 @@ const expanded = (handle: EditorHandle, blockId: string) =>
   handle.view.dom
     .querySelector(`[${FOLD_HEAD_ATTRIBUTE}="${blockId}"] button`)
     ?.getAttribute("aria-expanded");
-
-/** The position inside the paragraph that reads `text`. */
-function positionIn(handle: EditorHandle, text: string): number {
-  let found: number | undefined;
-  handle.view.state.doc.descendants((node, pos) => {
-    if (found === undefined && node.isTextblock && node.textContent === text) found = pos + 1;
-    return found === undefined;
-  });
-  if (found === undefined) throw new Error(`no paragraph reads ${text}`);
-  return found;
-}
 
 test("each requirement, check and plan task folds to its head line, and nothing else folds", async () => {
   const handle = await editor();
@@ -267,6 +260,26 @@ test("the visit keeps each fold for a new editor of the same document, from its 
   other.setMarkdown(SPEC);
   blockFoldsOf(other.view).attach({ choices: new Map() });
   expect(folded(other)).toEqual(["r1", "c1", "t1"]);
+});
+
+test("a sign-out ends the reader's fold choices in a live editor, and a new editor keeps none of them", async () => {
+  const documentRef = newDocumentRef();
+  const first = await editor(new Y.Doc(), documentRef);
+  first.setMarkdown(SPEC);
+  blockFoldsOf(first.view).attach({ choices: new Map() });
+  blockFoldsOf(first.view).toggle("t1");
+  expect(folded(first)).toEqual(["r1", "c1"]);
+  const queryClient = new QueryClient();
+  const stop = watchReadMarks(queryClient, visitReadMarks);
+  try {
+    writesOf(queryClient).signedOut("ada");
+    expect(folded(first)).toEqual(["r1", "c1", "t1"]);
+    const second = await editor(new Y.Doc(), documentRef);
+    second.setMarkdown(SPEC);
+    expect(folded(second)).toEqual(["r1", "c1", "t1"]);
+  } finally {
+    stop();
+  }
 });
 
 /** Whether the caret, or the block a node selection holds, is inside a folded block. */
@@ -519,6 +532,22 @@ test("a new editor in the visit keeps the blocks the visit's first comparison to
   const second = await compared(visitId, REVISED.replace(CHECK, "The check, edited since then."));
   await waitFor(() => expect(markedChanged(second, "c1")).toBe(true));
   expect(folded(second)).toEqual(["c1", "t1"]);
+});
+
+test("after a sign-out, a comparison with the next reader's baseline opens its changed blocks and no longer holds the earlier ones open", async () => {
+  const handle = await compared(newDocumentRef(), REVISED);
+  await waitFor(() => expect(folded(handle)).toEqual(["c1", "t1"]));
+  const queryClient = new QueryClient();
+  const stop = watchReadMarks(queryClient, visitReadMarks);
+  try {
+    writesOf(queryClient).signedOut("ada");
+    const next = REVISED.replace("The check, which names a needle.", "The check, as it read.");
+    setMarksBaseline(handle.view, against({ markdown: next, tree: undefined }));
+    await waitFor(() => expect(markedChanged(handle, "c1")).toBe(true));
+    await waitFor(() => expect(folded(handle)).toEqual(["r1", "t1"]));
+  } finally {
+    stop();
+  }
 });
 
 test("a block whose kind changed while the first comparison ran starts open", async () => {
