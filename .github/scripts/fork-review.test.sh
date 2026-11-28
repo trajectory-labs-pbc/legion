@@ -88,6 +88,8 @@ git -C "$work/main" -c user.name=t -c user.email=t@t commit --quiet --allow-empt
 git -C "$work/main" push --quiet "$work/origin.git" main
 mkdir -p "$work/main/.claude/skills"
 echo hello > "$work/main/a.txt"
+non_ascii=$(printf 'caf\303\251.txt')
+echo x > "$work/main/$non_ascii"
 echo skill > "$work/main/.claude/skills/x.md"
 ln -s /etc/hostname "$work/main/out"
 git -C "$work/main" add -A
@@ -104,6 +106,7 @@ run prepare PR_NUMBER=7 HEAD_SHA="$pr_head" GITHUB_WORKSPACE="$work/ws/legion" G
 cd "$script_dir"
 rm "$work/gh-answer"
 check "prepare writes the head beside the checkout" "$(is "$status:$(outvar dir):$(cat "$work/ws/fork-review/head/a.txt")" "0:$work/ws/fork-review:hello")"
+check "the diff names a non-ASCII path unquoted" "$(is "$(grep -cxF "+++ b/$non_ascii" "$work/ws/fork-review/diff.patch")" 1)"
 check "the head's .claude directory is removed" "$(is "$([ -e "$work/ws/fork-review/head/.claude" ] && echo kept)" "")"
 check "a symlink in the head is a file holding its target" \
   "$(is "$([ -L "$work/ws/fork-review/head/out" ] && echo link):$(cat "$work/ws/fork-review/head/out")" ":/etc/hostname")"

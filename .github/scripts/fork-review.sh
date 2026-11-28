@@ -74,7 +74,8 @@ prepare() {
   # head's own would reach the model as more than data. The diff still shows any change to them.
   find "$dir/head" -name .claude -prune -exec rm -rf {} +
   base=$(git merge-base HEAD "$head")
-  git diff "$base" "$head" > "$dir/diff.patch"
+  # Unquoted paths, so a non-ASCII file name keeps its hunks for the inline comments.
+  git -c core.quotePath=false diff "$base" "$head" > "$dir/diff.patch"
   git log --format='%H %s' "$base..$head" > "$dir/commits.txt"
   # The verdict of an earlier review of the same diff under the same reviewer files stands. The key
   # hashes binary files by their full blob ids, which a plain diff abbreviates.
