@@ -49,6 +49,16 @@ registry.json
 packages/daemon/internal/ghbranch/ghbranch.go
 packages/daemon/internal/ghbranch/ghbranch_test.go
 
+# A secret request's Inbox row opens the broker's page in a new tab; proposed upstream too.
+# Remove these lines when upstream merges it.
+docs/site/media/broker/screenshots.spec.ts
+docs/site/src/content/docs/broker/guides/approve-a-request.md
+packages/dispatch/e2e/broker-approval.e2e.ts
+packages/dispatch/web/src/features/credentials/CredentialRequestsSection.test.tsx
+packages/dispatch/web/src/features/credentials/CredentialRequestsSection.tsx
+packages/dispatch/web/src/features/credentials/pending.test.tsx
+packages/dispatch/web/src/features/credentials/pending.ts
+
 # The docs build names the repository the fork was forked from.
 .github/scripts/ci_filter_coverage.py
 .github/workflows/docs-site.yaml
