@@ -252,6 +252,33 @@ describe("the baseline", () => {
     expect(await line("Since v12")).toBeDefined();
   });
 
+  test("change-marks a new editor in the visit gets the very baseline object the marks keep their pairs by, and a reload's read a new one", async () => {
+    const document = aDocument(false);
+    const asks = [[approvalAsk(at(document.artifactId, 16), { approved: 8 })]];
+    const visit = page(document, { asks });
+    const shownText = (read: ReturnType<typeof visit.read>) =>
+      read?.baseline.state === "ready" ? read.baseline.baseline : undefined;
+    const first = visit.mount();
+    expect(await line("Since v8, the last approved version")).toBeDefined();
+    const kept = shownText(visit.read());
+    expect(kept).toBeDefined();
+    first.unmount();
+    // A return comes later than the cache's sweep of a read nothing shows.
+    await new Promise((done) => setTimeout(done, 20));
+
+    const second = visit.mount();
+    expect(await line("Since v8, the last approved version")).toBeDefined();
+    expect(shownText(visit.read())).toBe(kept);
+    second.unmount();
+
+    // A reload starts with a new page's reads.
+    const reloaded = page(document, { asks });
+    reloaded.mount();
+    expect(await line("Since v8, the last approved version")).toBeDefined();
+    expect(shownText(reloaded.read())).toEqual(kept);
+    expect(shownText(reloaded.read())).not.toBe(kept);
+  });
+
   test("a sign-out ends the visit's pick, and the line draws again from the answers", async () => {
     const document = aDocument(false);
     const visit = page(document, {

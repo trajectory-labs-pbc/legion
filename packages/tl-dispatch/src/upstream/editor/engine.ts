@@ -1,4 +1,5 @@
 // How upstream compares two texts of a document: read by the compare worker and the lazy aids.
+export { blockIdOf } from "@legion/proof-editor/headless";
 export type { ChangeBaseline } from "@upstream-dispatch/features/doc/change-marks";
 export {
   changedWords,

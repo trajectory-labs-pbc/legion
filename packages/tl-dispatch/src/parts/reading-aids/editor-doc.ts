@@ -3,29 +3,36 @@ import { Plugin } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-const listeners = new WeakMap<EditorView, Set<() => void>>();
+/** Listeners kept for each editor: `subscribe` adds one until its stop, `call` calls them. */
+export function viewListeners() {
+  const listeners = new WeakMap<EditorView, Set<() => void>>();
+  return {
+    call(view: EditorView): void {
+      for (const listener of listeners.get(view) ?? []) listener();
+    },
+    subscribe(view: EditorView, listener: () => void): () => void {
+      const own = listeners.get(view) ?? new Set();
+      listeners.set(view, own.add(listener));
+      return () => own.delete(listener);
+    },
+  };
+}
+
+const docListeners = viewListeners();
 
 /** Tells the parts when the editor's document changes, by a local or a remote step. */
 export function docChangesPlugin(): Plugin {
   return new Plugin({
     view: () => ({
       update: (view, previous) => {
-        if (view.state.doc === previous.doc) return;
-        for (const listener of listeners.get(view) ?? []) listener();
+        if (view.state.doc !== previous.doc) docListeners.call(view);
       },
     }),
   });
 }
 
 function useDocChanges(view: EditorView) {
-  return useCallback(
-    (listener: () => void) => {
-      const own = listeners.get(view) ?? new Set();
-      listeners.set(view, own.add(listener));
-      return () => own.delete(listener);
-    },
-    [view]
-  );
+  return useCallback((listener: () => void) => docListeners.subscribe(view, listener), [view]);
 }
 
 /** The editor's document, drawn again after each change of it. */

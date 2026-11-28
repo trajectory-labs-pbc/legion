@@ -18,5 +18,6 @@ export {
   DocumentRuntime,
   type DocumentRuntimeValue,
 } from "@upstream-dispatch/features/doc/runtime";
+export { specBlockMarks } from "@upstream-dispatch/features/doc/spec-marks";
 export { EDITOR_BOX_ATTRIBUTE } from "@upstream-dispatch/features/issue-page/node-caret";
 export { blockFragment } from "@upstream-dispatch/features/refs/block-reference";

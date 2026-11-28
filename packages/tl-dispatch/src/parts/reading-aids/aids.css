@@ -26,22 +26,79 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   padding: revert-layer;
 }
 
-/* Each link of Read first: a pointer target grown to 24 px, and the focus token's outline. */
-[data-reading-aids-read-first] a {
+/* Each link of Read first and the counts line: a pointer target grown to 24 px, and the focus token's outline. */
+:is([data-reading-aids-read-first], [data-reading-aids-counts]) a {
   position: relative;
   border-radius: var(--radius-sm);
 }
 
-[data-reading-aids-read-first] a::before {
+:is([data-reading-aids-read-first], [data-reading-aids-counts]) a::before {
   content: "";
   position: absolute;
   inset-inline: 0;
   inset-block: calc(var(--spacing) * -0.5);
 }
 
-[data-reading-aids-read-first] a:focus-visible {
+:is([data-reading-aids-read-first], [data-reading-aids-counts]) a:focus-visible {
   outline-style: solid;
   outline-width: calc(var(--spacing) * 0.5);
   outline-color: var(--focus);
   outline-offset: calc(var(--spacing) * 0.5);
+}
+
+/* While a comparison may draw marks, the text leaves a gutter at its left for their labels. */
+.reading-aids-marked {
+  padding-inline-start: var(--reading-gutter-width);
+}
+
+.reading-aids-marked > .reading-aids-parts {
+  margin-inline-start: calc(var(--reading-gutter-width) * -1);
+}
+
+/* A block's label beside its first line; its spoken text ends with a colon, to read apart. */
+.reading-aids-marked [data-reading-aids-change]::before {
+  content: attr(data-reading-aids-change);
+  /* biome-ignore lint/suspicious/noDuplicateProperties: the line above is for a browser without alt text */
+  content: attr(data-reading-aids-change) / attr(data-reading-aids-change) ": ";
+  position: absolute;
+  inset-inline-start: 0;
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+  line-height: calc(var(--font-size) * var(--line-height));
+  color: var(--muted-foreground);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* The words a changed block gained, and those it lost where they stood. */
+.reading-aids-added {
+  text-decoration-line: underline;
+  text-decoration-thickness: calc(var(--border-width) * 2);
+  text-underline-offset: calc(var(--spacing) * 0.75);
+}
+
+.reading-aids-removed {
+  color: var(--muted-foreground);
+  text-decoration-line: line-through;
+}
+
+/* A fold of earlier text under one line; a block, so a fold in an ordered list takes no number. */
+.reading-aids-change-fold {
+  display: block;
+  margin: 0;
+  list-style: none;
+  white-space: normal;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.reading-aids-change-fold > .reading-aids-earlier {
+  display: block;
+  padding-inline: calc(var(--spacing) * 2.5);
+  white-space: pre-wrap;
+}
+
+.reading-aids-change-fold > .reading-aids-earlier[hidden] {
+  display: none;
 }
