@@ -14,4 +14,5 @@ export {
   DispatchQueryClient,
   queryRetry,
   queryRetryDelay,
+  replaceQueryData,
 } from "@upstream-dispatch/api/query-client";
