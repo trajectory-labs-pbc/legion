@@ -169,10 +169,11 @@ test("MLR-03 on a fake clock, the skeleton shows at 200 ms and, its answer 50 ms
     await tick(100);
     expect(screen.getByRole("status", loading)).toBeDefined();
     answer.resolve({ machine_code_page: true });
-    await tick(200);
+    // Shown at 200 ms, so held until 500 ms: still there at 499 ms, gone at 500 ms.
+    await tick(246);
     expect(screen.getByRole("status", loading)).toBeDefined();
     expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
-    await tick(100);
+    await tick(0);
     expect(screen.queryByRole("status", loading)).toBeNull();
     expect(screen.getByRole("heading", { name: "Enter machine login code" })).toBeDefined();
   });

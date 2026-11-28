@@ -76,9 +76,10 @@ describe("useSkeleton", () => {
       await tick(250);
       expect(view.container.textContent).toBe("skeleton");
       view.rerender(<Probe waiting={false} />);
-      await tick(200);
+      // Shown at 200 ms, so held until 500 ms: still there at 499 ms, gone at 500 ms.
+      await tick(247);
       expect(view.container.textContent).toBe("skeleton");
-      await tick(100);
+      await tick(0);
       expect(view.container.textContent).toBe("content");
     });
   });

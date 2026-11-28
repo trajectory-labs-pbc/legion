@@ -555,7 +555,7 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
   }
 });
 
-test("MLS-11 a list still loading shows still skeleton rows after 200 ms, held 300 ms once shown", async () => {
+test("MLS-11 a list still loading shows still skeleton rows after 200 ms, and keeps them through the hold once shown", async () => {
   const answer = Promise.withResolvers<{ credentials: LauncherCredentialResp[] }>();
   const getMachineLogins = spyOn(api, "getMachineLogins").mockReturnValue(answer.promise);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
