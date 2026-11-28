@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "@legion/ui/components/avatar";
 import { Checkbox } from "@legion/ui/components/checkbox";
 import { Time } from "@legion/ui/components/time";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/tooltip";
+import { isDrawn } from "@legion/ui/lib/utils";
 import { Bot, Check, CircleHelp, Diamond, type LucideIcon, Reply, Sparkles } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -113,7 +114,7 @@ export function InboxRowView({
               role="img"
             />
           ) : null}
-          {owner === undefined ? null : <span className="mr-2">{owner}</span>}
+          {isDrawn(owner) ? <span className="mr-2">{owner}</span> : null}
           <span>{title}</span>
         </>
       }

@@ -199,6 +199,11 @@ describe("layers", () => {
       "only src/parts/priority draws BarsGlyph",
     ],
     [
+      "src/features/inbox/x.tsx",
+      'import { BarsGlyph } from "../../../../ui/src/components/bars-glyph";',
+      "only src/parts/priority draws BarsGlyph",
+    ],
+    [
       "src/shell/x.tsx",
       'import { AttentionMark } from "@legion/ui/components/attention-mark";',
       "only src/parts/needs-you draws AttentionMark",

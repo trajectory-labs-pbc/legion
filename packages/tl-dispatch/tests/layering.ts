@@ -258,7 +258,7 @@ function rulesFor(from: Place, entry: Import): [Rule, string][] {
   const broken: [Rule, string][] = [];
   const unreadable = readable(entry);
   if (unreadable !== undefined) broken.push(["imports-are-readable", unreadable]);
-  const named = entry.pkg ?? entry.specifier;
+  const named = entry.pkg ?? entry.file;
   if (named !== undefined) broken.push(...libraryRules(from, named));
   broken.push(...routeImportRules(from, entry));
   if (entry.file === undefined || entry.file.startsWith(UI_PACKAGE + sep)) return broken;

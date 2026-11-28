@@ -61,7 +61,7 @@ export function rowFacts(row: InboxListRow): InboxRowFacts {
   return {
     ...base,
     kind: "ask",
-    actor: actorOf(row.ask.author),
+    actor: actorOf(row.ask.last_reply?.author ?? row.ask.author),
     urgency: { value: urgency, label: URGENCY_LABELS[urgency] },
   };
 }
