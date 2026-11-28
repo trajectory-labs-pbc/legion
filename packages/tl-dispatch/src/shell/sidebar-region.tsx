@@ -1,6 +1,6 @@
 import { NavSurface } from "@legion/ui/components/nav";
 import type { ComponentProps, ReactNode, RefObject } from "react";
-import type { AuthenticatedUser } from "@/upstream/contract";
+import type { AuthenticatedUser } from "@/data/session";
 import { IconRail } from "@/upstream/widgets/icon-rail";
 import { useInboxRowCount } from "./inbox-count";
 

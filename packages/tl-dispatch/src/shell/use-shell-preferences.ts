@@ -1,4 +1,4 @@
-import { useUserPreference } from "@/upstream/data-hooks";
+import { useUserPreference } from "@/data/preferences";
 import { DEFAULT_MARGIN_WIDTH } from "@/upstream/shell";
 
 const hiddenOrShown = [

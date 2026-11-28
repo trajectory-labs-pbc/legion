@@ -1,9 +1,10 @@
 import { Button } from "@legion/ui/components/button";
 import { SurfaceTitle } from "@legion/ui/components/heading";
 import type { ReactNode } from "react";
+import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageLink, Redirect } from "@/navigation/page-link";
-import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { pageRoute } from "@/navigation/page-route";
 import { inboxQuery } from "@/upstream/queries";
 import { ANSWERS_PATH } from "@/upstream/routes";
 import { READING_PANE_QUERY, useDocumentTitle, useMediaQuery } from "@/upstream/shell";

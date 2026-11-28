@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations, themeTokens } from "./design-rules";
+import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
 import { sourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -133,6 +133,101 @@ const ALLOWED: readonly [string, string][] = [
   ["css", ".x { font-size: 13px; font-weight: 500; }"],
 ];
 
+/** Controls whose path decides: each file, its text, and the rules it breaks, none if allowed. */
+const PLACED: readonly [string, string, readonly string[]][] = [
+  ["src/features/inbox/fetch.tsx", 'fetch("/api/v1/inbox");', [RULES.network]],
+  ["src/shell/socket.tsx", "new WebSocket(url);", [RULES.network]],
+  ["src/parts/asks/events.tsx", "new window.EventSource(url);", [RULES.network]],
+  ["src/shell/global-fetch.tsx", 'globalThis.fetch("/x");', [RULES.network]],
+  ["src/shell/self-fetch.tsx", 'self.fetch("/x");', [RULES.network]],
+  ["src/shell/window-window.tsx", 'globalThis.window.fetch("/x");', [RULES.network]],
+  ["src/shell/keyed-fetch.tsx", 'window["fetch"]("/x");', [RULES.network]],
+  ["src/data/inbox/fetch.ts", 'fetch("/api/v1/inbox");', []],
+  ["src/upstream/fetch.ts", "new WebSocket(url);", []],
+  [
+    "src/shell/own-fetch.tsx",
+    'const fetch = () => 1;\nfetch();\nclient.fetch("/x");',
+    [RULES.network, RULES.network],
+  ],
+  [
+    "src/shell/caught-fetch.tsx",
+    "try {\n  go();\n} catch (fetch) {\n  log(fetch);\n}",
+    [RULES.network, RULES.network],
+  ],
+  ["src/data/inbox/query.ts", "whoAmIQuery();", [RULES.session]],
+  ["src/data/inbox/api.ts", "api.whoAmI();", [RULES.session]],
+  ["src/data/inbox/key.ts", 'const key = ["whoami"];', [RULES.session]],
+  [
+    "src/data/inbox/alias.ts",
+    'import { api as a } from "@/upstream/api";\na.whoAmI();',
+    [RULES.session],
+  ],
+  ["src/data/inbox/taken.ts", "const { whoAmI } = api;\nwhoAmI();", [RULES.session, RULES.session]],
+  ["src/data/inbox/keyed.ts", 'api["whoAmI"]();', [RULES.session]],
+  ["src/data/session.ts", 'whoAmIQuery();\napi.whoAmI();\nconst key = ["whoami"];', []],
+  ["src/shell/local.tsx", 'localStorage.getItem("k");', [RULES.storage]],
+  ["src/shell/indexed.tsx", 'indexedDB.open("d");', [RULES.storage]],
+  ["src/shell/session-storage.tsx", 'window.sessionStorage.setItem("k", "v");', [RULES.storage]],
+  ["src/shell/global-storage.tsx", "globalThis.localStorage.clear();", [RULES.storage]],
+  [
+    "src/shell/view-storage.tsx",
+    'document.defaultView?.localStorage.getItem("k");',
+    [RULES.storage],
+  ],
+  ["src/shell/alias.tsx", 'const w = window;\nw.localStorage.getItem("k");', [RULES.globalAlias]],
+  [
+    "src/shell/default-alias.tsx",
+    'function f(w = window) {\n  return w.fetch("/x");\n}',
+    [RULES.globalAlias],
+  ],
+  [
+    "src/shell/assigned-alias.tsx",
+    'let w;\nw = window;\nw.localStorage.getItem("k");',
+    [RULES.globalAlias],
+  ],
+  [
+    "src/shell/taken-storage.tsx",
+    'const { localStorage } = window;\nlocalStorage.getItem("k");',
+    [RULES.globalAlias, RULES.storage, RULES.storage],
+  ],
+  ["src/shell/renamed-storage.tsx", "const { localStorage: kept } = self;", [RULES.globalAlias]],
+  [
+    "src/browser/unload.ts",
+    'localStorage.getItem("k");\nwindow.addEventListener("beforeunload", ask);',
+    [RULES.storage],
+  ],
+  [
+    "src/browser/storage.ts",
+    'window.localStorage.getItem("k");\nconfirm("?");\nalert("!");\nprompt("?");',
+    [RULES.dialog, RULES.dialog, RULES.dialog],
+  ],
+  [
+    "src/shell/dialogs.tsx",
+    'confirm("?");\nalert("!");\nprompt("?");',
+    [RULES.dialog, RULES.dialog, RULES.dialog],
+  ],
+  [
+    "src/shell/window-dialogs.tsx",
+    'window.confirm("?");\nwindow.alert("!");\nwindow.prompt("?");',
+    [RULES.dialog, RULES.dialog, RULES.dialog],
+  ],
+  [
+    "src/shell/global-dialogs.tsx",
+    'globalThis.confirm("?");\nglobalThis.alert("!");\nglobalThis.prompt("?");',
+    [RULES.dialog, RULES.dialog, RULES.dialog],
+  ],
+  [
+    "src/shell/own-confirm.tsx",
+    "function Menu({ confirm }) {\n  return confirm;\n}",
+    [RULES.dialog, RULES.dialog],
+  ],
+  ["src/shell/confirm-member.tsx", "const out = { confirm: () => 1 };\nsignOut.confirm();", []],
+  ["src/shell/unload.tsx", 'window.addEventListener("beforeunload", ask);', [RULES.unload]],
+  ["src/shell/onunload.tsx", "window.onbeforeunload = ask;", [RULES.unload]],
+  ["src/shell/bare-onunload.tsx", "onbeforeunload = ask;", [RULES.unload]],
+  ["src/shell/frame-onunload.tsx", "frame.contentWindow.onbeforeunload = ask;", [RULES.unload]],
+];
+
 const controlPath = (index: number, extension: string) =>
   `src/${extension === "css" ? "shell" : "pages"}/control-${index}.${extension}`;
 
@@ -154,7 +249,8 @@ beforeAll(async () => {
     path: controlPath(index, extension),
     text,
   }));
-  found = await designViolations([...controls, MAPS_UPSTREAM, LINES]);
+  const placed = PLACED.map(([path, text]) => ({ path, text }));
+  found = await designViolations([...controls, ...placed, MAPS_UPSTREAM, LINES]);
 });
 
 describe("design rules", () => {
@@ -199,6 +295,10 @@ describe("design rules", () => {
     REFUSED.map((control, index) => [index, ...control] as const)
   )("refuses control %d (%s): %s", (index, extension, _text, rule) => {
     expect(rulesOf(controlPath(index, extension)).join("\n")).toContain(rule);
+  });
+
+  test.each(PLACED)("%s: %s", (path, _text, rules) => {
+    expect(rulesOf(path)).toEqual([...rules]);
   });
 
   test.each(

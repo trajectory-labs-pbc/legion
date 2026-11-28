@@ -1,5 +1,5 @@
-import type { FetchQueryOptions, QueryClient, QueryKey } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import type { PrefetchClient } from "@/data/prefetch";
 
 import { fillPath, type PathParams } from "./path";
 
@@ -8,13 +8,7 @@ export type PageSearch<Search extends string> = { readonly [Key in Search]?: str
 
 /** A read a page makes first, which a link may start before the page opens. */
 export interface Prefetch {
-  start(client: QueryClient): Promise<void>;
-}
-
-export function prefetchOf<TQueryFnData, TError, TData, TQueryKey extends QueryKey>(
-  options: FetchQueryOptions<TQueryFnData, TError, TData, TQueryKey>
-): Prefetch {
-  return { start: (client) => client.prefetchQuery(options) };
+  start(client: PrefetchClient): Promise<void>;
 }
 
 /** The address a route is open at, as text: upstream's parsers read it. */

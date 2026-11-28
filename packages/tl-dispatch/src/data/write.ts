@@ -13,7 +13,7 @@ import {
   stoppedNote,
   useKeyedWrite,
 } from "@/upstream/writes";
-import type { WriteFailureText } from "@/writes/write-failure-note";
+import type { WriteFailureText } from "./write-failure-note";
 
 /** One query a write's value stands in while it is out, and the change it makes there. */
 export interface Patch {

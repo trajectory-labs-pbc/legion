@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
   type ComponentProps,
   type FocusEvent,
@@ -8,6 +7,7 @@ import {
   useRef,
 } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { usePrefetchClient } from "@/data/prefetch";
 
 import { type PageRoute, type PageSearch, type Prefetch, pageHref } from "./page-route";
 import { isParamsOf, type ParamsProp } from "./path";
@@ -28,7 +28,7 @@ interface PrefetchIntent {
  * answer: upstream's reads ignore the abort signal, so a cancel would only discard it.
  */
 function usePrefetchIntent(reads: (() => readonly Prefetch[]) | undefined): PrefetchIntent {
-  const client = useQueryClient();
+  const client = usePrefetchClient();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef(reads);
   useLayoutEffect(() => {

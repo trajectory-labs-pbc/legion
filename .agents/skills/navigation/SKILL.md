@@ -35,7 +35,7 @@ A route is `pageRoute({ path, element, search?, prefetch?, layout? })`:
 
 - `path` uses navigation's grammar, which only `path.ts` reads: `/`-separated text, a `:name` segment for a param, and a last `*` for the rest of the address. `"/issues/:key/*"` binds `key`.
 - `search` lists the search keys the page reads, as literals.
-- `prefetch(params)` returns the page's first reads, each `prefetchOf(queryOptions)`.
+- `prefetch(params)` returns the page's first reads, each `prefetchOf(queryOptions)` from `src/data/prefetch.ts`.
 - `layout` says how the shell frames the page: a `PageLayout` (`src/pages/page.ts`), or a function of the address.
 
 `pageRoute` keeps the path and search keys as literal types, so every link to the route is typed.

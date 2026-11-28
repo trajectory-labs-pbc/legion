@@ -1,5 +1,6 @@
+import { prefetchOf } from "@/data/prefetch";
 import { lazyNamed } from "@/loading/lazy-named";
-import { pageRoute, prefetchOf } from "@/navigation/page-route";
+import { pageRoute } from "@/navigation/page-route";
 import { issueQuery } from "@/upstream/queries";
 
 import type { Page } from "./page";

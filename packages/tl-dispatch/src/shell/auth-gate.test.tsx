@@ -2,20 +2,16 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import { http, type RequestHandler } from "msw";
+import { sessionKey } from "@/data/session";
 import type { DispatchEvent } from "@/upstream/contract";
 import type { EventPages } from "@/upstream/live";
-import { liveSocketFor } from "@/upstream/live";
 import { writesOf } from "@/upstream/writes";
+import { fakeLive } from "../../tests/live";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { answerShellReads, holdReads, json } from "../../tests/network";
 import { render, settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
-import {
-  answerDraft,
-  answerRequests,
-  installFakeLiveSockets,
-  setAnswerDraft,
-} from "../../tests/upstream";
+import { answerDraft, answerRequests, setAnswerDraft } from "../../tests/upstream";
 import { pressWrite, reader } from "../../tests/writes";
 import { AuthGate } from "./auth-gate";
 
@@ -91,7 +87,7 @@ describe("AuthGate", () => {
     const container = mount(client);
     await waitFor(() => expect(container.textContent).toContain("Sign in"));
     expect(client.getQueryData(["issues"])).toBeUndefined();
-    expect(client.getQueryState(["whoami"])?.status).toBe("error");
+    expect(client.getQueryState(sessionKey)?.status).toBe("error");
   });
 
   test("SHL-24 a failed check announces that Dispatch is out of reach, and Retry asks again", async () => {
@@ -112,6 +108,36 @@ describe("AuthGate", () => {
     down = false;
     settle(() => container.querySelector("button")?.click());
     await waitFor(() => expect(container.textContent).toContain("Sign in"));
+  });
+
+  test("SHL-24 a check a proxy refused keeps a Retry that asks again, with the skeleton meanwhile", async () => {
+    let asked = 0;
+    let answer: (() => void) | undefined;
+    // The shell's other reads stay pending; the check's own answer comes after, so it wins.
+    answerShellReads(() => undefined);
+    answerRequests(
+      http.get("/auth/whoami", () => {
+        asked += 1;
+        if (asked === 1) return Response.json({ error: { code: "FORBIDDEN" } }, { status: 403 });
+        return new Promise<Response>((resolve) => {
+          answer = () => resolve(json(reader));
+        });
+      })
+    );
+    const container = mount();
+    await waitFor(() =>
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Could not reach Dispatch."
+      )
+    );
+    settle(() => container.querySelector("button")?.click());
+    await waitFor(() => expect(asked).toBe(2));
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    await settle(async () => answer?.());
+    await waitFor(() =>
+      expect(container.querySelector('[data-testid="app-shell"]')).not.toBeNull()
+    );
+    await shellChunksArrive();
   });
 
   test("SHL-14 a write a reload cut off goes out again once the same person is signed in", async () => {
@@ -149,16 +175,12 @@ describe("AuthGate", () => {
   });
 
   test("SHL-20 a live event reaches the page's cache once the person is signed in", async () => {
-    const sockets = installFakeLiveSockets();
-    cleanups.push(() => sockets.restore());
     const client = newClient();
-    cleanups.push(() => liveSocketFor(client).close());
+    const live = fakeLive(client);
+    cleanups.push(live.stop);
     const log: EventPages = { pageParams: [null], pages: [[]] };
     client.setQueryData(["events", "AB-1"], log);
     await mountSignedIn(client);
-    const socket = sockets.latest();
-    settle(() => socket.open());
-    const { sub } = socket.subscribed("events");
     const event = {
       actor: { id: "alice", kind: "user" },
       created_at: "2026-11-01T00:00:00Z",
@@ -170,10 +192,7 @@ describe("AuthGate", () => {
       seq: 1,
       type: "issue.updated",
     } as DispatchEvent;
-    settle(() => {
-      socket.receive({ type: "events_start", sub, since: "0", replay_complete: true });
-      socket.receive({ type: "event", sub, id: "1", event });
-    });
+    live.send(event);
     expect(client.getQueryData<EventPages>(["events", "AB-1"])?.pages[0]).toEqual([event]);
   });
 

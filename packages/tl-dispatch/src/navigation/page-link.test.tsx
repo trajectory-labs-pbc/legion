@@ -3,10 +3,11 @@ import { QueryClient, QueryClientProvider, queryOptions } from "@tanstack/react-
 import { fireEvent, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { prefetchOf } from "@/data/prefetch";
 import { MemoryNavigationProvider } from "../../tests/navigation";
 import { quietConsoleError, renderWithQueries } from "../../tests/upstream";
 import { PageLink, PREFETCH_INTENT_MS, Redirect } from "./page-link";
-import { pageRoute, prefetchOf } from "./page-route";
+import { pageRoute } from "./page-route";
 
 /** A read that waits until the test lets it answer, and records each start. */
 function slowRead() {

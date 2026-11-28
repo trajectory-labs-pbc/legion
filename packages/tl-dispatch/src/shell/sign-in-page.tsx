@@ -1,14 +1,13 @@
 import { MessagePage } from "@legion/ui/blocks/message-page";
 import { Button } from "@legion/ui/components/button";
 import { textVariants } from "@legion/ui/lib/typography";
-import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { useLeaveToSignIn } from "@/data/sign-ins";
 import { KeptWrites } from "@/upstream/widgets/kept-writes";
-import { writesOf } from "@/upstream/writes";
 
 /** The sign-in page; a lapsed session shows the writes it keeps. */
 export function SignInPage(): ReactNode {
-  const queryClient = useQueryClient();
+  const leaveToSignIn = useLeaveToSignIn();
   return (
     <MessagePage eyebrow="Dispatch" title="Make the next decision clear.">
       <p className={textVariants({ className: "mt-3", tone: "muted" })}>
@@ -22,7 +21,7 @@ export function SignInPage(): ReactNode {
             href="/auth/start"
             onClick={(event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-              writesOf(queryClient).leavingToSignIn();
+              leaveToSignIn();
             }}
           />
         }

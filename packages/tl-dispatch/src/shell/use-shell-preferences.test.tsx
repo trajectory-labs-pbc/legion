@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { whoAmIQuery } from "@/upstream/queries";
+import { sessionKey } from "@/data/session";
 import { DEFAULT_MARGIN_WIDTH } from "@/upstream/shell";
 
 import { render, settle } from "../../tests/react";
@@ -21,7 +21,7 @@ afterEach(() => {
 /** Mounts the hook for a reader Dispatch already named, so no read goes out. */
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
-  client.setQueryData(whoAmIQuery().queryKey, { kind: "user", login: "reader", event_head: "0" });
+  client.setQueryData(sessionKey, { kind: "user", login: "reader", event_head: "0" });
   mounted.push(
     render(
       <QueryClientProvider client={client}>
