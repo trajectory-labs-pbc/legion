@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
-import { ReadFailure, readFailureOf } from "@/features/read-failure";
+import { ReadFailure, readFailureOf } from "@/data/read-failure";
+import { NotFound } from "@/features/not-found";
 import { lazyNamed } from "@/loading/lazy-named";
 import { PageFallback } from "@/loading/page-skeleton";
 import { credentialCapabilitiesQuery, machineLoginsQuery } from "@/upstream/queries";
-import { NotFound } from "../not-found/not-found";
 
 const loadPage = () => import("./machine-login-page");
 const MachineLoginPage = lazyNamed(loadPage, "MachineLoginPage");

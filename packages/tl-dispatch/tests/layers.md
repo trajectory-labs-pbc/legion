@@ -24,9 +24,6 @@ Ask these questions in order, and stop at the first yes.
 9. Is it a page's frame options, prefetch and lazy element? It is the page's `route.tsx`.
 10. Is it the route tree, the providers or the start? It goes to `src/app`.
 
-Until the migration moves them, some files sit in a layer that is not their folder's; the table names each one with the step that moves it.
-Today these are the `machine-login` and `not-found` folders of `src/pages`, in the layer of the route files; and `src/features/read-failure.tsx`, in `data`.
-
 ## Every file has a layer (`every-file-has-a-layer`)
 
 Each file under `src/` is in a row of the table, or is one of the root files: `main.tsx`, the entry that only `index.html` loads; `views.ts`, the lists of the view map; and the stylesheets.
@@ -132,9 +129,11 @@ A route file imports no other route file.
 
 ## A route file loads its page lazily (`pages-load-lazily`)
 
-A page's `page.tsx` is imported only by its own `route.tsx`, and only with `import()`, so no page goes into the entry chunk; a test may import it directly.
+A page's `page.tsx` is imported only by its own `route.tsx`, and only with `import()`, so no page goes into the entry chunk except those `EAGER` names; a test may import it directly.
 A type-only import loads nothing, so the rule does not count it.
-The exceptions are in `EAGER`, each with its reason: the Inbox is the home page, so its route imports its `page.tsx` statically and it draws at first paint with no loading fallback.
+The exceptions are in `EAGER`, each with its reason: the Inbox is the home page, so its route imports its `page.tsx` statically and it draws at first paint with no loading fallback; upstream draws the machine login and not-found pages at first paint, and a lazy page would show the skeleton first.
+Each entry names a file that exists, with a reason: a page its own route imports statically, or a feature's other file or an upstream view that an eager page imports statically (the not-found view, which the machine login page draws too, and upstream's Inbox).
+`scripts/check-entry-modules.ts` reads `EAGER` from `tests/layers.table.ts`: after a build, `bun run check:entry-modules` fails when a feature's file other than its route file, a seam view or the upstream module a seam view gives is in the entry chunk and `EAGER` does not name it, and when an entry is not in the entry chunk.
 A route file loads each upstream view with `import()` for the same reason; the page's `page.tsx` may import its upstream view directly, since the page itself loads lazily.
 
 ## A route file draws nothing (`routes-draw-nothing`)

@@ -1,8 +1,8 @@
 import { pageRoute } from "@/navigation/page-route";
 import { routes } from "@/navigation/routes";
-// Drawn at first paint before the features move.
-import { MachineLoginRoute } from "@/pages/machine-login/machine-login-route";
 import type { AppPage } from "@/shell/page-layout";
+// Upstream draws it at first paint, so it loads with the entry (tests/layers.table.ts, EAGER).
+import { MachineLoginRoute } from "./page";
 
 export const machineLogin = {
   id: "machine-login",
