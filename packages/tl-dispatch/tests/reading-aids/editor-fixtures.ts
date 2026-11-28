@@ -4,7 +4,8 @@
 import type { EditorView } from "@milkdown/kit/prose/view";
 import * as Y from "yjs";
 import { createAidedEditor } from "@/parts/reading-aids/aided-editor";
-import type { EditorHandle, EditorOptions } from "@/upstream/editor/frame";
+import { FOLDED_CLASS } from "@/parts/reading-aids/folds";
+import { BLOCK_ID_ATTRIBUTE, type EditorHandle, type EditorOptions } from "@/upstream/editor/frame";
 import { compiledBlockSchema } from "@/upstream/editor/worker";
 
 export const SPEC = "dispatch://CORE-1/spec";
@@ -58,6 +59,29 @@ export function blockIdsOf(view: EditorView): string[] {
   });
   return ids;
 }
+
+/** The position of the block `blockId` in `view`'s document. */
+export function positionOf(view: EditorView, blockId: string): number {
+  let found: number | undefined;
+  view.state.doc.descendants((node, pos) => {
+    if (found === undefined && node.attrs.blockId === blockId) found = pos;
+    return found === undefined;
+  });
+  if (found === undefined) throw new Error(`the document has no block ${blockId}`);
+  return found;
+}
+
+/** The ids of the blocks `view` draws folded, in document order. */
+export const foldedIdsOf = (view: EditorView) =>
+  [...view.dom.querySelectorAll(`.${FOLDED_CLASS}`)].map((element) =>
+    element.getAttribute(BLOCK_ID_ATTRIBUTE)
+  );
+
+// Above the fixed refs the tests name, such as CORE-1 and CORE-7.
+let documents = 100;
+
+/** The address of a document no other editor of the run names. */
+export const newDocumentRef = () => `dispatch://CORE-${++documents}/spec`;
 
 /** Keeps `handle` for `destroyEditors`. */
 export function keep(handle: EditorHandle): EditorHandle {

@@ -42,6 +42,20 @@ export async function seedEditedSpec(page: Page, text: string, ops: Ops): Promis
   return spec;
 }
 
+/** A spec with a requirement, a check and a plan task. */
+export const TYPED_READ = [
+  FIRST,
+  SECOND,
+  ":::requirement{#r1}\nThe requirement as read.\n:::",
+  ":::check{#c1}\nThe check as read.\n:::",
+  ":::plan_task{#t1}\nThe task as read.\n:::",
+].join("\n\n");
+
+/** The edit of `TYPED_READ`'s requirement. */
+export const REVISE_REQUIREMENT: Ops = [
+  { find: "The requirement as read.", op: "replace", with: "The requirement as revised." },
+];
+
 /** The counts line's Compare with. */
 export const compareWith = (page: Page) =>
   partsRoot(page).getByRole("combobox", { name: "Compare with" });

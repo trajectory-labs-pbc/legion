@@ -1,4 +1,5 @@
 import { textVariants } from "@legion/ui/lib/typography";
+import type { ReactNode } from "react";
 
 import { ReadFailure } from "@/data/read-failure";
 
@@ -112,10 +113,13 @@ function BaselineState({
 
 /** The line above the text that names the baseline the marks compare with, and their counts. */
 export function CountsLine({
+  controls,
   marks,
   moveTo,
   read,
 }: {
+  /** The other aids' controls, before Compare with. */
+  controls?: ReactNode;
   /** What the marks show against the ready baseline; with none, the line names the baseline. */
   marks: ChangeMarks | undefined;
   /** Moves to a changed section. */
@@ -128,8 +132,8 @@ export function CountsLine({
       {read.changedSince === undefined ? null : (
         <span className={muted}>{textChangedText(read.changedSince)}</span>
       )}
-      {/* The line's controls: each aid's own goes here, before Compare with. */}
       <div className="ms-auto flex items-center gap-2">
+        {controls}
         <CompareWith
           onChange={read.compareWith}
           picker={read.picker}
