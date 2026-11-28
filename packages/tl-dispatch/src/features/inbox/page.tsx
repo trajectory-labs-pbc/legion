@@ -3,11 +3,13 @@ import { SurfaceTitle } from "@legion/ui/components/heading";
 import type { ReactNode } from "react";
 import { PageLink } from "@/navigation/page-link";
 import { routes } from "@/navigation/routes";
+import { useInboxPreview } from "@/stores/inbox-preview";
 import { READING_PANE_QUERY, useDocumentTitle, useMediaQuery } from "@/upstream/shell";
 import { Inbox } from "@/upstream/views/inbox/inbox";
+import { InboxView } from "./view";
 
-export function InboxPage(): ReactNode {
-  useDocumentTitle("Inbox · Dispatch");
+/** Upstream's whole Inbox under today's header, for each person who has not turned on the preview. */
+function UpstreamInboxPage(): ReactNode {
   const readingPaneShown = useMediaQuery(READING_PANE_QUERY);
   return (
     <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col" : undefined}>
@@ -20,4 +22,10 @@ export function InboxPage(): ReactNode {
       <Inbox />
     </section>
   );
+}
+
+/** The Inbox: the new one while this browser's preview is on, else upstream's (R16). */
+export function InboxPage(): ReactNode {
+  useDocumentTitle("Inbox · Dispatch");
+  return useInboxPreview((preview) => preview.on) ? <InboxView /> : <UpstreamInboxPage />;
 }

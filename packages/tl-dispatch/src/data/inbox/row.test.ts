@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { InboxRow } from "@/upstream/contract";
 import { INBOX_ASKS, UNREAD_THREAD } from "../../../tests/inbox";
-import { rowFacts } from "./row";
+import { rowFacts, rowText } from "./row";
 
 describe("a row's facts", () => {
   test("an ask has its urgency and its agent, and no unread mark", () => {
@@ -47,6 +47,35 @@ describe("a row's facts", () => {
         agent: false,
         id: "ana@example.com",
       }
+    );
+  });
+});
+
+describe("a row's words", () => {
+  test("an ask shows its issue on line one and the question's first line on line two", () => {
+    const ask = { ...INBOX_ASKS.withOptions, question: "\n  Which release path?\nMore." };
+    expect(rowText({ kind: "ask", ask })).toEqual({
+      owner: "CORE-1",
+      title: "Release train",
+      preview: "Which release path?",
+    });
+    const { issue: _issue, ...onNothing } = ask;
+    expect(rowText({ kind: "ask", ask: onNothing })).toEqual({
+      owner: undefined,
+      title: "Which release path?",
+      preview: "",
+    });
+  });
+
+  test("a thread shows its owner and subject, then the last writer and the newest line", () => {
+    expect(rowText({ kind: "thread", thread: UNREAD_THREAD })).toEqual({
+      owner: "CORE-1",
+      title: "Root",
+      preview: "Agent: Done.",
+    });
+    const person = { ...UNREAD_THREAD.reply, author: { kind: "user", id: "ana@example.com" } };
+    expect(rowText({ kind: "thread", thread: { ...UNREAD_THREAD, reply: person } }).preview).toBe(
+      "ana@example.com: Done."
     );
   });
 });

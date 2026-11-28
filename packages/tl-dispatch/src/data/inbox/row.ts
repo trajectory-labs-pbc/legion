@@ -76,3 +76,41 @@ export function rowFacts(row: InboxListRow): InboxRowFacts {
     urgency: { value: urgency, label: URGENCY_LABELS[urgency] },
   };
 }
+
+/** A row's words: its owner and title on line one, and its preview on line two (INB-39). */
+export interface RowText {
+  /** The issue's key, the document's project, or an Agent row's session. */
+  owner: string | undefined;
+  title: string;
+  preview: string;
+}
+
+const firstLine = (text: string) =>
+  text
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line !== "") ?? "";
+
+/**
+ * An ask: its issue or document, and the question's first line. A thread: its owner, its subject,
+ * and the last writer with the newest message's first line (INB-49).
+ */
+export function rowText(row: InboxListRow): RowText {
+  if (row.kind === "ask") {
+    const { issue, document, question } = row.ask;
+    const line = firstLine(question);
+    const title = issue?.title ?? document?.name;
+    return {
+      owner: issue?.key ?? document?.project,
+      title: title ?? line,
+      preview: title === undefined ? "" : line,
+    };
+  }
+  const { issue, document, session, subject, reply } = row.thread;
+  const writer = reply.author.kind === "user" ? reply.author.id : (session?.name ?? "Agent");
+  return {
+    owner: issue?.key ?? document?.project ?? session?.name,
+    title: subject,
+    preview: `${writer}: ${reply.first_line}`,
+  };
+}

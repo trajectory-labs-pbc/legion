@@ -79,6 +79,19 @@ describe("a row of the Inbox", () => {
     }
   });
 
+  test("an ask in an urgency group draws no bars, since its group shows the urgency", () => {
+    mount(
+      <InboxRowView
+        facts={ASK}
+        now={NOW}
+        preview="Preview"
+        title="Ship the importer"
+        urgencyShown={false}
+      />
+    );
+    expect(screen.queryByRole("img", { name: /^Urgency/ })).toBeNull();
+  });
+
   test("an unread thread has the dot before its title, and a read one has none", () => {
     const unread = draw(thread(true));
     const dot = screen.getByRole("img", { name: "Unread" });

@@ -6,13 +6,13 @@ function Avatar({
   className,
   size = "default",
   ...props
-}: AvatarPrimitive.Root.Props & { size?: "default" | "sm" | "lg" }) {
+}: AvatarPrimitive.Root.Props & { size?: "sm" | "default" | "row" | "lg" }) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
+        "group/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full select-none data-[size=lg]:size-10 data-[size=row]:size-9 data-[size=sm]:size-6",
         className
       )}
       {...props}

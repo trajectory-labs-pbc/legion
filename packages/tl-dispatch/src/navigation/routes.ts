@@ -1,8 +1,25 @@
-import { AGENT_ARTIFACT_PATH, AGENT_LIVE_PATH, ANSWERS_PATH, PERSON_PATH } from "@/upstream/routes";
+import type { InboxListAddress } from "@/data/inbox/list";
+import {
+  AGENT_ARTIFACT_PATH,
+  AGENT_LIVE_PATH,
+  ANSWERS_PATH,
+  PERSON_PATH,
+  parseInboxSearch,
+} from "@/upstream/routes";
 
 import { routePath } from "./page-route";
 
 export type { RoutePath } from "./page-route";
+
+/**
+ * The Inbox's address as the new Inbox reads it: upstream's reading, except that no `?group=` is
+ * the "Needs you" grouping and `?group=priority` is upstream's Priority bands (R3).
+ */
+export function inboxAddress(search: string): InboxListAddress {
+  const { group, ...route } = parseInboxSearch(search);
+  const named = new URLSearchParams(search).get("group");
+  return { ...route, group: named === "priority" ? "priority" : (group ?? "needs-you") };
+}
 
 /**
  * The addresses of each page, by its id and the name of the route. A link names one, so the shell

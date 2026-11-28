@@ -12,7 +12,7 @@ replaces them one page at a time.
 | `src/navigation` | The router: each page's addresses (`routes.ts`), typed links, hooks and the route tree |
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
 | `src/browser` | Upstream's storage keys, read and removed in upstream's names and formats (`storage.ts`), and the unload prompt (`unload.ts`) |
-| `src/stores` | What the fork keeps in the browser: one Zustand store for each concern, each with Zustand's `persist` under the fork's prefix, its version and its actions (`ui-preferences.ts`: what a person sets in the UI); with `storage.ts`, the only files that touch the browser's storage |
+| `src/stores` | What the fork keeps in the browser: one Zustand store for each concern, each with Zustand's `persist` under the fork's prefix, its version and its actions (`ui-preferences.ts`: what a person sets in the UI; `inbox-preview.ts`: whether this browser shows the new Inbox, until its last pull request), over `browser-kept.ts`'s one storage and other-tab follow; with `storage.ts`, the only files that touch the browser's storage |
 | `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed read (`read-failure`, the alert with its Retry) or write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
 | `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
