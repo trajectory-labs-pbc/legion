@@ -20,6 +20,12 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **KB8** A toast's Undo is the only undo. `$mod+z` stays the browser's in a field and has no app command; a global undo is later work. Linear: `$mod+z` undoes almost every write and returns to its page. Check: reviewer.
 
+**KB9** In the command menu, Right arrow on a record's row opens that record's actions as the menu's next list. Linear: the command menu's nested lists. Pages: all. Check: (new) the palette tests.
+
+**KB10** Backspace in the command menu's empty field widens what the menu acts on, from the block or record in view to its project, as upstream's palette does. With words in the field it erases a letter. Linear: Backspace in an empty command menu steps back out of a nested list; this app keeps upstream's key. Pages: all. Check: (new) the palette tests.
+
+**KB11** The command menu's search finds values as well as commands: "done" finds "Status > Done", which sets the subject's status. Linear: the command menu finds a status by its name. Pages: all. Check: (new) the palette tests.
+
 ## Context menus (CX)
 
 **CX1** Right-click on a row, a board card, a link to a record or a record's header opens the record's menu: the same rows, sections and key hints as the record header's `⋯` button. Sections, in order: open, change (the property pickers first, as submenus), create, other, copy (one submenu), destructive. Linear: the issue context menu. Pages: every list, board and record. Check: (new) a test compares the two menus.
@@ -29,6 +35,10 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 **CX3** Right-click on body text or a field keeps the browser's own menu, and `Alt`+right-click always does. Linear: `Alt`+right-click. Check: (new) a test right-clicks the body text.
 
 **CX4** A phone has no context menu. The `⋯` button opens the menu as a bottom sheet titled with the record's name. Check: reviewer on a phone.
+
+**CX5** A separator is a direct child of the menu's content, between two rows or groups, never at a group's edge. It draws only between two rows: never first, never last, and once where two meet; a group counts as a row. The separator does this in CSS, so a row, or a whole group, that a caller leaves out leaves no stray line. A caller leaves out a group it has no rows for, label and all. Linear: menu sections divided by one line. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx`.
+
+**CX6** When one row of a menu leads with an icon, or is a checkbox, every other row and each group label keeps the icon's room, so the labels line up. The menu does this: a caller never pads a row. A row marks its leading icon, and only that, with `data-icon="inline-start"`, as on a Button (an icon, an avatar, a dot, an image); an unmarked icon gives no room, and a mark elsewhere, such as on a trailing badge's icon, drops a plain row's room and gives it to every other row. A checkbox row always keeps its check's room, so an icon it holds sits after the check and its label starts later. Linear: menu labels line up whether a row has an icon or not. Pages: every dropdown and context menu. Check: `packages/ui/src/components/dropdown-menu.test.tsx`; reviewer for a leading icon without the mark, and for an `inline-start` mark on anything but a row's leading icon.
 
 ## The pointer (PT)
 

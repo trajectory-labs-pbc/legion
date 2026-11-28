@@ -50,7 +50,7 @@ export function AccountMenu({
         <DropdownMenuItem
           render={<PageLink onClick={onNavigate} page={routes.people.person} params={{ login }} />}
         >
-          <UserIcon aria-hidden />
+          <UserIcon aria-hidden data-icon="inline-start" />
           Your page
         </DropdownMenuItem>
         {signOut === undefined ? null : (
@@ -58,7 +58,9 @@ export function AccountMenu({
             disabled={!signOut.enabled}
             onClick={() => commandStore.run("global.sign-out")}
           >
-            {SignOutIcon === undefined ? null : <SignOutIcon aria-hidden />}
+            {SignOutIcon === undefined ? null : (
+              <SignOutIcon aria-hidden data-icon="inline-start" />
+            )}
             {signOut.label}
           </DropdownMenuItem>
         )}

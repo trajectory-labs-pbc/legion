@@ -58,21 +58,24 @@ function DropdownMenuGroup(props: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
+// Only a row's leading icon is marked inline-start. A marked row or a checkbox row gives every
+// unmarked row and label in its menu the icon's room; a mark elsewhere drops a plain row's room.
+const ICON_ROOM_CLASS =
+  "in-[[role=menu]:has([data-icon=inline-start],[role=menuitemcheckbox])]:not-has-[[data-icon=inline-start]]:ps-8";
+
+const ITEM_CLASS = `relative flex h-control-sm cursor-default items-center gap-2 rounded-sm px-2 text-sm outline-hidden select-none ${highlightClass} ${ICON_ROOM_CLASS} data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground`;
 
 const DESTRUCTIVE_CLASS =
   "data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger-tint data-[variant=destructive]:data-highlighted:text-danger data-[variant=destructive]:*:[svg]:text-danger!";
 
 function DropdownMenuItem({
   className,
-  inset,
   variant = "default",
   ...props
-}: MenuPrimitive.Item.Props & { inset?: boolean; variant?: "default" | "destructive" }) {
+}: MenuPrimitive.Item.Props & { variant?: "default" | "destructive" }) {
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
-      data-inset={inset}
       data-variant={variant}
       className={cn(ITEM_CLASS, DESTRUCTIVE_CLASS, className)}
       {...props}
@@ -90,7 +93,8 @@ function DropdownMenuLinkItem({ className, ...props }: MenuPrimitive.LinkItem.Pr
   );
 }
 
-// A checkbox item stays open, so several can change in one visit; a radio item closes on its choice.
+// A checkbox item stays open, so several can change in one visit, and always keeps its check's room;
+// a radio item closes on its choice.
 function DropdownMenuCheckboxItem({
   className,
   children,
@@ -101,10 +105,10 @@ function DropdownMenuCheckboxItem({
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       closeOnClick={closeOnClick}
-      className={cn(ITEM_CLASS, "pl-8", className)}
+      className={cn(ITEM_CLASS, "ps-8", className)}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span className="pointer-events-none absolute start-2 flex size-3.5 items-center justify-center">
         <MenuPrimitive.CheckboxItemIndicator>
           <CheckIcon aria-hidden="true" className="size-4" />
         </MenuPrimitive.CheckboxItemIndicator>
@@ -128,10 +132,10 @@ function DropdownMenuRadioItem({
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       closeOnClick={closeOnClick}
-      className={cn(ITEM_CLASS, "pr-8", className)}
+      className={cn(ITEM_CLASS, "pe-8", className)}
       {...props}
     >
-      <span className="pointer-events-none absolute right-2 flex size-3.5 items-center justify-center">
+      <span className="pointer-events-none absolute end-2 flex size-3.5 items-center justify-center">
         <MenuPrimitive.RadioItemIndicator>
           <CheckIcon aria-hidden="true" className="size-4" />
         </MenuPrimitive.RadioItemIndicator>
@@ -141,17 +145,13 @@ function DropdownMenuRadioItem({
   );
 }
 
-function DropdownMenuLabel({
-  className,
-  inset,
-  ...props
-}: MenuPrimitive.GroupLabel.Props & { inset?: boolean }) {
+function DropdownMenuLabel({ className, ...props }: MenuPrimitive.GroupLabel.Props) {
   return (
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
-      data-inset={inset}
       className={cn(
-        "px-2 py-1.5 text-xs font-medium text-muted-foreground data-[inset]:pl-8",
+        "px-2 py-1.5 text-xs font-medium text-muted-foreground",
+        ICON_ROOM_CLASS,
         className
       )}
       {...props}
@@ -159,19 +159,24 @@ function DropdownMenuLabel({
   );
 }
 
+// A separator sits in the content, between rows or groups. It draws when a row comes anywhere
+// before it and a row right after it, so none draws first, last, or twice in a row.
+const SEPARATOR_CLASS =
+  "-mx-1 my-1 hidden h-px bg-border [:not([data-slot=dropdown-menu-separator])~&]:has-[+:not([data-slot=dropdown-menu-separator])]:block";
+
 function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(SEPARATOR_CLASS, className)}
       {...props}
     />
   );
 }
 
-/** A menu row's key at its right, drawn as the app draws every key. */
+/** A menu row's key at its end, drawn as the app draws every key. */
 function DropdownMenuShortcut({ className, steps }: { className?: string; steps: KeySteps }) {
-  return <KbdSequence className={cn("ml-auto", className)} steps={steps} />;
+  return <KbdSequence className={cn("ms-auto", className)} steps={steps} />;
 }
 
 function DropdownMenuSub(props: MenuPrimitive.SubmenuRoot.Props) {
@@ -180,14 +185,12 @@ function DropdownMenuSub(props: MenuPrimitive.SubmenuRoot.Props) {
 
 function DropdownMenuSubTrigger({
   className,
-  inset,
   children,
   ...props
-}: MenuPrimitive.SubmenuTrigger.Props & { inset?: boolean }) {
+}: MenuPrimitive.SubmenuTrigger.Props) {
   return (
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
-      data-inset={inset}
       className={cn(
         ITEM_CLASS,
         "data-popup-open:bg-accent data-popup-open:text-accent-foreground data-popup-open:inset-ring data-popup-open:inset-ring-muted-foreground",
@@ -196,7 +199,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon aria-hidden="true" className="ml-auto size-4" />
+      <ChevronRightIcon aria-hidden="true" className="ms-auto size-4" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
