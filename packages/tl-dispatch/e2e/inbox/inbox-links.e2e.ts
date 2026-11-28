@@ -231,33 +231,35 @@ test("INB-12 ?q= fills the search box and filters by its first 1000 characters",
   await expect(row(main(page), other)).toHaveCount(0);
 });
 
-test("INB-13 ?assignee= lists the reader's own, a person's, everyone's or nobody's questions", async ({
-  inbox,
-  page,
-}) => {
-  const mine = await inbox.ask("withOptions", "Mine to answer?");
-  const reader = await inbox.reader();
-  const traffic = watchApiRequests(page);
-  const listed = async (assignee: string[], shows: boolean) => {
-    const query = new URLSearchParams({ project: await inbox.project() });
-    for (const value of assignee) query.append("assignee", value);
-    await page.goto(`/?${query}`);
-    await expect(inboxHeading(page)).toBeVisible();
-    // A row that shows is waited for; one that does not needs the page to have settled.
-    if (!shows) await expectLoadSettled(traffic);
-    await expect(row(main(page), mine)).toHaveCount(shows ? 1 : 0);
-  };
-  await listed([], true);
-  await listed([`  ${reader.toUpperCase()} `], true);
-  await listed(["everyone"], true);
-  await listed(["unassigned"], false);
-  await listed([`nobody-${randomUUID()}@example.com`], false);
-  // A repeated value is one: any change writes the address with it once.
-  await listed([reader, reader], true);
-  await chooseView(page, "Sort by", "Urgency");
-  await expect.poll(() => search(page).get("sort")).toBe("urgency");
-  expect(search(page).getAll("assignee")).toEqual([reader]);
-});
+for (const r of [1, 2, 3, 4, 5, 6, 7, 8]) {
+  test(`INB-13 r${r} ?assignee= lists the reader's own, a person's, everyone's or nobody's questions`, async ({
+    inbox,
+    page,
+  }) => {
+    const mine = await inbox.ask("withOptions", "Mine to answer?");
+    const reader = await inbox.reader();
+    const traffic = watchApiRequests(page);
+    const listed = async (assignee: string[], shows: boolean) => {
+      const query = new URLSearchParams({ project: await inbox.project() });
+      for (const value of assignee) query.append("assignee", value);
+      await page.goto(`/?${query}`);
+      await expect(inboxHeading(page)).toBeVisible();
+      // A row that shows is waited for; one that does not needs the page to have settled.
+      if (!shows) await expectLoadSettled(traffic);
+      await expect(row(main(page), mine)).toHaveCount(shows ? 1 : 0);
+    };
+    await listed([], true);
+    await listed([`  ${reader.toUpperCase()} `], true);
+    await listed(["everyone"], true);
+    await listed(["unassigned"], false);
+    await listed([`nobody-${randomUUID()}@example.com`], false);
+    // A repeated value is one: any change writes the address with it once.
+    await listed([reader, reader], true);
+    await chooseView(page, "Sort by", "Urgency");
+    await expect.poll(() => search(page).get("sort")).toBe("urgency");
+    expect(search(page).getAll("assignee")).toEqual([reader]);
+  });
+}
 
 test("INB-14 View › Show › Dismissed writes ?show=dismissed, and Inbox takes it away", async ({
   inbox,

@@ -136,8 +136,7 @@ export function watchApiRequests(page: Page): ApiRequests {
         .map(([route, count]) => ({ count, route }))
         .sort((a, b) => b.count - a.count || a.route.localeCompare(b.route));
     },
-    pending: () =>
-      [...inFlight].map((r) => `${r.resourceType()} ${r.method()} ${r.url()}`),
+    pending: () => [...inFlight].map((r) => `${r.resourceType()} ${r.method()} ${r.url()}`),
     quietFor: (ms) => inFlight.size === 0 && Date.now() - lastSettledAt >= ms,
     requests,
     reset: () => {
