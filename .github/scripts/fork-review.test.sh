@@ -197,6 +197,20 @@ scan_with() {
 }
 mkdir "$work/rd"
 printf '%s\n' '{"id":42,"user":"github-actions[bot]"}' '{"id":43,"user":"a"}' > "$work/rd/review-comments.jsonl"
+# a.go's first hunk adds a line that reads like a file header.
+cat > "$work/rd/diff.patch" << 'EOF'
+diff --git a/a.go b/a.go
+--- a/a.go
++++ b/a.go
+@@ -1,8 +1,10 @@ package a
++++ b/z.go
+@@ -18,2 +20,2 @@ func f() {
+diff --git a/b.go b/b.go
+--- a/b.go
++++ b/b.go
+@@ -40,2 +40,3 @@
+@@ -99,2 +100,2 @@
+EOF
 scan_with '{"summary":"Fine.","findings":[{"path":"a.go","line":3,"severity":"Minor","body":"Rename x."}]}'
 check "a clean review passes on" "$(is "$status:$([ -n "$review_out" ] && echo set)" 0:set)"
 check "the body starts with the verdict at the head" "$(is "$(jq -r '.body | split("\n")[0]' <<< "$review_out")" 'Verdict: APPROVE at abc')"
@@ -215,6 +229,12 @@ check "a finding an earlier comment raised opens no second thread" \
   "$(is "$(jq -r '.comments | length' <<< "$review_out"):$(contains "$(jq -r .body <<< "$review_out")" 'still stands, comment 42')" 0:true)"
 scan_with '{"summary":"Still.","findings":[{"path":"a.go","line":3,"severity":"Medium","body":"x","earlier_comment_id":43},{"path":"a.go","line":4,"severity":"Medium","body":"y","earlier_comment_id":99}]}'
 check "an id that names no comment of this workflow opens a thread" "$(is "$(jq -r '.comments | length' <<< "$review_out")" 2)"
+scan_with '{"summary":"Fine.","findings":[{"path":"b.go","line":60,"severity":"Medium","body":"x"},{"path":"a.go","line":21,"severity":"Medium","body":"y"}]}'
+check "a finding on a line no hunk shows opens its thread on the nearest hunk line" \
+  "$(is "$(jq -c '.comments[0] | [.line, .body]' <<< "$review_out")" '[42,"**Medium** (line 60, which the diff does not show): x"]')"
+check "a line in a later hunk keeps its line after a line that reads like a header" "$(is "$(jq -r '.comments[1].line' <<< "$review_out")" 21)"
+scan_with '{"summary":"Fine.","findings":[{"path":"c.go","line":5,"severity":"Medium","body":"x"}]}'
+check "a finding on a file the diff does not change keeps its line" "$(is "$(jq -c '.comments[0] | [.path, .line]' <<< "$review_out")" '["c.go",5]')"
 scan_with '{"summary":"Made by acmecorp.","findings":[]}'
 check "a private term withholds the review" "$(is "$status:$review_out" 1:)"
 check "the refusal prints no term" "$(is "$(contains "$out" acmecorp)" false)"

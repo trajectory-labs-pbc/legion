@@ -123,6 +123,16 @@ prompt() {
   output schema "$(jq -c . "$review_dir_files/review.schema.json")"
 }
 
+# hunk_lines PATCH: for each file, the [first, last] head lines of each hunk, the lines GitHub
+# accepts an inline comment on. A header line is read only between `diff --git` and the first hunk.
+hunk_lines() {
+  awk '/^diff --git /{header = 1; path = ""; next}
+    header && /^\+\+\+ /{path = substr($0, 1, 6) == "+++ b/" ? substr($0, 7) : ""; sub(/\t$/, "", path); next}
+    /^@@ /{header = 0; if (path != "" && match($0, /\+[0-9]+(,[0-9]+)?/)) {split(substr($0, RSTART + 1, RLENGTH - 1), n, ","); print path "\t" n[1] "\t" (2 in n ? n[2] : 1)}}' "$1" \
+    | jq -Rn '[inputs | split("\t") | .[1] |= tonumber | .[2] |= tonumber | select(.[2] > 0)]
+      | group_by(.[0]) | map({key: .[0][0], value: map([.[1], .[1] + .[2] - 1])}) | from_entries'
+}
+
 # The credentials the model's job holds: a JSON web token (its first two parts start with `eyJ`,
 # an encoded `{"`), an Anthropic token and a GitHub token. A review never needs to quote one.
 token_pattern='eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}|sk-ant-[A-Za-z0-9_-]{8,}|gh[opsu]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}'
@@ -149,9 +159,15 @@ scan() {
   # ruleset requires resolved before a merge. A Minor finding, and one an earlier comment of this
   # workflow already raised, is a line of the body; an id that names no such comment counts as
   # new. `folded` is the body with every finding in it, for when GitHub refuses an inline comment.
-  jq -c --arg head "$head" --slurpfile earlier "$comments" '
+  # A thread goes on the finding's line, or, when no hunk shows that line, on the nearest hunk line
+  # of the same file, which GitHub accepts.
+  hunk_lines "${REVIEW_DIR:?}/diff.patch" > "$work/hunks.json"
+  jq -c --arg head "$head" --slurpfile earlier "$comments" --slurpfile hunks "$work/hunks.json" '
     [$earlier[] | select(.user == "github-actions[bot]") | .id] as $ids
     | .findings |= map(.earlier_comment_id as $e | if any($ids[]; . == $e) then . else .earlier_comment_id = null end)
+    | .findings |= map(. as $f | ($hunks[0][$f.path] // []) as $h
+      | .anchor = if $h == [] or any($h[]; $f.line >= .[0] and $f.line <= .[1]) then $f.line
+        else $h | map(if $f.line < .[0] then .[0] else .[1] end) | min_by(. - $f.line | if . < 0 then -. else . end) end)
     | (if any(.findings[]; .severity == "High") then "CHANGES" else "APPROVE" end) as $verdict
     | def inline: .severity != "Minor" and .earlier_comment_id == null;
     def item: "- **\(.severity)** `\(.path):\(.line)`\(if .earlier_comment_id then " (still stands, comment \(.earlier_comment_id))" else "" end): \(.body)";
@@ -165,7 +181,8 @@ scan() {
       verdict: $verdict,
       body: body([.findings[] | select(inline | not)]),
       folded: body(.findings),
-      comments: [.findings[] | select(inline) | {path, line, side: "RIGHT", body: "**\(.severity)**: \(.body)"}]
+      comments: [.findings[] | select(inline) | {path, line: .anchor, side: "RIGHT",
+        body: "**\(.severity)**\(if .anchor == .line then "" else " (line \(.line), which the diff does not show)" end): \(.body)"}]
     }' <<< "$review" > "$work/review.json"
   # `folded` holds every word the review can post.
   jq -r .folded "$work/review.json" > "$work/text"
@@ -195,7 +212,7 @@ post() {
   err=$(mktemp)
   if ! jq -c --arg head "$head" '{commit_id: $head, event: "COMMENT", body, comments}' <<< "$review" \
     | gh api -X POST "repos/$repository/pulls/$pr/reviews" --input - > /dev/null 2> "$err"; then
-    # GitHub refuses the whole review with an HTTP 422 when, for one, a comment's line is outside the
+    # GitHub refuses the whole review with an HTTP 422 when, for one, a comment's file is not in the
     # diff, so the findings go into the body instead, which the scan read whole.
     grep -q 'HTTP 422' "$err" || { cat "$err" >&2; fail "GitHub refused the review"; }
     jq -c --arg head "$head" '{commit_id: $head, event: "COMMENT", body: .folded}' <<< "$review" \
