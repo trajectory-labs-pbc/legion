@@ -6,21 +6,16 @@ import { TruncatedText } from "#registry/legion/ui/truncated-text";
 
 // happy-dom lays nothing out; text reads as cut while these stand. Only a span reads as cut: the
 // span inside the button is the element measured.
+const span = HTMLSpanElement.prototype;
 function cutText(): void {
-  Object.defineProperty(HTMLSpanElement.prototype, "scrollWidth", {
-    configurable: true,
-    get: () => 200,
-  });
-  Object.defineProperty(HTMLSpanElement.prototype, "clientWidth", {
-    configurable: true,
-    get: () => 100,
-  });
+  Object.defineProperty(span, "scrollWidth", { configurable: true, get: () => 200 });
+  Object.defineProperty(span, "clientWidth", { configurable: true, get: () => 100 });
 }
 
 describe("TruncatedText", () => {
   afterEach(() => {
-    Reflect.deleteProperty(HTMLSpanElement.prototype, "scrollWidth");
-    Reflect.deleteProperty(HTMLSpanElement.prototype, "clientWidth");
+    Reflect.deleteProperty(span, "scrollWidth");
+    Reflect.deleteProperty(span, "clientWidth");
   });
 
   it("is plain text while the text fits", () => {

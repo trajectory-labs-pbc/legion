@@ -457,11 +457,8 @@ const CONTROLS = [
   "[role=treeitem]",
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
-/** What may hold a small control without meeting it: a link with no other role or a `role="link"`
- *  row, a tree row, a focusable element that is no control (no `button`, `input`, `select`,
- *  `textarea` or `summary` tag and no `role` attribute), or one with none of those tags and the
- *  role region, group or tab panel. Any other control that holds one meets it. HTML lets a
- *  `button` take the link or tree row role, not the region, group or tab panel role. */
+/** PT2's holders (keyboard-and-feedback.md). HTML lets a `button` take the link or tree row role,
+ *  not the region, group or tab panel role. */
 const HOLDERS = [
   "a[href]:not([role])",
   "[role=link]",
