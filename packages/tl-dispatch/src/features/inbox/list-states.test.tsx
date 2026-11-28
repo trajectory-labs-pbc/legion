@@ -26,7 +26,8 @@ describe("the Inbox list's states", () => {
       expect(screen.queryByRole("status")).toBeNull();
       await tick(100);
       const status = screen.getByRole("status", { name: "Loading your inbox" });
-      expect(status.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(12);
+      // Six rows, each the row's shape: the avatar, two lines and the time.
+      expect(status.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(24);
       expect(screen.queryByText("rows")).toBeNull();
       view.unmount();
     });
