@@ -8,6 +8,7 @@ import { CHECK_SIZES, CONTROL_HEIGHTS, TOUCH_MIN_HEIGHT } from "./control-scale"
 import { type CssDeclaration, importedPath, parseCss } from "./css";
 import { EXEMPT } from "./design-config";
 import { filesWith, importsOf, ownFiles, resolutionCache } from "./imports";
+import { openingOf } from "./map/source";
 import {
   APP_STYLESHEET,
   PACKAGE_ROOT,
@@ -43,6 +44,8 @@ export const RULES = {
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
+  rowHeight:
+    "a part of a list row takes no height class but the row tokens: `h-list-row-1` or `h-list-row-2` (a glyph or an avatar keeps its `size-N`)",
   type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
   network:
@@ -633,6 +636,15 @@ const inScale = (kind: string, value: string) =>
   (kind !== "min-h" && CONTROL_HEIGHTS.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
 
+// A list row's parts: the row blocks' files, a feature's row files, and what a `ListRow` or a
+// `GroupHeader` element holds.
+export const ROW_FILE =
+  /^(\.\.\/ui\/src\/blocks\/(list-row|group-header)|src\/features\/[^/]+\/row(-[^/]+)?)\.tsx$/;
+const ROW_TAGS = new Set(["ListRow", "GroupHeader"]);
+const ROW_HEIGHT = /^(min-h|max-h|h)-(.+)$/;
+const ROW_TOKENS = new Set(["list-row-1", "list-row-2"]);
+const isRowElement = (node: ts.Node) => ROW_TAGS.has(openingOf(node)?.tagName.getText() ?? "");
+
 type Refuse = (node: ts.Node, text: string, rule: string) => void;
 
 /** Adds a violation of `rule` at `node`'s line of `source` to `violations`. */
@@ -671,8 +683,11 @@ function scriptViolations(
   const bare = !file.path.startsWith("../");
   // Inside a class expression, the expression is judged whole; outside, each literal is.
   let inClass = false;
+  let inRow = ROW_FILE.test(file.path);
   const visit = (node: ts.Node) => {
     const opens = mayStripe && !inClass && isClassExpression(node);
+    const row = !inRow && isRowElement(node);
+    if (row) inRow = true;
     if (opens && drawsStripe(expressionWords(node, constants), stripes, bare)) {
       refuse(node, node.getText(), RULES.stripe);
     }
@@ -686,6 +701,14 @@ function scriptViolations(
       }
       if (mayStripe && !inClass && drawsStripe(node.text.split(/\s+/), stripes)) {
         refuse(node, node.text, RULES.stripe);
+      }
+      if (inRow) {
+        for (const utility of utilities) {
+          const height = ROW_HEIGHT.exec(utility)?.[2];
+          if (height !== undefined && !ROW_TOKENS.has(height)) {
+            refuse(node, utility, RULES.rowHeight);
+          }
+        }
       }
     }
     if (ts.isObjectLiteralExpression(node) && isStyleObject(node)) {
@@ -772,6 +795,7 @@ function scriptViolations(
     if (opens) inClass = true;
     ts.forEachChild(node, visit);
     if (opens) inClass = false;
+    if (row) inRow = false;
   };
   visit(source);
 
