@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
 import { filesWith } from "../imports";
+import { SRC_DIR } from "../source";
 import {
   coverage,
   effectiveOwners,
@@ -13,7 +14,7 @@ import {
   owners,
   ownOwner,
 } from "./coverage";
-import { featureViews, forkSrc } from "./source";
+import { featureViews } from "./source";
 
 const files = featureViews();
 const all = owners();
@@ -139,7 +140,7 @@ describe("the view map", () => {
   });
 
   test("a type-only import loads nothing", () => {
-    const at = (name: string) => join(forkSrc, "probe", name);
+    const at = (name: string) => join(SRC_DIR, "probe", name);
     const text = [
       'import type { A } from "./a";',
       'import { type B } from "./b";',
@@ -154,7 +155,7 @@ describe("the view map", () => {
   });
 
   test("an import that resolves to nothing stops the map", () => {
-    const file = join(forkSrc, "probe", "x.tsx");
+    const file = join(SRC_DIR, "probe", "x.tsx");
     const files = filesWith(new Map([[file, 'import { Gone } from "./gone";']]));
     expect(() => loadedFiles(file, files)).toThrow("./gone resolves to no file and no package");
   });
