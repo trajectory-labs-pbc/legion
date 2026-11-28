@@ -29,6 +29,8 @@ export const textVariants = cva("", {
     size: {
       body: "text-sm",
       caption: "text-xs",
+      // A large number, such as a metric's value: its weight and figures are part of its size.
+      figure: "text-base font-semibold tabular-nums",
     },
     tone: TONE,
     weight: {

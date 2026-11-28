@@ -71,12 +71,14 @@
   --color-danger: var(--danger);
   --color-danger-tint: var(--danger-tint);
   --color-danger-border: var(--danger-border);
+  --color-danger-faint: var(--danger-faint);
   --color-warning: var(--warning);
   --color-warning-tint: var(--warning-tint);
   --color-warning-border: var(--warning-border);
   --color-success: var(--success);
   --color-success-tint: var(--success-tint);
   --color-success-border: var(--success-border);
+  --color-success-faint: var(--success-faint);
   --color-scrim: var(--scrim);
 }
 
@@ -124,12 +126,15 @@
   --danger: #c32b21;
   --danger-tint: #fce8e6;
   --danger-border: #f3b7b0;
+  /* A bar's second value, behind the bar: 1.8:1 or more on each row fill and from the bar. */
+  --danger-faint: #e48a81;
   --warning: #965e00;
   --warning-tint: #fef7e0;
   --warning-border: #f5dfa0;
   --success: #167834;
   --success-tint: #e6f4ea;
   --success-border: #a8d5b5;
+  --success-faint: #6fb383;
   --scrim: #000;
   --shadow-tint: rgb(20 19 17 / 0.14);
   --radius: 8px;
@@ -179,12 +184,14 @@
   --danger: #f5a097;
   --danger-tint: #3d1f1c;
   --danger-border: #6e2d28;
+  --danger-faint: #934740;
   --warning: #e8b95b;
   --warning-tint: #3a2e12;
   --warning-border: #6a5420;
   --success: #86d49b;
   --success-tint: #1b3324;
   --success-border: #2e5a3a;
+  --success-faint: #3a744b;
   /* Lighter than in light: the page under it is dark already. */
   --scrim: rgb(0 0 0 / 0.6);
   --shadow-tint: rgb(0 0 0 / 0.5);
@@ -233,12 +240,14 @@
     --danger: #f5a097;
     --danger-tint: #3d1f1c;
     --danger-border: #6e2d28;
+    --danger-faint: #934740;
     --warning: #e8b95b;
     --warning-tint: #3a2e12;
     --warning-border: #6a5420;
     --success: #86d49b;
     --success-tint: #1b3324;
     --success-border: #2e5a3a;
+    --success-faint: #3a744b;
     /* Lighter than in light: the page under it is dark already. */
     --scrim: rgb(0 0 0 / 0.6);
     --shadow-tint: rgb(0 0 0 / 0.5);

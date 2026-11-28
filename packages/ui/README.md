@@ -70,4 +70,6 @@ installs from the default branch, not from the ref you asked for.
   group's count. A list row draws its focus outline inside itself, as a scroll container does, so
   its list does not clip it; every other part draws it 2 px outside. It also checks the contrast of
   each text colour on each surface the components draw it on, of the focus outline and the field
-  and state edges, and of a priority's track against its filled bars and each row fill.
+  and state edges, of a priority's track against its filled bars and each row fill, of a bar's faint
+  second value against its bar and each row fill, and of a neutral bar against its track, on the
+  card and beside the status colours, which it stays quieter than.
