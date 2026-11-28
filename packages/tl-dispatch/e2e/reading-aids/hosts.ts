@@ -7,6 +7,8 @@ import {
   createComment,
   createIssue,
   createProjectDocument,
+  getArtifactBlocks,
+  getArtifactText,
 } from "../../../dispatch/e2e/api";
 import { connectedDot, documentEditor } from "../../../dispatch/e2e/editor";
 import { AGENT, personOf, runProject } from "../flows";
@@ -28,6 +30,15 @@ export const countsLine = (page: Page) => partsRoot(page).locator("[data-reading
 export const head = (page: Page, blockId: string) =>
   page.locator(`[data-reading-aids-fold-head="${blockId}"] button`);
 
+/** The id of the block whose text is `text`, from the server's own block list. */
+export async function blockIdOf(artifactId: string, text: string): Promise<string> {
+  const { markdown } = await getArtifactText(artifactId, AGENT);
+  const blocks = await getArtifactBlocks(artifactId, AGENT);
+  const block = blocks.find(({ from, to }) => markdown.slice(from, to) === text);
+  if (block === undefined) throw new Error(`no block reads ${JSON.stringify(text)}`);
+  return block.id;
+}
+
 /** How many parts' roots the page shows, anywhere: a hidden editor's root is not shown. */
 export const shownParts = (page: Page) =>
   page
@@ -35,6 +46,39 @@ export const shownParts = (page: Page) =>
     .evaluateAll(
       (roots) => roots.filter((root) => root.checkVisibility({ visibilityProperty: true })).length
     );
+
+/** The box of the one element `locator` finds; it throws while none is drawn. */
+export async function box(locator: Locator) {
+  const found = await locator.boundingBox();
+  if (found === null) throw new Error(`${locator} has no box`);
+  return found;
+}
+
+export const top = async (locator: Locator) => (await box(locator)).y;
+
+export const bottom = async (locator: Locator) => {
+  const { height, y } = await box(locator);
+  return y + height;
+};
+
+/** Puts the focus on the host as the aids' move does, which alone makes it focusable. */
+export async function focusHost(page: Page): Promise<void> {
+  const host = page.locator(HOST);
+  await host.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) throw new Error("the host is no HTML element");
+    element.tabIndex = -1;
+    element.addEventListener("blur", () => element.removeAttribute("tabindex"), { once: true });
+    element.focus({ preventScroll: true });
+  });
+  await expect(host).toBeFocused();
+}
+
+/** Waits until the animations running on `locator`, such as its transitions, have ended. */
+export async function transitionsEnded(locator: Locator): Promise<void> {
+  await locator.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished))
+  );
+}
 
 /** How far apart the tops of two elements are, once both are drawn. */
 export async function topsApart(first: Locator, second: Locator): Promise<number | null> {

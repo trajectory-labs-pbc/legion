@@ -2,13 +2,44 @@
 import { fileURLToPath } from "node:url";
 
 import { documentEditor, selectEditorText, typeAtEnd } from "../../../dispatch/e2e/editor";
-import { expect, test } from "../test";
-import { compareWith, revisitSpec, seedReadThenRevised, sinceText } from "./baseline-seed";
-import { head, openHost, SECOND, seedHost } from "./hosts";
+import { expect, type Page, test } from "../test";
+import {
+  compareWith,
+  pickVersion,
+  revisitSpec,
+  seedReadThenRevised,
+  sinceText,
+} from "./baseline-seed";
+import { head, openHost, SECOND, seedHost, transitionsEnded } from "./hosts";
+import {
+  foldLines,
+  LINE_TEXTS,
+  LINES,
+  onlyChangesControl,
+  onlyChangesOn,
+  onlyFolded,
+  openComparedWithFirst,
+  seedChanged,
+  seedLines,
+} from "./only-changes-seed";
 import { openCounted, outline } from "./outline-fixture";
 import { readFirst, readFirstListed, seedDecided } from "./read-first-seed";
 
 const SCREENSHOTS = fileURLToPath(new URL("../screenshots/", import.meta.url));
+
+/** Turns Only changes on once the version picker's popup is gone and its trigger has the focus back. */
+async function onlyChangesOnAfterPick(page: Page): Promise<void> {
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(compareWith(page)).toBeFocused();
+  await onlyChangesOn(page);
+}
+
+/** The pointer away, the control's transition ended, and no focus ring, before a picture. */
+async function settled(page: Page): Promise<void> {
+  await page.mouse.move(0, 0);
+  await transitionsEnded(onlyChangesControl(page));
+  await expect(page.locator(":focus")).toHaveCount(0, { timeout: 0 });
+}
 
 const REWRITTEN = "We ask every team to read the decisions before they open the plan.";
 const REMOVED = "A paragraph about the old rollout, which the new version drops.";
@@ -48,6 +79,19 @@ const FOLDS = [
   SECOND,
   "",
 ].join("\n");
+
+/** The sections after the changed one: a quiet one with a requirement, and a long one. */
+const QUIET = [
+  "## Release",
+  SECOND,
+  ":::requirement{#r1}",
+  "**R1.** Each upload keeps its original file name.",
+  ":::",
+  "The release section's last paragraph.",
+  "## Notes",
+  "The notes section's first paragraph.",
+  "The notes section's second paragraph.",
+];
 
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(colorScheme, () => {
@@ -100,11 +144,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.keyboard.press("Backspace");
       await page.keyboard.press("Backspace");
       await typeAtEnd(page, "A closing paragraph that the new version adds.");
-      await compareWith(page).click();
-      await page
-        .getByRole("listbox")
-        .getByRole("option", { exact: true, name: "Version 1" })
-        .click();
+      await pickVersion(page, 1);
       const editor = documentEditor(page);
       await expect(editor.locator("[data-reading-aids-change]")).toHaveCount(4);
       await page.mouse.move(0, 0);
@@ -116,6 +156,46 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(editor.getByText("Rewritten: hide the earlier text")).toBeVisible();
       await page.mouse.move(0, 0);
       await page.screenshot({ path: `${SCREENSHOTS}change-marks-open-${colorScheme}.png` });
+    });
+
+    for (const kind of ["spec", "document"] as const) {
+      test(`screenshots: Only changes on the ${kind} host, against version 1, ${colorScheme}`, async ({
+        page,
+      }) => {
+        const { path } = await seedChanged(page, kind, QUIET);
+        await openComparedWithFirst(page, path);
+        await page.screenshot({
+          path: `${SCREENSHOTS}only-changes-off-${kind}-${colorScheme}.png`,
+        });
+        await onlyChangesOnAfterPick(page);
+        await expect(onlyFolded(page)).toHaveCount(5);
+        await settled(page);
+        await page.screenshot({ path: `${SCREENSHOTS}only-changes-on-${kind}-${colorScheme}.png` });
+      });
+    }
+
+    test(`screenshots: Only changes' fold lines for the preamble, a run and a list's items, ${colorScheme}`, async ({
+      page,
+    }) => {
+      const { path } = await seedLines(page, "spec");
+      await openComparedWithFirst(page, path);
+      await onlyChangesOnAfterPick(page);
+      await expect(foldLines(page)).toHaveText(LINE_TEXTS);
+      for (const [index, { name }] of LINES.entries()) {
+        await foldLines(page).nth(index).scrollIntoViewIfNeeded();
+        await settled(page);
+        await page.screenshot({
+          path: `${SCREENSHOTS}only-changes-line-${name}-${colorScheme}.png`,
+        });
+      }
+    });
+
+    test(`screenshots: the outline with Only changes on, ${colorScheme}`, async ({ page }) => {
+      await openCounted(page);
+      await expect(outline(page)).toBeVisible();
+      await onlyChangesOn(page);
+      await settled(page);
+      await page.screenshot({ path: `${SCREENSHOTS}only-changes-outline-${colorScheme}.png` });
     });
 
     test(`screenshots: folded heads, an open block and a head at a Tab stop, ${colorScheme}`, async ({

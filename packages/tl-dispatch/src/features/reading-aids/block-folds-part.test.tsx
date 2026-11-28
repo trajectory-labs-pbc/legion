@@ -173,12 +173,24 @@ async function markedPage(text: ChangeBaseline) {
 
 test("after a sign-out with the marks drawn, the next person's visit opens the blocks the marks show changed", async () => {
   const text = textWith("The task.", "The task, as planned.");
-  const { handle, rerender, signOut, stop } = await markedPage(text);
+  const { artifactId, handle, rerender, signOut, stop } = await markedPage(text);
   act(signOut);
   expect(folded(handle)).toEqual(["r1", "t1"]);
   // The page reads the cached text again, so the marks compare nothing anew for the next visit.
   rerender({ shown: readyWith(text) });
   await waitFor(() => expect(folded(handle)).toEqual(["r1"]));
+  expect([...(visitOf(artifactId).blockFolds.touched ?? [])]).toEqual(["t1"]);
+  stop();
+});
+
+test("after a sign-out, a next person's page with no baseline holds no block open, so each block folds", async () => {
+  const { artifactId, handle, rerender, signOut, stop } = await markedPage(
+    textWith("The task.", "The task, as planned.")
+  );
+  act(signOut);
+  rerender({ shown: { state: "none" } });
+  await waitFor(() => expect(folded(handle)).toEqual(["r1", "t1"]));
+  expect(visitOf(artifactId).blockFolds.touched).toBeUndefined();
   stop();
 });
 

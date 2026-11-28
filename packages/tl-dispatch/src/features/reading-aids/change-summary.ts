@@ -29,7 +29,7 @@ export interface MarkedBlock {
 }
 
 /** A heading of level 1 or 2 starts a section. */
-const startsSection = (node: Node) =>
+export const startsSection = (node: Node) =>
   node.type.name === "heading" && typeof node.attrs.level === "number" && node.attrs.level <= 2;
 
 const firstLine = (node: Node) => node.textContent.split("\n", 1)[0]?.trim() ?? "";
@@ -42,6 +42,17 @@ function titleOf(node: Node): string {
   return heading ? "Untitled section" : "Before the first heading";
 }
 
+/** `blocks` in sections, each from a heading on; the text before the first heading is one. */
+export function sectionsOf<T extends { readonly node: Node }>(blocks: readonly T[]): T[][] {
+  const sections: T[][] = [];
+  for (const block of blocks) {
+    const last = sections.at(-1);
+    if (last === undefined || startsSection(block.node)) sections.push([block]);
+    else last.push(block);
+  }
+  return sections;
+}
+
 /** The counts of `blocks` and of the removed blocks after the ids named; replaced is both. */
 export function summarize(
   blocks: readonly MarkedBlock[],
@@ -50,27 +61,26 @@ export function summarize(
   let changed = 0;
   let added = 0;
   let removed = 0;
-  // Each section's first block; only a changed one is named.
-  const sections: { blockId: string | undefined; node: Node }[] = [];
+  const sections = sectionsOf(blocks);
   const touched = new Set<number>();
   const sectionOf = new Map<string | undefined, number>();
   const byBlock = new Map<string, number>();
   const count = (id: string | undefined, by: number) => {
     if (id !== undefined) byBlock.set(id, (byBlock.get(id) ?? 0) + by);
   };
-  for (const { id, node, verdict } of blocks) {
-    if (startsSection(node) || sections.length === 0) sections.push({ blockId: id, node });
-    const section = sections.length - 1;
-    if (id !== undefined) sectionOf.set(id, section);
-    if (verdict.kind === "unchanged") continue;
-    touched.add(section);
-    count(id, verdict.kind === "replaced" ? 2 : 1);
-    if (verdict.kind === "new") added += 1;
-    else if (verdict.kind === "replaced") {
-      added += 1;
-      removed += 1;
-    } else changed += 1;
-  }
+  sections.forEach((section, index) => {
+    for (const { id, verdict } of section) {
+      if (id !== undefined) sectionOf.set(id, index);
+      if (verdict.kind === "unchanged") continue;
+      touched.add(index);
+      count(id, verdict.kind === "replaced" ? 2 : 1);
+      if (verdict.kind === "new") added += 1;
+      else if (verdict.kind === "replaced") {
+        added += 1;
+        removed += 1;
+      } else changed += 1;
+    }
+  });
   for (const after of removedAfter) {
     removed += 1;
     count(after, 1);
@@ -80,8 +90,11 @@ export function summarize(
     added,
     byBlock,
     changed,
-    changedSections: sections.flatMap(({ blockId, node }, index) =>
-      touched.has(index) ? [{ blockId, title: titleOf(node) }] : []
+    // Each section's first block; only a changed one is named.
+    changedSections: sections.flatMap(([first], index) =>
+      first !== undefined && touched.has(index)
+        ? [{ blockId: first.id, title: titleOf(first.node) }]
+        : []
     ),
     removed,
     sections: sections.length,
@@ -111,6 +124,10 @@ export const plural = (count: number, one: string) => `${count} ${one}${count ==
 
 /** A count as a short label shows it: past 99, "99+". */
 export const shownCount = (count: number) => (count > 99 ? "99+" : String(count));
+
+/** A short label's count and noun: "1 block", "3 blocks", "99+ blocks". */
+export const shownPlural = (count: number, one: string, many = `${one}s`) =>
+  `${shownCount(count)} ${count === 1 ? one : many}`;
 
 /** The counts as the line says them: "7 blocks, 6 changed, 1 added, in 5 of 7 sections". */
 export function countsText(summary: ChangeSummary): string {

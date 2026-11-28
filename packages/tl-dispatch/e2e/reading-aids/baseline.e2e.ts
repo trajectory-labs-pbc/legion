@@ -1,7 +1,14 @@
 // The baseline is fixed for the visit: a new editor keeps it and the reader's pick; a reload ends both.
 import { documentEditor } from "../../../dispatch/e2e/editor";
 import { expect, type Page, test } from "../test";
-import { compareWith, revisitSpec, seedReadThenRevised, sinceText } from "./baseline-seed";
+import {
+  compareWith,
+  pickVersion,
+  revisitSpec,
+  seedReadThenRevised,
+  sinceText,
+  versionOption,
+} from "./baseline-seed";
 import { FIRST, openHost, SECOND, seedHost, THIRD } from "./hosts";
 
 /** The counts of one changed block in a document with no heading, one section. */
@@ -9,10 +16,6 @@ const ONE_CHANGED = "1 block, 1 changed, in 1 of 1 section";
 
 /** The change marks' labels in the document's text. */
 const changeLabels = (page: Page) => documentEditor(page).locator("[data-reading-aids-change]");
-
-/** A Compare-with option: upstream's own version picker offers the same names. */
-const compareOption = (page: Page, name: string) =>
-  page.getByRole("listbox").getByRole("option", { exact: true, name });
 
 /** Goes to the other document and back in the app, so upstream makes a new editor. */
 async function leaveAndReturn(page: Page): Promise<void> {
@@ -40,8 +43,7 @@ test("baseline: a return to the spec keeps the visit's read mark and Compare-wit
   await expect(sinceText(page, sinceRead)).toBeVisible();
 
   const address = page.url();
-  await compareWith(page).click();
-  await compareOption(page, `Version ${read + 1}`).click();
+  await pickVersion(page, read + 1);
   // A pick with the same counts still shows them.
   await expect(sinceText(page, `Since v${read + 1}: ${ONE_CHANGED}`)).toBeVisible();
   expect(page.url()).toBe(address);
@@ -74,8 +76,7 @@ test("baseline: a Compare-with pick changes the marks and not the address, a ret
   ).toBeVisible();
 
   const address = page.url();
-  await compareWith(page).click();
-  await compareOption(page, `Version ${latest - 1}`).click();
+  await pickVersion(page, latest - 1);
   await expect(changeLabels(page)).toHaveText(["The third block, revised."]);
   await expect(sinceText(page, `Since v${latest - 1}: ${ONE_CHANGED}`)).toBeVisible();
   expect(page.url()).toBe(address);
@@ -104,7 +105,7 @@ test("baseline: Tab reaches Compare with in the parts, and a pick from the keybo
   }
   await expect(trigger).toBeFocused();
   await page.keyboard.press("ArrowDown");
-  await expect(compareOption(page, "Version 1")).toBeVisible();
+  await expect(versionOption(page, 1)).toBeVisible();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   await expect(sinceText(page, "No changes since v1")).toBeVisible();
