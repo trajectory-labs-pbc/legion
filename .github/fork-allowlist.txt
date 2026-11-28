@@ -80,3 +80,10 @@ packages/dispatch/web/src/features/credentials/pending.ts
 # The docs build names the repository the fork was forked from.
 .github/scripts/ci_filter_coverage.py
 .github/workflows/docs-site.yaml
+
+# The review of each pull request with upstream's reviewer rules.
+.github/fork-review/
+.github/scripts/fork-review.sh
+.github/scripts/fork-review.test.sh
+.github/workflows/fork-review.yaml
+.github/workflows/fork-review-test.yaml
