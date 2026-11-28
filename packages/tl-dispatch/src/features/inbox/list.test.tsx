@@ -5,8 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { InboxRow, MyReplyRow } from "@/upstream/contract";
 import { renderApp } from "../../../tests/app";
 import { INBOX_ASKS, INBOX_READS, inboxReads, UNREAD_THREAD } from "../../../tests/inbox";
-import { answerReads } from "../../../tests/network";
-import { sleep } from "../../../tests/react";
+import { answerReads, waitFor } from "../../../tests/network";
 import { signedInClient } from "../../../tests/writes";
 import { InboxView } from "./view";
 
@@ -36,10 +35,11 @@ async function draw(
   threads: MyReplyRow[] = [UNREAD_THREAD]
 ) {
   answerReads(INBOX_READS, inboxReads({ inbox: () => asks, replies: () => threads }));
-  mounted.push(renderApp(<InboxView />, { path, client: signedInClient() }));
+  const client = signedInClient();
+  mounted.push(renderApp(<InboxView />, { path, client }));
   await screen.findByRole("heading", { name: "Inbox" });
   // Every read lands inside `act`, the credential requests' too, which draws nothing yet.
-  await sleep(20);
+  await waitFor(() => client.isFetching() === 0);
 }
 /** The header of the group a row's line sits in. */
 const headerOf = (line: string) =>
