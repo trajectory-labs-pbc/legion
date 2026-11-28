@@ -180,6 +180,13 @@ export const LIBRARIES: readonly {
     reason:
       "only src/parts/priority draws BarsGlyph, from its one table of priorities and urgencies to levels",
   },
+  {
+    name: /^@legion\/ui\/components\/attention-mark$/,
+    owners: ["src/parts/needs-you"],
+    tests: false,
+    reason:
+      "only src/parts/needs-you draws AttentionMark, the one mark of what waits on the reader",
+  },
 ];
 
 /**

@@ -16,7 +16,7 @@ replaces them one page at a time.
 | `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed read (`read-failure`, the alert with its Retry) or write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
 | `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
-| `src/parts` | The parts several pages and the shell share: `view-header`, a view's header row with its views as tabs; `needs-you`, the one mark for what waits on the reader; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`); `priority`, a priority or an urgency as bars, from one table of levels; only `priority` imports `@legion/ui/components/bars-glyph` (`tests/layers.table.ts`) |
+| `src/parts` | The parts several pages and the shell share: `view-header`, a view's header row with its views as tabs; `needs-you`, the one mark for what waits on the reader; `priority`, a priority or an urgency as bars, from one table of levels; only `needs-you` imports `@legion/ui/components/attention-mark`, and only `priority` imports `@legion/ui/components/bars-glyph` (`tests/layers.table.ts`) |
 | `src/features` | Each page's folder, with its route file (`route.tsx`) and, where this app draws the page, its `page.tsx` |
 
 `tests/layers.table.ts` holds the layers and their rules as data, with the list of the imports

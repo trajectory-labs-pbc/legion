@@ -6,8 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@legion/ui/components/t
 import { Bot, Check, CircleHelp, Diamond, type LucideIcon, Reply, Sparkles } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-import type { InboxRowFacts, RowActor, RowUrgency } from "@/data/inbox/row";
-import type { IssuePriority } from "@/data/priority";
+import type { InboxRowFacts, RowUrgency } from "@/data/inbox/row";
 import { PriorityBars } from "@/parts/priority";
 
 const KIND_ICONS: Record<InboxRowFacts["type"], LucideIcon> = {
@@ -19,8 +18,9 @@ const KIND_ICONS: Record<InboxRowFacts["type"], LucideIcon> = {
 };
 
 /** The writer's face, or the agent glyph, with the row's kind as a badge on its corner. */
-function RowAvatar({ actor, facts }: { actor: RowActor; facts: InboxRowFacts }): ReactNode {
+function RowAvatar({ facts }: { facts: InboxRowFacts }): ReactNode {
   const Kind = KIND_ICONS[facts.type];
+  const { actor } = facts;
   return (
     <span className="relative flex">
       <Avatar className="size-9">
@@ -39,18 +39,15 @@ function RowAvatar({ actor, facts }: { actor: RowActor; facts: InboxRowFacts }):
   );
 }
 
-const priorityWords = (priority: IssuePriority | null) =>
-  priority === null ? "no priority" : `priority P${priority}`;
-
 /** An ask's urgency as bars, with the issue's priority in its tooltip and its name. */
 function UrgencyBars({
   urgency,
   priority,
 }: {
   urgency: RowUrgency;
-  priority: IssuePriority | null;
+  priority: InboxRowFacts["priority"];
 }): ReactNode {
-  const label = `Urgency: ${urgency.label}, ${priorityWords(priority)}`;
+  const label = `Urgency: ${urgency.label}, ${priority === null ? "no priority" : `priority P${priority}`}`;
   return (
     <Tooltip>
       {/* Above the content's click area, so the pointer reaches the tooltip. */}
@@ -98,7 +95,6 @@ export function InboxRowView({
   const unread = facts.kind === "thread" && facts.unread;
   return (
     <ListRow
-      data-kind={facts.kind}
       description={preview}
       descriptionEnd={<Time now={now} value={facts.at} />}
       end={
@@ -106,7 +102,7 @@ export function InboxRowView({
           <UrgencyBars priority={facts.priority} urgency={facts.urgency} />
         ) : undefined
       }
-      leading={<RowAvatar actor={facts.actor} facts={facts} />}
+      leading={<RowAvatar facts={facts} />}
       title={
         <>
           {unread ? (

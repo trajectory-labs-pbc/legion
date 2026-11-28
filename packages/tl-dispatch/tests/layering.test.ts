@@ -198,6 +198,11 @@ describe("layers", () => {
       'import { BarsGlyph } from "@legion/ui/components/bars-glyph";',
       "only src/parts/priority draws BarsGlyph",
     ],
+    [
+      "src/shell/x.tsx",
+      'import { AttentionMark } from "@legion/ui/components/attention-mark";',
+      "only src/parts/needs-you draws AttentionMark",
+    ],
     ["src/shell/x.tsx", 'import { create } from "zustand";', "src/stores"],
     ["src/shell/x.test.tsx", 'import { persist } from "zustand/middleware";', "src/stores"],
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
@@ -568,6 +573,11 @@ describe("layers", () => {
     [
       "src/parts/priority/x.tsx",
       'import { BarsGlyph } from "@legion/ui/components/bars-glyph";',
+      undefined,
+    ],
+    [
+      "src/parts/needs-you/x.tsx",
+      'import { AttentionMark } from "@legion/ui/components/attention-mark";',
       undefined,
     ],
     [

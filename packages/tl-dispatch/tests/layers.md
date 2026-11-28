@@ -75,6 +75,7 @@ Only `src/navigation` and `src/app` import the router (`react-router-dom`, or an
 Only `src/data` and `src/app` import `@tanstack/react-query`: a view reads and writes through `src/data`.
 No file of the app imports `@base-ui/react`: Base UI comes through `packages/ui`.
 Only `src/parts/priority` imports the UI package's `BarsGlyph`, so a priority and an urgency take their bars from its one table of levels.
+Only `src/parts/needs-you` imports the UI package's `AttentionMark`, so what waits on the reader has one mark and one wording.
 A test may import the router and the query library, which a page test needs to draw the page with its own client.
 
 ## No import of the own index (`no-own-index`)

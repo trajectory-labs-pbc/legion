@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { screen } from "@testing-library/react";
+import { describe, expect, jest, test } from "bun:test";
+import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
@@ -50,14 +50,29 @@ function draw(facts: InboxRowFacts, select?: ReactNode) {
 const title = () => screen.getByText("Ship the importer");
 
 describe("a row of the Inbox", () => {
-  test("an ask shows its urgency bars, names the priority, and has no unread dot", async () => {
+  test("an ask shows its urgency bars, names the priority, and has no unread dot", () => {
     const { row } = draw(ASK);
     expect(row?.className).toContain("h-list-row-2");
     const bars = screen.getByRole("img", { name: "Urgency: High, priority P1" });
     expect(bars.getAttribute("data-level")).toBe("3");
     expect(screen.queryByRole("img", { name: "Unread" })).toBeNull();
-    await userEvent.hover(bars);
-    expect((await screen.findByRole("tooltip")).textContent).toBe("Urgency: High, priority P1");
+  });
+
+  test("the bars' tooltip names the urgency and the priority on hover", () => {
+    jest.useFakeTimers();
+    try {
+      draw(ASK);
+      const trigger = screen.getByRole("img", { name: /^Urgency/ }).parentElement;
+      if (trigger === null) throw new Error("the bars have no tooltip trigger");
+      // userEvent waits on timers, so the pointer comes as plain events on the fake clock.
+      fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+      fireEvent.mouseEnter(trigger);
+      fireEvent.mouseMove(trigger);
+      act(() => jest.advanceTimersByTime(600));
+      expect(screen.getByText("Urgency: High, priority P1")).toBeDefined();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("an unread thread has the dot before its title, and a read one has none", () => {
@@ -74,7 +89,9 @@ describe("a row of the Inbox", () => {
     draw(thread(false));
     expect(title().closest('[class*="font-medium"]')).not.toBeNull();
     expect(screen.getByText("Should the importer retry a failed batch?")).toBeDefined();
-    expect(screen.getByText("2h").tagName).toBe("TIME");
+    expect(screen.getByText("2h").closest("time")?.getAttribute("datetime")).toBe(
+      base.at.toISOString()
+    );
   });
 
   test("the avatar shows the kind as a badge: the agent glyph for an agent, initials for a person", () => {

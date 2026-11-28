@@ -11,8 +11,6 @@ import {
   URGENCY_LABELS,
 } from "@/upstream/logic/inbox";
 
-export type { InboxListRow };
-
 /** An ask's urgency, with its word. */
 export interface RowUrgency {
   value: AskUrgency;
