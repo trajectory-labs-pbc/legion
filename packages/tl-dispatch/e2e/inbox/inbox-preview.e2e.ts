@@ -1,16 +1,16 @@
 // Check `inbox-preview`, the page's part: upstream's Inbox until the palette's command turns the
 // preview on, the new Inbox at once and after a reload, and upstream's again after the command
-// that leaves it. The test also keeps the new list's screenshots, light and dark, at each width
+// that leaves it. Upstream's Inbox is the one that draws a row with its select checkbox
+// (page.ts's `row`). The test also keeps the new list's screenshots, light and dark, at each width
 // the pull request's design review reads (test-results, which CI uploads).
 import type { Locator, Page } from "@playwright/test";
 
-import { main } from "./page";
+import { main, row } from "./page";
 import { expect, test } from "./seed";
 
 const WIDTHS = [1440, 1024, 390] as const;
 const SCHEMES = ["light", "dark"] as const;
 
-const upstreamView = (page: Page) => page.locator("[data-upstream-view]");
 const newView = (page: Page) => page.getByRole("navigation", { name: "Inbox views" });
 
 /** The palette's Actions, after typing `words` into its search. */
@@ -45,14 +45,14 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await inbox.unreadThread("Is the retry fix in?", ["Looking now.", "Done: the retry is in."]);
 
   await inbox.open();
-  await expect(upstreamView(page)).toBeVisible();
+  await expect(row(main(page), release)).toBeVisible();
   await expect(newView(page)).toHaveCount(0);
 
   let actions = await paletteActions(page, "Inbox preview");
   await expect(actions.getByRole("option", { name: "Leave the Inbox preview" })).toHaveCount(0);
   await actions.getByRole("option", { name: "Preview the new Inbox" }).click();
   await expect(newView(page)).toBeVisible();
-  await expect(upstreamView(page)).toHaveCount(0);
+  await expect(row(main(page), release)).toHaveCount(0);
   await expect(page.getByText(release.text).first()).toBeVisible();
 
   await page.reload();
@@ -81,6 +81,6 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   actions = await paletteActions(page, "Inbox preview");
   await expect(actions.getByRole("option", { name: "Preview the new Inbox" })).toHaveCount(0);
   await runWithKeys(page, actions.getByRole("option", { name: "Leave the Inbox preview" }));
-  await expect(upstreamView(page)).toBeVisible();
+  await expect(row(main(page), release)).toBeVisible();
   await expect(newView(page)).toHaveCount(0);
 });
