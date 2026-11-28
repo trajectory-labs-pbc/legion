@@ -1,6 +1,12 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { EXEMPT } from "./design-config";
-import { type DesignViolation, designViolations, RULES, themeTokens } from "./design-rules";
+import {
+  type DesignViolation,
+  designViolations,
+  ROW_FILE,
+  RULES,
+  themeTokens,
+} from "./design-rules";
 import { sourceFiles, uiSourceFiles } from "./source";
 
 /** Each control is a file of its own; one compile checks them all, and each test reads its file. */
@@ -292,6 +298,20 @@ const PLACED: readonly [string, string, readonly string[]][] = [
   ["src/shell/onunload.tsx", "window.onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/bare-onunload.tsx", "onbeforeunload = ask;", [RULES.unload]],
   ["src/shell/frame-onunload.tsx", "frame.contentWindow.onbeforeunload = ask;", [RULES.unload]],
+  // A list row's height is one of the two row tokens, on the row and on each of its parts.
+  ["src/shell/row-tall.tsx", '<ListRow className="h-[56px]" title="t" />;', [RULES.rowHeight]],
+  [
+    "src/shell/row-part.tsx",
+    '<ListRow leading={<span className="h-14" />} title="t" />;\n<div className="h-14" />;',
+    [RULES.rowHeight],
+  ],
+  ["src/features/x/row.tsx", '<span className="min-h-10" />;', [RULES.rowHeight]],
+  ["../ui/src/blocks/list-row.tsx", '<div className="h-14" />;', [RULES.rowHeight]],
+  [
+    "src/shell/row-tokens.tsx",
+    '<ListRow className="h-list-row-2" title="t" />;\n<GroupHeader className="h-list-row-1" />;',
+    [],
+  ],
   // The stripe rule reads the UI package's files too.
   [
     "../ui/src/components/stripe.tsx",
@@ -326,12 +346,16 @@ beforeAll(async () => {
 });
 
 describe("design rules", () => {
-  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule.
-  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe", async () => {
+  // One compile reads both packages; of the UI package's files, the suite checks the stripe rule
+  // and the row heights.
+  test("the app's own files keep them, the exempt files aside, and the UI draws no stripe and keeps its row tokens", async () => {
     const found = await designViolations([...sourceFiles(), ...uiSourceFiles()]);
     const ui = (violation: DesignViolation) => violation.file.startsWith("../ui/");
     expect(found.filter((violation) => !ui(violation))).toEqual([]);
-    expect(found.filter((violation) => ui(violation) && violation.rule === RULES.stripe)).toEqual(
+    // A row block that moves leaves the rule's reach, so the rule must still find both.
+    expect(uiSourceFiles().filter((file) => ROW_FILE.test(file.path)).length).toBe(2);
+    const uiRules: readonly string[] = [RULES.stripe, RULES.rowHeight];
+    expect(found.filter((violation) => ui(violation) && uiRules.includes(violation.rule))).toEqual(
       []
     );
   });
