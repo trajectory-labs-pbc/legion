@@ -57,6 +57,12 @@ const quoted = (line: string | undefined) =>
 const lineAfter = (section: string, label: string) =>
   section.split("\n").find((line) => line.startsWith(`${label}:`));
 
+const pinsOf = (line: string | undefined) =>
+  [...(line ?? "").matchAll(/`([^`]+)` in `([^`]+)`/g)].map(([, part = "", file = ""]) => ({
+    part,
+    file,
+  }));
+
 /** A region's line names its files with backticks, or says none. */
 const namesOrNone = (line: string | undefined) =>
   line !== undefined && (line.endsWith(": none.") || quoted(line).length > 0);
@@ -93,13 +99,16 @@ function parseRegions(
         );
       }
     }
+    if (quoted(pinned).length !== 2 * pinsOf(pinned).length) {
+      listProblems.push(
+        `${LIST}: region ${heading} names each unit it pins as \`part\` in \`file\`.`
+      );
+    }
     regions.push({
       heading,
       rebuilt: parsed.regions.get(name) === true,
       views: quoted(views),
-      pinned: [...(pinned ?? "").matchAll(/`([^`]+)` in `([^`]+)`/g)].map(
-        ([, part = "", file = ""]) => ({ part, file })
-      ),
+      pinned: pinsOf(pinned),
     });
   }
   return { listProblems, regions, noRegionViews, ids: parsed.items.map((item) => item.id) };
@@ -199,6 +208,8 @@ describe("the Inbox's regions", () => {
   /** The facts with each region of `numbers` marked rebuilt. */
   const rebuilding = (...numbers: number[]): Region[] =>
     facts.regions.map((r) => (numbers.some((n) => isRegion(r, n)) ? { ...r, rebuilt: true } : r));
+  /** copies.json's pins without those of `file`, so a control holds as the page's pins land. */
+  const pinsWithout = (file: string) => facts.pins.filter((p) => p.file !== upstreamFile(file));
 
   test("the parity file, replacedViews, copies.json and the route file agree", () => {
     expect(facts.regions).toHaveLength(19);
@@ -207,7 +218,8 @@ describe("the Inbox's regions", () => {
   });
 
   test("a rebuilt region names each view file that replacedViews lacks", () => {
-    const problems = regionProblems({ ...facts, regions: rebuilding(7) });
+    const unplaced = facts.replaced.filter((view) => !region(7).views.includes(view));
+    const problems = regionProblems({ ...facts, regions: rebuilding(7), replaced: unplaced });
     expect(problems).toEqual(
       region(7).views.map(
         (view) =>
@@ -218,7 +230,7 @@ describe("the Inbox's regions", () => {
     const placed = {
       ...facts,
       regions: rebuilding(7),
-      replaced: [...facts.replaced, ...region(7).views],
+      replaced: [...unplaced, ...region(7).views],
     };
     expect(regionProblems(placed)).toEqual([]);
   });
@@ -230,6 +242,7 @@ describe("the Inbox's regions", () => {
       ...facts,
       regions: rebuilding(12),
       replaced: [...facts.replaced, ...region(12).views],
+      pins: pinsWithout("features/inbox/PaneDocument.tsx"),
     };
     expect(regionProblems(twelve)).toContain(paneFrame);
     const pin: Copy = {
@@ -239,10 +252,10 @@ describe("the Inbox's regions", () => {
       commit: "0000000",
       sha256: "0",
     };
-    expect(regionProblems({ ...twelve, pins: [...facts.pins, pin] })).not.toContain(paneFrame);
+    expect(regionProblems({ ...twelve, pins: [...twelve.pins, pin] })).not.toContain(paneFrame);
     // Region 3 pins emptyStateMessage, which copies.json holds, and has no view file.
     expect(regionProblems({ ...facts, regions: rebuilding(3) })).toEqual([]);
-    const unpinned = facts.pins.filter((p) => p.part !== "emptyStateMessage");
+    const unpinned = pinsWithout("features/inbox/Inbox.tsx");
     expect(regionProblems({ ...facts, regions: rebuilding(3), pins: unpinned })).toEqual([
       "region 3. List states is rebuilt, and copies.json does not pin emptyStateMessage of features/inbox/Inbox.tsx",
     ]);
@@ -281,7 +294,18 @@ describe("the Inbox's regions", () => {
     ]);
   });
 
-  test("a row ID that the list drops is named", () => {
+  test("a pin line whose names are not each `part` in `file` is named", () => {
+    const loose = LIST_TEXT.replace(
+      "`PaneFrame` in `features/inbox/PaneDocument.tsx`.",
+      "`PaneFrame` (`features/inbox/PaneDocument.tsx`)."
+    );
+    expect(loose).not.toBe(LIST_TEXT);
+    expect(parseRegions(loose).listProblems).toEqual([
+      "tests/parity/inbox.md: region 12. Reading pane: frame and question kinds names each unit it pins as `part` in `file`.",
+    ]);
+  });
+
+  test("a gap in the row IDs is named", () => {
     expect(regionProblems({ ...facts, ids: facts.ids.filter((id) => id !== "INB-3") })).toEqual([
       "tests/parity/inbox.md has no row INB-3: a row that the page drops stays, with its mark",
     ]);

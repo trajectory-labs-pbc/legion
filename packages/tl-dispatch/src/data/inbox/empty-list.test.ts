@@ -15,7 +15,7 @@ const ready = (
 const expired: CredentialPendingRow = { ...PENDING_CREDENTIAL_REQUEST, state: "expired" };
 
 describe("the search words", () => {
-  test("INB-30 are the lowercased words of the address, and spaces or text past the cap are none", () => {
+  test("INB-12 are the lowercased words of the address, and spaces or text past the cap are none", () => {
     expect(searchWordsOf(" Deploy  web ")).toEqual(["deploy", "web"]);
     expect(searchWordsOf(undefined)).toEqual([]);
     expect(searchWordsOf("   ")).toEqual([]);
