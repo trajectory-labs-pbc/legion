@@ -6,7 +6,16 @@ import type { AuthenticatedUser, InboxRow } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, type ReadAnswer, unasked } from "../../tests/inbox";
-import { answerShellReads, holdShellReads, json, readFailed, waitFor } from "../../tests/network";
+import {
+  answerShellReads,
+  holdShellReads,
+  json,
+  readFailed,
+  readRefused,
+  refusalLanded,
+  type ShellAnswer,
+  waitFor,
+} from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
 import { Sidebar, SidebarView } from "./sidebar";
@@ -65,7 +74,7 @@ function mount(
     onPeek,
     peek = false,
   }: {
-    answer?: (url: string) => Response | undefined;
+    answer?: (url: string) => ShellAnswer;
     client?: QueryClient;
     commands?: boolean;
     onPeek?: () => void;
@@ -328,6 +337,23 @@ describe("the sidebar", () => {
     expect(openOf(mountView(data))).toEqual([false, false]);
   });
 
+  test("a section the server refuses or cannot find says so with no Retry", async () => {
+    const container = mount("/agents", {
+      client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      answer: (url) => {
+        if (url.endsWith("/api/v1/projects")) return readRefused(403);
+        if (url.includes("pinned=true")) return readRefused(404);
+        return undefined;
+      },
+    });
+    const alerts = () => [...container.querySelectorAll('[role="alert"]')];
+    await waitFor(() => alerts().length === 2);
+    expect(alerts().map((alert) => alert.textContent)).toEqual([
+      "Could not find pinned issues.",
+      "You cannot see projects.",
+    ]);
+  });
+
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
     let projectReads = 0;
     const container = mount("/agents", {
@@ -443,8 +469,54 @@ describe("the sidebar", () => {
     expect(inboxRow?.closest("li")?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).not.toBeNull();
   });
 
+  test("an inbox read the server refuses or cannot find draws no Retry, so Peek keeps the count's box", async () => {
+    for (const status of [403, 404] as const) {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const container = mount("/agents", {
+        answer: inboxReads({
+          inbox: () => readRefused(status),
+          unread: 3,
+        }),
+        client,
+        onPeek: () => {},
+        peek: true,
+      });
+      // The refusal landed, and the row drew what it makes of it.
+      await waitFor(() => refusalLanded(client, status));
+      await sleep(100);
+      const row = container.querySelector('nav a[href="/"]')?.closest("li");
+      expect(numberOf(row?.querySelector("a") ?? null)).toBeNull();
+      expect(row?.querySelector(`[aria-label="${INBOX_RETRY}"]`)).toBeNull();
+      expect(row?.querySelector(`[aria-label="${PEEK}"]`)).not.toBeNull();
+      for (const view of mounted.splice(0)) view.unmount();
+    }
+  });
+
+  test("an inbox read refused before the sidebar mounts again draws no Retry while it is asked again", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const refused = () => readRefused(403);
+    let inbox: () => ShellAnswer = refused;
+    const answer = inboxReads({ inbox: () => inbox(), unread: 3 });
+    mount("/agents", { answer, client });
+    await waitFor(() => refusalLanded(client, 403));
+    for (const view of mounted.splice(0)) view.unmount();
+
+    const again = Promise.withResolvers<Response>();
+    inbox = () => again.promise;
+    const container = mount("/agents", { answer, client });
+    const retry = () => container.querySelector(`[aria-label="${INBOX_RETRY}"]`);
+    await waitFor(() => answered.some((url) => url.endsWith("/api/v1/inbox")));
+    await sleep(100);
+    expect(retry()).toBeNull();
+
+    again.resolve(refused());
+    await waitFor(() => refusalLanded(client, 403));
+    await sleep(100);
+    expect(retry()).toBeNull();
+  });
+
   /** Mounts the sidebar on reads `answer` gives, once the Inbox count has failed. */
-  async function mountFailedInbox(answer: (url: string) => Response | undefined) {
+  async function mountFailedInbox(answer: (url: string) => ShellAnswer) {
     const container = mount("/agents", {
       client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
       answer,

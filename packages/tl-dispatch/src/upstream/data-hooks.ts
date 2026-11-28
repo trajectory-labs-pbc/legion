@@ -1,4 +1,5 @@
-// Upstream's hooks and stores of server and session data that the fork reads.
+// Upstream's hooks and stores of server and session data that the fork reads, and the focus
+// hand-off a failed read's alert takes from its Retry.
 export {
   liveViewsOf,
   useLiveViewState,
@@ -28,3 +29,4 @@ export {
   userPreferenceStorageKey,
   useUserPreference,
 } from "@upstream-dispatch/features/shell/userPreference";
+export { useFocusHandOff } from "@upstream-dispatch/hooks/useFocusHandOff";

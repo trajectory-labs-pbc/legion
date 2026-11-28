@@ -16,7 +16,7 @@ import { routes } from "@/navigation/routes";
 import { AgentName } from "@/upstream/widgets/agent-name";
 import { FoldSection } from "./fold-section";
 import { PeekButton } from "./peek-button";
-import { CountRetry, RowCountMark } from "./row-count";
+import { CountRetry, RowCountMark, retryableFaultOf } from "./row-count";
 
 import {
   type SectionRead,
@@ -152,7 +152,7 @@ export function SidebarView({
     <nav aria-label="Navigation" className="mt-2 flex flex-col gap-4">
       <ul className="flex flex-col gap-0.5">
         {data.destinations.map(({ name, label, icon: Icon, page, current, count }) => {
-          const fault = count?.fault;
+          const fault = retryableFaultOf(count);
           // A failed count's Retry takes the box Peek would show in.
           const peekHere = peekable && name === "inbox" && fault === undefined;
           const row = (

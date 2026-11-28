@@ -3,11 +3,12 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { http } from "msw";
 import { useState } from "react";
 
+import { DispatchQueryClient, NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@/upstream/api";
 import { issueQuery, projectsQuery } from "@/upstream/queries";
 import { mount } from "../../tests/mount";
-import { json } from "../../tests/network";
+import { answered, json } from "../../tests/network";
 import { settle } from "../../tests/react";
-import { answerRequests } from "../../tests/upstream";
+import { answerRequests, holdNotifications } from "../../tests/upstream";
 import { until } from "../../tests/wait";
 import { type Read, useRead } from "./read";
 
@@ -46,6 +47,23 @@ function mountNames(client = newClient()) {
 }
 
 describe("useRead", () => {
+  test("a read that loads and answers draws once while loading and once with its data", async () => {
+    answerProjects(() => projects("Alpha"));
+    const drawn: string[] = [];
+    function Probe() {
+      drawn.push(useRead(projectsQuery()).state);
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={newClient()}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => drawn.at(-1) === "ready");
+    await settle(async () => {});
+    expect(drawn).toEqual(["loading", "ready"]);
+  });
+
   test("a failed refresh keeps the data and says why", async () => {
     answerProjects(() => projects("Alpha"), failure);
     const { client, read } = mountNames();
@@ -95,12 +113,47 @@ describe("useRead", () => {
     expect(Reflect.get(read(), "retry")).toBeUndefined();
   });
 
-  test("a 409 is a failure that can be tried again", async () => {
-    answerProjects(refused(409));
+  test("a 400 is invalid, with no Retry", async () => {
+    answerProjects(refused(400));
+    const { read } = mountNames();
+    await until(() => read().state === "error");
+    expect(read()).toMatchObject({ state: "error", refusal: "invalid" });
+    expect(Reflect.get(read(), "retry")).toBeUndefined();
+  });
+
+  test("a 400 INVALID_QUERY is a failure that can be tried again", async () => {
+    answerProjects(() => json({ code: "INVALID_QUERY", error: "kind takes reply and agent" }, 400));
     const { read } = mountNames();
     await until(() => read().state === "error");
     expect(Reflect.get(read(), "refusal")).toBeUndefined();
     expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+  });
+
+  for (const status of [408, 409, 429]) {
+    test(`a ${status} is a failure that can be tried again`, async () => {
+      answerProjects(refused(status));
+      const { read } = mountNames();
+      await until(() => read().state === "error");
+      expect(Reflect.get(read(), "refusal")).toBeUndefined();
+      expect(Reflect.get(read(), "retry")).toBeInstanceOf(Function);
+    });
+  }
+
+  test("the rolling-release 404 is a failure that can be tried again", async () => {
+    const rolling = answered(404, NO_ROUTE_ROLLING_RELEASE_MESSAGE);
+    let read: Read<unknown> = { state: "loading" };
+    function Probe() {
+      read = useRead({ queryKey: ["rolling"], queryFn: () => Promise.reject(rolling) });
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={newClient()}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => read.state === "error");
+    expect(Reflect.get(read, "refusal")).toBeUndefined();
+    expect(Reflect.get(read, "retry")).toBeInstanceOf(Function);
   });
 
   test("a refusal holds while the read is asked again, with no Retry meanwhile", async () => {
@@ -182,6 +235,46 @@ describe("useRead", () => {
     await until(() => read.state === "error");
     expect(Reflect.get(read, "refusal")).toBeUndefined();
     expect(Reflect.get(read, "retry")).toBeInstanceOf(Function);
+  });
+
+  test("a failed read asked again keeps its failure while a second ask waits behind the first", async () => {
+    let answer: () => Promise<unknown> = () => Promise.reject(answered(500));
+    const client = new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } });
+    const drawn: string[] = [];
+    function Probe() {
+      drawn.push(useRead({ queryKey: ["race"], queryFn: () => answer() }).state);
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={client}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => drawn.at(-1) === "error");
+    // The client asks it again, as an event or a window focus does.
+    const asked = Promise.withResolvers<never>();
+    answer = () => asked.promise;
+    settle(() => void client.refetchQueries());
+    await until(() => client.getQueryState(["race"])?.fetchStatus === "fetching");
+    // Asked while that fetch is out, the client queues one more, which starts as the first fails.
+    const queued = Promise.withResolvers<never>();
+    answer = () => queued.promise;
+    settle(() => void client.invalidateQueries());
+    const mark = drawn.length;
+    // A browser tells the readers on a timer, so they hear of the failure only once the queued
+    // fetch has started and cleared it.
+    const held = holdNotifications();
+    try {
+      await settle(async () => asked.reject(answered(500)));
+      expect(held.held()).toBeGreaterThan(0);
+    } finally {
+      held.tell();
+    }
+    await settle(async () => queued.reject(answered(500)));
+    await until(() => client.getQueryState(["race"])?.fetchStatus === "idle");
+    expect(drawn.length).toBeGreaterThan(mark);
+    expect(drawn.slice(mark)).not.toContain("loading");
+    expect(drawn.at(-1)).toBe("error");
   });
 
   test("a Retry the browser holds while offline is running", async () => {

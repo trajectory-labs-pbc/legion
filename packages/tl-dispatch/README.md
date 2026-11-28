@@ -13,7 +13,7 @@ replaces them one page at a time.
 | `src/loading` | The chunk loaders, and the skeleton a page shows while it loads |
 | `src/browser` | Upstream's storage keys, read and removed in upstream's names and formats (`storage.ts`), and the unload prompt (`unload.ts`) |
 | `src/stores` | What the fork keeps in the browser: one Zustand store for each concern, each with Zustand's `persist` under the fork's prefix, its version and its actions (`ui-preferences.ts`: what a person sets in the UI); with `storage.ts`, the only files that touch the browser's storage |
-| `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed read (`read-failure`, the alert with its Retry) or write; only it and the seam reach the network |
+| `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it), which read is refused and the retry policy every read takes (`read.ts`), and what a surface says of a failed read (`read-failure`, the alert with its Retry) or write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
 | `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
 | `src/parts` | The connected parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |

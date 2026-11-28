@@ -4,8 +4,16 @@ import type { ReactNode } from "react";
 import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
-import { answerShellReads, json, readFailed, waitFor } from "../../tests/network";
-import { settle, tooltipOf } from "../../tests/react";
+import {
+  answerShellReads,
+  json,
+  readFailed,
+  readRefused,
+  refusalLanded,
+  type ShellAnswer,
+  waitFor,
+} from "../../tests/network";
+import { settle, sleep, tooltipOf } from "../../tests/react";
 import { CompactHeader } from "./compact-header";
 
 const PEEK = "Peek inbox";
@@ -20,7 +28,7 @@ let answered: string[] = [];
 
 function mount(
   children: ReactNode,
-  answer: (url: string) => Response | undefined = () => undefined,
+  answer: (url: string) => ShellAnswer = () => undefined,
   client = new QueryClient()
 ) {
   answered = answerShellReads(answer).asked;
@@ -111,6 +119,23 @@ describe("CompactHeader", () => {
     expect(header.querySelector('[data-slot="attention-mark"]')).toBeNull();
     // The row names its count on hover, as the Agents row does.
     expect(count()?.closest("a")?.getAttribute("title")).toBe("3 unread threads");
+  });
+
+  test("an Inbox read the server refuses or cannot find draws no line and no Retry", async () => {
+    for (const status of [403, 404] as const) {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const header = mount(
+        <CompactHeader navigationOpen={false} onInbox onOpenNavigation={() => {}} />,
+        inboxReads({ inbox: () => readRefused(status), unread: 3 }),
+        client
+      );
+      // The refusal landed, and the header drew what it makes of it.
+      await waitFor(() => refusalLanded(client, status));
+      await sleep(100);
+      expect(header.textContent).not.toContain("Inbox count");
+      expect(header.querySelector("button[aria-busy], [role='alert']")).toBeNull();
+      for (const cleanup of cleanups.splice(0).reverse()) cleanup();
+    }
   });
 
   test("a failed Inbox count shows its failed line, whose Retry asks every read again", async () => {

@@ -1,5 +1,6 @@
 // Upstream's API client and its query client.
 
+export { NO_ROUTE_ROLLING_RELEASE_MESSAGE } from "@legion/contracts";
 export type { WriteBounds } from "@upstream-dispatch/api/client";
 export {
   ApiError,
@@ -8,6 +9,7 @@ export {
   isNoIdentity,
   isUnauthorized,
   NetworkError,
+  RequestTimeoutError,
 } from "@upstream-dispatch/api/client";
 export {
   askSignInAgain,

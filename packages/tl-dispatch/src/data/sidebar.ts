@@ -3,11 +3,11 @@ import { api } from "@/upstream/api";
 import type { UserAgentStates } from "@/upstream/contract";
 import { pinnedAgentSessions } from "@/upstream/data-hooks";
 import { prioritySummaryQuery, projectsQuery, userAgentStateQuery } from "@/upstream/queries";
-import { type ShellRead, shellRead } from "./shell-read";
+import { type ShellRead, useShellRead } from "./shell-read";
 
 /** Each agent's state for the reader. */
 export function useAgentStates(): ShellRead<UserAgentStates> {
-  return shellRead(useQuery(userAgentStateQuery()));
+  return useShellRead(useQuery(userAgentStateQuery()));
 }
 
 /** The pinned agents, oldest pin first, with their unread replies. */
@@ -26,17 +26,17 @@ export function usePinnedAgentRows(): readonly { sessionId: string; unread: numb
 
 /** The summary of the reader's priorities. */
 export function usePrioritySummary() {
-  return shellRead(useQuery(prioritySummaryQuery()));
+  return useShellRead(useQuery(prioritySummaryQuery()));
 }
 
 /** The issues the reader pinned. */
 export function usePinnedIssues() {
-  return shellRead(
+  return useShellRead(
     useQuery({ queryKey: ["issues", "pinned"], queryFn: () => api.listIssues({ pinned: true }) })
   );
 }
 
 /** The projects the reader sees. */
 export function useProjects() {
-  return shellRead(useQuery(projectsQuery()));
+  return useShellRead(useQuery(projectsQuery()));
 }

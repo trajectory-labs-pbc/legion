@@ -4,10 +4,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { api } from "@/upstream/api";
 import { renderApp } from "../../../tests/app";
+import { answered } from "../../../tests/network";
 import { MachineLoginRoute } from "./page";
 
-function renderRoute(): HTMLElement {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderRoute(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+): HTMLElement {
   return renderApp(<MachineLoginRoute />, { path: "/credentials/machine", client: queryClient })
     .container;
 }
@@ -100,6 +102,66 @@ test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the 
     again.resolve({ machine_code_page: true });
     expect(await screen.findByRole("heading", { name: "Enter machine login code" })).toBeDefined();
     expect(capabilities).toHaveBeenCalledTimes(2);
+  } finally {
+    cleanup();
+    capabilities.mockRestore();
+    logins.mockRestore();
+  }
+});
+
+for (const [id, status, shown] of [
+  ["MLR-06", 403, "a line with no Retry"],
+  ["MLR-07", 404, "the not-found page"],
+] as const) {
+  test(`${id} a capabilities read the server answers with a ${status} shows ${shown}`, async () => {
+    const capabilities = spyOn(api, "getCredentialCapabilities").mockRejectedValue(
+      answered(status)
+    );
+    const logins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+    try {
+      renderRoute();
+      if (status === 404) {
+        expect(await screen.findByRole("heading", { name: "Page not found" })).toBeDefined();
+        expect(screen.queryByRole("alert")).toBeNull();
+      } else {
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toBe("You cannot see the machine login page.");
+        expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+      }
+    } finally {
+      cleanup();
+      capabilities.mockRestore();
+      logins.mockRestore();
+    }
+  });
+}
+
+test("MLR-08 a logins list refused before the route mounts again is loading until it answers", async () => {
+  const capabilities = spyOn(api, "getCredentialCapabilities").mockResolvedValue({
+    machine_code_page: true,
+  });
+  const logins = spyOn(api, "getMachineLogins").mockRejectedValue(answered(403));
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const section = async () => within(await screen.findByRole("region", { name: "Machine logins" }));
+  try {
+    renderRoute(queryClient);
+    expect((await (await section()).findByRole("alert")).textContent).toBe(
+      "You cannot see machine logins."
+    );
+    cleanup();
+
+    // The route asks the list again beside the page, so it is out when the list mounts.
+    const again = Promise.withResolvers<never>();
+    logins.mockReturnValue(again.promise);
+    const asked = logins.mock.calls.length;
+    renderRoute(queryClient);
+    const shown = await section();
+    expect(logins.mock.calls.length).toBeGreaterThan(asked);
+    expect(shown.queryByRole("alert")).toBeNull();
+    expect(shown.queryByRole("button", { name: "Retry" })).toBeNull();
+
+    again.reject(answered(403));
+    expect((await shown.findByRole("alert")).textContent).toBe("You cannot see machine logins.");
   } finally {
     cleanup();
     capabilities.mockRestore();

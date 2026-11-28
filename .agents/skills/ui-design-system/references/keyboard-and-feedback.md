@@ -44,6 +44,20 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 **ES4** While data loads, a list shows still skeleton rows at the row height, with no shimmer, and a record shows its frame; never a spinner in the middle of the panel. Show the skeleton only after about 200 ms. Check: reviewer.
 
+## Error states (ER)
+
+A failed read draws through `ReadFailure`, and a failed count beside a row through `CountRetry` (`packages/tl-dispatch/src/data/read-failure.tsx`, `packages/tl-dispatch/src/shell/row-count.tsx`). `refusalOf` (`packages/tl-dispatch/src/data/read.ts`) decides whether a failed read offers Retry, and `useRead`, `useReadFailure`, `refreshFailureOf` and the retry policy `readRetry` all use it; upstream's `queryRetry` decides the automatic retry of the rest.
+
+**ER1** A failed read shows its error inside the part it fills: the panel, a section or the line under a bar. The sidebar, the header and the rest of the page stay. Linear: a failed view keeps the app's frame. Pages: all. Check: the sidebar section tests; reviewer for a page's panel.
+
+**ER2** The error says what failed ("Could not load machine logins.") and what to do: Retry, or nothing where nothing can help. Check: `read-failure.test.tsx`.
+
+**ER3** Every failure but a 400, a 403 or a 404 keeps Retry: a 5xx, a 408, a 409, a 429, a dropped connection, a time-out, the 404 the client answers once a route stays missing while a release rolls out, and a 400 `INVALID_QUERY`, which an older process answers to a query value a newer build sends while a release rolls out. A failed refresh keeps the rows it shows. The retry policy never asks a refused read again by itself, and a read keeps the failure it showed while the same query is asked again, however often it fails meanwhile; its Retry shows it is busy while the ask is out, held offline included. A read that failed before its part mounted, or before its part moved to it, loads until it answers again: its part shows no failure and no busy Retry meanwhile. Check: `read-failure.test.tsx` and `read.test.tsx`; RVL-09; MLR-08; the sidebar tests.
+
+**ER4** A 403 gets no Retry and says the reader cannot see it. A 404 gets no Retry and says it was not found; a 404 of the page's own read shows the not-found page. A 400 gets no Retry and says only what could not load. When reads are refused differently, a 403 wins, then a 404. A refused count beside a row draws nothing, so Peek keeps its box. A Retry answered by a refusal gives its focus to the alert, except the compact header's Inbox line, which a refusal removes; a refused sidebar count and a not-found page have no alert either. Linear: a missing issue opens its not-found page. Check: `read-failure.test.tsx` and `read.test.tsx`; MLR-06, MLR-07, MLS-11, MLS-12, RVL-13; the sidebar and compact header tests.
+
+**ER5** When a read that can work again failed beside a refused one, Retry stays: it asks every read again. Check: `read-failure.test.tsx`.
+
 ## Toasts (TO)
 
 **TO1** A toast is one line in the bottom-right corner (the shell's status corner): an icon, the text, and at most one action. A reversible write offers Undo. A toast about a moved or created record links to it. Linear: toasts with Undo and links. Pages: all. Check: the status-corner tests.

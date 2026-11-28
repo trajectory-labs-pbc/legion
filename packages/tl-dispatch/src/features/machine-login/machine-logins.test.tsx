@@ -9,6 +9,7 @@ import { api } from "@/upstream/api";
 import type { ApproverGrantResp, LauncherCredentialResp } from "@/upstream/contract";
 import { confirmRevoke } from "../../../tests/machine-logins";
 import { MemoryNavigationProvider } from "../../../tests/navigation";
+import { answered } from "../../../tests/network";
 import {
   GrantsSection,
   keyedAttempt,
@@ -553,3 +554,22 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
     getMachineLogins.mockRestore();
   }
 });
+
+for (const [id, status, line] of [
+  ["MLS-11", 404, "Could not find machine logins."],
+  ["MLS-12", 403, "You cannot see machine logins."],
+] as const) {
+  test(`${id} a machine logins read the server answers with a ${status} says so with no Retry`, async () => {
+    const getMachineLogins = spyOn(api, "getMachineLogins").mockRejectedValue(answered(status));
+    try {
+      renderPage();
+      const section = within(await screen.findByRole("region", { name: "Machine logins" }));
+      const alert = await section.findByRole("alert");
+      expect(alert.textContent).toBe(line);
+      expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+    } finally {
+      cleanup();
+      getMachineLogins.mockRestore();
+    }
+  });
+}
