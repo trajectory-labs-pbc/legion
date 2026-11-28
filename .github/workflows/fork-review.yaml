@@ -3,8 +3,8 @@ name: Fork review
 # This repository is a fork, and this file, which upstream does not have, reviews each pull request
 # to main with upstream's own reviewer rules (packages/daemon/internal/prompts/roles/ and the
 # thermonuclear pair under skills/), so a change that is to go upstream meets upstream's review
-# first. It posts one review for each head and reports the verdict as the `review` check: a High
-# finding fails it, and a Medium finding opens a thread that main's ruleset requires resolved.
+# first. It posts one review for each new diff and reports the verdict as the `review` check: a
+# High finding fails it, and a Medium finding opens a thread that main's ruleset requires resolved.
 #
 # Why pull_request_target. GitHub runs main's copy of this file, with main's prompt and reviewer
 # text, so a pull request cannot change the review that judges it, and every run's OIDC ref is
@@ -13,7 +13,8 @@ name: Fork review
 # request is built or run: its tree is read as files, and the model has no shell.
 #
 # Two jobs. `model` decides whether to review (.github/scripts/fork-review.sh gate: a member's pull
-# request is reviewed, an outside author's fails with no model call, the upstream sync passes) and
+# request is reviewed, an outside author's fails with no model call, the upstream sync passes),
+# reports the verdict recorded for the same diff when there is one (`decide`), and otherwise
 # runs Claude with a read-only token and an OIDC token. It checks the review's text against the
 # private-name rules before anything leaves the job, because a posted review cannot be deleted.
 # `review` posts the review with the event COMMENT, sets the check and holds the only write scope.
@@ -25,11 +26,12 @@ name: Fork review
 # nothing; drafts are reviewed too. Main has no merge queue; adding one needs a `merge_group`
 # trigger here.
 #
-# A diff already reviewed is not reviewed again. After a pass, `review` saves a key of the pull
-# request's diff and main's reviewer files to the cache, and `model` passes with no model call when
-# it finds the same key. A cache written on this event belongs to main, which only main's workflows
-# write, so a branch cannot plant a key. A title or body edit, or a rebase that keeps the diff,
-# then costs nothing. An evicted key costs one more review.
+# A diff already reviewed is not reviewed again. After posting a review, `review` saves its verdict
+# to the cache under a key of the pull request's diff and main's reviewer files. `model` finds the
+# key and reports the same verdict with no model call, so a title or body edit, or a rebase that
+# keeps the diff, neither costs a run nor draws a new verdict. A cache written on this event is in
+# main's scope, which no branch's workflow can write; any code that runs on main can. An evicted
+# key costs one more review.
 #
 # No `workflow_call` trigger: the federation rule cannot tell a caller's run from this file's own.
 #
@@ -41,7 +43,7 @@ on:
     branches: [main]
 
 # A push replaces the head a review in flight covers. An edit waits for it instead, and then
-# finds its key if it passed.
+# finds its verdict; GitHub keeps one waiting run for each group.
 concurrency:
   group: fork-review-${{ github.event.pull_request.number }}
   cancel-in-progress: ${{ github.event.action != 'edited' }}
@@ -60,8 +62,8 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     outputs:
-      decision: ${{ steps.earlier.outputs.cache-hit == 'true' && 'pass' || steps.gate.outputs.decision }}
-      reason: ${{ steps.earlier.outputs.cache-hit == 'true' && 'an earlier review passed this same diff' || steps.gate.outputs.reason }}
+      decision: ${{ steps.decide.outputs.decision }}
+      reason: ${{ steps.decide.outputs.reason }}
       key: ${{ steps.prepare.outputs.key }}
       review: ${{ steps.scan.outputs.review }}
     steps:
@@ -84,14 +86,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: .github/scripts/fork-review.sh prepare
 
-      - name: Look for an earlier pass of the same diff
+      - name: Look for the verdict of an earlier review of the same diff
         id: earlier
         if: steps.gate.outputs.decision == 'review'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: fork-review-pass
+          path: fork-review-verdict
           key: ${{ steps.prepare.outputs.key }}
-          lookup-only: true
+
+      - name: Decide the verdict to report
+        id: decide
+        env:
+          GATE_DECISION: ${{ steps.gate.outputs.decision }}
+          GATE_REASON: ${{ steps.gate.outputs.reason }}
+          CACHE_HIT: ${{ steps.earlier.outputs.cache-hit }}
+          KEY: ${{ steps.prepare.outputs.key }}
+        run: .github/scripts/fork-review.sh decide
 
       # The model reads main's tree (its working directory) and the pull request's files, and
       # nothing else: reads are allowed in those two directories alone, and denied in the runner's
@@ -101,7 +111,7 @@ jobs:
       # and the review's text is checked only after this step.
       - name: Review with Claude
         id: claude
-        if: steps.gate.outputs.decision == 'review' && steps.earlier.outputs.cache-hit != 'true'
+        if: steps.decide.outputs.decision == 'review'
         uses: anthropics/claude-code-action@6fed3ca145920b639991cb756090506e1bcaf515 # v1.0.245
         env:
           # Anthropic retries a refused request on the model it recommends for that category.
@@ -132,8 +142,9 @@ jobs:
       # the execution file, not passed in `env`, which the log prints before the scan runs.
       - name: Check the review's text and pass it on
         id: scan
-        if: steps.gate.outputs.decision == 'review' && steps.earlier.outputs.cache-hit != 'true'
+        if: steps.decide.outputs.decision == 'review'
         env:
+          REVIEW_DIR: ${{ steps.prepare.outputs.dir }}
           EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
           PRIVATE_NAME_TERMS: ${{ secrets.PRIVATE_NAME_TERMS }}
         run: .github/scripts/fork-review.sh scan
@@ -164,13 +175,10 @@ jobs:
           REVIEW: ${{ needs.model.outputs.review }}
         run: .github/scripts/fork-review.sh post
 
-      # The step above fails on any verdict but APPROVE, so only a pass reaches this.
-      - name: Remember that this diff passed
-        if: needs.model.outputs.decision == 'review'
-        run: echo "$HEAD_SHA" > fork-review-pass
-
-      - if: needs.model.outputs.decision == 'review'
+      # `post` writes the verdict file only after it posted a review with its threads.
+      - name: Save the verdict for this diff
+        if: ${{ !cancelled() && hashFiles('fork-review-verdict') != '' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: fork-review-pass
+          path: fork-review-verdict
           key: ${{ needs.model.outputs.key }}

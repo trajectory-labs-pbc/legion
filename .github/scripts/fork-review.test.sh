@@ -50,10 +50,10 @@ run() {
 # outvar <name>: a value the function wrote to its outputs.
 outvar() { sed -n "s/^$1=//p" "$work/output"; }
 
-# payload <author> <association> <head ref> <head repo>: a pull_request_target payload.
+# payload <author> <association> <head ref> <head repo> [state]: a pull_request_target payload.
 payload() {
-  jq -n --arg author "$1" --arg association "$2" --arg ref "$3" --arg repo "$4" \
-    '{pull_request: {user: {login: $author}, author_association: $association,
+  jq -n --arg author "$1" --arg association "$2" --arg ref "$3" --arg repo "$4" --arg state "${5:-open}" \
+    '{pull_request: {state: $state, user: {login: $author}, author_association: $association,
       head: {ref: $ref, repo: {full_name: $repo}}, base: {repo: {full_name: "fork/legion"}}}}' > "$work/event.json"
 }
 
@@ -63,7 +63,7 @@ run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.js
 check "a member's pull request is reviewed" "$(is "$status:$(outvar decision)" 0:review)"
 payload person CONTRIBUTOR feat/x person/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
-check "an outside author's pull request is refused" "$(is "$status:$(outvar decision)" 0:refuse)"
+check "an outside author's pull request is refused" "$(is "$status:$(outvar decision)" 0:fail)"
 check "the refusal says what to do" "$(contains "$(outvar reason)" 'a maintainer takes the branch')"
 payload 'legion-upstream-sync[bot]' NONE fork-sync fork/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
@@ -73,7 +73,10 @@ run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.js
 check "a member's branch named fork-sync is reviewed" "$(is "$(outvar decision)" review)"
 payload 'legion-upstream-sync[bot]' NONE fork-sync other/legion
 run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
-check "a fork-sync branch from another repository is refused" "$(is "$(outvar decision)" refuse)"
+check "a fork-sync branch from another repository is refused" "$(is "$(outvar decision)" fail)"
+payload person MEMBER feat/x fork/legion closed
+run gate GITHUB_EVENT_NAME=pull_request_target GITHUB_EVENT_PATH="$work/event.json"
+check "a closed pull request passes with no review" "$(is "$(outvar decision)" pass)"
 run gate GITHUB_EVENT_NAME=pull_request GITHUB_EVENT_PATH="$work/event.json"
 check "another event fails" "$(is "$status" 1)"
 
@@ -114,29 +117,72 @@ check "the prompt names the head, base, number and directory" \
 check "the prompt keeps no placeholder" "$(is "$(contains "$prompt_text" '@[A-Z_]*@')" false)"
 check "the schema is one line of JSON" "$(jq -e .properties.findings <<< "$(outvar schema)" > /dev/null && echo true || echo false)"
 key=$(outvar key)
-check "the key names the pull request and a hash" "$(is "$(grep -cE '^fork-review-pass-7-[0-9a-f]{64}$' <<< "$key")" 1)"
+check "the key names the pull request and a hash" "$(is "$(grep -cE '^fork-review-7-[0-9a-f]{64}$' <<< "$key")" 1)"
+# prepare_at <head>: run prepare again for pull request 7 at the head.
+prepare_at() {
+  rm -rf "$work/ws/fork-review"
+  git -C "$work/ws/legion" worktree prune
+  cd "$work/ws/legion"
+  run prepare PR_NUMBER=7 HEAD_SHA="$1" GITHUB_WORKSPACE="$work/ws/legion" GITHUB_EVENT_PATH="$work/event.json"
+  cd "$script_dir"
+}
 # key_after <commit message> <path>: the key once main gains a file at the path.
 key_after() {
-  rm -rf "$work/ws/fork-review"
   mkdir -p "$(dirname "$work/ws/legion/$2")"
   echo "$1" > "$work/ws/legion/$2"
   git -C "$work/ws/legion" add -A
   git -C "$work/ws/legion" -c user.name=t -c user.email=t@t commit --quiet -m "$1"
-  (cd "$work/ws/legion" && run prepare PR_NUMBER=7 HEAD_SHA="$pr_head" GITHUB_WORKSPACE="$work/ws/legion" GITHUB_EVENT_PATH="$work/event.json")
+  prepare_at "$pr_head"
   outvar key
 }
 check "a change to main elsewhere keeps the key" "$(is "$(key_after other docs/other.md)" "$key")"
+new_key=$(key_after rules packages/daemon/internal/prompts/roles/reviewer.md)
 check "a change to the reviewer rules makes a new key" \
-  "$(is "$([ "$(key_after rules packages/daemon/internal/prompts/roles/reviewer.md)" = "$key" ] && echo same)" "")"
+  "$(is "$(grep -c '^fork-review-7-' <<< "$new_key"):$([ "$new_key" = "$key" ] && echo same)" 1:)"
+check "the key reads a binary file's whole blob id" "$(contains "$(< "$script")" 'git diff --binary --full-index "$base" "$head"')"
+prepare_at "$base_sha"
+check "a head the pull request moved past is not reviewed" "$(is "$status:$(contains "$out" 'moved past')" 1:true)"
+# Every rule file the prompt names is on main, under a path the key reads.
+key_paths=$(sed -n '/^reviewer_paths=(/,/)$/p' "$script" | tr -d '()' | sed 's/^reviewer_paths=//')
+prompt_paths=$(grep -oE '`(packages|skills)/[^`]+`' "$script_dir/../fork-review/prompt.md" | tr -d '`' | sort -u)
+missing=$(for p in $prompt_paths; do
+  [ -e "$script_dir/../../$p" ] || echo "absent:$p"
+  covered=false
+  for k in $key_paths; do case $p in "$k"/* | "$k") covered=true ;; esac; done
+  [ "$covered" = true ] || echo "unkeyed:$p"
+done)
+check "the key reads each rule file the prompt names" "$(is "$(wc -l <<< "$prompt_paths"):$missing" 4:)"
+
+echo "decide"
+mkdir "$work/cwd"
+cd "$work/cwd"
+run decide GATE_DECISION=fail GATE_REASON='not a member'
+check "with no lookup, the gate's decision stands" "$(is "$status:$(outvar decision)" 0:fail)"
+run decide GATE_DECISION=review GATE_REASON=member CACHE_HIT=false
+check "with no earlier verdict, the model reviews" "$(is "$(outvar decision)" review)"
+echo APPROVE > fork-review-verdict
+run decide GATE_DECISION=review GATE_REASON=member CACHE_HIT=true KEY=k
+check "an earlier APPROVE of the same diff passes" "$(is "$(outvar decision)" pass)"
+echo CHANGES > fork-review-verdict
+run decide GATE_DECISION=review GATE_REASON=member CACHE_HIT=true KEY=k
+check "an earlier CHANGES of the same diff fails and says how to review again" \
+  "$(is "$(outvar decision):$(contains "$(outvar reason)" 'delete the cache entry k')" fail:true)"
+echo pwned > fork-review-verdict
+run decide GATE_DECISION=review GATE_REASON=member CACHE_HIT=true KEY=k
+check "a record that is no verdict fails" "$(is "$status:$(outvar decision)" 1:)"
+rm fork-review-verdict
+cd "$script_dir"
 
 echo "scan"
 terms=$'acmecorp\nkey:ACME'
 # scan_with <review JSON>: run scan over an execution file whose result holds it.
 scan_with() {
   jq -n --argjson review "$1" '[{type: "system"}, {type: "result", total_cost_usd: 0.5, structured_output: $review}]' > "$work/execution.json"
-  run scan EXECUTION_FILE="$work/execution.json" HEAD_SHA=abc PRIVATE_NAME_TERMS="$terms"
+  run scan EXECUTION_FILE="$work/execution.json" HEAD_SHA=abc PRIVATE_NAME_TERMS="$terms" REVIEW_DIR="$work/rd"
   review_out=$(outvar review)
 }
+mkdir "$work/rd"
+printf '%s\n' '{"id":42,"user":"github-actions[bot]"}' '{"id":43,"user":"a"}' > "$work/rd/review-comments.jsonl"
 scan_with '{"summary":"Fine.","findings":[{"path":"a.go","line":3,"severity":"Minor","body":"Rename x."}]}'
 check "a clean review passes on" "$(is "$status:$([ -n "$review_out" ] && echo set)" 0:set)"
 check "the body starts with the verdict at the head" "$(is "$(jq -r '.body | split("\n")[0]' <<< "$review_out")" 'Verdict: APPROVE at abc')"
@@ -153,6 +199,8 @@ check "a High finding makes the verdict CHANGES and opens a thread" \
 scan_with '{"summary":"Still.","findings":[{"path":"a.go","line":3,"severity":"High","body":"Still dropped.","earlier_comment_id":42}]}'
 check "a finding an earlier comment raised opens no second thread" \
   "$(is "$(jq -r '.comments | length' <<< "$review_out"):$(contains "$(jq -r .body <<< "$review_out")" 'still stands, comment 42')" 0:true)"
+scan_with '{"summary":"Still.","findings":[{"path":"a.go","line":3,"severity":"Medium","body":"x","earlier_comment_id":43},{"path":"a.go","line":4,"severity":"Medium","body":"y","earlier_comment_id":99}]}'
+check "an id that names no comment of this workflow opens a thread" "$(is "$(jq -r '.comments | length' <<< "$review_out")" 2)"
 scan_with '{"summary":"Made by acmecorp.","findings":[]}'
 check "a private term withholds the review" "$(is "$status:$review_out" 1:)"
 check "the refusal prints no term" "$(is "$(contains "$out" acmecorp)" false)"
@@ -174,11 +222,12 @@ run scan EXECUTION_FILE="$work/missing.json" HEAD_SHA=abc PRIVATE_NAME_TERMS="$t
 check "no execution file fails" "$(is "$status" 1)"
 
 echo "post"
+cd "$work/cwd"
 approve='{"verdict":"APPROVE","body":"Verdict: APPROVE at abc","folded":"Verdict: APPROVE at abc","comments":[]}'
 changes='{"verdict":"CHANGES","body":"Verdict: CHANGES at abc","folded":"Verdict: CHANGES at abc folded a.go:3","comments":[{"path":"a.go","line":3,"side":"RIGHT","body":"x"}]}'
 run post DECISION=pass REASON=sync
 check "a pass posts nothing and passes" "$(is "$status:$(wc -c < "$work/gh.log")" 0:0)"
-run post DECISION=refuse REASON='not a member'
+run post DECISION=fail REASON='not a member'
 check "a refusal posts nothing and fails" "$(is "$status:$(wc -c < "$work/gh.log")" 1:0)"
 run post DECISION= MODEL_RESULT=failure
 check "a model job that decided nothing fails" "$(is "$status" 1)"
@@ -187,12 +236,16 @@ check "a failed or withheld review posts nothing and fails" "$(is "$status:$(wc 
 run post DECISION=review MODEL_RESULT=success REVIEW="$approve" PR_NUMBER=7 HEAD_SHA=abc
 check "an APPROVE posts one COMMENT review at the head and passes" \
   "$(is "$status:$(grep -c '^gh api -X POST repos/fork/legion/pulls/7/reviews' "$work/gh.log"):$(contains "$(cat "$work/gh.log")" '"commit_id":"abc","event":"COMMENT"')" 0:1:true)"
+check "a posted APPROVE is recorded for the same diff" "$(is "$(cat fork-review-verdict)" APPROVE)"
 run post DECISION=review MODEL_RESULT=success REVIEW="$changes" PR_NUMBER=7 HEAD_SHA=abc
-check "a CHANGES posts its review and fails" "$(is "$status:$(grep -c '^gh api' "$work/gh.log")" 1:1)"
+check "a CHANGES posts its review, is recorded and fails" "$(is "$status:$(grep -c '^gh api' "$work/gh.log"):$(cat fork-review-verdict)" 1:1:CHANGES)"
+rm fork-review-verdict
+medium=$(jq -c '.verdict = "APPROVE"' <<< "$changes")
 touch "$work/refuse-once"
-run post DECISION=review MODEL_RESULT=success REVIEW="$changes" PR_NUMBER=7 HEAD_SHA=abc
-check "a refused inline comment is posted again in the body" \
-  "$(is "$(grep -c '^gh api' "$work/gh.log"):$(contains "$(tail -n 2 "$work/gh.log")" '"body":"Verdict: CHANGES at abc folded a.go:3"}')" 2:true)"
+run post DECISION=review MODEL_RESULT=success REVIEW="$medium" PR_NUMBER=7 HEAD_SHA=abc
+check "a refused inline comment is posted in the body, fails and is not recorded" \
+  "$(is "$status:$(grep -c '^gh api' "$work/gh.log"):$(contains "$(tail -n 2 "$work/gh.log")" '"body":"Verdict: CHANGES at abc folded a.go:3"}'):$([ -e fork-review-verdict ] && echo recorded)" 1:2:true:)"
+cd "$script_dir"
 
 echo "workflow"
 wf=$(< "$workflow")
@@ -203,10 +256,9 @@ check "the workflow runs main's copy, not the pull request's" \
 check "the review job runs whatever the model job did" "$(contains "$wf" 'if: \${{ !cancelled() }}')"
 check "a pull request retargeted to main is reviewed" "$(contains "$wf" 'types: \[opened, synchronize, reopened, edited\]')"
 check "an edit waits for the review in flight" "$(contains "$wf" "cancel-in-progress: .{{ github.event.action != 'edited' }}")"
-check "the model runs only when no earlier pass has the key" \
-  "$(is "$(grep -c "if: steps.gate.outputs.decision == 'review' && steps.earlier.outputs.cache-hit != 'true'" "$workflow")" 2)"
-check "only a review that passed saves its key" \
-  "$(is "$(grep -c "if: needs.model.outputs.decision == 'review'" "$workflow")" 2)"
+check "the model runs only when decide says review" \
+  "$(is "$(grep -c "if: steps.decide.outputs.decision == 'review'" "$workflow")" 2)"
+check "only a posted review saves its verdict" "$(contains "$wf" "if: .{{ !cancelled() && hashFiles('fork-review-verdict') != '' }}")"
 check "the model has no shell, no skill and cannot write" "$(contains "$wf" '--disallowedTools "Bash,Skill,Edit,Write,')"
 check "the model reads only the two directories it is given" \
   "$(is "$(contains "$wf" 'allowedTools "Agent,Read(/[$][{][{] github.workspace [}][}]/[*][*]),Read(/[$][{][{] steps.prepare.outputs.dir [}][}]/[*][*])"'):$(contains "$wf" 'Read,Grep')" true:false)"
