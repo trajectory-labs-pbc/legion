@@ -65,6 +65,7 @@ A page's view file, `src/upstream/views/<page>.tsx` or the folder of that name, 
 A page with more than one view gets the folder, with one file for each view: an `import()` of a file loads every view it gives, so each lazy chunk has its own file.
 `src/app` also reads the data seam files that a provider needs, and `write-kinds.ts`, which registers upstream's kinds of writes.
 `mark.tsx` is read by the seam files, and for `ForkView` by the layers that pass fork elements into a marked component.
+The `editor/` files give the document editor's engine and its parts to the reading aids alone (`src/parts/reading-aids`), one file for each chunk: the compare worker's bundle, and the aids that load with the page or behind the aided editor's `import()`.
 A seam file may read another, and a test may read each seam file.
 The root files have readers too, and a test is held to them: `views.ts` is read only by the tests of the view map (`tests/map`), a stylesheet only by `main.tsx` and `styles.css`, and `main.tsx` only by `tests/main.test.tsx`, which loads the entry once to see the order of its first two steps.
 A seam file or a root file that the table does not list has no reader, so a new one comes with its row.
