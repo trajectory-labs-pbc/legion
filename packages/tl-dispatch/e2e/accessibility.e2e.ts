@@ -459,14 +459,14 @@ const CONTROLS = [
 ].join(", ");
 /** What may hold a small control without meeting it: a link with no other role or a `role="link"`
  *  row, a tree row, a focusable element that is no control (no `button`, `input`, `select`,
- *  `textarea` or `summary` tag and no `role` attribute), or one with the role region, group or tab
- *  panel. Any other control that holds one meets it. */
+ *  `textarea` or `summary` tag and no `role` attribute), or one with no control tag and the role
+ *  region, group or tab panel. Any other control that holds one meets it. */
 const HOLDERS = [
   "a[href]:not([role])",
   "[role=link]",
   "[role=treeitem]",
   `[tabindex]:not(${NATIVE_CONTROLS}, [role])`,
-  ":is([role=region], [role=group], [role=tabpanel])",
+  `:is([role=region], [role=group], [role=tabpanel]):not(${NATIVE_CONTROLS})`,
 ].join(", ");
 
 /** A live machine login whose machine name is too long for its cell, so the row cuts it. */
@@ -674,15 +674,16 @@ test("a region, a group, a tab panel, a link or a tree row holds a small control
     <section role="region" aria-label="Scroll" tabindex="0" style="overflow: auto">${checkbox}</section>
     <div role="tabpanel" tabindex="0">${checkbox}</div>
     <div role="group" tabindex="0">${checkbox}</div>
-    <a href="#g" role="group" style="display: block">${checkbox}</a>
+    <a href="#g" role="group">${checkbox}</a>
     <div role="treeitem" aria-selected="false" tabindex="0">${checkbox}</div>
-    <a href="#row" style="display: block">${checkbox}</a>
+    <a href="#row">${checkbox}</a>
     <div role="link" tabindex="0">${checkbox}</div>
     <button type="button" tabindex="0">${checkbox}</button>
+    <button type="button" role="group">${checkbox}</button>
     <details open><summary tabindex="0">${checkbox}</summary></details>
     <select tabindex="0" size="4">${checkbox}</select>
     <div role="button" tabindex="0">${checkbox}</div>
-    <a href="#menu" role="menuitem" style="display: block">${checkbox}</a>
+    <a href="#menu" role="menuitem">${checkbox}</a>
   `);
   const controls = page.locator('[data-slot="checkbox"]');
   const meets: string[][] = [];
@@ -696,7 +697,8 @@ test("a region, a group, a tab panel, a link or a tree row holds a small control
     [],
     [],
     [],
-    [expect.stringMatching(/^<button/)],
+    [expect.stringMatching(/^<button type="button" tabindex="0"/)],
+    [expect.stringMatching(/^<button type="button" role="group"/)],
     [expect.stringMatching(/^<summary/)],
     [expect.stringMatching(/^<select/)],
     [expect.stringMatching(/^<div role="button"/)],
