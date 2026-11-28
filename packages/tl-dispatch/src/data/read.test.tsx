@@ -3,11 +3,12 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { http } from "msw";
 import { useState } from "react";
 
+import { ApiError, DispatchQueryClient } from "@/upstream/api";
 import { issueQuery, projectsQuery } from "@/upstream/queries";
 import { mount } from "../../tests/mount";
 import { json } from "../../tests/network";
 import { settle } from "../../tests/react";
-import { answerRequests } from "../../tests/upstream";
+import { answerRequests, holdNotifications } from "../../tests/upstream";
 import { until } from "../../tests/wait";
 import { type Read, useRead } from "./read";
 
@@ -182,6 +183,47 @@ describe("useRead", () => {
     await until(() => read.state === "error");
     expect(Reflect.get(read, "refusal")).toBeUndefined();
     expect(Reflect.get(read, "retry")).toBeInstanceOf(Function);
+  });
+
+  test("a failed read asked again keeps its failure while a second ask waits behind the first", async () => {
+    const failed = () => new ApiError(500, { code: "INTERNAL", error: "no" });
+    let answer: () => Promise<unknown> = () => Promise.reject(failed());
+    const client = new DispatchQueryClient({ defaultOptions: { queries: { retry: false } } });
+    const drawn: string[] = [];
+    function Probe() {
+      drawn.push(useRead({ queryKey: ["race"], queryFn: () => answer() }).state);
+      return null;
+    }
+    mount(
+      <QueryClientProvider client={client}>
+        <Probe />
+      </QueryClientProvider>
+    );
+    await until(() => drawn.at(-1) === "error");
+    // The client asks it again, as an event or a window focus does.
+    const asked = Promise.withResolvers<never>();
+    answer = () => asked.promise;
+    settle(() => void client.refetchQueries());
+    await until(() => client.getQueryState(["race"])?.fetchStatus === "fetching");
+    // Asked while that fetch is out, the client queues one more, which starts as the first fails.
+    const queued = Promise.withResolvers<never>();
+    answer = () => queued.promise;
+    settle(() => void client.invalidateQueries());
+    const mark = drawn.length;
+    // A browser tells the readers on a timer, so they hear of the failure only once the queued
+    // fetch has started and cleared it.
+    const held = holdNotifications();
+    try {
+      await settle(async () => asked.reject(failed()));
+      expect(held.held()).toBeGreaterThan(0);
+    } finally {
+      held.tell();
+    }
+    await settle(async () => queued.reject(failed()));
+    await until(() => client.getQueryState(["race"])?.fetchStatus === "idle");
+    expect(drawn.length).toBeGreaterThan(mark);
+    expect(drawn.slice(mark)).not.toContain("loading");
+    expect(drawn.at(-1)).toBe("error");
   });
 
   test("a Retry the browser holds while offline is running", async () => {

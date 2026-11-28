@@ -1,5 +1,6 @@
 import {
   type DefaultError,
+  hashKey,
   type QueryKey,
   type UseQueryOptions,
   useQuery,
@@ -71,6 +72,29 @@ export function readRetry(failureCount: number, error: unknown): boolean {
   return refusalOf(error) === undefined && queryRetry(failureCount, error);
 }
 
+/** A read with nothing to show in one place: how it failed, whether it is out, which query it is. */
+type FailurePlace<F> =
+  | { readonly failure: F | undefined; readonly out: boolean; readonly query?: string }
+  | undefined;
+
+/**
+ * How each place's read last failed, as this view saw it. A refetch clears the error of a read
+ * with no data until it answers, so a failure stays while the same query is out again, however
+ * often it failed meanwhile; a read this view never saw fail has none while it is out.
+ */
+export function useKeptFailures<F>(places: readonly FailurePlace<F>[]): readonly (F | undefined)[] {
+  const [seen, setSeen] = useState<readonly FailurePlace<F>[]>([]);
+  const kept = places.map((place, index) => {
+    const before = seen[index];
+    if (place?.failure !== undefined || !place?.out || before?.query !== place.query) return place;
+    return { ...place, failure: before?.failure };
+  });
+  const changed = (place: FailurePlace<F>, index: number) =>
+    place?.failure !== seen[index]?.failure || place?.query !== seen[index]?.query;
+  if (kept.some(changed)) setSeen(kept);
+  return kept.map((place) => place?.failure);
+}
+
 /**
  * Reads `options` as upstream gives them, under their key, so upstream's event refresh and its
  * widgets share the cache entry.
@@ -80,17 +104,20 @@ export function useRead<TQueryFnData, TError, TQueryKey extends QueryKey, T = TQ
   { select }: ReadOptions<TQueryFnData, T> = {}
 ): Read<T, TError> {
   const query = useQuery<TQueryFnData, TError, T, TQueryKey>({ ...options, select });
-  // A read again drops the error, so the failure this view saw is kept, with its query's time.
-  const [seen, setSeen] = useState<{ readonly error: TError; readonly at: number } | null>(null);
-  if (!query.isPending && query.error !== null && query.errorUpdatedAt !== seen?.at) {
-    setSeen({ error: query.error, at: query.errorUpdatedAt });
-  }
-  const own = seen?.at === query.errorUpdatedAt ? seen.error : null;
-  // A view that mounts on a failed read, or moves to one, saw no failure of it yet.
-  if (query.isPending && own === null) return { state: "loading" };
-  const retrying = query.fetchStatus !== "idle";
-  if (query.isPending || query.isLoadingError) {
-    const error = query.isPending ? own : query.error;
+  const empty = query.isPending || query.isLoadingError;
+  const [error] = useKeptFailures([
+    empty
+      ? {
+          failure: query.error ?? undefined,
+          out: query.fetchStatus !== "idle",
+          query: hashKey(options.queryKey),
+        }
+      : undefined,
+  ]);
+  if (empty) {
+    // A view that mounts on a failed read, or moves to one, saw no failure of it yet.
+    if (error === undefined) return { state: "loading" };
+    const retrying = query.fetchStatus !== "idle";
     const refusal = refusalOf(error);
     return refusal === undefined
       ? { state: "error", error: query.error, retrying, retry: () => void query.refetch() }

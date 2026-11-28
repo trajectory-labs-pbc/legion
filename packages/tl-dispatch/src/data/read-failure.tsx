@@ -1,9 +1,9 @@
 import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
-import { type ReadFault, type Refusal, refusalOf } from "@/data/read";
+import { type ReadFault, type Refusal, refusalOf, useKeptFailures } from "@/data/read";
 import { useFocusHandOff } from "@/upstream/data-hooks";
 
 /** How a read with nothing to show last failed, as the component reading it saw. */
@@ -20,13 +20,13 @@ type Failure = Refusal | "retryable";
 export function useReadFailure(
   ...reads: readonly (UseQueryResult<unknown> | undefined)[]
 ): ReadFault | undefined {
-  const [seen, setSeen] = useState<readonly (Failure | undefined)[]>([]);
-  const failures = reads.map((read, index): Failure | undefined => {
-    if (read === undefined || read.data !== undefined) return undefined;
-    if (read.error !== null) return refusalOf(read.error) ?? "retryable";
-    return read.fetchStatus === "idle" ? undefined : seen[index];
-  });
-  if (failures.some((failure, index) => failure !== seen[index])) setSeen(failures);
+  const failures = useKeptFailures<Failure>(
+    reads.map((read) => {
+      if (read === undefined || read.data !== undefined) return undefined;
+      const failure = read.error === null ? undefined : (refusalOf(read.error) ?? "retryable");
+      return { failure, out: read.fetchStatus !== "idle" };
+    })
+  );
   if (failures.every((failure) => failure === undefined)) return undefined;
   const retrying = reads.some(
     (read, index) => failures[index] !== undefined && read?.fetchStatus !== "idle"
