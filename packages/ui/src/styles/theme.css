@@ -27,6 +27,9 @@
   /* A table row, and a small control: a small button, a menu entry, a pill under a mouse. */
   --spacing-row: calc(var(--spacing) * 8);
   --spacing-control-sm: calc(var(--spacing) * 7);
+  /* A list row of one line, which a group header also takes, and a list row of two lines. */
+  --spacing-list-row-1: calc(var(--spacing) * 9);
+  --spacing-list-row-2: calc(var(--spacing) * 14);
   /* Every edge Tailwind draws (`border`, `border-t`, `divide-y`) is the one --border-width. */
   --default-border-width: var(--border-width);
   --color-background: var(--background);
@@ -42,6 +45,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-faint-foreground: var(--faint-foreground);
+  --color-track: var(--track);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -91,6 +95,8 @@
   --muted: #f2f1ee;
   --muted-foreground: #5d5c59;
   --faint-foreground: #6f6e6b;
+  /* A priority's unfilled bars: far from the filled bars, and visible on each row fill. */
+  --track: #a3a19c;
   /* The highlight step: 1.3:1 or more on a popover, with text at 4.5:1 or more on it. */
   --accent: #e2e0db;
   --accent-foreground: #141414;
@@ -146,6 +152,7 @@
   --muted: #282622;
   --muted-foreground: #a6a29a;
   --faint-foreground: #908d86;
+  --track: #615f59;
   --accent: #383630;
   --accent-foreground: #f5f4f2;
   /* A destructive button is solid in dark too; destructive text is `danger`. */
@@ -199,6 +206,7 @@
     --muted: #282622;
     --muted-foreground: #a6a29a;
     --faint-foreground: #908d86;
+    --track: #615f59;
     --accent: #383630;
     --accent-foreground: #f5f4f2;
     /* A destructive button is solid in dark too; destructive text is `danger`. */

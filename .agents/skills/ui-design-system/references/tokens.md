@@ -42,6 +42,7 @@ The steps from `card` to `secondary`, `muted` and `background` are small on purp
 | --- | --- |
 | `foreground` | Titles, body text, values. |
 | `muted-foreground` | Metadata: ids, dates, counts, descriptions, placeholder text, a property's label. |
+| `track` | Never text: a glyph's unfilled part, a priority's unfilled bars. It stays 4.5:1 or more from `foreground` and 1.8:1 or more on the page, a card, a popover and each row fill (`secondary`, `muted`, `accent`). |
 | `primary-foreground`, `destructive-foreground` | Text on a primary or destructive fill. |
 
 Never lower a text token's opacity: the contrast tests read the token, not the mix.
@@ -62,9 +63,10 @@ Use the `*-tint` fill and the `*-border` line together for a whole block of a st
 ## Size scales
 
 - Control heights: the steps of `CONTROL_HEIGHTS` in `packages/tl-dispatch/tests/control-scale.ts`, with `h-8` (32 px) the default; on a coarse pointer every control reaches `TOUCH_MIN_HEIGHT`. The design-rule tests read that file and refuse any other control height.
+- List rows: `h-list-row-1` (36 px, one line, and a group header) and `h-list-row-2` (56 px, two lines). There is no third row height.
 - Icons in a control: `size-3`, `size-3.5` or `size-4`. Status and priority icons: `size-3.5` in rows, `size-4` in the properties panel.
 - Spacing is on the 4 px scale. No arbitrary values (`mt-[13px]`).
-- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. On a page, `SurfaceTitle` is the `h1` and `Heading` starts at `h2`; inside an overlay, `OverlayOutline` makes the title an `h2` and the first `Heading` an `h3`. `Heading` takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. `packages/ui` has no text component: pass `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
+- Type comes from `SurfaceTitle`, `Heading` and `textVariants`, never from raw `text-*` or `font-*` classes. On a page, `SurfaceTitle` is the `h1` and `Heading` starts at `h2`; inside an overlay, `OverlayOutline` makes the title an `h2` and the first `Heading` an `h3`. `Heading` takes its rank from the `HeadingSection` around it. Both take a `size` of `headingVariants`. Running text is `Text`, which takes the same `size`, `tone` and `weight` as `textVariants`; a part that draws its own element passes `textVariants(...)` to `className`. Each recipe's classes are in `packages/ui/src/lib/typography.ts`.
 
 | Recipe | Use |
 | --- | --- |

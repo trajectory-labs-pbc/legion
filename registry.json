@@ -19,6 +19,8 @@
           "shadow-dialog": "0 24px 64px -16px var(--shadow-tint)",
           "spacing-row": "calc(var(--spacing) * 8)",
           "spacing-control-sm": "calc(var(--spacing) * 7)",
+          "spacing-list-row-1": "calc(var(--spacing) * 9)",
+          "spacing-list-row-2": "calc(var(--spacing) * 14)",
           "default-border-width": "var(--border-width)",
           "color-background": "var(--background)",
           "color-foreground": "var(--foreground)",
@@ -33,6 +35,7 @@
           "color-muted": "var(--muted)",
           "color-muted-foreground": "var(--muted-foreground)",
           "color-faint-foreground": "var(--faint-foreground)",
+          "color-track": "var(--track)",
           "color-accent": "var(--accent)",
           "color-accent-foreground": "var(--accent-foreground)",
           "color-destructive": "var(--destructive)",
@@ -80,6 +83,7 @@
           "muted": "#f2f1ee",
           "muted-foreground": "#5d5c59",
           "faint-foreground": "#6f6e6b",
+          "track": "#a3a19c",
           "accent": "#e2e0db",
           "accent-foreground": "#141414",
           "destructive": "#9b1c1f",
@@ -131,6 +135,7 @@
           "muted": "#282622",
           "muted-foreground": "#a6a29a",
           "faint-foreground": "#908d86",
+          "track": "#615f59",
           "accent": "#383630",
           "accent-foreground": "#f5f4f2",
           "destructive": "#9b1c1f",
@@ -199,6 +204,7 @@
             "--muted": "#282622",
             "--muted-foreground": "#a6a29a",
             "--faint-foreground": "#908d86",
+            "--track": "#615f59",
             "--accent": "#383630",
             "--accent-foreground": "#f5f4f2",
             "--destructive": "#9b1c1f",
@@ -371,6 +377,23 @@
           "path": "packages/ui/src/components/badge.tsx",
           "type": "registry:ui",
           "target": "@ui/badge.tsx"
+        }
+      ]
+    },
+    {
+      "name": "bars-glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/bars-glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/bars-glyph.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
         }
       ]
     },
@@ -689,6 +712,18 @@
       ]
     },
     {
+      "name": "glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
+        }
+      ]
+    },
+    {
       "name": "heading",
       "type": "registry:ui",
       "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
@@ -981,6 +1016,23 @@
       ]
     },
     {
+      "name": "state-glyph",
+      "type": "registry:ui",
+      "dependencies": ["cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/state-glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/state-glyph.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/glyph.tsx",
+          "type": "registry:ui",
+          "target": "@ui/glyph.tsx"
+        }
+      ]
+    },
+    {
       "name": "switch",
       "type": "registry:ui",
       "dependencies": ["@base-ui/react@1.9.0", "cn@0.2.6"],
@@ -1022,6 +1074,23 @@
       ]
     },
     {
+      "name": "text",
+      "type": "registry:ui",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
       "name": "textarea",
       "type": "registry:ui",
       "dependencies": ["cn@0.2.6"],
@@ -1030,6 +1099,28 @@
           "path": "packages/ui/src/components/textarea.tsx",
           "type": "registry:ui",
           "target": "@ui/textarea.tsx"
+        }
+      ]
+    },
+    {
+      "name": "time",
+      "type": "registry:ui",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/components/time.tsx",
+          "type": "registry:ui",
+          "target": "@ui/time.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/format.ts",
+          "type": "registry:lib",
+          "target": "@lib/format.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
         }
       ]
     },
@@ -1124,6 +1215,18 @@
       ]
     },
     {
+      "name": "read-boundary",
+      "type": "registry:block",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/read-boundary.tsx",
+          "type": "registry:component",
+          "target": "@components/read-boundary.tsx"
+        }
+      ]
+    },
+    {
       "name": "shortcuts-sheet",
       "type": "registry:block",
       "dependencies": [
@@ -1172,6 +1275,70 @@
           "path": "packages/ui/src/lib/typography.ts",
           "type": "registry:lib",
           "target": "@lib/typography.ts"
+        }
+      ]
+    },
+    {
+      "name": "states",
+      "type": "registry:block",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/states.tsx",
+          "type": "registry:component",
+          "target": "@components/states.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
+      "name": "view-header",
+      "type": "registry:block",
+      "dependencies": ["class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/view-header.tsx",
+          "type": "registry:component",
+          "target": "@components/view-header.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/count.tsx",
+          "type": "registry:ui",
+          "target": "@ui/count.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
         }
       ]
     }

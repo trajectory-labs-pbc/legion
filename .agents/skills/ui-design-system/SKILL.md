@@ -23,7 +23,7 @@ Each rule in the references has an ID, and a reviewer cites the ID of each rule 
 Read each in its reference before you build what it names.
 
 - **FR2** the inverted-L frame (`references/frame-and-lists.md`).
-- **LR1** one-line list rows; **LR3** one highlight for pointer and keys; **LR5** selection and its bar (`references/frame-and-lists.md`).
+- **LR1** list rows of one line or two; **LR3** one highlight for pointer and keys; **LR5** selection and its bar (`references/frame-and-lists.md`).
 - **IV3** the peek; **SP1** status and priority glyphs; **IE1** editing a property in place (`references/records-and-status.md`).
 - **SU1, SU2** no shadow at rest and no coloured stripe (`references/surfaces-and-type.md`).
 - **KB2, KB3** one command per action, and one-key commands on the subject; **CX1** the context menu; **ES1** empty views; **TO1** toasts (`references/keyboard-and-feedback.md`).
