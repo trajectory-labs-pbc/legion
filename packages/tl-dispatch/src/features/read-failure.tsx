@@ -2,15 +2,12 @@ import { Alert, AlertAction, AlertTitle } from "@legion/ui/components/alert";
 import { Button } from "@legion/ui/components/button";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-/** Reads that failed with nothing to show, and their Retry. */
-export interface ReadFault {
-  /** Their Retry is out: the failure stays, and its Retry shows it is busy. */
-  retrying: boolean;
-  retry: () => void;
-}
+import type { RetryableFault } from "@/data/read";
 
 /** The reads that failed with nothing to show, if any; the failure stays while their Retry runs. */
-export function readFailureOf(...reads: readonly UseQueryResult<unknown>[]): ReadFault | undefined {
+export function readFailureOf(
+  ...reads: readonly UseQueryResult<unknown>[]
+): RetryableFault | undefined {
   // A Retry puts a read back to pending, so the error count is what says it failed before.
   const failed = reads.filter((read) => read.data === undefined && read.errorUpdateCount > 0);
   if (failed.length === 0) return undefined;
@@ -24,7 +21,7 @@ export function readFailureOf(...reads: readonly UseQueryResult<unknown>[]): Rea
 }
 
 /** A read whose refresh failed under what it shows, if so; the failure stays while its Retry runs. */
-export function refreshFailureOf(read: UseQueryResult<unknown>): ReadFault | undefined {
+export function refreshFailureOf(read: UseQueryResult<unknown>): RetryableFault | undefined {
   if (!read.isRefetchError) return undefined;
   return { retrying: read.isFetching, retry: () => void read.refetch() };
 }
@@ -35,7 +32,7 @@ export function ReadFailure({
   noun,
   size = "compact",
 }: {
-  fault: ReadFault;
+  fault: RetryableFault;
   noun: string;
   /** `default` where the failure stands for a whole page. */
   size?: "default" | "compact";

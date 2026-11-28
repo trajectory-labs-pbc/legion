@@ -1,8 +1,13 @@
 // Upstream's writes: the keyed write, the write store and the submit guard.
+export { isConflict } from "@upstream-dispatch/features/writes/conflicts";
 export { SendStoppedError, stoppedWriteNote } from "@upstream-dispatch/features/writes/keyed-write";
-export type { KeyedWriteResult } from "@upstream-dispatch/features/writes/useKeyedWrite";
+export type {
+  KeyedWriteOptions,
+  KeyedWriteResult,
+} from "@upstream-dispatch/features/writes/useKeyedWrite";
 export {
   refusedNote,
+  stoppedNote,
   useKeyedWrite,
   useRefusalOfSubject,
 } from "@upstream-dispatch/features/writes/useKeyedWrite";
