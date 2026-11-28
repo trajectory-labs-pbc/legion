@@ -3,9 +3,11 @@
 // serious or critical finding, and accepts none. Each scan leaves out upstream's views inside the
 // region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's own
 // axe run reads those. Fork elements passed into a marked component sit in a `data-fork-view`
-// mark inside it, which the scan reads again. No region opens an upstream dialog or overlay: the
-// new-version banner shows only after a new deploy, and the chord indicator only mid-chord. The
-// run seeds, so it is local only: the deployed mode leaves this file out (modes.ts).
+// mark inside it, which the scan reads again. No scan and no width read runs with an upstream
+// dialog or overlay open: the new-version banner shows only after a new deploy, the chord
+// indicator only mid-chord, and a reference preview opens only on hover or keyboard focus, which
+// the Tab walk gives after both scans; the walk counts no stop in the card. The run seeds, so it
+// is local only: the deployed mode leaves this file out (modes.ts).
 //
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
@@ -732,7 +734,7 @@ test("an input without its label fails the scan in a fork region", async ({ page
   ]);
 });
 
-test("an input without its label inside an upstream widget's wrapper is left out", async ({
+test("an input without its label inside a `data-upstream-view` wrapper is left out", async ({
   page,
 }) => {
   await openRegion(page, machineLogin);
