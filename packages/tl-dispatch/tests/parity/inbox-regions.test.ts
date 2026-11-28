@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 
 import { inbox } from "@/features/inbox/route";
 import type { Page } from "@/navigation/page";
 import { replacedViews } from "@/views";
 import { parseList } from "../../scripts/check-parity";
 import { BREAKS } from "../layers.table";
-import { type Copy, readPins } from "../map/copies";
-import { PACKAGE_ROOT, REPO_ROOT, SRC_DIR, UPSTREAM_WEB } from "../source";
+import { type Copy, readPins, upstreamWeb } from "../map/copies";
+import { PACKAGE_ROOT, SRC_DIR } from "../source";
 
 // Holds the Inbox's parity file to the rebuild: a region marked rebuilt has its view files in
 // replacedViews and its named units pinned, and the switch to the fork's page leaves nothing of
@@ -18,6 +18,11 @@ const LIST = "tests/parity/inbox.md";
 const ROUTE_FILE = "src/features/inbox/route.tsx";
 const PAGE_VIEW = "features/inbox/Inbox.tsx";
 const UPSTREAM_VIEWS = join(SRC_DIR, "upstream/views/inbox");
+const LIST_TEXT = readFileSync(join(PACKAGE_ROOT, LIST), "utf8");
+
+/** Whether `region` is the list's region `number`. */
+const isRegion = (region: { heading: string }, number: number) =>
+  region.heading.startsWith(`${number}. `);
 
 interface Region {
   /** Its heading, as "7. Filter bar and View menu". */
@@ -76,8 +81,13 @@ function parseRegions(
         `${LIST}: the heading ${heading} names no region of its Region | Rebuilt table`
       );
     }
-    for (const label of ["View files", "Pinned by name"]) {
-      if (!namesOrNone(lineAfter(section, label))) {
+    const views = lineAfter(section, "View files");
+    const pinned = lineAfter(section, "Pinned by name");
+    for (const [label, line] of [
+      ["View files", views],
+      ["Pinned by name", pinned],
+    ] as const) {
+      if (!namesOrNone(line)) {
         listProblems.push(
           `${LIST}: region ${heading} needs a line "${label}:" with names in backticks, or none.`
         );
@@ -86,29 +96,30 @@ function parseRegions(
     regions.push({
       heading,
       rebuilt: parsed.regions.get(name) === true,
-      views: quoted(lineAfter(section, "View files")),
-      pinned: [
-        ...(lineAfter(section, "Pinned by name") ?? "").matchAll(/`([^`]+)` in `([^`]+)`/g),
-      ].map(([, part = "", file = ""]) => ({ part, file })),
+      views: quoted(views),
+      pinned: [...(pinned ?? "").matchAll(/`([^`]+)` in `([^`]+)`/g)].map(
+        ([, part = "", file = ""]) => ({ part, file })
+      ),
     });
   }
   return { listProblems, regions, noRegionViews, ids: parsed.items.map((item) => item.id) };
 }
 
+/** A page's server as any page names it: the route's `satisfies` keeps its own literal. */
+const serverOf = (page: Pick<Page, "server">): Page["server"] => page.server;
+
 function readFacts(): Facts {
-  // The route's `satisfies` keeps its literal; widen it to every server a page can name.
-  const server: Page["server"] = inbox.server;
   return {
-    ...parseRegions(readFileSync(join(PACKAGE_ROOT, LIST), "utf8")),
+    ...parseRegions(LIST_TEXT),
     replaced: replacedViews,
     pins: readPins(),
-    forkServes: server === "fork",
+    forkServes: serverOf(inbox) === "fork",
     upstreamViews: existsSync(UPSTREAM_VIEWS) ? readdirSync(UPSTREAM_VIEWS).sort() : [],
     breaks: Object.values(BREAKS).flatMap((files) => Object.keys(files ?? {})),
   };
 }
 
-const upstreamFile = (file: string) => `${relative(REPO_ROOT, UPSTREAM_WEB)}/${file}`;
+const upstreamFile = (file: string) => `${upstreamWeb}/${file}`;
 
 /** Each way the rebuild disagrees with the parity file. */
 function regionProblems(facts: Facts): string[] {
@@ -181,15 +192,13 @@ function regionProblems(facts: Facts): string[] {
 describe("the Inbox's regions", () => {
   const facts = readFacts();
   const region = (number: number) => {
-    const found = facts.regions.find((r) => r.heading.startsWith(`${number}. `));
+    const found = facts.regions.find((r) => isRegion(r, number));
     if (found === undefined) throw new Error(`${LIST} has no region ${number}`);
     return found;
   };
   /** The facts with each region of `numbers` marked rebuilt. */
   const rebuilding = (...numbers: number[]): Region[] =>
-    facts.regions.map((r) =>
-      numbers.some((n) => r.heading.startsWith(`${n}. `)) ? { ...r, rebuilt: true } : r
-    );
+    facts.regions.map((r) => (numbers.some((n) => isRegion(r, n)) ? { ...r, rebuilt: true } : r));
 
   test("the parity file, replacedViews, copies.json and the route file agree", () => {
     expect(facts.regions).toHaveLength(19);
@@ -254,20 +263,19 @@ describe("the Inbox's regions", () => {
   });
 
   test("a region line without backticks, or a heading the table lacks, is named", () => {
-    const listText = readFileSync(join(PACKAGE_ROOT, LIST), "utf8");
-    const bare = listText.replace(
+    const bare = LIST_TEXT.replace(
       "View files: `features/inbox/BulkBar.tsx`.",
       "View files: features/inbox/BulkBar.tsx."
     );
-    expect(bare).not.toBe(listText);
+    expect(bare).not.toBe(LIST_TEXT);
     expect(parseRegions(bare).listProblems).toEqual([
       'tests/parity/inbox.md: region 9. Selection and the bulk bar needs a line "View files:" with names in backticks, or none.',
     ]);
-    const renamed = listText.replace(
+    const renamed = LIST_TEXT.replace(
       "## 9. Selection and the bulk bar\n",
       "## 9. Selection and bulk bars\n"
     );
-    expect(renamed).not.toBe(listText);
+    expect(renamed).not.toBe(LIST_TEXT);
     expect(parseRegions(renamed).listProblems).toEqual([
       "tests/parity/inbox.md: the heading 9. Selection and bulk bars names no region of its Region | Rebuilt table",
     ]);
@@ -298,9 +306,7 @@ describe("the Inbox's regions", () => {
       breaks: [],
     };
     expect(regionProblems(switched)).toEqual([]);
-    const nineteen = switched.regions.map((r) =>
-      r.heading.startsWith("19. ") ? { ...r, rebuilt: false } : r
-    );
+    const nineteen = switched.regions.map((r) => (isRegion(r, 19) ? { ...r, rebuilt: false } : r));
     expect(regionProblems({ ...switched, regions: nineteen })).toEqual([
       "src/features/inbox/route.tsx says that the fork serves the page, and region 19. Answered by you is not rebuilt",
     ]);

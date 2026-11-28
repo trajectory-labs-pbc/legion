@@ -1,7 +1,7 @@
-import { type InboxRoute, isOwnList, searchWordsOf } from "@/data/inbox/empty-list";
+import { type InboxRoute, isOwnList } from "@/data/inbox/empty-list";
 
 /** The fields of the Inbox's address that decide what an empty list says. */
-export type EmptyListAddress = Pick<InboxRoute, "q" | "show" | "agent" | "assignees" | "filters">;
+export type EmptyListAddress = Pick<InboxRoute, "show" | "agent" | "assignees" | "filters">;
 
 /** What an empty list shows: upstream's title, one sentence, and whether Clear filters is its action. */
 export interface EmptyList {
@@ -24,11 +24,14 @@ const said = (title: string, sentence: string, clearsFilters = false): EmptyList
  */
 export function emptyList({
   address,
+  words,
   viewer,
   agentName,
   credentialsHold,
 }: {
   address: EmptyListAddress;
+  /** The words the search box narrows the list by (`searchWordsOf`), as the list reads them. */
+  words: readonly string[];
   /** The signed-in person's email. */
   viewer: string | undefined;
   /** The agent of `?agent=`, in plain text. */
@@ -40,7 +43,7 @@ export function emptyList({
   const own = viewer !== undefined && isOwnList(selection, viewer);
   const fieldFiltered = Object.values(address.filters ?? {}).some((values) => values?.length);
   const filtered = fieldFiltered || (selection.length > 0 && !own);
-  if (searchWordsOf(address.q).length > 0) {
+  if (words.length > 0) {
     return said(
       "Nothing matches this text",
       "No row holds the text in the search box.",

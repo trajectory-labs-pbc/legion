@@ -8,12 +8,12 @@ const SKELETON_DELAY_MS = 200;
 
 /** Whether a view that is still loading may draw its skeleton yet (rule ES4). */
 export function useSkeletonDue(): boolean {
-  const [after, setAfter] = useState(false);
+  const [due, setDue] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setAfter(true), SKELETON_DELAY_MS);
+    const timer = setTimeout(() => setDue(true), SKELETON_DELAY_MS);
     return () => clearTimeout(timer);
   }, []);
-  return after;
+  return due;
 }
 
 /** A page that is not an issue's, as boxes: a title and list rows. */

@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { CredentialPendingResponse, CredentialPendingRow } from "@/upstream/contract";
 import { PENDING_CREDENTIAL_REQUEST } from "../../../tests/inbox";
 import type { Read } from "../read";
-import { credentialsHoldEmptyList } from "./empty-list";
+import { credentialsHoldEmptyList, searchWordsOf } from "./empty-list";
 
 const ready = (
   pending: CredentialPendingResponse["pending"]
@@ -13,6 +13,15 @@ const ready = (
   refreshError: undefined,
 });
 const expired: CredentialPendingRow = { ...PENDING_CREDENTIAL_REQUEST, state: "expired" };
+
+describe("the search words", () => {
+  test("INB-30 are the lowercased words of the address, and spaces or text past the cap are none", () => {
+    expect(searchWordsOf(" Deploy  web ")).toEqual(["deploy", "web"]);
+    expect(searchWordsOf(undefined)).toEqual([]);
+    expect(searchWordsOf("   ")).toEqual([]);
+    expect(searchWordsOf(`${" ".repeat(1000)}deploy`)).toEqual([]);
+  });
+});
 
 describe("the credential requests and the empty list", () => {
   test("INB-34 a list that loads, failed or waits on a decision holds the empty list", () => {

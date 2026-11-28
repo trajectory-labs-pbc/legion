@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 
 import type { Read } from "@/data/read";
 import { mount } from "../../../tests/mount";
@@ -10,9 +11,9 @@ import { InboxListBoundary } from "./list-states";
 const READY: Read<unknown> = { state: "ready", data: [], refreshError: undefined };
 
 /** The boundary for `read`, with its rows and, when given, its empty list. */
-const draw = (read: Read<unknown>, empty?: string) =>
+const draw = (read: Read<unknown>, empty?: ReactNode) =>
   mount(
-    <InboxListBoundary empty={empty === undefined ? undefined : <p>{empty}</p>} read={read}>
+    <InboxListBoundary empty={empty} read={read}>
       <p>rows</p>
     </InboxListBoundary>
   );
@@ -48,7 +49,7 @@ describe("the Inbox list's states", () => {
   });
 
   test("a ready list draws its empty list when one is given, else its rows", () => {
-    const empty = draw(READY, "Nothing needs you");
+    const empty = draw(READY, <p>Nothing needs you</p>);
     expect(screen.getByText("Nothing needs you")).toBeDefined();
     expect(screen.queryByText("rows")).toBeNull();
     empty.unmount();
@@ -57,11 +58,7 @@ describe("the Inbox list's states", () => {
   });
 
   test("an empty list of null keeps the rows", () => {
-    mount(
-      <InboxListBoundary empty={null} read={READY}>
-        <p>rows</p>
-      </InboxListBoundary>
-    );
+    draw(READY, null);
     expect(screen.getByText("rows")).toBeDefined();
   });
 });

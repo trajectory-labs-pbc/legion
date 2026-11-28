@@ -5,8 +5,8 @@ import { type EmptyListAddress, emptyList } from "./empty-list";
 const VIEWER = "reader@example.com";
 
 /** What the list says for `address`, read by the viewer, with the credential requests settled. */
-const say = (address: EmptyListAddress, credentialsHold = false) =>
-  emptyList({ address, viewer: VIEWER, agentName: "Builder", credentialsHold });
+const say = (address: EmptyListAddress, credentialsHold = false, words: string[] = []) =>
+  emptyList({ address, words, viewer: VIEWER, agentName: "Builder", credentialsHold });
 
 describe("what an empty Inbox list says", () => {
   test("INB-30 typed text wins over every other reason, and offers Clear filters only beside a filter", () => {
@@ -14,22 +14,17 @@ describe("what an empty Inbox list says", () => {
       title: "Nothing matches this text",
       sentence: "No row holds the text in the search box.",
     };
-    expect(say({ q: "deploy", show: "dismissed" }, true)).toEqual({
+    expect(say({ show: "dismissed" }, true, ["deploy"])).toEqual({
       ...text,
       clearsFilters: false,
     });
-    expect(say({ q: "deploy", filters: { project: ["web"] } })).toEqual({
+    expect(say({ filters: { project: ["web"] } }, false, ["deploy"])).toEqual({
       ...text,
       clearsFilters: true,
     });
-    expect(say({ q: "deploy", agent: "s1" })).toEqual({ ...text, clearsFilters: true });
-    expect(say({ q: "deploy", assignees: ["other@example.com"] })?.clearsFilters).toBe(true);
-    expect(say({ q: "deploy", assignees: [VIEWER] })?.clearsFilters).toBe(false);
-  });
-
-  test("INB-30 an address of spaces, or text past the cap, narrows nothing", () => {
-    expect(say({ q: "   " })?.title).toBe("Nothing needs you");
-    expect(say({ q: `${" ".repeat(1000)}deploy` })?.title).toBe("Nothing needs you");
+    expect(say({ agent: "s1" }, false, ["deploy"])).toEqual({ ...text, clearsFilters: true });
+    expect(say({ assignees: ["other@example.com"] }, false, ["deploy"])?.clearsFilters).toBe(true);
+    expect(say({ assignees: [VIEWER] }, false, ["deploy"])?.clearsFilters).toBe(false);
   });
 
   test("INB-31 the Dismissed view says so, with no action", () => {
@@ -73,6 +68,7 @@ describe("what an empty Inbox list says", () => {
     });
     const signedOut = emptyList({
       address: {},
+      words: [],
       viewer: undefined,
       agentName: undefined,
       credentialsHold: false,
