@@ -13,7 +13,9 @@
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
 // the pages the fork draws, at 390, 768 and 1440 px, each fits the window, and no box in it scrolls
-// or clips content wider than itself, as `wideBoxes` reads it (FR4).
+// or clips content wider than itself, as `wideBoxes` reads it (FR4). The walk and the width check
+// read the marks as the scan does: an element is upstream's when its nearest mark is a
+// `data-upstream-view` one, and the fork's under a nearer `data-fork-view` mark or under none.
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator } from "@playwright/test";
 
@@ -51,6 +53,8 @@ const SIDEBAR = '[data-testid="sidebar"]';
 const STATUS_CORNER = 'div:has(> [data-testid="connection-status"])';
 const UPSTREAM_VIEW = "[data-upstream-view]";
 const FORK_VIEW = "[data-fork-view]";
+/** Both marks: the nearest one an element sits in decides whose it is. */
+const MARKS = `${UPSTREAM_VIEW}, ${FORK_VIEW}`;
 const TOOLTIP = '[data-slot="tooltip-content"]';
 
 interface Region {
@@ -60,9 +64,8 @@ interface Region {
   /** The region's element: axe reads only inside it, and the Tab walk counts only the stops in
    *  it. */
   selector: string;
-  /** What each check leaves out of the region beside the `data-upstream-view` wrappers: a region
-   *  another row reads, or an upstream page. axe and the Tab walk skip it, and the width check
-   *  hides it. */
+  /** What each check leaves out of the region beside upstream's marked views: a region another
+   *  row reads, or an upstream page. axe and the Tab walk skip it, and the width check hides it. */
   exclude?: readonly string[];
   viewport?: { width: number; height: number };
   /** Runs before the page opens: the records it draws, and any request it must not send. */
@@ -89,8 +92,8 @@ interface Finding {
   selector: string;
 }
 
-/** What every check leaves out of `region`: what the fork mounts in a `data-upstream-view`
- *  wrapper, and the region's own `exclude`. */
+/** What axe leaves out of `region`: each `data-upstream-view` mark, and the region's own
+ *  `exclude`. `forkViewsOf` names the fork marks in them that it reads again. */
 const leftOut = (region: Region) => [UPSTREAM_VIEW, ...(region.exclude ?? [])];
 
 /** An open ask of the person's, so the Inbox and its counts draw a row and not an empty state. */
@@ -490,7 +493,7 @@ interface Stop {
   passed: "first" | "again" | null;
   /** The element's tag and name. */
   name: string;
-  /** In the region, and not in what it leaves out. */
+  /** In the region, not in what it leaves out, and the fork's by its nearest mark. */
   inRegion: boolean;
   /** Its outline: style, width and colour. */
   outline: string;
@@ -521,15 +524,19 @@ function focusColour(page: Page): Promise<string> {
  *  is marked only as a first stop, so a page with no stop comes round, and the focus can leave
  *  the page more than once before Tab comes back. */
 function readStop({
+  excluded,
   first,
   focus,
-  left,
+  marks,
   region,
+  upstream,
 }: {
+  excluded: readonly string[];
   first: boolean;
   focus: string;
-  left: readonly string[];
+  marks: string;
   region: string;
+  upstream: string;
 }): Stop {
   const element = document.activeElement ?? document.body;
   const nothing = element === document.body;
@@ -546,7 +553,8 @@ function readStop({
     passed,
     inRegion:
       element.closest(region) !== null &&
-      !left.some((selector) => element.closest(selector) !== null),
+      !excluded.some((selector) => element.closest(selector) !== null) &&
+      element.closest(marks)?.matches(upstream) !== true,
     name: `${element.tagName.toLowerCase()} "${label ?? ""}"`,
     outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`,
     outlined:
@@ -581,8 +589,10 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
       const stop = await page.evaluate(readStop, {
         first: press === 0,
         focus,
-        left: leftOut(region),
+        excluded: region.exclude ?? [],
+        marks: MARKS,
         region: region.selector,
+        upstream: UPSTREAM_VIEW,
       });
       if (stop.passed === "first") break;
       expect(
@@ -603,12 +613,33 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   return unmarked;
 }
 
-/** Hides what `leftOut(region)` names, so the width check measures the fork's boxes in a layout
- *  without it. */
+/** Hides what the width check leaves out of `region`, so it measures the fork's boxes in a layout
+ *  without them: the region's own `exclude`, and each element whose nearest mark is upstream's and
+ *  that holds no fork mark. An upstream box that holds one stays, as the fork's elements draw in
+ *  it. The marks follow the layout, so the check hides again after each resize. */
 async function hideLeftOut(page: Page, region: Region): Promise<void> {
-  await page.addStyleTag({
-    content: `${leftOut(region).join(", ")} { display: none !important; }`,
-  });
+  await page.evaluate(
+    ({ excluded, fork, marks, upstream }) => {
+      const attribute = "data-width-left-out";
+      if (document.getElementById(attribute) === null) {
+        const style = document.createElement("style");
+        style.id = attribute;
+        style.textContent = `[${attribute}] { display: none !important; }`;
+        document.head.append(style);
+      }
+      for (const element of document.querySelectorAll(`[${attribute}]`)) {
+        element.removeAttribute(attribute);
+      }
+      for (const element of document.body.querySelectorAll("*")) {
+        const hidden =
+          excluded.some((selector) => element.matches(selector)) ||
+          (element.closest(marks)?.matches(upstream) === true &&
+            element.querySelector(fork) === null);
+        if (hidden) element.setAttribute(attribute, "");
+      }
+    },
+    { excluded: region.exclude ?? [], fork: FORK_VIEW, marks: MARKS, upstream: UPSTREAM_VIEW }
+  );
 }
 
 /** Each box that scrolls (`overflow-x: auto` or `scroll`) or clips with `overflow-x: clip`
@@ -699,9 +730,9 @@ function fitEach(list: readonly Region[]): void {
       page,
     }) => {
       await openRegion(page, { ...region, viewport: PHONE });
-      await hideLeftOut(page, region);
       for (const viewport of WIDTHS) {
         await resize(page, region, viewport);
+        await hideLeftOut(page, region);
         await assertPageFits(page);
         expect(await wideBoxes(page), `${region.name} at ${viewport.width} px`).toEqual([]);
       }
@@ -735,7 +766,7 @@ test("an input without its label fails the scan in a fork region", async ({ page
   ]);
 });
 
-test("an input without its label inside a `data-upstream-view` wrapper is left out", async ({
+test("an input without its label inside a `data-upstream-view` mark is left out", async ({
   page,
 }) => {
   await openRegion(page, machineLogin);
@@ -747,10 +778,14 @@ test("an input without its label inside a `data-upstream-view` wrapper is left o
 
 // The run's own controls for the walk and the widths, on the machine login page: a button with no
 // outline, a thin one or one in another colour fails the walk, and content wider than the window
-// fails the width check at each width.
+// fails the width check at each width. The buttons and the scrolling box go in the page's section,
+// which sits in a fork mark inside the main region's upstream error boundary, so the walk and the
+// width check prove they read a fork mark inside an upstream one.
+const machineLoginSection = (page: Page) => heading(page, "Enter machine login code").locator("..");
+
 test("a control without FO1's outline fails the Tab walk", async ({ page }) => {
   await openRegion(page, machineLogin);
-  await page.locator(MAIN).evaluate((at) => {
+  await machineLoginSection(page).evaluate((at) => {
     for (const [name, outline] of [
       ["No outline", "none"],
       ["Thin outline", "1px solid var(--focus)"],
@@ -807,7 +842,7 @@ const appendWide = (page: Page, parent: string) =>
 
 test("a box that scrolls sideways fails the width check", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
-  await page.locator(MAIN).evaluate((at) => {
+  await machineLoginSection(page).evaluate((at) => {
     const box = document.createElement("div");
     box.dataset.testid = "wide-box";
     box.style.overflowX = "auto";
@@ -818,6 +853,26 @@ test("a box that scrolls sideways fails the width check", async ({ page }) => {
   expect(await wideBoxes(page)).toEqual([
     expect.stringMatching(/^div "wide-box" scrolls 2000 px in \d+ px$/),
   ]);
+});
+
+test("a box that scrolls sideways in an upstream widget's mark is left out of the width check", async ({
+  page,
+}) => {
+  await openRegion(page, { ...machineLogin, viewport: PHONE });
+  // The live views' mark, the last child of main, which holds no fork mark.
+  await page
+    .locator(`${MAIN} > ${UPSTREAM_VIEW}`)
+    .last()
+    .evaluate((at) => {
+      const box = document.createElement("div");
+      box.dataset.testid = "wide-upstream-box";
+      box.style.overflowX = "auto";
+      at.append(box);
+    });
+  await appendWide(page, '[data-testid="wide-upstream-box"]');
+  await hideLeftOut(page, machineLogin);
+  await expect(page.locator('[data-testid="wide-upstream-box"]')).toBeHidden();
+  expect(await wideBoxes(page)).toEqual([]);
 });
 
 test("a field's own value wider than the field passes the width check", async ({ page }) => {
@@ -841,9 +896,9 @@ test("a field's own value wider than the field passes the width check", async ({
 test("content wider than the window fails the width check at each width", async ({ page }) => {
   await openRegion(page, { ...machineLogin, viewport: PHONE });
   await appendWide(page, MAIN);
-  await hideLeftOut(page, machineLogin);
   for (const viewport of WIDTHS) {
     await resize(page, machineLogin, viewport);
+    await hideLeftOut(page, machineLogin);
     if (viewport === PHONE) {
       await expect(assertPageFits(page)).rejects.toThrow("px wide in a 390px viewport");
       expect(await wideBoxes(page), "at 390 px").toEqual([]);
