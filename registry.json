@@ -1387,6 +1387,43 @@
       ]
     },
     {
+      "name": "settings-section",
+      "type": "registry:block",
+      "dependencies": ["@base-ui/react@1.9.0", "class-variance-authority@0.7.1", "cn@0.2.6"],
+      "files": [
+        {
+          "path": "packages/ui/src/blocks/settings-section.tsx",
+          "type": "registry:component",
+          "target": "@components/settings-section.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/heading.tsx",
+          "type": "registry:ui",
+          "target": "@ui/heading.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/label.tsx",
+          "type": "registry:ui",
+          "target": "@ui/label.tsx"
+        },
+        {
+          "path": "packages/ui/src/components/text.tsx",
+          "type": "registry:ui",
+          "target": "@ui/text.tsx"
+        },
+        {
+          "path": "packages/ui/src/lib/typography.ts",
+          "type": "registry:lib",
+          "target": "@lib/typography.ts"
+        },
+        {
+          "path": "packages/ui/src/lib/utils.ts",
+          "type": "registry:lib",
+          "target": "@lib/utils.ts"
+        }
+      ]
+    },
+    {
       "name": "shortcuts-sheet",
       "type": "registry:block",
       "dependencies": [
