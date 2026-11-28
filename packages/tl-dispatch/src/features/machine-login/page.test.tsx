@@ -156,24 +156,28 @@ test("MLR-04 a failed capabilities read says so; Retry asks again and keeps the 
   expect(capabilities).toHaveBeenCalledTimes(2);
 });
 
-test("MLR-03 on a fake clock, the skeleton shows at 200 ms and, its answer 50 ms after, stands 300 ms before the page", async () => {
+test("MLR-03 on a fake clock, a skeleton shown at 200 ms whose answer comes at 253 ms stays until 500 ms, then the page", async () => {
   // The page's code is loaded, so only the answer is waited for.
   await import("./machine-login-page");
   answers(true);
   const answer = Promise.withResolvers<{ machine_code_page: boolean }>();
   spyOn(api, "getCredentialCapabilities").mockReturnValue(answer.promise);
   await onFakeClock(async () => {
+    const start = Date.now();
     renderRoute();
     await tick(150);
     expect(screen.queryByRole("status", loading)).toBeNull();
     await tick(100);
     expect(screen.getByRole("status", loading)).toBeDefined();
     answer.resolve({ machine_code_page: true });
-    // Shown at 200 ms, so held until 500 ms: still there at 499 ms, gone at 500 ms.
-    await tick(246);
+    // The route sees the answer at 253 ms; shown at 200 ms, the skeleton is held until 500 ms.
+    await tick(0);
+    await tick(245);
+    expect(Date.now() - start).toBe(499);
     expect(screen.getByRole("status", loading)).toBeDefined();
     expect(screen.queryByRole("heading", { name: "Enter machine login code" })).toBeNull();
     await tick(0);
+    expect(Date.now() - start).toBe(500);
     expect(screen.queryByRole("status", loading)).toBeNull();
     expect(screen.getByRole("heading", { name: "Enter machine login code" })).toBeDefined();
   });

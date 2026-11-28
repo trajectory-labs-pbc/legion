@@ -13,11 +13,14 @@ afterEach(() => {
 describe("PageFallback", () => {
   test("SHL-43 draws nothing for 200 ms, then a page-neutral skeleton: a title and rows, no issue tabs", async () => {
     await onFakeClock(async () => {
+      const start = Date.now();
       const view = render(<PageFallback />);
       cleanups.push(() => view.unmount());
-      await tick(150);
+      await tick(198);
+      expect(Date.now() - start).toBe(199);
       expect(view.container.innerHTML).toBe("");
-      await tick(100);
+      await tick(0);
+      expect(Date.now() - start).toBe(200);
       const skeleton = view.container.querySelector('[role="status"]');
       expect(skeleton?.getAttribute("aria-label")).toBe("Loading the page");
       expect(skeleton?.getAttribute("aria-busy")).toBe("true");
@@ -69,8 +72,9 @@ describe("useSkeleton", () => {
     });
   });
 
-  test("a skeleton whose wait ends 50 ms after it showed stays until it has stood 300 ms", async () => {
+  test("a skeleton shown at 200 ms whose wait ends at 251 ms stays until 500 ms", async () => {
     await onFakeClock(async () => {
+      const start = Date.now();
       const view = render(<Probe waiting />);
       cleanups.push(() => view.unmount());
       await tick(250);
@@ -78,8 +82,10 @@ describe("useSkeleton", () => {
       view.rerender(<Probe waiting={false} />);
       // Shown at 200 ms, so held until 500 ms: still there at 499 ms, gone at 500 ms.
       await tick(247);
+      expect(Date.now() - start).toBe(499);
       expect(view.container.textContent).toBe("skeleton");
       await tick(0);
+      expect(Date.now() - start).toBe(500);
       expect(view.container.textContent).toBe("content");
     });
   });
