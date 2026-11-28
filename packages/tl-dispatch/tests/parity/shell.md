@@ -61,5 +61,5 @@ The package's README, "Checks", has the rules.
 | SHL-40 | Recovery | The two `ErrorBoundary`s | | |
 | SHL-41 | Routes | The Inbox route, which serves `/` and `/credentials/*` except `/credentials/machine` | | |
 | SHL-42 | Routes | The `/replies` redirect | | |
-| SHL-43 | Routes | The Suspense fallbacks | changed | A page that is not an issue's loads with no issue tabs; upstream shows an issue page's tabs on every page but the frame |
+| SHL-43 | Routes | The Suspense fallbacks | changed | A page that is not an issue's loads with no issue tabs, and its skeleton shows after 200 ms; upstream shows an issue page's tabs on every page but the frame, at once |
 | SHL-44 | Issue frame | The outline issue page's frame and icon rail | | |

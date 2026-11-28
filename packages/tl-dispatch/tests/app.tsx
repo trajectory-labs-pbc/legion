@@ -14,23 +14,30 @@ export { AppShell } from "@/shell/app-shell";
 /** The page and route the app's route map gives an address. */
 export const { pageAt } = createRouteTree<PageLayout, (typeof pages)[number]>(pages);
 
+interface AppOptions {
+  path?: string;
+  client?: QueryClient;
+  move?: Move;
+}
+
 /**
- * Draws `element` with the app's providers: its query client, a router held at `path` (`move`
- * takes it elsewhere) and the app's pages.
+ * `element` inside the app's providers: its query client, a router held at `path` (`move` takes
+ * it elsewhere) and the app's pages.
  */
-export function renderApp(
+export function appTree(
   element: ReactNode,
-  {
-    path = "/",
-    client = new QueryClient(),
-    move,
-  }: { path?: string; client?: QueryClient; move?: Move } = {}
-) {
-  return render(
+  { path = "/", client = new QueryClient(), move }: AppOptions = {}
+): ReactNode {
+  return (
     <QueryClientProvider client={client}>
       <MemoryNavigationProvider move={move} path={path}>
         <RouteProvider pages={pages}>{element}</RouteProvider>
       </MemoryNavigationProvider>
     </QueryClientProvider>
   );
+}
+
+/** Draws `element` with the app's providers. */
+export function renderApp(element: ReactNode, options: AppOptions = {}) {
+  return render(appTree(element, options));
 }

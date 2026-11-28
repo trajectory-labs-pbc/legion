@@ -12,6 +12,7 @@ import { MemoryNavigationProvider } from "../../../tests/navigation";
 import {
   GrantsSection,
   keyedAttempt,
+  onFakeClock,
   realClock,
   tick,
   userOnFakeClock,
@@ -550,6 +551,66 @@ test("MLS-10 a cut name or approver is a button Tab reaches, whose tooltip shows
       Reflect.deleteProperty(proto, "scrollWidth");
       Reflect.deleteProperty(proto, "clientWidth");
     }
+    getMachineLogins.mockRestore();
+  }
+});
+
+test("MLS-11 a list still loading shows still skeleton rows after 200 ms, and keeps them through the hold once shown", async () => {
+  const answer = Promise.withResolvers<{ credentials: LauncherCredentialResp[] }>();
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockReturnValue(answer.promise);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    await onFakeClock(async () => {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MachineLogins />
+        </QueryClientProvider>
+      );
+      const section = within(screen.getByRole("region", { name: "Machine logins" }));
+      // The live region is there before its text, so a screen reader reads the text when it comes.
+      const status = section.getByRole("status");
+      expect(status.textContent).toBe("");
+      await tick(150);
+      expect(section.queryByRole("table")).toBeNull();
+      expect(status.textContent).toBe("");
+
+      await tick(100);
+      expect(status).toHaveTextContent("Loading machine logins");
+      const table = section.getByRole("table");
+      expect(table).toHaveAttribute("aria-busy", "true");
+      // A skeleton row has a loaded row's cells: a bar under each heading, and a Revoke no one
+      // sees or reaches, so it is as tall as a loaded row at every width.
+      const rows = within(table).getAllByRole("row").slice(1);
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        const cells = [...row.querySelectorAll("td")];
+        // The Machine and Approved by cells take a loaded row's fixed quarter.
+        expect(cells[0]).toHaveClass("w-1/4", "max-w-0");
+        expect(cells[2]).toHaveClass("w-1/4", "max-w-0");
+        expect(cells.map((cell) => cell.querySelectorAll('[data-slot="skeleton"]').length)).toEqual(
+          [1, 1, 1, 1, 1, 0]
+        );
+        const hidden = cells.at(-1)?.querySelector("button");
+        expect(hidden).toHaveTextContent("Revoke");
+        expect(hidden).toHaveAttribute("aria-hidden", "true");
+        expect(hidden).toHaveAttribute("tabindex", "-1");
+        expect(hidden).toHaveClass("invisible");
+      }
+
+      answer.resolve({ credentials: [devbox] });
+      await tick(200);
+      expect(section.queryByText("devbox.example.com")).toBeNull();
+      expect(section.getByRole("table")).toHaveAttribute("aria-busy", "true");
+
+      await tick(100);
+      expect(section.getByText("devbox.example.com")).toBeDefined();
+      expect(section.getByRole("table")).toHaveAttribute("aria-busy", "false");
+      expect(status.textContent).toBe("");
+      expect(section.getByRole("status")).toBe(status);
+    });
+  } finally {
+    cleanup();
+    queryClient.clear();
     getMachineLogins.mockRestore();
   }
 });

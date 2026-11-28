@@ -18,6 +18,7 @@ import {
   CollapsibleTrigger,
 } from "@legion/ui/components/collapsible";
 import { Heading } from "@legion/ui/components/heading";
+import { Skeleton } from "@legion/ui/components/skeleton";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Fragment, memo, type ReactNode, useRef, useState } from "react";
 import { ReadFailure, readFailureOf, refreshFailureOf } from "@/data/read-failure";
 import { WriteFailure } from "@/data/write-failure";
+import { useSkeleton } from "@/loading/page-skeleton";
 import type { LauncherCredentialResp } from "@/upstream/contract";
 import { machineName } from "@/upstream/logic/machine-login";
 import { machineLoginsQuery } from "@/upstream/queries";
@@ -138,6 +140,38 @@ function RevokeQuestionDialog({
       }
     </AlertDialog>
   );
+}
+
+const LOADING_ROWS = [0, 1, 2];
+
+/** The list's rows while they load: a loaded row's cells, a still bar under each heading and a
+ *  Revoke no one sees or reaches, so they are as tall as a loaded row at any width, and the
+ *  headings stay near where the loaded rows put them. */
+function LoadingRows(): ReactNode {
+  return LOADING_ROWS.map((row) => (
+    <TableRow key={row}>
+      <TableCell className={CUT_CELL}>
+        <Skeleton className="h-4 w-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-20" />
+      </TableCell>
+      <TableCell className={CUT_CELL}>
+        <Skeleton className="h-4 w-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-24" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Button aria-hidden className="invisible" size="sm" tabIndex={-1} variant="outline">
+          Revoke
+        </Button>
+      </TableCell>
+    </TableRow>
+  ));
 }
 
 function LoginRows({
@@ -257,6 +291,17 @@ export const MachineLogins = memo(function MachineLogins({
     isListed(logins.data, login) || afterRevoke(section.current, howTrigger.current);
   const fault = readFailureOf(logins);
   const refreshFault = refreshFailureOf(logins);
+  const skeleton = useSkeleton(logins.data === undefined && fault === undefined);
+  const rows = skeleton ? (
+    <LoadingRows />
+  ) : logins.data === undefined ? undefined : (
+    <LoginRows
+      logins={logins.data}
+      newCredential={newCredential}
+      question={question}
+      revoke={revoke}
+    />
+  );
   return (
     <section aria-labelledby="machine-logins-heading" className="space-y-3" ref={section}>
       <div className="space-y-1">
@@ -287,9 +332,13 @@ export const MachineLogins = memo(function MachineLogins({
       {refreshFault !== undefined ? (
         <ReadFailure fault={refreshFault} noun="the latest machine logins" />
       ) : null}
-      {logins.data !== undefined ? (
+      {/* Mounted before its text, so a screen reader reads the text when it comes. */}
+      <p className="sr-only" role="status">
+        {skeleton ? "Loading machine logins" : ""}
+      </p>
+      {rows !== undefined ? (
         <div className="overflow-clip rounded-lg border border-border bg-card">
-          <Table>
+          <Table aria-busy={skeleton}>
             <TableHeader>
               <TableRow>
                 {HEADINGS.map((heading) => (
@@ -302,21 +351,12 @@ export const MachineLogins = memo(function MachineLogins({
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              <LoginRows
-                logins={logins.data}
-                newCredential={newCredential}
-                question={question}
-                revoke={revoke}
-              />
-            </TableBody>
+            <TableBody>{rows}</TableBody>
           </Table>
         </div>
       ) : fault !== undefined ? (
         <ReadFailure fault={fault} noun="machine logins" />
-      ) : (
-        <p className={MUTED}>Loading machine logins…</p>
-      )}
+      ) : null}
       <RevokeQuestionDialog finalFocus={finalFocus} question={question} revoke={revoke} />
     </section>
   );
