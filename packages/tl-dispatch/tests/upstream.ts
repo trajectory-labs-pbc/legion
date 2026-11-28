@@ -18,6 +18,7 @@ export { isDecisionAsk } from "@upstream-dispatch/features/inbox/ask-decision";
 export { createDraftStore, DRAFT_KEPT_UNITS } from "@upstream-dispatch/features/inbox/draft-store";
 export { issueAsk } from "@upstream-dispatch/features/inbox/inbox-fixture";
 export { UnreadDot } from "@upstream-dispatch/features/project/UnreadDot";
+export { warmMarkdownRenderer } from "@upstream-dispatch/features/refs/markdown-engine";
 // Functions of the reference preview's module; a widget file gives only marked components, or a name `UNMARKED` lists.
 export {
   closeRefPreview,

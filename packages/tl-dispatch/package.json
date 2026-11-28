@@ -36,6 +36,7 @@
     "@axe-core/playwright",
     "@biomejs/biome",
     "@happy-dom/global-registrator",
+    "@milkdown/kit",
     "@playwright/test",
     "@tailwindcss/vite",
     "@tanstack/react-query",

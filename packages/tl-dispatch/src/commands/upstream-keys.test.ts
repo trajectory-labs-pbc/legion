@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
+import { ownOrUpstream, packageRelative, reach } from "../../tests/imports";
 import {
   type KeyRegistration,
   keyRegistrations,
@@ -173,5 +174,76 @@ describe("our labels for upstream's bindings", () => {
     ];
     const words = (label: string) => label.split(/\s+/).filter((word) => word !== "/").length;
     expect([...new Set(shown)].filter((label) => words(label) > 4)).toEqual([]);
+  });
+});
+
+/** The scopes whose keys act while a host page shows its document. */
+const HOST_SCOPES = new Set(["global", "issue", "document", "project"]);
+
+/** Upstream's bindings in those scopes that a host page loads, through any import but a type's. */
+function hostBindings(page: string): KeyRegistration[] {
+  const { reached } = reach(
+    [join(UPSTREAM_WEB, page)],
+    (entry) => entry.kind !== "type" && entry.file !== undefined && ownOrUpstream(entry.file)
+  );
+  const files = new Set([...reached].map(packageRelative));
+  return upstream.filter((binding) => {
+    const scope = scopeOf(binding);
+    return files.has(binding.file) && scope !== undefined && HOST_SCOPES.has(scope);
+  });
+}
+
+const HOST_PAGES = ["features/issue/IssuePage.tsx", "features/document/DocumentPage.tsx"];
+const AIDS = "reading-aids";
+
+/**
+ * Each aid key that a key the host page binds while the document shows takes, or the first step
+ * of its sequence. The catalog refuses a clash with its own keys (`c`, the `g` sequences) itself.
+ */
+function aidKeyClashes(
+  contexts: readonly CommandContext[],
+  bindings: readonly KeyRegistration[]
+): string[] {
+  const aids = contexts.find((context) => context.name === AIDS);
+  return (aids?.commands ?? []).flatMap((command) =>
+    (command.keys ?? []).flatMap((keys) => {
+      const checker = keyChecker([keys]);
+      return bindings
+        .filter((binding) => clashes(checker, binding.keys))
+        .map(
+          (binding) =>
+            `${command.name} (${keys}) and ${binding.file}:${binding.line} (${binding.label ?? binding.id}): ${binding.keys}`
+        );
+    })
+  );
+}
+
+const aidsWith = (keys: string): CommandContext[] => [
+  {
+    name: AIDS,
+    parent: "global",
+    scope: "document",
+    commands: [{ name: "probe", label: "Probe", keys: [keys] }],
+  },
+];
+
+describe("the reading aids' keys", () => {
+  test.each(HOST_PAGES)("on %s, take no key the page binds", (page) => {
+    expect(aidKeyClashes(APP_CONTEXTS, hostBindings(page))).toEqual([]);
+  });
+
+  test("the tabs issue page's bindings are found, its T sequences among them", () => {
+    const keys = hostBindings("features/issue/IssuePage.tsx").map((binding) => binding.keys);
+    expect(keys.some((key) => key.startsWith("t "))).toBe(true);
+  });
+
+  test("an aid on a key the issue page binds in the issue scope clashes with it", () => {
+    const binding = hostBindings("features/issue/IssuePage.tsx").find(
+      (candidate) => scopeOf(candidate) === "issue" && !candidate.keys.includes(" ")
+    );
+    if (binding === undefined) throw new Error("the issue page binds no single key in its scope");
+    expect(aidKeyClashes(aidsWith(binding.keys), [binding])).toEqual([
+      expect.stringContaining(`${binding.file}:${binding.line}`),
+    ]);
   });
 });

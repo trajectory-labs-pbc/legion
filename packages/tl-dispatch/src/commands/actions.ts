@@ -9,6 +9,12 @@ export interface CommandState {
   run: () => void;
 }
 
+/** The state of a command whose action may be absent: an absent action shuts its gate. */
+export const whenPresent = (run: (() => void) | undefined): CommandState => ({
+  enabled: run !== undefined,
+  run: () => run?.(),
+});
+
 /** The names of a context's commands, read from the catalog's ids. */
 type CommandNamesIn<
   Id extends string,

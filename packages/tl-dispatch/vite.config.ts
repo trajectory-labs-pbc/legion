@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { mergeConfig, type UserConfig } from "vite";
 import upstream from "../dispatch/web/vite.config";
+import { aidsChunks } from "./scripts/aids-chunks";
 import { writeEntryModules } from "./scripts/entry-modules";
 import { oneCopyEach } from "./scripts/one-copy-each";
 
@@ -21,6 +22,7 @@ export default mergeConfig(upstream, {
   root: at("."),
   publicDir: at("../dispatch/web/public"),
   plugins: [
+    aidsChunks(at("./src/")),
     oneCopyEach({ root: rootPackages, ui: uiPackages }, `${at("node_modules")}/`),
     // Outside dist, which the image copies whole; the migration compares it across builds.
     writeEntryModules(at("../.."), at(".build/entry-modules.json")),

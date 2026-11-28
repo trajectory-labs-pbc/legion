@@ -96,9 +96,11 @@ async function seedMachineLogin(): Promise<void> {
 const hold = (url: string | RegExp) => async (page: Page) => {
   await page.route(url, () => undefined);
 };
-/** A page view's chunk, named for its seam file: `views/issue.tsx` builds `issue-<hash>.js`. */
+/** A page's chunk, named for the file its route loads: `views/machines.tsx` builds
+ *  `machines-<hash>.js`, and the issue page's `page.tsx` builds `page-<hash>.js`, the name of the
+ *  document page's chunk too; an issue's address loads only its own. */
 const viewChunk = (name: string) => new RegExp(`/assets/${name}-[\\w-]{8}\\.js$`, "u");
-const ISSUE_CHUNK = viewChunk("issue");
+const ISSUE_CHUNK = viewChunk("page");
 /** The new issue page, which the shell draws in the issue frame. */
 const issueFrameOn = (page: Page) => withIssuePage(page.context(), "alice");
 const issueHref = (title: string) => async (page: Page) => `/issues/${await runIssue(page, title)}`;
