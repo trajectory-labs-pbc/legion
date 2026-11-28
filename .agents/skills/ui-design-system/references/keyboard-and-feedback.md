@@ -46,7 +46,7 @@ Keys come from the command catalog (`.agents/skills/commands/SKILL.md`); this fi
 
 ## Error states (ER)
 
-A failed read draws through `ReadFailure`, and a failed count beside a row through `CountRetry` (`packages/tl-dispatch/src/features/read-failure.tsx`, `packages/tl-dispatch/src/shell/row-count.tsx`). `refusalOf` (`packages/tl-dispatch/src/api/read-retry.ts`) decides whether a failed read offers Retry, and `useReadFailure`, `refreshFailureOf` and the retry policy `readRetry` all use it; upstream's `queryRetry` decides the automatic retry of the rest.
+A failed read draws through `ReadFailure`, and a failed count beside a row through `CountRetry` (`packages/tl-dispatch/src/data/read-failure.tsx`, `packages/tl-dispatch/src/shell/row-count.tsx`). `refusalOf` (`packages/tl-dispatch/src/data/read.ts`) decides whether a failed read offers Retry, and `useReadFailure`, `refreshFailureOf` and the retry policy `readRetry` all use it; upstream's `queryRetry` decides the automatic retry of the rest.
 
 **ER1** A failed read shows its error inside the part it fills: the panel, a section or the line under a bar. The sidebar, the header and the rest of the page stay. Linear: a failed view keeps the app's frame. Pages: all. Check: the sidebar section tests; reviewer for a page's panel.
 
