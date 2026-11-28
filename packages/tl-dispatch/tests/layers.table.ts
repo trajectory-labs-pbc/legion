@@ -29,8 +29,8 @@ export type Rule = (typeof RULES)[number];
 export const ROWS = [
   [{ layer: "browser", paths: ["src/browser"] }],
   [{ layer: "upstream", paths: ["src/upstream"] }],
-  // Until the data foundation moves them: src/writes and src/features/read-failure.tsx.
-  [{ layer: "data", paths: ["src/data", "src/writes", "src/features/read-failure.tsx"] }],
+  // Until the features move: src/features/read-failure.tsx.
+  [{ layer: "data", paths: ["src/data", "src/features/read-failure.tsx"] }],
   [
     { layer: "commands", paths: ["src/commands"] },
     { layer: "navigation", paths: ["src/navigation"] },
@@ -168,21 +168,11 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     ],
   },
   "library-owners": {
-    "src/navigation/page-link.tsx": ["@tanstack/react-query"],
-    "src/navigation/page-route.ts": ["@tanstack/react-query"],
     "src/pages/machine-login/machine-login-route.tsx": ["@tanstack/react-query"],
     "src/pages/machine-login/machine-logins.tsx": ["@tanstack/react-query"],
     "src/pages/machine-login/use-machine-login.ts": ["@tanstack/react-query"],
     "src/pages/machine-login/use-revoke.ts": ["@tanstack/react-query"],
-    "src/shell/auth-gate.tsx": ["@tanstack/react-query"],
-    "src/shell/forget-reads.ts": ["@tanstack/react-query"],
-    "src/shell/inbox-count.ts": ["@tanstack/react-query"],
     "src/shell/providers.tsx": ["@tanstack/react-query"],
-    "src/shell/sidebar-data.ts": ["@tanstack/react-query"],
-    "src/shell/sign-in-page.tsx": ["@tanstack/react-query"],
-    "src/shell/sign-ins.ts": ["@tanstack/react-query"],
-    "src/shell/use-sign-in-channel.ts": ["@tanstack/react-query"],
-    "src/shell/use-sign-out.ts": ["@tanstack/react-query"],
   },
   "seam-readers": {
     "src/pages/agents.tsx": [
@@ -231,36 +221,7 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/pages/page.ts": ["@/upstream/routes"],
     "src/pages/people.tsx": ["@/upstream/routes"],
     "src/pages/priorities.tsx": ["@/upstream/queries"],
-    "src/shell/app-shell.tsx": ["@/upstream/contract", "@/upstream/data-hooks"],
-    "src/shell/auth-gate.tsx": [
-      "@/upstream/api",
-      "@/upstream/contract",
-      "@/upstream/data-hooks",
-      "@/upstream/live",
-      "@/upstream/queries",
-      "@/upstream/write-kinds",
-      "@/upstream/writes",
-    ],
-    "src/shell/inbox-count.ts": ["@/upstream/data-hooks", "@/upstream/queries"],
-    "src/shell/navigation-panel.tsx": ["@/upstream/contract"],
-    "src/shell/sidebar-data.ts": [
-      "@/upstream/api",
-      "@/upstream/contract",
-      "@/upstream/data-hooks",
-      "@/upstream/queries",
-    ],
-    "src/shell/sidebar-region.tsx": ["@/upstream/contract"],
-    "src/shell/sidebar.tsx": ["@/upstream/contract", "@/upstream/data-hooks"],
-    "src/shell/sign-in-page.tsx": ["@/upstream/writes"],
-    "src/shell/sign-ins.ts": ["@/upstream/api", "@/upstream/data-hooks", "@/upstream/writes"],
-    "src/shell/status-corner.tsx": ["@/upstream/live"],
-    "src/shell/use-agent-pins.ts": ["@/upstream/data-hooks"],
-    "src/shell/use-shell-preferences.ts": ["@/upstream/data-hooks"],
-    "src/shell/use-sign-in-channel.ts": [
-      "@/upstream/api",
-      "@/upstream/data-hooks",
-      "@/upstream/writes",
-    ],
-    "src/shell/use-sign-out.ts": ["@/upstream/api", "@/upstream/data-hooks", "@/upstream/writes"],
+    // The kinds of writes register where the app starts; the features move puts that in src/app.
+    "src/shell/auth-gate.tsx": ["@/upstream/write-kinds"],
   },
 };

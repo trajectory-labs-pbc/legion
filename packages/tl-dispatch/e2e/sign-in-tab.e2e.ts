@@ -1,5 +1,5 @@
 // A sign-in in one tab reaches a second tab of the browser: the tab on the sign-in page leaves it
-// with no reload, told by the sign-in channel (src/shell/use-sign-in-channel.ts).
+// with no reload, told by the sign-in channel (src/data/use-sign-in-channel.ts).
 import { markDocument, personCookies, personOf, sameDocument } from "./flows";
 import { expect, test } from "./test";
 

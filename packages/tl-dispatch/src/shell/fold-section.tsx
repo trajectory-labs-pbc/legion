@@ -2,30 +2,13 @@ import { Button } from "@legion/ui/components/button";
 import { Heading } from "@legion/ui/components/heading";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
+import { forkKeys } from "@/browser/storage";
 
-const foldKey = (heading: string) => `tl-dispatch.sidebar.folded.${heading}`;
-
-function keptFolded(heading: string): boolean {
-  try {
-    return window.localStorage.getItem(foldKey(heading)) === "true";
-  } catch {
-    // A browser that refuses storage opens every section.
-    return false;
-  }
-}
-
-function keepFolded(heading: string, folded: boolean): void {
-  try {
-    if (folded) window.localStorage.setItem(foldKey(heading), "true");
-    else window.localStorage.removeItem(foldKey(heading));
-  } catch {
-    // A browser that refuses storage keeps the fold until the sidebar mounts again.
-  }
-}
+const folds = forkKeys.sidebarFolded;
 
 /** A sidebar section under a heading that folds it; this browser keeps the fold. */
 export function FoldSection({ children, heading }: { children: ReactNode; heading: string }) {
-  const [open, setOpen] = useState(() => !keptFolded(heading));
+  const [open, setOpen] = useState(() => folds.get(heading) !== true);
   const bodyId = useId();
   return (
     <section>
@@ -36,7 +19,8 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
           onClick={() => {
             const folding = open;
             setOpen(!folding);
-            keepFolded(heading, folding);
+            if (folding) folds.set(heading, true);
+            else folds.remove(heading);
           }}
           size="xs"
           variant="ghost"

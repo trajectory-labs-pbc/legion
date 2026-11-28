@@ -1,33 +1,25 @@
-import { isUnauthorized } from "@/upstream/api";
-import type { AuthenticatedUser } from "@/upstream/contract";
-import { draftStoresSignedIn, draftStoresSignedOut } from "@/upstream/data-hooks";
-import { useEventFeed } from "@/upstream/live";
-import { whoAmIQuery } from "@/upstream/queries";
 import "@/upstream/write-kinds";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, Suspense, useEffect, useState } from "react";
+import { type ReactNode, Suspense } from "react";
+import {
+  type AuthenticatedUser,
+  sessionEnded,
+  useAskSessionAgain,
+  useSession,
+} from "@/data/session";
+import { useSignedInFeed, useSignedInStores } from "@/data/sign-ins";
+import { useSignInChannel } from "@/data/use-sign-in-channel";
 import { lazyNamed } from "@/loading/lazy-named";
-import { writesOf } from "@/upstream/writes";
 
 import { AppShell } from "./app-shell";
 import { ConnectionErrorPage } from "./connection-error-page";
-import { forgetReads } from "./forget-reads";
 import { ShellSkeleton } from "./shell-skeleton";
-import { signIns } from "./sign-ins";
 import { SignedInParts } from "./signed-in-parts";
-import { useSignInChannel } from "./use-sign-in-channel";
 
 // A signed-in reader never needs the sign-in page's code.
 const SignInPage = lazyNamed(() => import("./sign-in-page"), "SignInPage");
 
 function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
-  const queryClient = useQueryClient();
-  const login = user.login;
-  // Writes a reload interrupted go on, once, before any page writes.
-  useEffect(() => {
-    writesOf(queryClient).resume(login);
-  }, [login, queryClient]);
-  useEventFeed();
+  useSignedInFeed(user.login);
   return (
     <SignedInParts>
       <AppShell user={user} />
@@ -36,47 +28,29 @@ function AuthenticatedApp({ user }: { user: AuthenticatedUser }): ReactNode {
 }
 
 export function AuthGate(): ReactNode {
-  const queryClient = useQueryClient();
-  const whoAmI = useQuery(whoAmIQuery());
-  // A 401 ends this page's session: drop every read made for the person who left.
-  const signedOut = whoAmI.isError && isUnauthorized(whoAmI.error);
-  useEffect(() => {
-    if (!signedOut) return;
-    forgetReads(queryClient);
-  }, [queryClient, signedOut]);
-  useEffect(
-    () => writesOf(queryClient).onSignedOut((person) => draftStoresSignedOut(queryClient, person)),
-    [queryClient]
-  );
-  const login = signedOut ? undefined : whoAmI.data?.login;
-  const known = signedOut || whoAmI.data !== undefined;
-  // The shell is drawn for a person only in the commit after the stores were told of them.
-  const [shellFor, setShellFor] = useState<string>();
-  useEffect(() => {
-    if (!known) return;
-    writesOf(queryClient).signedIn(login);
-    draftStoresSignedIn(queryClient, login);
-    signIns.signedIn(login ?? null);
-    if (login !== undefined) setShellFor(login);
-  }, [known, login, queryClient]);
+  const session = useSession();
+  const shellFor = useSignedInStores(session);
+  const askSessionAgain = useAskSessionAgain();
   useSignInChannel();
 
-  if (whoAmI.isPending) {
+  // A check again of one that failed with nothing to show, a refused one included.
+  if (session.state === "loading" || (session.state === "error" && session.retrying)) {
     return <ShellSkeleton />;
   }
-  if (signedOut) {
+  if (sessionEnded(session)) {
     return (
       <Suspense fallback={<ShellSkeleton />}>
         <SignInPage />
       </Suspense>
     );
   }
-  if (whoAmI.data !== undefined) {
-    return shellFor === whoAmI.data.login ? (
-      <AuthenticatedApp user={whoAmI.data} />
+  if (session.state === "ready") {
+    return shellFor === session.data.login ? (
+      <AuthenticatedApp user={session.data} />
     ) : (
       <ShellSkeleton />
     );
   }
-  return <ConnectionErrorPage onRetry={() => void whoAmI.refetch()} />;
+  // Dispatch never refuses the check itself, but a proxy in front of it may.
+  return <ConnectionErrorPage onRetry={session.retry ?? askSessionAgain} />;
 }

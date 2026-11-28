@@ -45,6 +45,14 @@ export const RULES = {
   height: "control height outside the scale",
   type: "type comes from `Heading` and `textVariants`: no raw size, weight, leading, tracking or uppercase class",
   upstreamTheme: "raw colour: upstream's theme roles are Tailwind palette classes; use the tokens",
+  network:
+    "the network is the data layer's: only `src/data` and the seam call `fetch` or open a `WebSocket` or an `EventSource`",
+  storage: "only `src/browser/storage.ts` reads or writes the browser's storage",
+  unload: "only `src/browser` sets the unload prompt",
+  dialog: "no native dialog: ask the reader with an `AlertDialog`",
+  session: "only `src/data/session.ts` reads the signed-in person",
+  globalAlias:
+    "name the browser's globals through `window`, `self` or `globalThis`, so the door rules see them",
 } as const;
 
 // ---- Declarations, from the compiled classes and from the app's own stylesheets ----
@@ -448,24 +456,31 @@ const inScale = (kind: string, value: string) =>
   (kind !== "min-h" && CONTROL_HEIGHTS.includes(Number(value))) ||
   (kind === "min-h" && Number(value) === TOUCH_MIN_HEIGHT);
 
-function scriptViolations(
-  file: SourceFile,
-  upstreamThemeLines: readonly number[]
-): DesignViolation[] {
-  const source = parseScript(file.path, file.text);
-  const violations: DesignViolation[] = upstreamThemeLines.map((line) => ({
-    file: file.path,
-    line,
-    text: "import from upstream's theme",
-    rule: RULES.upstreamTheme,
-  }));
-  const refuse = (node: ts.Node, text: string, rule: string) =>
+type Refuse = (node: ts.Node, text: string, rule: string) => void;
+
+/** Adds a violation of `rule` at `node`'s line of `source` to `violations`. */
+function refuserOf(file: SourceFile, source: ts.SourceFile, violations: DesignViolation[]): Refuse {
+  return (node, text, rule) =>
     violations.push({
       file: file.path,
       line: source.getLineAndCharacterOfPosition(node.getStart()).line + 1,
       text,
       rule,
     });
+}
+
+function scriptViolations(
+  file: SourceFile,
+  source: ts.SourceFile,
+  upstreamThemeLines: readonly number[]
+): DesignViolation[] {
+  const violations: DesignViolation[] = upstreamThemeLines.map((line) => ({
+    file: file.path,
+    line,
+    text: "import from upstream's theme",
+    rule: RULES.upstreamTheme,
+  }));
+  const refuse = refuserOf(file, source, violations);
   const styleKey = (node: ts.Node, key: string) => {
     const what = styleKeyKind(key);
     if (what !== undefined) refuse(node, key, `${what} ${RULES.style}`);
@@ -569,6 +584,129 @@ function scriptViolations(
   return violations;
 }
 
+// ---- The browser's doors: the network, storage, the unload prompt, native dialogs, the session ----
+const NETWORK = new Set(["fetch", "WebSocket", "EventSource"]);
+const STORAGE = new Set(["localStorage", "sessionStorage", "indexedDB"]);
+const DIALOG = new Set(["confirm", "alert", "prompt"]);
+const GLOBAL_OBJECT = new Set(["window", "self", "globalThis"]);
+const SESSION = new Set(["whoAmI", "whoAmIQuery"]);
+const SESSION_FILE = "src/data/session.ts";
+/** Names refused wherever they stand, a member's name included. */
+const ANYWHERE = new Set([...SESSION, "onbeforeunload"]);
+
+/**
+ * The rule that a file at `path` breaks when it names `name`. A door's global is refused by its
+ * name, whatever names it, so a binding of that name outside the door is refused too, and a bare
+ * name is always the global.
+ */
+function doorRule(path: string, name: string): string | undefined {
+  if (NETWORK.has(name) && !/^src\/(data|upstream)\//.test(path)) return RULES.network;
+  if (STORAGE.has(name) && path !== "src/browser/storage.ts") return RULES.storage;
+  if (DIALOG.has(name)) return RULES.dialog;
+  if (SESSION.has(name) && path !== SESSION_FILE && !path.startsWith("src/upstream/")) {
+    return RULES.session;
+  }
+  if (name === "onbeforeunload" && !path.startsWith("src/browser/")) return RULES.unload;
+  return undefined;
+}
+
+/** `window`, `self` or `globalThis`, or a member that is the window: `….window`, `….defaultView`. */
+function isGlobalObject(node: ts.Expression): boolean {
+  let bare = node;
+  while (
+    ts.isParenthesizedExpression(bare) ||
+    ts.isNonNullExpression(bare) ||
+    ts.isAsExpression(bare) ||
+    ts.isSatisfiesExpression(bare)
+  ) {
+    bare = bare.expression;
+  }
+  if (ts.isIdentifier(bare)) return GLOBAL_OBJECT.has(bare.text);
+  return (
+    ts.isPropertyAccessExpression(bare) &&
+    (GLOBAL_OBJECT.has(bare.name.text) || bare.name.text === "defaultView")
+  );
+}
+
+/** An identifier that names a value, not the key a member, a type or an alias is read under. */
+function namesAValue(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (
+    (ts.isPropertyAccessExpression(parent) ||
+      ts.isPropertyAssignment(parent) ||
+      ts.isMethodDeclaration(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isMethodSignature(parent) ||
+      ts.isGetAccessorDeclaration(parent) ||
+      ts.isSetAccessorDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return false;
+  }
+  if (
+    (ts.isBindingElement(parent) || ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent)) &&
+    parent.propertyName === node
+  ) {
+    return false;
+  }
+  return !(
+    ts.isJsxAttribute(parent) ||
+    ts.isQualifiedName(parent) ||
+    ts.isTypeReferenceNode(parent) ||
+    ts.isTypeQueryNode(parent)
+  );
+}
+
+/**
+ * The browser's globals that only their door may use, by their name, as a member of the window
+ * and as a literal key; the unload prompt; and the read of the signed-in person, which only the
+ * session file names (the seam re-exports it). Forms only a type checker sees pass, such as
+ * `frame.contentWindow`, `Reflect.get(window, …)` and a key held in a variable.
+ */
+function doorViolations(file: SourceFile, source: ts.SourceFile): DesignViolation[] {
+  const unload = !file.path.startsWith("src/browser/");
+  const session = file.path !== SESSION_FILE && !file.path.startsWith("src/upstream/");
+  const violations: DesignViolation[] = [];
+  const push = refuserOf(file, source, violations);
+  const refuse = (node: ts.Node, rule: string | undefined) => {
+    if (rule !== undefined) push(node, node.getText(), rule);
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isIdentifier(node)) {
+      if (ANYWHERE.has(node.text) || namesAValue(node)) {
+        refuse(node, doorRule(file.path, node.text));
+      }
+    } else if (
+      ts.isPropertyAccessExpression(node) &&
+      isGlobalObject(node.expression) &&
+      !ANYWHERE.has(node.name.text)
+    ) {
+      refuse(node, doorRule(file.path, node.name.text));
+    } else if (
+      ts.isElementAccessExpression(node) &&
+      ts.isStringLiteralLike(node.argumentExpression)
+    ) {
+      refuse(node, doorRule(file.path, node.argumentExpression.text));
+    } else if (
+      ((ts.isVariableDeclaration(node) || ts.isParameter(node)) &&
+        node.initializer !== undefined &&
+        isGlobalObject(node.initializer)) ||
+      (ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        isGlobalObject(node.right))
+    ) {
+      refuse(node, RULES.globalAlias);
+    } else if (ts.isStringLiteralLike(node)) {
+      if (unload && node.text === "beforeunload") refuse(node, RULES.unload);
+      if (session && node.text === "whoami") refuse(node, RULES.session);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return violations;
+}
+
 const UPSTREAM_THEME = join(UPSTREAM_WEB, "theme") + sep;
 
 export interface DesignOptions {
@@ -601,7 +739,8 @@ export async function designViolations(
       const lines = importsOf(join(PACKAGE_ROOT, file.path), disk, cache)
         .filter((entry) => entry.file?.startsWith(UPSTREAM_THEME) === true)
         .map((entry) => entry.line);
-      return scriptViolations(file, lines);
+      const source = parseScript(file.path, file.text);
+      return [...scriptViolations(file, source, lines), ...doorViolations(file, source)];
     }),
   ];
   const seen = new Set<string>();

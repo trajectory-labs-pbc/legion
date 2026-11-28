@@ -1,24 +1,21 @@
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { NAV_DESTINATIONS, type NavName } from "@/commands/nav";
 import type { CommandIcon } from "@/commands/schema";
+import { totalUnreadReplies, unreadRepliesLabel } from "@/data/agent-pins";
 import type { RetryableFault } from "@/data/read";
-import { readFailureOf } from "@/features/read-failure";
+import type { AuthenticatedUser } from "@/data/session";
+import type { ShellRead } from "@/data/shell-read";
+import {
+  useAgentStates,
+  usePinnedAgentRows,
+  usePinnedIssues,
+  usePrioritySummary,
+  useProjects,
+} from "@/data/sidebar";
 import { useAddress } from "@/navigation/hooks";
 import type { PageRoute } from "@/navigation/page-route";
 import { pathUnder } from "@/navigation/path";
 import { useCurrentPage } from "@/pages/index";
 import type { PageLayout } from "@/pages/page";
-import { api } from "@/upstream/api";
-import type { AuthenticatedUser, UserAgentStates } from "@/upstream/contract";
-import {
-  pinnedAgentSessions,
-  totalUnreadReplies,
-  unreadRepliesLabel,
-  useAgentPinWrite,
-  useAgentText,
-  useLiveViewState,
-} from "@/upstream/data-hooks";
-import { prioritySummaryQuery, projectsQuery, userAgentStateQuery } from "@/upstream/queries";
 import { useInboxRowCount } from "./inbox-count";
 import { NAV_PAGES } from "./nav-pages";
 import type { RowCount } from "./row-count";
@@ -38,8 +35,8 @@ export interface SectionRead<T> {
   fault: RetryableFault | undefined;
 }
 
-function sectionOf<T, R>(query: UseQueryResult<readonly T[]>, row: (item: T) => R): SectionRead<R> {
-  return { rows: query.data?.map(row), fault: readFailureOf(query) };
+function sectionOf<T, R>(read: ShellRead<readonly T[]>, row: (item: T) => R): SectionRead<R> {
+  return { rows: read.data?.map(row), fault: read.fault };
 }
 
 /** Work under no priority or parked under one; none until the summary names a priority. */
@@ -58,23 +55,15 @@ export function priorityFaults(
 
 /** The Agents row's count: the unread replies of every agent. */
 export function useAgentsRowCount(): RowCount {
-  const agents = useQuery(userAgentStateQuery());
+  const agents = useAgentStates();
   const unread = totalUnreadReplies(agents.data);
-  return { count: unread, label: unreadRepliesLabel(unread), fault: readFailureOf(agents) };
+  return { count: unread, label: unreadRepliesLabel(unread), fault: agents.fault };
 }
 
 /** The Priorities row's count: the work off a priority. */
 function usePrioritiesRowCount(): RowCount {
-  const summary = useQuery(prioritySummaryQuery());
-  return { count: priorityFaults(summary.data), fault: readFailureOf(summary) };
-}
-
-/** The pinned agents, oldest pin first, with their unread replies. */
-function pinnedOf(states: UserAgentStates): readonly { sessionId: string; unread: number }[] {
-  return pinnedAgentSessions(states).map((sessionId) => ({
-    sessionId,
-    unread: states[sessionId]?.unread_replies ?? 0,
-  }));
+  const summary = usePrioritySummary();
+  return { count: priorityFaults(summary.data), fault: summary.fault };
 }
 
 export interface SidebarItem {
@@ -123,13 +112,9 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
     agents: useAgentsRowCount(),
     priorities: usePrioritiesRowCount(),
   };
-  // Sorted in its own selection, which runs only when the agent state changes.
-  const pinnedAgents = useQuery({ ...userAgentStateQuery(), select: pinnedOf });
-  const pinnedIssues = useQuery({
-    queryKey: ["issues", "pinned"],
-    queryFn: () => api.listIssues({ pinned: true }),
-  });
-  const projects = useQuery(projectsQuery());
+  const pinnedAgents = usePinnedAgentRows();
+  const pinnedIssues = usePinnedIssues();
+  const projects = useProjects();
   return {
     destinations: NAV_DESTINATIONS.filter(
       ({ name }) => name !== "settings" || user.kind === "user"
@@ -145,7 +130,7 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       };
     }),
     pinnedAgents: {
-      rows: pinnedAgents.data?.map((agent) => ({
+      rows: pinnedAgents?.map((agent) => ({
         ...agent,
         selected: agent.sessionId === open.liveView,
       })),
@@ -166,16 +151,4 @@ export function useSidebarData(user: Pick<AuthenticatedUser, "kind">): SidebarDa
       current: shown.key === open.project,
     })),
   };
-}
-
-/** A pinned agent's name, its live view's state, and the way to unpin it. */
-export function usePinnedAgent(sessionId: string): {
-  name: string;
-  viewState: ReturnType<typeof useLiveViewState>;
-  unpin: () => void;
-} {
-  const name = useAgentText().sessionText(sessionId, undefined);
-  const viewState = useLiveViewState(sessionId);
-  const writePin = useAgentPinWrite();
-  return { name, viewState, unpin: () => writePin(sessionId, false) };
 }

@@ -1,12 +1,7 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, isNoIdentity } from "@/upstream/api";
-import type { UnsentChange } from "@/upstream/data-hooks";
-import { useKeyedWrite, useRefusalOfSubject, writesOf } from "@/upstream/writes";
-
-import { writeFailureNote } from "@/writes/write-failure-note";
-import { forgetReads } from "./forget-reads";
-import { signIns, signOutQuestion, unsentChanges } from "./sign-ins";
+import { signIns, type UnsentChange } from "@/data/sign-ins";
+import { useSignOutWrite } from "@/data/sign-out";
+import { writeFailureNote } from "@/data/write-failure-note";
 
 function signOutFailure(error: Error): string {
   return writeFailureNote(error, {
@@ -14,6 +9,15 @@ function signOutFailure(error: Error): string {
     anew: "Every change is still here. Retry ends your session, or finds it ended, and signs you out here.",
     refused: () => "The sign-out did not go through. You are still signed in, with every change.",
   });
+}
+
+/** The question a sign-out asks while changes would be discarded. */
+function signOutQuestion(unsent: readonly string[], unanswered = false): string {
+  const elsewhere = "any unsent changes in your other Dispatch tabs";
+  if (unsent.length === 0) return `Sign out and discard ${elsewhere}?`;
+  const count = unsent.length === 1 ? "1 unsent change" : `${unsent.length} unsent changes`;
+  const what = unanswered ? `${count}, and ${elsewhere}` : count;
+  return `Sign out and discard ${what}?\n\n${unsent.map((label) => `• ${label}`).join("\n")}`;
 }
 
 /** The labels of the changes a sign-out would discard, each once, this tab's first. */
@@ -47,35 +51,9 @@ export interface SignOut {
 
 /** Signs `login` out, asking first while this tab or another holds unsent changes. */
 export function useSignOut(login: string): SignOut {
-  const queryClient = useQueryClient();
-  const write = useKeyedWrite({
-    endsWithSession: true,
-    inline: true,
-    keyed: false,
-    label: (_signingOut: string) => "Sign out",
-    onError: (_error, signingOut) => signIns.stillSignedIn(signingOut),
-    onSuccess: (_answer, signingOut) => {
-      void queryClient.resetQueries({ queryKey: ["whoami"] });
-      forgetReads(queryClient);
-      writesOf(queryClient).signedOut(signingOut);
-      signIns.signedOut(signingOut);
-    },
-    method: "POST",
-    write: () =>
-      api
-        .logout()
-        .catch((error: unknown) =>
-          isNoIdentity(error) ? { ok: true as const } : Promise.reject(error)
-        ),
-  });
-  // A refusal belongs to the person who pressed sign-out.
-  const refused = useRefusalOfSubject(write, (signingOut) => signingOut === login);
+  const write = useSignOutWrite(login);
   const [askingTabs, setAskingTabs] = useState(false);
   const [question, setQuestion] = useState<{ text: string; open: boolean }>();
-  const send = () => {
-    signIns.signingOut(login);
-    write.mutate(login);
-  };
   const dismiss = () => setQuestion((asked) => asked && { ...asked, open: false });
   return {
     start: () => {
@@ -83,21 +61,21 @@ export function useSignOut(login: string): SignOut {
       setAskingTabs(true);
       void signIns.unsentElsewhere(login).then((elsewhere) => {
         setAskingTabs(false);
-        const here = unsentChanges(writesOf(queryClient).rows(), login);
+        const here = write.unsentHere();
         const unsent = unsentLabels(here, elsewhere.unsent);
         if (unsent.length > 0 || elsewhere.unanswered) {
           setQuestion({ text: signOutQuestion(unsent, elsewhere.unanswered), open: true });
-        } else send();
+        } else write.send();
       });
     },
-    pending: write.isPending || askingTabs,
-    error: refused && write.error !== null ? signOutFailure(write.error) : undefined,
-    clearError: write.reset,
+    pending: write.pending || askingTabs,
+    error: write.error === null ? undefined : signOutFailure(write.error),
+    clearError: write.clearError,
     question: question?.text,
     asking: question?.open === true,
     confirm: () => {
       dismiss();
-      send();
+      write.send();
     },
     dismiss,
   };
