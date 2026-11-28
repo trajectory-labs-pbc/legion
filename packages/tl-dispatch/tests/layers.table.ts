@@ -181,7 +181,6 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
   "imports-are-readable": {
     "src/commands/engine-stack.test.ts": ["(not a literal)"],
     "src/commands/hotkey-tooltip.test.tsx": ["(not a literal)"],
-    "src/stores/sidebar-folds.test.ts": ["(not a literal)"],
   },
   "library-owners": {
     "src/features/machine-login/page.tsx": ["@tanstack/react-query"],

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { refused, withLocalStorage } from "../../tests/local-storage";
 import { upstreamKeys } from "./storage";
 
 afterEach(() => {
@@ -18,11 +17,21 @@ describe("storage", () => {
   });
 
   test("a browser that refuses storage keeps nothing, and nothing throws", () => {
-    withLocalStorage(refused, () => {
+    const kept = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("refused", "SecurityError");
+      },
+    });
+    try {
       const pins = upstreamKeys.legacyPinnedAgents;
       expect(() => pins.set("reader", "[]")).not.toThrow();
       expect(pins.get("reader")).toBeUndefined();
       expect(() => pins.remove("reader")).not.toThrow();
-    });
+    } finally {
+      if (kept === undefined) Reflect.deleteProperty(window, "localStorage");
+      else Object.defineProperty(window, "localStorage", kept);
+    }
   });
 });

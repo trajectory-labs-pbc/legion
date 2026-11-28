@@ -8,7 +8,7 @@ export interface StoredKey<Param> {
 }
 
 /** Refused storage keeps nothing, so what it would have given is nothing. */
-export function quietly<T>(act: () => T): T | undefined {
+function quietly<T>(act: () => T): T | undefined {
   try {
     return act();
   } catch {
