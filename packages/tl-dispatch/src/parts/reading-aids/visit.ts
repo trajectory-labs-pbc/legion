@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import type { DocumentRead, ReadMarkListener } from "@/data/read-marks";
 
 import type { BaselineChoice } from "./baseline";
+import type { OnlyChangesFolds } from "./only-changes-parts";
 
 /** What the aids keep of one document for the visit: from its first show in this tab to a reload. */
 export interface Visit {
@@ -21,6 +22,8 @@ export interface Visit {
     term?: string;
     touched?: ReadonlySet<string>;
   };
+  /** "Only changes", while it is on: the folds the press made, which the reader opens part by part. */
+  readonly onlyChanges: { made?: OnlyChangesFolds };
 }
 
 const visits = new Map<string, Visit>();
@@ -40,7 +43,7 @@ function notify(): void {
 export function visitOf(artifactId: string): Visit {
   let visit = visits.get(artifactId);
   if (visit === undefined) {
-    visit = { blockFolds: { choices: new Map() } };
+    visit = { blockFolds: { choices: new Map() }, onlyChanges: {} };
     visits.set(artifactId, visit);
   }
   return visit;

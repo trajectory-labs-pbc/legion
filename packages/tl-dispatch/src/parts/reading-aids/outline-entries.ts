@@ -71,12 +71,15 @@ export function outlineEntries(
   return entries;
 }
 
-/** Where a move of `step` from `from` lands: none past an end, nor back from before the first. */
+/** Where a move of `step` from `from` lands, on the next entry `takes` allows: none past an end, nor back from before the first. */
 export function stepEntry(
   length: number,
   from: number | undefined,
-  step: 1 | -1
+  step: 1 | -1,
+  takes: (index: number) => boolean = () => true
 ): number | undefined {
-  const to = (from ?? -1) + step;
-  return to >= 0 && to < length ? to : undefined;
+  for (let to = (from ?? -1) + step; to >= 0 && to < length; to += step) {
+    if (takes(to)) return to;
+  }
+  return undefined;
 }

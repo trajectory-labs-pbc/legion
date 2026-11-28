@@ -82,12 +82,16 @@ export function inProcess() {
   return { comparer, gate, sent, worker };
 }
 
-const inProcessAidedEditor = aidedEditor(async () => ({
+/** Upstream's `createEditor` with the aids, their change marks compared in the test's process. */
+export const inProcessAidedEditor = aidedEditor(async () => ({
   ...editorAids,
   installAids: (editor, host, documentRef) =>
     editorAids.installAids(editor, host, documentRef, () => inProcess().comparer),
 }));
 
-/** An aided editor in `root` on a new document, its change marks compared in the test's process. */
-export const inProcessEditorIn = async (root: HTMLElement, documentRef: string | undefined) =>
-  keep(await inProcessAidedEditor(root, options(new Y.Doc(), documentRef)));
+/** An aided editor in `root` on `ydoc`, its change marks compared in the test's process. */
+export const inProcessEditorIn = async (
+  root: HTMLElement,
+  documentRef: string | undefined,
+  ydoc = new Y.Doc()
+) => keep(await inProcessAidedEditor(root, options(ydoc, documentRef)));

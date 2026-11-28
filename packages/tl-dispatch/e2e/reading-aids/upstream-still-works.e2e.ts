@@ -24,6 +24,7 @@ import { test as appTest, expect, type Page } from "../test";
 import {
   counterOffset,
   FIRST,
+  focusHost,
   HOST,
   openHost,
   PARTS,
@@ -369,11 +370,7 @@ test("upstream-still-works: the global keys act with the focus on the host, as a
   const { path } = await seedHost(page, "spec");
   await openHost(page, path);
   await expect(page.locator(HOST)).toHaveCount(1);
-  await page.locator(HOST).evaluate((host) => {
-    if (!(host instanceof HTMLElement)) return;
-    host.tabIndex = -1;
-    host.focus();
-  });
+  await focusHost(page);
   await page.keyboard.press("?");
   await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
 });
