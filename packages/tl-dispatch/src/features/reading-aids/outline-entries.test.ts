@@ -130,3 +130,13 @@ test("a move starts at the first entry, and at either end there is no move at al
   expect(stepEntry(3, 2, 1)).toBeUndefined();
   expect(stepEntry(3, 0, -1)).toBeUndefined();
 });
+
+test("outline: a move that takes only some entries skips the others, and stops past the last it takes", () => {
+  const changed = (index: number) => index === 1 || index === 3;
+  expect(stepEntry(5, undefined, 1, changed)).toBe(1);
+  expect(stepEntry(5, 1, 1, changed)).toBe(3);
+  expect(stepEntry(5, 3, 1, changed)).toBeUndefined();
+  expect(stepEntry(5, 4, -1, changed)).toBe(3);
+  expect(stepEntry(5, 1, -1, changed)).toBeUndefined();
+  expect(stepEntry(5, 2, -1, () => false)).toBeUndefined();
+});

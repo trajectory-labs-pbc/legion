@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from "react";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
-import { FoldsControl, useBlockFolds } from "./block-folds-part";
+import { AidControl } from "./aid-control";
+import { useBlockFolds } from "./block-folds-part";
 import { CountsLine } from "./counts-line";
 import { moveToBlock } from "./moves";
+import { useOnlyChanges } from "./only-changes-part";
 import { OutlineNav, useOutline } from "./outline";
 import { type BlockCounts, blockCounts } from "./outline-entries";
 import type { PartsEntry, PartsProps } from "./parts-slot";
@@ -24,14 +26,16 @@ const NO_COUNTS: ReadonlyMap<string, BlockCounts> = new Map();
 /** The shown editor's outline, and its keys merged with the other parts' into one registration. */
 function ShownAids({
   actions,
+  changesOnly = false,
   counts,
   entry,
 }: {
   actions: AidActions;
+  changesOnly?: boolean;
   counts: ReadonlyMap<string, BlockCounts>;
   entry: PartsEntry;
 }) {
-  const outline = useOutline(entry, counts);
+  const outline = useOutline(entry, counts, changesOnly);
   return (
     <>
       <AidCommands actions={{ ...actions, ...outline.actions }} />
@@ -46,6 +50,12 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
   const readFirst = useReadFirst(entry, document);
   const baseline = useBaseline(document);
   const marks = useChangeMarks(entry.editor.view, baseline.baseline);
+  const { on, toggleOnlyChanges } = useOnlyChanges(
+    entry,
+    document.artifactId,
+    baseline.baseline,
+    marks
+  );
   const moveToSection = useCallback(
     (blockId: string) => moveToBlock(entry, blockId, "click"),
     [entry]
@@ -57,7 +67,20 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
     <>
       <ReadFirst document={document} state={readFirst} />
       <CountsLine
-        controls={folds.toggleFolds === undefined ? null : <FoldsControl />}
+        controls={
+          <>
+            {toggleOnlyChanges === undefined ? null : (
+              <AidControl
+                commandId="reading-aids.toggle-only-changes"
+                label="Only changes"
+                pressed={on}
+              />
+            )}
+            {folds.toggleFolds === undefined ? null : (
+              <AidControl commandId="reading-aids.toggle-folds" />
+            )}
+          </>
+        }
         marks={marks}
         moveTo={moveToSection}
         read={baseline}
@@ -66,9 +89,11 @@ function DocumentParts({ document, entry, shown }: PartsProps & { document: Aide
         <ShownAids
           actions={{
             ...folds,
+            toggleOnlyChanges,
             nextDecision: step && (() => step(1)),
             previousDecision: step && (() => step(-1)),
           }}
+          changesOnly={on}
           counts={counts}
           entry={entry}
         />

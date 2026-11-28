@@ -1,5 +1,6 @@
 // The aids' unit tests' editors: upstream's options, a root inside given elements, and two
 // documents that relay their updates.
+import { blockIdOf } from "@legion/proof-editor/headless";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import type { EditorHandle, EditorOptions } from "@upstream-dispatch/features/doc/editor";
 import { compiledBlockSchema } from "@upstream-dispatch/features/doc/schema";
@@ -82,6 +83,27 @@ let documents = 100;
 
 /** The address of a document no other editor of the run names. */
 export const newDocumentRef = () => `dispatch://CORE-${++documents}/spec`;
+/** The position inside the paragraph that reads `text`. */
+export function positionIn(handle: EditorHandle, text: string): number {
+  let found: number | undefined;
+  handle.view.state.doc.descendants((node, pos) => {
+    if (found === undefined && node.isTextblock && node.textContent === text) found = pos + 1;
+    return found === undefined;
+  });
+  if (found === undefined) throw new Error(`no paragraph reads ${text}`);
+  return found;
+}
+
+/** The id of the block that reads `text`. */
+export function idOf(handle: EditorHandle, text: string): string {
+  let id: string | undefined;
+  handle.view.state.doc.descendants((node) => {
+    if (id === undefined && node.textContent === text) id = blockIdOf(node) ?? undefined;
+    return id === undefined;
+  });
+  if (id === undefined) throw new Error(`no block reads ${text}`);
+  return id;
+}
 
 /** Keeps `handle` for `destroyEditors`. */
 export function keep(handle: EditorHandle): EditorHandle {

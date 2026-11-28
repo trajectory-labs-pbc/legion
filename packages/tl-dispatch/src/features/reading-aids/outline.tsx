@@ -169,8 +169,13 @@ export interface Outline {
   readonly actions: Pick<AidActions, "nextHeading" | "previousHeading">;
 }
 
-/** The outline of an aided editor's document: its entries, the marked one, its room and its moves. */
-export function useOutline(entry: PartsEntry, counts: ReadonlyMap<string, BlockCounts>): Outline {
+/** The outline of an aided editor's document: its entries, the marked one, its room and its moves,
+ *  which with `changesOnly` land only on entries whose range holds a change. */
+export function useOutline(
+  entry: PartsEntry,
+  counts: ReadonlyMap<string, BlockCounts>,
+  changesOnly: boolean
+): Outline {
   const entries = useEntries(entry, counts);
   const article = useMemo(() => entry.root.closest("article"), [entry]);
   const room = useRoom(article);
@@ -188,7 +193,8 @@ export function useOutline(entry: PartsEntry, counts: ReadonlyMap<string, BlockC
       return at === -1 ? marked : at;
     };
     const step = (by: 1 | -1) => () => {
-      const to = stepEntry(entries.length, from(), by);
+      const takes = (index: number) => !changesOnly || (entries[index]?.changes ?? 0) > 0;
+      const to = stepEntry(entries.length, from(), by, takes);
       if (to !== undefined) moveTo(to);
     };
     const some = entries.length > 0;
@@ -199,7 +205,7 @@ export function useOutline(entry: PartsEntry, counts: ReadonlyMap<string, BlockC
       moveTo,
       shown: room && some,
     };
-  }, [entry, entries, marked, room, hold, heldId]);
+  }, [entry, entries, marked, room, hold, heldId, changesOnly]);
 }
 
 /** The two counts of an entry: the word its name says, and the word of its caption. */

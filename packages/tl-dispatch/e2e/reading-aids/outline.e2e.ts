@@ -7,7 +7,9 @@ import { marginShell } from "../../../dispatch/e2e/issue-page";
 import { userPreferenceStorageKey } from "../../../dispatch/web/src/features/shell/userPreference";
 import { personOf } from "../flows";
 import { expect, type Page, test } from "../test";
+import { seedEditedSpec } from "./baseline-seed";
 import { counterOffset, HOST, openHost, seedHost, TEXT, topsApart } from "./hosts";
+import { ONLY_CHANGES_FOLD, onlyChangesControl, onlyChangesOn } from "./only-changes-seed";
 import {
   ENTRIES,
   expectMovedTo,
@@ -231,6 +233,24 @@ test("outline: a click on an entry moves to its heading and leaves the address a
   // With headings, the sheet lists the outline's keys.
   await page.keyboard.press("?");
   await expect(shortcutsSheet(page)).toContainText("Next heading");
+});
+
+test("outline: with Only changes on, a click on an entry whose heading a quiet section folds opens its part and moves to it", async ({
+  page,
+}) => {
+  const { path } = await seedEditedSpec(page, OUTLINE_TEXT, [
+    { find: "The later part, paragraph 1:", op: "replace", with: "The later part, paragraph one:" },
+  ]);
+  await page.setViewportSize({ height: 800, width: 1600 });
+  await openHost(page, path);
+  await expect(onlyChangesControl(page)).toBeVisible();
+  await onlyChangesOn(page);
+  const order = heading(page, "Order");
+  await expect(order).toContainClass(ONLY_CHANGES_FOLD);
+  await outline(page).getByRole("button", { name: "Order" }).click();
+  await expectMovedTo(page, "Order");
+  await expect(order).not.toContainClass(ONLY_CHANGES_FOLD);
+  await expect(order).toBeInViewport();
 });
 
 test("outline: each entry counts the changes and the open decisions in its range, an h2's with its subsections", async ({

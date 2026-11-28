@@ -10,6 +10,8 @@ import {
 } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet, type EditorView } from "@milkdown/kit/prose/view";
 
+import { measured } from "./timing";
+
 /** The meta of a transaction that asks each fold to open the block it names, by id. */
 export const REVEAL_BLOCK = "revealBlock";
 
@@ -96,7 +98,7 @@ function* searchedTexts(node: Node): Generator<string> {
 }
 
 /** The folded blocks that hold `term`, in any case. */
-function foldsMatching(doc: Node, folded: ReadonlySet<string>, term: string): string[] {
+export function foldsMatching(doc: Node, folded: ReadonlySet<string>, term: string): string[] {
   const lower = term.toLowerCase();
   const matching: string[] = [];
   doc.descendants((node) => {
@@ -168,23 +170,28 @@ function foldsOpenedBy(transaction: Transaction, folded: ReadonlySet<string>): S
   return opened;
 }
 
-function draw(doc: Node, folded: ReadonlySet<string>): DecorationSet {
+function draw(doc: Node, folded: ReadonlySet<string>, className: string): DecorationSet {
   if (folded.size === 0) return DecorationSet.empty;
   const decorations: Decoration[] = [];
   doc.descendants((node, pos) => {
     const id = blockIdOf(node);
     if (id === null || !folded.has(id)) return !node.isTextblock;
     decorations.push(
-      Decoration.node(pos, pos + node.nodeSize, { "aria-hidden": "true", class: FOLDED_CLASS })
+      Decoration.node(pos, pos + node.nodeSize, { "aria-hidden": "true", class: className })
     );
     return false;
   });
   return DecorationSet.create(doc, decorations);
 }
 
-function stateOf(doc: Node, folded: ReadonlySet<string>, opened: ReadonlySet<string>): FoldsState {
+function stateOf(
+  doc: Node,
+  folded: ReadonlySet<string>,
+  opened: ReadonlySet<string>,
+  className: string
+): FoldsState {
   const shown = opened.size === 0 ? folded : new Set([...folded].filter((id) => !opened.has(id)));
-  return { decorations: draw(doc, shown), folded: shown, opened };
+  return { decorations: draw(doc, shown, className), folded: shown, opened };
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -205,9 +212,14 @@ function foldFocused(
   return element?.getAttribute("data-block-id") ?? undefined;
 }
 
-/** Folds the blocks `folds` names, by block id; a move, the caret, an edit, a focus or `?q=` opens one. */
-export function foldsPlugin(name: string, folds: Folds): { key: FoldsKey; plugin: Plugin } {
+/** Folds the blocks `folds` names, each with `foldClass` too when given; a move, caret, edit, focus or `?q=` opens one. */
+export function foldsPlugin(
+  name: string,
+  folds: Folds,
+  foldClass?: string
+): { key: FoldsKey; plugin: Plugin } {
   const key = new PluginKey<FoldsState>(name);
+  const className = foldClass === undefined ? FOLDED_CLASS : `${FOLDED_CLASS} ${foldClass}`;
   // A click's focus comes before the caret it sets, which opens a fold itself; the press ends
   // wherever the main button is released or cancelled, a head's button too.
   let press: AbortController | undefined;
@@ -216,18 +228,23 @@ export function foldsPlugin(name: string, folds: Folds): { key: FoldsKey; plugin
   const plugin = new Plugin<FoldsState>({
     key,
     state: {
-      init: (_config, state) => stateOf(state.doc, folds.folded(state.doc), NONE),
+      init: (_config, state) => stateOf(state.doc, folds.folded(state.doc), NONE, className),
       apply: (transaction, value, _old, state: EditorState) => {
         const redraw = transaction.docChanged || transaction.getMeta(FOLDS_CHANGED) === true;
-        const folded = redraw ? folds.folded(state.doc) : value.folded;
-        const opened = foldsOpenedBy(transaction, folded);
-        if (!redraw && opened.size === 0) return value;
-        const pending = value.opened === recorded ? NONE : value.opened;
-        return stateOf(
-          state.doc,
-          folded,
-          pending.size === 0 ? opened : new Set([...pending, ...opened])
-        );
+        const next = () => {
+          const folded = redraw ? folds.folded(state.doc) : value.folded;
+          const opened = foldsOpenedBy(transaction, folded);
+          if (!redraw && opened.size === 0) return value;
+          const pending = value.opened === recorded ? NONE : value.opened;
+          return stateOf(
+            state.doc,
+            folded,
+            pending.size === 0 ? opened : new Set([...pending, ...opened]),
+            className
+          );
+        };
+        // An edit or a new set redraws every fold, timed with the edit's marks or as a redraw of its own.
+        return redraw ? measured(transaction.docChanged ? "folds" : "redraw", next) : next();
       },
     },
     props: {

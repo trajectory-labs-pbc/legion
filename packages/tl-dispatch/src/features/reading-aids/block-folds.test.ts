@@ -1,8 +1,10 @@
 import { afterEach, beforeAll, expect, test } from "bun:test";
 import { NodeSelection, TextSelection } from "@milkdown/kit/prose/state";
+import { QueryClient } from "@tanstack/react-query";
 import { waitFor } from "@testing-library/react";
 import type { EditorHandle } from "@upstream-dispatch/features/doc/editor";
 import { warmMarkdownRenderer } from "@upstream-dispatch/features/refs/markdown-engine";
+import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import * as Y from "yjs";
 
 import { HOST_ATTRIBUTE } from "./aided-editor";
@@ -14,6 +16,7 @@ import {
   foldedIdsOf,
   linkedDocs,
   newDocumentRef,
+  positionIn,
   positionOf,
   rootIn,
 } from "./editor-fixtures";
@@ -21,7 +24,7 @@ import { FOLD_HEAD_ATTRIBUTE } from "./fold-head";
 import { redrawFolds, revealBlock, setFoldQuery } from "./folds";
 import { CHANGE_ATTRIBUTE } from "./mark-drawing";
 import { compareWith } from "./marks-plugin";
-import { visitOf } from "./visit";
+import { recordReadMarks, visitOf } from "./visit";
 
 beforeAll(async () => {
   await warmMarkdownRenderer();
@@ -63,17 +66,6 @@ const expanded = (handle: EditorHandle, blockId: string) =>
   handle.view.dom
     .querySelector(`[${FOLD_HEAD_ATTRIBUTE}="${blockId}"] button`)
     ?.getAttribute("aria-expanded");
-
-/** The position inside the paragraph that reads `text`. */
-function positionIn(handle: EditorHandle, text: string): number {
-  let found: number | undefined;
-  handle.view.state.doc.descendants((node, pos) => {
-    if (found === undefined && node.isTextblock && node.textContent === text) found = pos + 1;
-    return found === undefined;
-  });
-  if (found === undefined) throw new Error(`no paragraph reads ${text}`);
-  return found;
-}
 
 test("each requirement, check and plan task folds to its head line, and nothing else folds", async () => {
   const handle = await editor();
@@ -267,6 +259,26 @@ test("the visit keeps each fold for a new editor of the same document, from its 
   other.setMarkdown(SPEC);
   blockFoldsOf(other.view).attach({ choices: new Map() });
   expect(folded(other)).toEqual(["r1", "c1", "t1"]);
+});
+
+test("a sign-out ends the reader's fold choices in a live editor, and a new editor keeps none of them", async () => {
+  const documentRef = newDocumentRef();
+  const first = await editor(new Y.Doc(), documentRef);
+  first.setMarkdown(SPEC);
+  blockFoldsOf(first.view).attach({ choices: new Map() });
+  blockFoldsOf(first.view).toggle("t1");
+  expect(folded(first)).toEqual(["r1", "c1"]);
+  const queryClient = new QueryClient();
+  const stop = recordReadMarks(queryClient);
+  try {
+    writesOf(queryClient).signedOut("ada");
+    expect(folded(first)).toEqual(["r1", "c1", "t1"]);
+    const second = await editor(new Y.Doc(), documentRef);
+    second.setMarkdown(SPEC);
+    expect(folded(second)).toEqual(["r1", "c1", "t1"]);
+  } finally {
+    stop();
+  }
 });
 
 /** Whether the caret, or the block a node selection holds, is inside a folded block. */

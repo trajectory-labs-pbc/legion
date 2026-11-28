@@ -28,10 +28,14 @@ export interface DrawnChanges extends Against {
   readonly summary: ChangeSummary;
 }
 
-interface MarksState {
-  readonly against: Against | undefined;
-  /** Each block drawn, with the verdict it is drawn with. */
+/** The top-level blocks of the last draw with their verdicts, and each removed block's anchor. */
+export interface Marked {
   readonly blocks: readonly MarkedBlock[];
+  readonly removedAfter: readonly (string | undefined)[];
+}
+
+interface MarksState extends Marked {
+  readonly against: Against | undefined;
   readonly compared: Compared | undefined;
   readonly decorations: DecorationSet;
   readonly drawn: DrawnChanges | undefined;
@@ -55,6 +59,7 @@ const EMPTY: MarksState = {
   decorations: DecorationSet.empty,
   drawn: undefined,
   failed: undefined,
+  removedAfter: [],
 };
 
 function reduce(state: MarksState, meta: MarksMeta): MarksState {
@@ -137,7 +142,13 @@ function draw(
 ): MarksState {
   const { compared } = state;
   if (compared === undefined)
-    return { ...state, blocks: [], decorations: DecorationSet.empty, drawn: undefined };
+    return {
+      ...state,
+      blocks: [],
+      decorations: DecorationSet.empty,
+      drawn: undefined,
+      removedAfter: [],
+    };
   const decorations: Decoration[] = [];
   const blocks: MarkedBlock[] = [];
   const present = new Set<string>();
@@ -167,10 +178,8 @@ function draw(
     const at = after === undefined ? 0 : (ends.get(after) ?? 0);
     decorations.push(removedPiece(0, key, text, "div", opened)(at));
   }
-  const summary = summarize(
-    blocks,
-    removed.map(({ after }) => after)
-  );
+  const removedAfter = removed.map(({ after }) => after);
+  const summary = summarize(blocks, removedAfter);
   const { baseline, choice } = compared;
   const last = state.drawn;
   const kept =
@@ -182,6 +191,7 @@ function draw(
     blocks,
     decorations: DecorationSet.create(doc, decorations),
     drawn: kept ? last : { baseline, choice, summary },
+    removedAfter,
   };
 }
 
@@ -232,6 +242,12 @@ export function changedBlocks(view: EditorView): ReadonlySet<string> | undefined
       id === undefined || verdict.kind === "unchanged" ? [] : [id]
     )
   );
+}
+
+/** The blocks of the last draw and their verdicts; none while no comparison drew. */
+export function markedBlocks(view: EditorView): Marked | undefined {
+  const state = marksKey.getState(view.state);
+  return state?.compared === undefined ? undefined : state;
 }
 
 /** Why the comparison against `baseline` drew no marks, if it failed. */

@@ -7,6 +7,8 @@ import {
   createComment,
   createIssue,
   createProjectDocument,
+  getArtifactBlocks,
+  getArtifactText,
 } from "../../../dispatch/e2e/api";
 import { connectedDot, documentEditor } from "../../../dispatch/e2e/editor";
 import { AGENT, personOf, runProject } from "../flows";
@@ -27,6 +29,15 @@ export const countsLine = (page: Page) => partsRoot(page).locator("[data-reading
 /** The fold head's button of the block `blockId`, which `fold-head.ts` marks. */
 export const head = (page: Page, blockId: string) =>
   page.locator(`[data-reading-aids-fold-head="${blockId}"] button`);
+
+/** The id of the block whose text is `text`, from the server's own block list. */
+export async function blockIdOf(artifactId: string, text: string): Promise<string> {
+  const { markdown } = await getArtifactText(artifactId, AGENT);
+  const blocks = await getArtifactBlocks(artifactId, AGENT);
+  const block = blocks.find(({ from, to }) => markdown.slice(from, to) === text);
+  if (block === undefined) throw new Error(`no block reads ${JSON.stringify(text)}`);
+  return block.id;
+}
 
 /** How many parts' roots the page shows, anywhere: a hidden editor's root is not shown. */
 export const shownParts = (page: Page) =>
