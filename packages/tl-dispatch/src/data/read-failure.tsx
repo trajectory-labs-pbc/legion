@@ -48,14 +48,9 @@ export function useReadFailure(
 export function refreshFailureOf(read: UseQueryResult<unknown>): ShownFault | undefined {
   if (!read.isRefetchError) return undefined;
   const refusal = refusalOf(read.error);
-  if (refusal !== undefined) {
-    return { refusal, retrying: read.fetchStatus !== "idle", refresh: true };
-  }
-  return {
-    retrying: read.fetchStatus !== "idle",
-    retry: () => void read.refetch(),
-    refresh: true,
-  };
+  const retrying = read.fetchStatus !== "idle";
+  if (refusal !== undefined) return { refusal, retrying, refresh: true };
+  return { retrying, retry: () => void read.refetch(), refresh: true };
 }
 
 /** What a failed read says of `noun`. */

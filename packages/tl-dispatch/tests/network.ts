@@ -60,12 +60,12 @@ export const answerShellReads = (answer: (url: string) => ShellAnswer) =>
 
 export const json = (body: unknown, status = 200) => Response.json(body, { status });
 
-/** The server's refusal of a read that failed on its side. */
-export const readFailed = () => json({ code: "INTERNAL", error: "internal server error" }, 500);
-
 /** The server's code for a failure answered with `status`. */
 const codeOf = (status: number) =>
   status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL";
+
+/** The server's refusal of a read that failed on its side. */
+export const readFailed = () => json({ code: codeOf(500), error: "internal server error" }, 500);
 
 /** The server's refusal of a read: a 403, or a 404 of a record it does not have. */
 export const readRefused = (status: 403 | 404) =>
