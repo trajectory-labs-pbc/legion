@@ -19,7 +19,7 @@ The theme is a shadcn theme on CSS variables. Change a token only in `packages/u
 | `sidebar` | The same colour as `background`, in light and in dark: the sidebar is part of the frame (FR2). |
 | `card` | The content panel, where lists, boards and record views draw. |
 | `secondary` | The highlighted row on the content panel, whether the pointer or the keyboard put it there. Also the hover of an outline or a ghost button. |
-| `muted` | A selected row, a group header row, and a quiet fill such as a count chip or a code block. |
+| `muted` | A selected row, a group header row, a pressed toggle button (`aria-pressed`), and a quiet fill such as a count chip or a code block. |
 | `accent` | Hover inside a menu or a popover. Do not use it on the content panel. |
 | `sidebar-accent` | The current row in the sidebar. The hovered row is `sidebar-accent/50`, so hover and current differ. The current row keeps its weight, so its label does not change width. |
 | `popover` | A menu, popover, combobox, tooltip, hover card, command menu or toast, and the panel of a dialog, an alert dialog or a drawer (SU5). |

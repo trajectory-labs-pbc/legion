@@ -1,18 +1,12 @@
 // Each requirement, check and plan task folds to its head line, and the reader's moves open it.
 
 import type { Locator } from "@playwright/test";
-import {
-  createComment,
-  createIssue,
-  createIssueArtifact,
-  getArtifactBlocks,
-  getArtifactText,
-} from "../../../dispatch/e2e/api";
+import { createComment, createIssue, createIssueArtifact } from "../../../dispatch/e2e/api";
 import { documentEditor, marginCard, placeCaret, typeAtEnd } from "../../../dispatch/e2e/editor";
 import { navigateInApp } from "../../../dispatch/e2e/sends";
 import { AGENT, personOf, runProject } from "../flows";
 import { expect, type Page, test } from "../test";
-import { head, openHost, uniqueName } from "./hosts";
+import { blockIdOf, head, openHost, uniqueName } from "./hosts";
 
 const SECOND_PARAGRAPH = "Its second paragraph, which a reference names.";
 const THIRD_PARAGRAPH =
@@ -52,15 +46,6 @@ const spec = (served: string) =>
     "A closing paragraph.",
     "",
   ].join("\n");
-
-/** The id of the block whose text is `text`, from the server's own block list. */
-async function blockIdOf(artifactId: string, text: string): Promise<string> {
-  const { markdown } = await getArtifactText(artifactId, AGENT);
-  const blocks = await getArtifactBlocks(artifactId, AGENT);
-  const block = blocks.find(({ from, to }) => markdown.slice(from, to) === text);
-  if (block === undefined) throw new Error(`no block reads ${JSON.stringify(text)}`);
-  return block.id;
-}
 
 interface Seeded {
   key: string;

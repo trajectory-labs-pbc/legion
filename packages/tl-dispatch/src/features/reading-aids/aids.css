@@ -128,9 +128,25 @@ section[aria-label="Document editor"]:has(article:not([hidden]) [data-reading-ai
   white-space: normal;
 }
 
+/* A head inside a part that "Only changes" folds folds with it. */
+.reading-aids-fold-head:has(+ .reading-aids-only-changes) {
+  display: none;
+}
+
+/* The line a folded part leaves, a block, so a line in an ordered list takes no number. */
+.reading-aids-fold-line {
+  display: block;
+  margin: 0;
+  list-style: none;
+  white-space: normal;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* A printed document shows each block whole, so a fold and its head do not print. */
 @media print {
-  .reading-aids-fold-head {
+  .reading-aids-fold-head,
+  .reading-aids-fold-line {
     display: none;
   }
 }

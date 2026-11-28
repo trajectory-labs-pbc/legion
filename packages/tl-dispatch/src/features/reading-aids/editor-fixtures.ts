@@ -59,6 +59,29 @@ export function blockIdsOf(view: EditorView): string[] {
   return ids;
 }
 
+/** The position inside the paragraph that reads `text`. */
+export function positionIn(handle: EditorHandle, text: string): number {
+  let found: number | undefined;
+  handle.view.state.doc.descendants((node, pos) => {
+    if (found === undefined && node.isTextblock && node.textContent === text) found = pos + 1;
+    return found === undefined;
+  });
+  if (found === undefined) throw new Error(`no paragraph reads ${text}`);
+  return found;
+}
+
+/** The id of the block that reads `text`. */
+export function idOf(handle: EditorHandle, text: string): string {
+  let id: string | undefined;
+  handle.view.state.doc.descendants((node) => {
+    if (id === undefined && node.textContent === text && typeof node.attrs.blockId === "string")
+      id = node.attrs.blockId;
+    return id === undefined;
+  });
+  if (id === undefined) throw new Error(`no block reads ${text}`);
+  return id;
+}
+
 /** Keeps `handle` for `destroyEditors`. */
 export function keep(handle: EditorHandle): EditorHandle {
   handles.push(handle);

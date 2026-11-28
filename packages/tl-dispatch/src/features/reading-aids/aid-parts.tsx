@@ -1,9 +1,10 @@
 import { useCallback } from "react";
 
 import { type AidActions, useAidCommands } from "./aid-commands";
-import { FoldsControl, useBlockFolds } from "./block-folds-part";
+import { AidControl, useBlockFolds } from "./block-folds-part";
 import { CountsLine } from "./counts-line";
 import { moveToBlock } from "./moves";
+import { useOnlyChanges } from "./only-changes-part";
 import type { PartsProps } from "./parts-slot";
 import { ReadFirst, useReadFirst } from "./read-first";
 import { type AidedDocument, useAidedDocument } from "./reads";
@@ -26,6 +27,12 @@ function DocumentParts({
   const readFirst = useReadFirst(entry, document);
   const baseline = useBaseline(document);
   const marks = useChangeMarks(entry.editor.view, baseline.baseline);
+  const { on, toggleOnlyChanges } = useOnlyChanges(
+    entry,
+    document.artifactId,
+    baseline.baseline,
+    marks
+  );
   const moveToSection = useCallback(
     (blockId: string) => moveToBlock(entry, blockId, "click"),
     [entry]
@@ -34,17 +41,35 @@ function DocumentParts({
   return (
     <>
       <ReadFirst document={document} state={readFirst} />
-      <CountsLine marks={marks} moveTo={moveToSection} read={baseline} />
+      <CountsLine
+        controls={
+          <>
+            {toggleOnlyChanges === undefined ? null : (
+              <AidControl
+                commandId="reading-aids.toggle-only-changes"
+                label="Only changes"
+                pressed={on}
+              />
+            )}
+            {folds.toggleFolds === undefined ? null : (
+              <AidControl commandId="reading-aids.toggle-folds" />
+            )}
+          </>
+        }
+        marks={marks}
+        moveTo={moveToSection}
+        read={baseline}
+      />
       {shown ? (
         <AidCommands
           actions={{
             ...folds,
+            toggleOnlyChanges,
             nextDecision: step && (() => step(1)),
             previousDecision: step && (() => step(-1)),
           }}
         />
       ) : null}
-      {folds.toggleFolds === undefined ? null : <FoldsControl />}
     </>
   );
 }
@@ -57,7 +82,9 @@ export function AidParts(props: PartsProps) {
   return (
     <>
       {props.shown ? <AidCommands actions={folds} /> : null}
-      {folds.toggleFolds === undefined ? null : <FoldsControl />}
+      {folds.toggleFolds === undefined ? null : (
+        <AidControl commandId="reading-aids.toggle-folds" />
+      )}
     </>
   );
 }

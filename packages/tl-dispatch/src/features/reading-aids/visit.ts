@@ -1,5 +1,6 @@
 import type { Query, QueryClient } from "@tanstack/react-query";
 import type { DocumentRead } from "@upstream-dispatch/api/types";
+import type { ChangeBaseline } from "@upstream-dispatch/features/doc/change-marks";
 import { writesOf } from "@upstream-dispatch/features/writes/write-store";
 import { useSyncExternalStore } from "react";
 
@@ -15,6 +16,22 @@ export interface Visit {
   readonly compareWith?: number;
   /** Each block's fold by id (true when open), and the `?q=` term last applied. */
   readonly blockFolds: { readonly choices: Map<string, boolean>; term?: string };
+  /** "Only changes", while it is on: the folds the press made, which the reader opens part by part. */
+  readonly onlyChanges: { made?: OnlyChangesFolds };
+}
+
+/** A part "Only changes" folds: its blocks, and whether a line names it. */
+export interface FoldedPart {
+  readonly ids: readonly string[];
+  /** False for a section's body, which folds to its heading alone. */
+  readonly line: boolean;
+}
+
+/** The folds of "Only changes" against one baseline: its parts, and the blocks still folded. */
+export interface OnlyChangesFolds {
+  readonly baseline: ChangeBaseline;
+  readonly parts: readonly FoldedPart[];
+  readonly folded: Set<string>;
 }
 
 /** The name of upstream's read of the reader's read mark of a document. */
@@ -36,7 +53,7 @@ function notify(): void {
 export function visitOf(artifactId: string): Visit {
   let visit = visits.get(artifactId);
   if (visit === undefined) {
-    visit = { blockFolds: { choices: new Map() } };
+    visit = { blockFolds: { choices: new Map() }, onlyChanges: {} };
     visits.set(artifactId, visit);
   }
   return visit;

@@ -28,11 +28,18 @@ export interface DrawnChanges extends Against {
   readonly summary: ChangeSummary;
 }
 
+/** The top-level blocks of the last draw with their verdicts, and each removed block's anchor. */
+export interface Marked {
+  readonly blocks: readonly MarkedBlock[];
+  readonly removedAfter: readonly (string | undefined)[];
+}
+
 interface MarksState {
   readonly against: Against | undefined;
   readonly compared: Compared | undefined;
   readonly decorations: DecorationSet;
   readonly drawn: DrawnChanges | undefined;
+  readonly marked: Marked | undefined;
   readonly failed: ComparisonFailure | undefined;
   /** Each Retry compares the baseline again. */
   readonly attempt: number;
@@ -52,6 +59,7 @@ const EMPTY: MarksState = {
   decorations: DecorationSet.empty,
   drawn: undefined,
   failed: undefined,
+  marked: undefined,
 };
 
 function reduce(state: MarksState, meta: MarksMeta): MarksState {
@@ -134,7 +142,7 @@ function draw(
 ): MarksState {
   const { compared } = state;
   if (compared === undefined)
-    return { ...state, decorations: DecorationSet.empty, drawn: undefined };
+    return { ...state, decorations: DecorationSet.empty, drawn: undefined, marked: undefined };
   const decorations: Decoration[] = [];
   const blocks: MarkedBlock[] = [];
   const present = new Set<string>();
@@ -164,10 +172,8 @@ function draw(
     const at = after === undefined ? 0 : (ends.get(after) ?? 0);
     decorations.push(removedPiece(0, key, text, "div", opened)(at));
   }
-  const summary = summarize(
-    blocks,
-    removed.map(({ after }) => after)
-  );
+  const removedAfter = removed.map(({ after }) => after);
+  const summary = summarize(blocks, removedAfter);
   const { baseline, choice } = compared;
   const last = state.drawn;
   const kept =
@@ -178,6 +184,7 @@ function draw(
     ...state,
     decorations: DecorationSet.create(doc, decorations),
     drawn: kept ? last : { baseline, choice, summary },
+    marked: { blocks, removedAfter },
   };
 }
 
@@ -214,6 +221,10 @@ export function compareWith(view: EditorView, against: Against | undefined): voi
 /** The counts of the marks drawn and their baseline: the last one's while a new one compares. */
 export const drawnChanges = (view: EditorView): DrawnChanges | undefined =>
   marksKey.getState(view.state)?.drawn;
+
+/** The blocks of the last draw and their verdicts; none while no comparison drew. */
+export const markedBlocks = (view: EditorView): Marked | undefined =>
+  marksKey.getState(view.state)?.marked;
 
 /** Why the comparison against `baseline` drew no marks, if it failed. */
 export function comparisonFailure(

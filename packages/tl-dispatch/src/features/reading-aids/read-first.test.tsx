@@ -3,8 +3,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { quietConsoleError } from "@upstream-dispatch/__tests__/act-warnings";
+import { installFakeLiveSockets } from "@upstream-dispatch/__tests__/live-socket-harness";
 import { ApiError, api } from "@upstream-dispatch/api/client";
-import type { IssueAskRow as Ask, IssueDetails } from "@upstream-dispatch/api/types";
+import { useEventFeed } from "@upstream-dispatch/api/event-feed";
+import { liveSocketFor } from "@upstream-dispatch/api/live-socket";
+import type {
+  IssueAskRow as Ask,
+  IssueDetails,
+  LiveServerFrame,
+} from "@upstream-dispatch/api/types";
 import type {
   ConnectionCallbacks,
   DocumentConnection,
@@ -12,14 +19,16 @@ import type {
 import { actorLabelText } from "@upstream-dispatch/features/refs/AgentName";
 import { warmMarkdownRenderer } from "@upstream-dispatch/features/refs/markdown-engine";
 import { buildDispatchReference } from "@upstream-dispatch/features/refs/routes";
-
+import type { ReactNode } from "react";
 import { commandStore } from "@/commands/command-store";
+
 import { MemoryNavigationProvider } from "../../../tests/navigation";
 import { AidParts } from "./aid-parts";
 import { HOST_ATTRIBUTE } from "./aided-editor";
-import { APPROVED, CHANGED_SECTIONS, REVISED } from "./change-marks.fixture";
+import { APPROVED, CHANGED_SECTIONS, REVISED, said } from "./change-marks.fixture";
 import { InProcessWorker, inProcessEditorIn } from "./comparer-fixtures";
 import { blockIdsOf, destroyEditors } from "./editor-fixtures";
+import { ONLY_CHANGES_FOLD } from "./only-changes";
 import { partsSlot, reportingSync } from "./parts-slot";
 
 beforeAll(async () => {
@@ -130,13 +139,17 @@ async function mount(
   markdown: string,
   asks: (blocks: readonly string[]) => Ask[],
   {
+    beside = null,
     earlier = markdown,
     issueRead = Promise.resolve(issue),
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
     synced = true,
     tree,
   }: {
+    beside?: ReactNode;
     earlier?: string;
     issueRead?: Promise<IssueDetails>;
+    queryClient?: QueryClient;
     synced?: boolean;
     tree?: { readonly type: string };
   } = {}
@@ -157,7 +170,7 @@ async function mount(
   spyOn(api, "getIssue").mockReturnValue(issueRead);
   const asksRead = spyOn(api, "listIssueAsks").mockImplementation(async () => asks(blocks));
   // The counts line's read of the version a request approved.
-  spyOn(api, "getArtifactVersion").mockImplementation(async (_id, number) => ({
+  const versionRead = spyOn(api, "getArtifactVersion").mockImplementation(async (_id, number) => ({
     authors: [],
     created_at: "2026-11-20T10:00:00Z",
     markdown: earlier,
@@ -167,16 +180,16 @@ async function mount(
     summary: null,
   }));
   const focusBlock = spyOn(handle, "focusBlock").mockImplementation(() => {});
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
       <MemoryNavigationProvider path={`/issues/${KEY}/spec`}>
         <AidParts entry={entry} shown />
       </MemoryNavigationProvider>
+      {beside}
     </QueryClientProvider>
   );
   const refresh = () => act(() => queryClient.invalidateQueries({ queryKey: ["asks", KEY] }));
-  return { asksRead, blocks, focusBlock, host, refresh, sync };
+  return { asksRead, blocks, focusBlock, host, refresh, sync, versionRead };
 }
 
 const readFirst = async () => within(await screen.findByRole("region", { name: "Read first" }));
@@ -333,6 +346,58 @@ test("DOC-5 read-first: a decision leaves the list once the asks read answers it
   state = "answered";
   await refresh();
   expect(await (await readFirst()).findByText("No open requests or decisions")).toBeDefined();
+});
+
+/** Upstream's live event feed, as the app's shell mounts it. */
+function EventFeed() {
+  useEventFeed();
+  return null;
+}
+
+test("aids-reads: an event on the live socket for an answered decision takes it off Read first, with only upstream's read of the asks", async () => {
+  const sockets = installFakeLiveSockets();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(["whoami"], { event_head: "0", kind: "user", login: "alice" });
+  try {
+    let state: Ask["state"] = "open";
+    const { asksRead, versionRead } = await mount(
+      SPEC_REF,
+      "First.",
+      (ids) => [decision("a", ids[0], { question: "Ship it?", state })],
+      { beside: <EventFeed />, queryClient }
+    );
+    await (await readFirst()).findByRole("link", { name: "Ship it?" });
+    const socket = sockets.latest();
+    act(() => socket.open());
+    const { sub } = socket.subscribed("events");
+    act(() => socket.receive({ replay_complete: true, since: "0", sub, type: "events_start" }));
+    const [asks, versions] = [asksRead.mock.calls.length, versionRead.mock.calls.length];
+    state = "answered";
+    // The frame as Dispatch sends it: the answered ask.
+    const answered = {
+      event: {
+        actor: { id: "ada", kind: "user" },
+        created_at: "2026-11-20T11:00:00Z",
+        id: 1,
+        issue_key: KEY,
+        notify: true,
+        payload: decision("a", undefined, { state: "answered" }),
+        project: "CORE",
+        seq: 1,
+        type: "ask.answered",
+      },
+      id: "1",
+      sub,
+      type: "event",
+    } satisfies LiveServerFrame;
+    act(() => socket.receive(answered));
+    expect(await (await readFirst()).findByText("No open requests or decisions")).toBeDefined();
+    expect(asksRead.mock.calls.length).toBe(asks + 1);
+    expect(versionRead.mock.calls.length).toBe(versions);
+  } finally {
+    liveSocketFor(queryClient).close();
+    sockets.restore();
+  }
 });
 
 test("DOC-7 read-first: a decision's question and a request's are drawn as their plain words", async () => {
@@ -492,6 +557,47 @@ test("DOC-8 read-first: on the approval's plan the line gives 7 blocks in 5 of 7
   ).toEqual(CHANGED_SECTIONS);
 });
 
+/** A plan whose first section changed and whose second, which holds a decision, did not. */
+const quietDecision = (changed: boolean) =>
+  [
+    "## Changed",
+    said("changed", changed ? "now" : "today"),
+    "## Quiet",
+    "The first quiet paragraph.",
+    "The paragraph a decision is on.",
+    "The last quiet paragraph.",
+  ].join("\n\n");
+
+test("read-first: a click on a decision in a part that Only changes folds opens the part", async () => {
+  const user = userEvent.setup();
+  const { blocks, focusBlock, host } = await mount(
+    SPEC_REF,
+    quietDecision(true),
+    (ids) => [twoDocuments, decision("a", ids[4], { question: "Keep the quiet part?" })],
+    { earlier: quietDecision(false) }
+  );
+  // The handle's own move, which opens the folds around its block.
+  focusBlock.mockRestore();
+  await user.click(await screen.findByRole("button", { name: "Only changes" }));
+  const decided = () => host.querySelector(`[data-block-id="${blocks[4]}"]`);
+  expect(decided()?.classList.contains(ONLY_CHANGES_FOLD)).toBe(true);
+
+  await user.click(await (await readFirst()).findByRole("link", { name: "Keep the quiet part?" }));
+  expect(window.location.hash).toBe(`#b-${blocks[4]}`);
+  await waitFor(() => expect(decided()?.classList.contains(ONLY_CHANGES_FOLD)).toBe(false));
+  expect(document.activeElement).toBe(host);
+});
+
+test("only-changes: the counts line holds the fold control beside Only changes, and the parts hold it once", async () => {
+  const folding = (changed: boolean) =>
+    [quietDecision(changed), ":::requirement{#r1}", "**R1.** A requirement.", ":::"].join("\n\n");
+  await mount(SPEC_REF, folding(true), () => [twoDocuments], { earlier: folding(false) });
+  await screen.findByRole("button", { name: "Only changes" });
+  expect(countsLine().getByRole("button", { name: "Only changes" })).toBeDefined();
+  expect(countsLine().getByRole("button", { name: "Fold or open blocks" })).toBeDefined();
+  expect(screen.getAllByRole("button", { name: "Fold or open blocks" })).toHaveLength(1);
+});
+
 test("DOC-8 read-first: with nothing changed since the baseline, the line says so and links no section", async () => {
   await mount(SPEC_REF, EARLIER, () => [twoDocuments]);
   expect(await screen.findByText("No changes since v8")).toBeDefined();
@@ -554,4 +660,12 @@ test("DOC-9 read-first: off the spec's page the counts line shows, and with no r
   await mount(VERIFICATION_REF, CHANGED, () => [twoDocuments], { earlier: EARLIER });
   expect(await screen.findByText("No earlier version to compare")).toBeDefined();
   expect(document.querySelector("[data-reading-aids-change]")).toBeNull();
+});
+
+test("baseline: with no earlier version, Only changes is not offered and its key does nothing", async () => {
+  await mount(VERIFICATION_REF, CHANGED, () => [twoDocuments], { earlier: EARLIER });
+  expect(await screen.findByText("No earlier version to compare")).toBeDefined();
+  expect(screen.queryByRole("button", { name: "Only changes" })).toBeNull();
+  expect(commandStore.view("reading-aids.toggle-only-changes")?.enabled).toBe(false);
+  expect(document.querySelector(`.${ONLY_CHANGES_FOLD}`)).toBeNull();
 });
