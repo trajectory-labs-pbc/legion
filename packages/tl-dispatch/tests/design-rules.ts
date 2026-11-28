@@ -16,7 +16,7 @@ import {
   UI_STYLESHEET,
   UPSTREAM_WEB,
 } from "./source";
-import { parseScript } from "./typescript";
+import { literal, parseScript } from "./typescript";
 
 export interface DesignViolation {
   file: string;
@@ -40,6 +40,7 @@ export const RULES = {
     "a control keeps the default cursor: only a link that leaves the app shows the pointer, which the browser gives it",
   apply: "`@apply` hides classes from the compile check; put the classes in the markup",
   styleProp: "a style prop must be an object literal, so the rule can read it",
+  styleText: "a style written as text hides its properties from the rule; use classes",
   style: "set in a style, out of the compile check's sight; use classes",
   styleTag: "an inline stylesheet is out of the compile check's sight; use a stylesheet under src/",
   height: "control height outside the scale",
@@ -116,7 +117,7 @@ const NAME_VALUES = new Set([
 const SKIPPED = /^@(keyframes|property)\b|^@layer properties$/;
 const MOTION_GUARD = /^@media.*prefers-reduced-motion:\s*no-preference/;
 const COLOUR_PROPERTY =
-  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end|start|end|before|after)|border-image(-source)?|(column-|row-)?rule|text-decoration|text-stroke|text-emphasis|filter|backdrop-filter)$|shadow|gradient/;
+  /(^|-)colou?r$|^(fill|stroke|background|background-image|outline|border|border-(top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end|start|end|before|after)|border-image(-source)?|(column-|row-)?rule|text-decoration|text-stroke|list-style(-image)?|color-scheme|filter|backdrop-filter)$|(^|-)text-emphasis$|shadow|gradient/;
 const FOCUS_PROPERTY = new Set([
   "outline-color",
   "--tw-outline-color",
@@ -125,8 +126,8 @@ const FOCUS_PROPERTY = new Set([
   "--tw-inset-ring-color",
 ]);
 /** A CSS property without its vendor prefix. */
-const unprefixed = (property: string) => property.replace(/^-(webkit|moz|ms)-/, "");
-const TEXT_PROPERTY = new Set(["color", "-webkit-text-fill-color"]);
+const unprefixed = (property: string) => property.replace(/^-(webkit|moz|ms|epub)-/, "");
+const TEXT_PROPERTY = new Set(["color", "text-fill-color"]);
 const MOTION_PROPERTY = /^(transition|animation)(-|$)|^(transform|translate|scale|rotate)$/;
 /** `value` with every parenthesised group taken out, nested ones too. */
 function outsideParentheses(value: string): string {
@@ -195,11 +196,12 @@ export function declarationProblems(
   tokens: ThemeTokens,
   { circle = false, fromClass = false }: { circle?: boolean; fromClass?: boolean } = {}
 ): string[] {
-  const { property, value, context } = declaration;
+  const { value, context } = declaration;
+  const property = unprefixed(declaration.property);
   if (context.some((prelude) => SKIPPED.test(prelude))) return [];
   const problems: string[] = [];
   if (rawColour(property, value)) problems.push(RULES.raw);
-  if (COLOUR_PROPERTY.test(unprefixed(property)) || TEXT_PROPERTY.has(property)) {
+  if (COLOUR_PROPERTY.test(property) || TEXT_PROPERTY.has(property)) {
     const names = varNames(value);
     if (names.some((name) => !name.startsWith("--tw-") && !tokens.colours.has(name))) {
       problems.push(RULES.outside);
@@ -367,9 +369,10 @@ function stylesheetViolations(file: SourceFile, tokens: ThemeTokens): DesignViol
 function styleKind(property: string): string | undefined {
   if (COLOUR_PROPERTY.test(property)) return "a colour";
   if (/radius$/.test(property)) return "a radius";
-  if (/^(min-|max-)?(height|block-size|logical-height|size)$/.test(property)) return "a height";
-  if (/^(animation|transition)/.test(property)) return "motion";
+  if (/^(min-|max-)?(height|block-size|logical-height|size)$|^(zoom|aspect-ratio)$/.test(property))
+    return "a height";
   if (property === "scale") return "a scale";
+  if (/^(animation|transition|transform|translate|rotate)/.test(property)) return "motion";
   if (property === "cursor") return "a cursor";
   if (property === "all") return "every property";
   return undefined;
@@ -385,7 +388,7 @@ function styleRule(property: string): string | undefined {
   return what === undefined ? undefined : `${what} ${RULES.style}`;
 }
 
-const STYLE_NAME = /(^|[a-z_])(style|styles|css|sx)$/i;
+const STYLE_NAME = /(^|_)(style|styles|css|sx|STYLE|STYLES|CSS|SX)$|(Style|Styles|Css|CSS|Sx)$/;
 const NATIVE_CONTROL = new Set(["button", "input", "select", "textarea"]);
 const UI_CONTROL = new Set([
   "Button",
@@ -397,6 +400,30 @@ const UI_CONTROL = new Set([
   "ComboboxInput",
   "InputGroup",
 ]);
+
+/** `node` without parentheses, `!`, `as`, `<T>` and `satisfies`. */
+function bare(node: ts.Expression): ts.Expression {
+  let inner = node;
+  while (
+    ts.isParenthesizedExpression(inner) ||
+    ts.isNonNullExpression(inner) ||
+    ts.isAsExpression(inner) ||
+    ts.isTypeAssertionExpression(inner) ||
+    ts.isSatisfiesExpression(inner)
+  ) {
+    inner = inner.expression;
+  }
+  return inner;
+}
+
+/** `el.style` or `el['style']`, however it is wrapped. */
+function isStyle(node: ts.Expression | undefined): boolean {
+  if (node === undefined) return false;
+  const inner = bare(node);
+  return ts.isPropertyAccessExpression(inner)
+    ? inner.name.text === "style"
+    : ts.isElementAccessExpression(inner) && literal(inner.argumentExpression) === "style";
+}
 
 function isStyleObject(node: ts.ObjectLiteralExpression): boolean {
   const parent = node.parent;
@@ -415,10 +442,7 @@ function isStyleObject(node: ts.ObjectLiteralExpression): boolean {
     return parent.type.getText().includes("CSSProperties");
   }
   if (ts.isCallExpression(parent)) {
-    return (
-      parent.expression.getText() === "Object.assign" &&
-      /\.style$/.test(parent.arguments[0]?.getText() ?? "")
-    );
+    return parent.expression.getText() === "Object.assign" && isStyle(parent.arguments[0]);
   }
   return false;
 }
@@ -478,22 +502,37 @@ function scriptViolations(
     rule: RULES.upstreamTheme,
   }));
   const refuse = refuserOf(file, source, violations);
-  // `el.style`, through parentheses and `!`.
-  const isStyle = (node: ts.Expression): boolean =>
-    ts.isParenthesizedExpression(node) || ts.isNonNullExpression(node)
-      ? isStyle(node.expression)
-      : /\.style$/.test(node.getText());
-  // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` (or `ms-`,
-  // which sets nothing) is then read as its prefix, as Chromium reads it.
+  // A camelCase key is dashed and a dashed one read as written; a leading `webkit-` or `epub-`
+  // (or `ms-`, which sets nothing) is then read as its prefix, as a browser reads it.
   const styleKey = (
     node: ts.Node,
     key: string,
     property = (
       key.includes("-") ? key : key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-    ).replace(/^(webkit|ms)-/, "-$1-")
+    ).replace(/^(webkit|ms|epub)-/, "-$1-")
   ) => {
-    const rule = key === "cssText" ? RULES.styleProp : styleRule(property);
+    const rule = key === "cssText" ? RULES.styleText : styleRule(property);
     if (rule !== undefined) refuse(node, key, rule);
+  };
+
+  const styleObject = (node: ts.ObjectLiteralExpression) => {
+    for (const member of node.properties) {
+      if (
+        ts.isSpreadAssignment(member) ||
+        (member.name !== undefined && ts.isComputedPropertyName(member.name))
+      ) {
+        const key = ts.isSpreadAssignment(member)
+          ? undefined
+          : (member.name as ts.ComputedPropertyName).expression;
+        if (key !== undefined && ts.isStringLiteralLike(key)) styleKey(member, key.text);
+        else refuse(member, member.getText(), RULES.styleProp);
+      } else if (member.name !== undefined) {
+        styleKey(
+          member,
+          ts.isStringLiteralLike(member.name) ? member.name.text : member.name.getText()
+        );
+      }
+    }
   };
 
   const visit = (node: ts.Node) => {
@@ -506,25 +545,7 @@ function scriptViolations(
         refuse(node, node.text, RULES.round);
       }
     }
-    if (ts.isObjectLiteralExpression(node) && isStyleObject(node)) {
-      for (const member of node.properties) {
-        if (
-          ts.isSpreadAssignment(member) ||
-          (member.name !== undefined && ts.isComputedPropertyName(member.name))
-        ) {
-          const key = ts.isSpreadAssignment(member)
-            ? undefined
-            : (member.name as ts.ComputedPropertyName).expression;
-          if (key !== undefined && ts.isStringLiteralLike(key)) styleKey(member, key.text);
-          else refuse(member, member.getText(), RULES.styleProp);
-        } else if (member.name !== undefined) {
-          styleKey(
-            member,
-            ts.isStringLiteralLike(member.name) ? member.name.text : member.name.getText()
-          );
-        }
-      }
-    }
+    if (ts.isObjectLiteralExpression(node) && isStyleObject(node)) styleObject(node);
     if (ts.isJsxAttribute(node) && node.name.getText() === "style") {
       const value = node.initializer;
       const expression =
@@ -538,7 +559,7 @@ function scriptViolations(
       node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
       node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
     ) {
-      const target = node.left;
+      const target = bare(node.left);
       if (ts.isPropertyAccessExpression(target) && isStyle(target.expression)) {
         styleKey(node, target.name.text);
       }
@@ -548,17 +569,34 @@ function scriptViolations(
         else refuse(node, target.getText(), RULES.styleProp);
       }
     }
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === "setProperty" &&
-      /\.style$/.test(node.expression.expression.getText())
-    ) {
-      const key = node.arguments[0];
-      if (key !== undefined && ts.isStringLiteralLike(key)) {
+    if (ts.isCallExpression(node)) {
+      const callee = bare(node.expression);
+      const method = ts.isPropertyAccessExpression(callee) ? callee.name.text : undefined;
+      const on = ts.isPropertyAccessExpression(callee) ? bare(callee.expression) : undefined;
+      const [first, ...rest] = node.arguments;
+      const propertyWrite =
+        (method === "setProperty" && isStyle(on)) ||
+        ((method === "set" || method === "append") &&
+          on !== undefined &&
+          ts.isPropertyAccessExpression(on) &&
+          on.name.text === "attributeStyleMap");
+      if (propertyWrite) {
         // CSSOM lower-cases the name; a custom property is refused whatever its case.
-        styleKey(node, key.text, key.text.toLowerCase());
-      } else refuse(node, node.getText(), RULES.styleProp);
+        if (first !== undefined && ts.isStringLiteralLike(first)) {
+          styleKey(node, first.text, first.text.toLowerCase());
+        } else refuse(node, node.getText(), RULES.styleProp);
+      }
+      if (method === "setAttribute" && literal(first)?.toLowerCase() === "style") {
+        refuse(node, node.getText(), RULES.styleText);
+      }
+      if (callee.getText() === "Object.assign" && isStyle(first)) {
+        for (const source of rest) {
+          const inner = bare(source);
+          if (!ts.isObjectLiteralExpression(inner))
+            refuse(source, source.getText(), RULES.styleProp);
+          else if (inner !== source) styleObject(inner);
+        }
+      }
     }
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText();
