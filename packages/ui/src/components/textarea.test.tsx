@@ -13,4 +13,12 @@ describe("Textarea", () => {
     await userEvent.keyboard("one{Enter}two");
     expect((textarea as HTMLTextAreaElement).value).toBe("one\ntwo");
   });
+
+  it("types 14 px text, and 16 px on a coarse pointer", () => {
+    render(<Textarea aria-label="Comment" />);
+    const field = screen.getByRole("textbox", { name: "Comment" });
+    expect([...field.classList]).toEqual(
+      expect.arrayContaining(["text-sm", "pointer-coarse:text-base"])
+    );
+  });
 });

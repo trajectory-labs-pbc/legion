@@ -105,6 +105,40 @@ test("MLP-02 a NO_SUCH_CODE lookup failure renders inline under the input", asyn
   }
 });
 
+// A 404 FEATURE_OFF or a 403 says nothing of the code. A 429 never reaches the field as a
+// refusal: the lookup asks again under its key.
+test.each([
+  [404, "NO_SUCH_CODE", "true"],
+  [404, "FEATURE_OFF", null],
+  [403, "FORBIDDEN", null],
+] as const)("MLP-11 the code field names a %i %s lookup failure", async (status, code, invalid) => {
+  const user = userEvent.setup();
+  const lookupMachineCredential = spyOn(api, "lookupMachineCredential").mockRejectedValue(
+    new ApiError(status, { code, error: "The lookup was refused." })
+  );
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+
+  try {
+    renderPage();
+    const field = screen.getByLabelText("Code shown on the machine");
+    await user.click(field);
+    await user.paste("zzzz999");
+    await user.click(screen.getByRole("button", { name: "Look up" }));
+
+    await screen.findByRole("alert");
+    expect(field).toHaveAccessibleDescription("The lookup was refused.");
+    expect(field.getAttribute("aria-invalid")).toBe(invalid);
+    // The failure is of the code looked up, not of a new one.
+    await user.type(field, "9");
+    expect(field).not.toHaveAttribute("aria-describedby");
+    expect(field).not.toHaveAttribute("aria-invalid");
+  } finally {
+    cleanup();
+    lookupMachineCredential.mockRestore();
+    getMachineLogins.mockRestore();
+  }
+});
+
 test("MLP-03 code -> lookup -> Deny posts the looked-up code too", async () => {
   const user = userEvent.setup();
   const lookupMachineCredential = spyOn(api, "lookupMachineCredential").mockResolvedValue(
@@ -228,6 +262,26 @@ test("MLP-05 a lookup the reader stopped says it may have been made", async () =
   }
 });
 
+test("MLP-11 the code field names a stopped lookup's note and stays valid", async () => {
+  jest.useFakeTimers();
+  const lookup = spyOn(api, "lookupMachineCredential").mockRejectedValue(dropped());
+  const getMachineLogins = spyOn(api, "getMachineLogins").mockResolvedValue({ credentials: [] });
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  try {
+    await stoppedPage(queryClient);
+    await stopTheLateWrite(queryClient);
+    const field = screen.getByLabelText("Code shown on the machine");
+    expect(field).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+    expect(field).not.toHaveAttribute("aria-invalid");
+  } finally {
+    realClock();
+    cleanup();
+    queryClient.clear();
+    lookup.mockRestore();
+    getMachineLogins.mockRestore();
+  }
+});
+
 test("MLP-06 an approval the reader stopped says it may have been made", async () => {
   jest.useFakeTimers();
   const lookedUp = Promise.withResolvers<RecordResponse>();
@@ -310,6 +364,7 @@ test.each(
     await user.click(pressedButton);
     await waitFor(() => expect(pressedButton).toHaveAttribute("aria-busy", "true"));
     expect(pressedButton).toHaveFocus();
+    expect(screen.getByLabelText("Code shown on the machine")).toBeEnabled();
     const otherButton = screen.getByRole("button", { name: other });
     expect(otherButton).not.toHaveAttribute("aria-busy");
     // The guard would drop a second decision, so the other button does not offer one.
@@ -339,6 +394,7 @@ test("MLP-09 Look up waits for a code, keeps the focus while it is out, and a re
     await user.click(button);
     await waitFor(() => expect(button).toHaveAttribute("aria-busy", "true"));
     expect(button).toHaveFocus();
+    expect(screen.getByLabelText("Code shown on the machine")).toBeEnabled();
     answer.reject(new ApiError(404, { code: "NOT_FOUND", error: "No login waits on that code." }));
     expect(await screen.findByRole("alert")).toHaveTextContent("No login waits on that code.");
   } finally {

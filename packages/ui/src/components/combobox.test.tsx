@@ -169,4 +169,12 @@ describe("Combobox", () => {
     );
     expect(screen.getByRole("button", { name: "Show fruits" })).toBeDefined();
   });
+
+  it("types 16 px text in a chips input on a coarse pointer", () => {
+    render(<Multiple />);
+    // The chips field gives the 14 px; its input grows on a coarse pointer.
+    expect([...screen.getByRole("combobox", { name: "Fruits" }).classList]).toEqual(
+      expect.arrayContaining(["pointer-coarse:text-base"])
+    );
+  });
 });

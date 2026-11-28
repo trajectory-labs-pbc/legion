@@ -28,6 +28,7 @@ This list holds only the items that the page's tests already named by ID, so it 
 | MLP-08 | Code form | Approve keeps the focus while it is out, Deny waits for it, and a refusal is announced | | |
 | MLP-09 | Code form | Look up waits for a code, keeps the focus while it is out, and a refused lookup is announced | | |
 | MLP-10 | Code form | Deny keeps the focus while it is out, Approve waits for it, and a refusal is announced | | |
+| MLP-11 | Code form | While the code field holds the code looked up, it names the failed lookup as its description, and is invalid only when the server refused that code | changed | Upstream draws the failure under the field without tying it to the field (rule FM2) |
 | MLD-01 | Code form | After Approve succeeds, the page shows the decision and no decision buttons | | |
 | MLD-02 | Code form | After Deny succeeds, the page shows the decision and no decision buttons | | |
 | MLD-03 | Code form | A looked-up login already approved shows its decision and no decision buttons | | |

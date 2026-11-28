@@ -264,7 +264,10 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
   return (
     <ComboboxPrimitive.Input
       data-slot="combobox-chip-input"
-      className={cn("min-w-16 flex-1 bg-transparent outline-none", className)}
+      className={cn(
+        "min-w-16 flex-1 bg-transparent outline-none pointer-coarse:text-base",
+        className
+      )}
       {...props}
     />
   );

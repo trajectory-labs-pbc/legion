@@ -19,4 +19,12 @@ describe("Input", () => {
     await userEvent.keyboard("Fix the build");
     expect((input as HTMLInputElement).value).toBe("Fix the build");
   });
+
+  it("types 14 px text, and 16 px on a coarse pointer", () => {
+    render(<Input aria-label="Title" />);
+    const field = screen.getByRole("textbox", { name: "Title" });
+    expect([...field.classList]).toEqual(
+      expect.arrayContaining(["text-sm", "pointer-coarse:text-base"])
+    );
+  });
 });

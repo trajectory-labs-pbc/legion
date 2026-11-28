@@ -49,9 +49,13 @@ function Decision({
   );
 }
 
+/** The code form's failure line, which the code field names as its description. */
+const CODE_ERROR = "machine-code-error";
+
 /** The person types the code a machine printed, then approves or denies that machine's login. */
 export function MachineLoginPage(): ReactNode {
-  const { code, typeCode, lookUp, lookup, approve, deny, submitGuard, view } = useMachineLogin();
+  const { code, typeCode, lookUp, lookup, codeFailure, approve, deny, submitGuard, view } =
+    useMachineLogin();
   useDocumentTitle("Machine login · Dispatch");
   const codeField = useRef<HTMLInputElement>(null);
   const card = useRef<HTMLDivElement>(null);
@@ -88,6 +92,8 @@ export function MachineLoginPage(): ReactNode {
         <div className="flex flex-col gap-1">
           <Label htmlFor="machine-code">Code shown on the machine</Label>
           <Input
+            aria-describedby={codeFailure === null ? undefined : CODE_ERROR}
+            aria-invalid={codeFailure === "refused" || undefined}
             autoComplete="off"
             className="font-mono"
             id="machine-code"
@@ -110,6 +116,7 @@ export function MachineLoginPage(): ReactNode {
         <WriteFailure
           anew="Look up sends the code in the field as a new lookup."
           error={lookup.error}
+          id={CODE_ERROR}
           refused={(error) => apiErrorMessage(error, "Could not look up that code.")}
           what="the lookup of that code"
         />
