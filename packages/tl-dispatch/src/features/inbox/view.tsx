@@ -1,4 +1,5 @@
 import { EmptyState } from "@legion/ui/blocks/states";
+import { InboxIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { credentialsHoldEmptyList } from "@/data/inbox/empty-list";
@@ -38,20 +39,23 @@ export function InboxView(): ReactNode {
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <ViewHeader tabs={TABS} title="Inbox" />
-      {address.show === "dismissed" ? null : (
-        <InboxListBoundary
-          empty={
-            empty === undefined ? null : (
-              <EmptyState description={empty.sentence} title={empty.title} />
-            )
-          }
-          read={list}
-        >
-          {list.state === "ready" ? (
-            <InboxGroups grouping={address.group} list={list.data} />
-          ) : null}
-        </InboxListBoundary>
-      )}
+      {/* From 1280 px the page owns its scroller (route.tsx): the list scrolls, the header stays. */}
+      <div className="min-h-0 flex-1 xl:overflow-y-auto">
+        {address.show === "dismissed" ? null : (
+          <InboxListBoundary
+            empty={
+              empty === undefined ? null : (
+                <EmptyState description={empty.sentence} icon={<InboxIcon />} title={empty.title} />
+              )
+            }
+            read={list}
+          >
+            {list.state === "ready" ? (
+              <InboxGroups grouping={address.group} list={list.data} />
+            ) : null}
+          </InboxListBoundary>
+        )}
+      </div>
     </section>
   );
 }

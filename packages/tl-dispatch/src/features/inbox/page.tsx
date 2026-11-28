@@ -15,7 +15,8 @@ const InboxView = lazyNamed(() => import("./view"), "InboxView");
 function UpstreamInboxPage(): ReactNode {
   const readingPaneShown = useMediaQuery(READING_PANE_QUERY);
   return (
-    <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col" : undefined}>
+    // The Inbox's layout gives main no padding (route.tsx), so upstream's page keeps its own.
+    <section className={readingPaneShown ? "flex min-h-0 flex-1 flex-col p-6" : "px-6 pt-6"}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <SurfaceTitle size="page">Inbox</SurfaceTitle>
         <Button render={<PageLink page={routes.inbox.answers} />} size="sm" variant="link">

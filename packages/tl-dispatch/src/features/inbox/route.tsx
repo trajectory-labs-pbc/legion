@@ -10,9 +10,11 @@ import { InboxPage } from "./page";
 
 const AnswersPage = lazyNamed(() => import("@/upstream/views/inbox/answers"), "AnswersPage");
 
-/** The Inbox fills the viewport while its reading pane shows. */
+/** The Inbox fills the viewport while its reading pane shows, and its list meets the panel's
+ *  edges; upstream's page pads itself. */
 const INBOX_LAYOUT = {
   inbox: true,
+  flush: true,
   fillsViewport: "reading-pane",
 } as const satisfies PageLayout;
 

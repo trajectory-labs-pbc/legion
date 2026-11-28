@@ -10,6 +10,8 @@ export interface PageLayout {
    * Inbox's reading pane shows.
    */
   readonly fillsViewport?: boolean | "reading-pane";
+  /** The page draws to the panel's edges: main has no padding, and the page pads itself. */
+  readonly flush?: boolean;
   /** The page has the margin column. */
   readonly margin?: boolean;
   /**

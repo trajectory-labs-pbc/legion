@@ -38,6 +38,8 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   inbox,
   page,
 }, testInfo) => {
+  // Older rows first, so the list runs past the fold and the rows named below are its newest.
+  await inbox.asks(14, "Which shard replays the ledger");
   const release = await inbox.ask("withOptions", "Which release path for the train?");
   await inbox.ask("noOptions", "Who reviews the migration notes?");
   const later = await inbox.ask("oneChoice", "Where does the canary run first?");
@@ -58,16 +60,24 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await page.reload();
   await expect(newView(page)).toBeVisible();
 
-  // Later starts folded; the pointer and the keyboard each open and close it.
+  // From 1280 px the list scrolls in itself under the header, which stays; the page does not.
   const fold = main(page).getByRole("button", { name: /^Later/ });
+  await main(page).getByText(release.text).first().hover();
+  await page.mouse.wheel(0, 4000);
+  await expect(fold).toBeInViewport();
+  await expect(newView(page)).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Later starts folded; the pointer and the keyboard each open and close it.
   await expect(fold).toHaveAttribute("aria-expanded", "false");
   await fold.click();
   await expect(main(page).getByText(later.text).first()).toBeVisible();
   await fold.press("Enter");
   await expect(fold).toHaveAttribute("aria-expanded", "false");
 
-  // The screenshots show the page at rest: no focus ring, and no colour mid-transition.
+  // The screenshots show the list's top at rest: no focus ring, and no colour mid-transition.
   await fold.blur();
+  await page.mouse.wheel(0, -4000);
   for (const width of WIDTHS) {
     await page.setViewportSize({ height: 900, width });
     for (const colorScheme of SCHEMES) {

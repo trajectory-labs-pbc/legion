@@ -31,7 +31,7 @@ function RowAvatar({ facts }: { facts: InboxRowFacts }): ReactNode {
       </Avatar>
       <span
         aria-label={facts.kindLabel}
-        className="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full bg-background text-foreground"
+        className="absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-foreground"
         role="img"
       >
         <Kind aria-hidden className="size-3" />
@@ -114,11 +114,11 @@ export function InboxRowView({
           {unread ? (
             <span
               aria-label="Unread"
-              className="mr-2 inline-block size-1.5 rounded-full bg-foreground align-middle"
+              className="mr-1.5 inline-block size-2 rounded-full bg-foreground align-middle"
               role="img"
             />
           ) : null}
-          {isDrawn(owner) ? <span className="mr-2">{owner}</span> : null}
+          {isDrawn(owner) ? <span className="mr-1 text-muted-foreground">{owner}</span> : null}
           <span>{title}</span>
         </>
       }

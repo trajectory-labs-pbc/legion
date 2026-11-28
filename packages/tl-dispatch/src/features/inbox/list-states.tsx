@@ -16,9 +16,15 @@ function InboxLoading(): ReactNode {
   return (
     <LoadingState label="Loading your inbox">
       {ROWS.map((row) => (
-        <div className="flex h-list-row-2 flex-col justify-center gap-2 px-4" key={row}>
-          <Skeleton className="h-3 w-2/5" />
-          <Skeleton className="h-3 w-3/5" />
+        <div className="flex h-list-row-2 items-center gap-2 px-3" key={row}>
+          <Skeleton className="size-9 shrink-0 rounded-full" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className="h-3 w-2/5" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-3 w-3/5" />
+              <Skeleton className="ml-auto h-3 w-6" />
+            </div>
+          </div>
         </div>
       ))}
     </LoadingState>
