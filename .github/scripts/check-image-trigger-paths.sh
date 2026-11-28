@@ -878,6 +878,7 @@ NON_BUILDING_ACTIONS = {
     "actions/setup-node",
     "actions/upload-artifact",
     "actions/upload-pages-artifact",
+    "anthropics/claude-code-action",
     "docker/login-action",
     "docker/metadata-action",
     "docker/setup-buildx-action",

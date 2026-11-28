@@ -1,0 +1,33 @@
+name: Fork review test
+
+# This repository is a fork, and this file, which upstream does not have, runs
+# .github/scripts/fork-review.test.sh on a change to the review's files. The review itself runs
+# only from main (fork-review.yaml says why), so this is the check a change to it gets before it
+# merges.
+on:
+  pull_request:
+    paths:
+      - .github/fork-review/**
+      - .github/scripts/fork-review.sh
+      - .github/scripts/fork-review.test.sh
+      - .github/scripts/check-private-names.sh
+      - .github/scripts/test-lib.sh
+      - .github/workflows/fork-review.yaml
+      - .github/workflows/fork-review-test.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test the review script
+        shell: bash
+        run: .github/scripts/fork-review.test.sh
