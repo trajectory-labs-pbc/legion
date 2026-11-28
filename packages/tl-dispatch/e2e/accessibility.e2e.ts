@@ -3,8 +3,9 @@
 // serious or critical finding, and accepts none. Each scan leaves out upstream's views inside the
 // region: each component of the seam draws inside a `data-upstream-view` mark, and upstream's own
 // axe run reads those. Fork elements passed into a marked component sit in a `data-fork-view`
-// mark inside it, which the scan reads again. The run seeds, so it is local only: the deployed
-// mode leaves this file out (modes.ts).
+// mark inside it, which the scan reads again. No region opens an upstream dialog or overlay: the
+// new-version banner shows only after a new deploy, and the chord indicator only mid-chord. The
+// run seeds, so it is local only: the deployed mode leaves this file out (modes.ts).
 //
 // Beside it, with the same scope: a Tab walk over each region, in light and in dark, that goes
 // round the page back to its first stop and finds FO1's outline at every stop in the region; and
@@ -56,8 +57,9 @@ interface Region {
   /** The region's element: axe reads only inside it, and the Tab walk counts only the stops in
    *  it. */
   selector: string;
-  /** What each check leaves out of the region beside upstream's widgets: a region another row
-   *  reads, or an upstream page. axe and the Tab walk skip it, and the width check hides it. */
+  /** What each check leaves out of the region beside the `data-upstream-view` wrappers: a region
+   *  another row reads, or an upstream page. axe and the Tab walk skip it, and the width check
+   *  hides it. */
   exclude?: readonly string[];
   viewport?: { width: number; height: number };
   /** Runs before the page opens: the records it draws, and any request it must not send. */
@@ -598,8 +600,8 @@ async function walk(page: Page, region: Region): Promise<Unmarked[]> {
   return unmarked;
 }
 
-/** Hides upstream's views and what `region` leaves out, so the width check measures the fork's
- *  boxes in a layout without them. */
+/** Hides what `leftOut(region)` names, so the width check measures the fork's boxes in a layout
+ *  without it. */
 async function hideLeftOut(page: Page, region: Region): Promise<void> {
   await page.addStyleTag({
     content: `${leftOut(region).join(", ")} { display: none !important; }`,

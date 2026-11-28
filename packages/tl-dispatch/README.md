@@ -278,7 +278,8 @@ refuses to start it on a folder with no build.
   first (`sign-out-asks`; only the local mode confirms it). The first two pages change with no
   reload by the test.
   `e2e/accessibility.e2e.ts`, in the local mode only, runs axe at WCAG 2.0 and 2.1 A and AA on
-  each region the app draws, in light and in dark, and leaves out upstream's widgets and pages.
+  each region the app draws, in light and in dark, and leaves out upstream's views in each region
+  (what the fork mounts in a `data-upstream-view` wrapper, and the issue frame's page).
   With the same scope, a Tab walk finds the focus outline at each Tab stop of each region but the
   account menu and the key tooltip; a region that holds no control is walked too, and must have no
   stop. Each page in `forkPages`, and the sign-in page, read with upstream's views and what a
