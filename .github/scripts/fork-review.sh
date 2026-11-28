@@ -20,8 +20,12 @@ output() { # output NAME VALUE: one line of the step's outputs
   printf '%s=%s\n' "$1" "$2" >> "${GITHUB_OUTPUT:?}"
 }
 
-# The author associations whose pull requests, reviews and comments count as a member's.
-members='["OWNER","MEMBER","COLLABORATOR"]'
+# permission LOGIN: LOGIN's access to this repository. A member is a person with write, maintain or
+# admin access. The event's author_association is not read: it shows a private member of the
+# organization as CONTRIBUTOR.
+permission() {
+  gh api "repos/${GITHUB_REPOSITORY:?}/collaborators/$1/permission" --jq .permission
+}
 
 # The files on main that decide a review. A change to one makes every diff new again.
 reviewer_paths=(.github/fork-review .github/scripts/fork-review.sh .github/workflows/fork-review.yaml
@@ -33,7 +37,7 @@ reviewer_paths=(.github/fork-review .github/scripts/fork-review.sh .github/workf
 # other than the last pusher.
 gate() {
   local event=${GITHUB_EVENT_NAME:?} payload=${GITHUB_EVENT_PATH:?} decision reason
-  local author head_ref head_repo base_repo
+  local author head_ref head_repo base_repo access
   [ "$event" = pull_request_target ] || fail "fork-review runs on pull_request_target, not on $event"
   author=$(jq -r '.pull_request.user.login' "$payload")
   head_ref=$(jq -r '.pull_request.head.ref' "$payload")
@@ -46,12 +50,15 @@ gate() {
   elif [ "$author" = 'legion-upstream-sync[bot]' ] && [ "$head_ref" = fork-sync ] && [ "$head_repo" = "$base_repo" ]; then
     decision=pass
     reason="an upstream sync pull request: upstream reviewed its code before it merged"
-  elif jq -e --argjson members "$members" '.pull_request.author_association as $a | $members | index($a)' "$payload" > /dev/null; then
+  elif ! access=$(permission "$author"); then
+    decision=fail
+    reason="the access of $author to this repository could not be read, so no review runs; re-run the job"
+  elif [[ $access =~ ^(admin|maintain|write)$ ]]; then
     decision=review
-    reason="the author is a member of the repository"
+    reason="the author is a member of the repository ($access access)"
   else
     decision=fail
-    reason="the author is not a member of this repository, so no review runs: a maintainer takes the branch into this repository and opens the pull request from there"
+    reason="the author is not a member of this repository ($access access), so no review runs: a maintainer takes the branch into this repository and opens the pull request from there"
   fi
   echo "$decision: $reason"
   output decision "$decision"
@@ -106,9 +113,16 @@ decide() {
 
 # trusted ENDPOINT FIELDS: the items of a paginated list whose author is a member or this
 # workflow, as JSON lines of FIELDS. Anyone signed in can review a public pull request.
+# An author whose access cannot be read counts as no member.
 trusted() {
-  gh api --paginate "$1" | jq -c --argjson members "$members" \
-    ".[] | select((.author_association as \$a | \$members | index(\$a)) or .user.login == \"github-actions[bot]\") | $2"
+  local items login access allowed=("github-actions[bot]")
+  items=$(gh api --paginate "$1" | jq -c '.[]')
+  while IFS= read -r login; do
+    if access=$(permission "$login" 2> /dev/null) && [[ $access =~ ^(admin|maintain|write)$ ]]; then
+      allowed+=("$login")
+    fi
+  done < <(jq -r '.user.login' <<< "$items" | sort -u)
+  jq -c --args ".user.login as \$u | select(\$ARGS.positional | index(\$u)) | $2" "${allowed[@]}" <<< "$items"
 }
 
 # prompt DIR BASE HEAD PR: the prompt and the answer's schema, as step outputs.
