@@ -625,6 +625,8 @@ describe("the theme", () => {
     const texts = {
       body: textVariants({ size: "body", tone: "muted", weight: "medium" }),
       caption: textVariants({ size: "caption", tone: "muted", weight: "medium" }),
+      // Its own weight is part of its size.
+      figure: textVariants({ size: "figure", tone: "muted" }),
     } satisfies Record<TextSize, string>;
     const recipes = [
       ...Object.values(headings).map((recipe) => [recipe, "wrap-balance"] as const),
