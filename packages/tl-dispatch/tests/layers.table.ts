@@ -22,7 +22,7 @@ export type Rule = (typeof RULES)[number];
 
 /**
  * The layers, highest first; each inner list is one row. A path is a folder (`src/shell`), a file
- * (`src/start.tsx`) or a pattern whose `*` is one path segment, so `src/features/*` is each
+ * (`src/app/start.tsx`) or a pattern whose `*` is one path segment, so `src/features/*` is each
  * feature's folder and not a loose file beside them; the most specific match wins. The UI
  * package counts as above every layer.
  */
@@ -41,8 +41,7 @@ export const ROWS = [
   [{ layer: "shell", paths: ["src/shell"] }],
   // Until the features move: each page file of src/pages, the parts in its folder included.
   [{ layer: "routes", paths: ["src/features/*/route.tsx", "src/pages"] }],
-  // Until the features move: src/start.tsx.
-  [{ layer: "app", paths: ["src/app", "src/start.tsx"] }],
+  [{ layer: "app", paths: ["src/app"] }],
 ] as const;
 
 export type Layer = (typeof ROWS)[number][number]["layer"];
@@ -69,7 +68,8 @@ const PAGE_VIEW_READERS: readonly Reader[] = [
 /**
  * The readers of each seam file and each root file. A `<page>` in a reader stands for the
  * `<page>` of the file read. A seam file may read another, and a test may read each one; a seam
- * file or a root file that this table does not list has no other reader.
+ * file or a root file that this table does not list has no other reader. A file of no layer reads
+ * `src/app` only as its entry here says.
  */
 export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/contract.ts": ["data", "app"],
@@ -90,6 +90,10 @@ export const READERS: Readonly<Record<string, readonly Reader[]>> = {
   "src/upstream/views/<page>.tsx": PAGE_VIEW_READERS,
   "src/upstream/views/<page>": PAGE_VIEW_READERS,
   "src/views.ts": ["tests/map"],
+  // The entry runs once a process, so one test loads it.
+  "src/main.tsx": ["tests/main.test.tsx"],
+  // The composition root: only the entry starts it, and a test may draw it.
+  "src/app": ["src/main.tsx"],
   "src/*.css": ["src/main.tsx", "src/styles.css"],
 };
 
@@ -113,10 +117,10 @@ export const LIBRARIES: readonly {
 }[] = [
   {
     name: /^(react-router(-dom)?|@tanstack\/[a-z-]*router[a-z-]*)$/,
-    // The features move adds src/app.
-    owners: ["navigation"],
+    owners: ["navigation", "app"],
     tests: true,
-    reason: "only src/navigation imports the router, so a router move changes one folder",
+    reason:
+      "only src/navigation and src/app import the router, so a router move changes two folders",
   },
   {
     name: /^@tanstack\/react-query$/,
@@ -146,7 +150,6 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/shell/account-menu.tsx": ["@/pages/people"],
     "src/shell/app-name.tsx": ["@/pages/inbox"],
     "src/shell/compact-header.tsx": ["@/pages/agents", "@/pages/inbox"],
-    "src/shell/main-region.tsx": ["@/pages/index"],
     "src/shell/nav-pages.ts": [
       "@/pages/agents",
       "@/pages/delivery",
@@ -155,12 +158,7 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
       "@/pages/priorities",
       "@/pages/settings",
     ],
-    "src/shell/sidebar-data.test.ts": ["@/pages/index"],
-    "src/shell/sidebar-data.ts": ["@/pages/index", "@/pages/page"],
     "src/shell/sidebar.tsx": ["@/pages/agents", "@/pages/issue", "@/pages/project"],
-    "src/shell/use-focus-main.test.tsx": ["@/pages/index"],
-    "src/shell/use-focus-main.ts": ["@/pages/page"],
-    "src/shell/use-shell-layout.ts": ["@/pages/index"],
     "src/shell/use-shell-overlays.ts": [
       "@/pages/inbox",
       "@/pages/machine-login",
@@ -172,7 +170,6 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/pages/machine-login/machine-logins.tsx": ["@tanstack/react-query"],
     "src/pages/machine-login/use-machine-login.ts": ["@tanstack/react-query"],
     "src/pages/machine-login/use-revoke.ts": ["@tanstack/react-query"],
-    "src/shell/providers.tsx": ["@tanstack/react-query"],
   },
   "seam-readers": {
     "src/pages/agents.tsx": [
@@ -221,7 +218,5 @@ export const BREAKS: Partial<Record<Rule, Readonly<Record<string, readonly strin
     "src/pages/page.ts": ["@/upstream/routes"],
     "src/pages/people.tsx": ["@/upstream/routes"],
     "src/pages/priorities.tsx": ["@/upstream/queries"],
-    // The kinds of writes register where the app starts; the features move puts that in src/app.
-    "src/shell/auth-gate.tsx": ["@/upstream/write-kinds"],
   },
 };

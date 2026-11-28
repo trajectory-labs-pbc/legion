@@ -139,6 +139,9 @@ describe("layers", () => {
     ["src/shell/x.tsx", 'import { useNavigate } from "react-router-dom";', "only src/navigation"],
     ["src/pages/x.tsx", 'import { Link } from "react-router";', "only src/navigation"],
     ["src/main.tsx", 'import { BrowserRouter } from "react-router-dom";', "only src/navigation"],
+    ["src/shell/x.tsx", 'import { useLocation } from "react-router-dom";', "and src/app import"],
+    ["src/shell/x.tsx", 'import { AppProviders } from "@/app/providers";', "shell is above app"],
+    ["src/features/inbox/x.tsx", 'import { pages } from "@/app/routes";', "features is above app"],
     [
       "src/commands/x.ts",
       'import { AppShell } from "../shell/app-shell";',
@@ -162,7 +165,12 @@ describe("layers", () => {
       'import config from "../../vite.config";',
       "only a test imports vite.config.ts",
     ],
-    ["src/shell/x.test.tsx", 'import "../main";', "src/main.tsx is read by no file"],
+    ["src/shell/x.test.tsx", 'import "../main";', "src/main.tsx is read by tests/main.test.tsx"],
+    [
+      "src/views.ts",
+      'import { pages } from "@/app/routes";',
+      "src/app/routes.ts is read by src/main.tsx",
+    ],
     ["tests/x.ts", 'import "../src/views";', "src/views.ts is read by tests/map"],
   ])("refuses %s: %s", (path, text, rule) => {
     expect(rulesOf([{ path, text }])).toContain(rule);
@@ -374,11 +382,15 @@ describe("layers", () => {
     ["src/pages/x.tsx", 'import { AppShell } from "@/shell/app-shell";', undefined],
     ["src/commands/x.ts", 'import { lazyNamed } from "@/loading/lazy-named";', undefined],
     ["src/navigation/x.tsx", 'import { Link } from "react-router-dom";', undefined],
+    ["src/app/x.tsx", 'import { BrowserRouter } from "react-router-dom";', undefined],
     ["src/data/x.ts", 'import { useQuery } from "@tanstack/react-query";', undefined],
     ["src/shell/x.test.tsx", 'import { QueryClient } from "@tanstack/react-query";', undefined],
     ["src/shell/x.test.tsx", 'import { MemoryRouter } from "react-router-dom";', undefined],
     ["src/shell/x.test.tsx", 'import { renderApp } from "../../tests/react";', undefined],
     ["tests/x.ts", 'import { AppShell } from "@/shell/app-shell";', undefined],
+    ["tests/main.test.tsx", 'await import("../src/main");', undefined],
+    ["src/main.tsx", 'import { start } from "./app/start";', undefined],
+    ["tests/x.ts", 'import { pages } from "@/app/routes";', undefined],
     [
       "tests/x.ts",
       'import { y } from "./upstream";',

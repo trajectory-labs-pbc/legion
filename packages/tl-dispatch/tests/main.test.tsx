@@ -1,18 +1,20 @@
+// Loads the entry, which runs once a process: so this file holds one test.
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { act } from "react";
+import * as client from "react-dom/client";
 
-import { holdReads } from "../tests/network";
-import { start } from "./start";
+import { holdReads } from "./network";
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-test("SHL-38 installs the stale-chunk recovery before React takes the root for its first render", async () => {
+test("SHL-38 the entry installs the stale-chunk recovery before React takes the root", async () => {
   // The sign-in check never answers: the app stays on its loading screen.
   holdReads("/auth/whoami");
   const root = document.createElement("div");
+  root.id = "root";
   document.body.append(root);
   cleanups.push(() => root.remove());
   const steps: string[] = [];
@@ -35,12 +37,26 @@ test("SHL-38 installs the stale-chunk recovery before React takes the root for i
       add.apply(target, args);
     });
   });
-  let app: { stop(): void } | undefined;
+  // The entry keeps no handle on its root, so the test takes one to unmount it.
+  const createRoot = client.createRoot;
+  const roots: client.Root[] = [];
+  const taken = spyOn(client, "createRoot").mockImplementation((...args) => {
+    const made = createRoot(...args);
+    roots.push(made);
+    return made;
+  });
+  cleanups.push(
+    () => taken.mockRestore(),
+    () =>
+      act(() => {
+        for (const made of roots) made.unmount();
+      })
+  );
   await act(async () => {
-    app = start(root);
+    await import("../src/main");
   });
   for (const spy of spies) spy.mockRestore();
-  cleanups.push(() => act(() => app?.stop()));
   expect(steps).toEqual(["recovery installed", "root taken"]);
+  expect(roots).toHaveLength(1);
   expect(root.querySelector('[aria-busy="true"]')).not.toBeNull();
 });

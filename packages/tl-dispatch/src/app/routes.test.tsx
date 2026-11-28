@@ -1,7 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { isValidElement } from "react";
+import { Route, Routes } from "react-router-dom";
+import { useAddress } from "@/navigation/hooks";
 import { pageHref } from "@/navigation/page-route";
-import { pageAt, pages } from "@/pages/index";
+import { PageRoutes } from "@/navigation/route-tree";
+import { InboxPage, inbox } from "@/pages/inbox";
+import type { PageLayout } from "@/shell/page-layout";
 import {
   buildInboxPath,
   liveViewSessionOf,
@@ -11,8 +17,52 @@ import {
   routeIsInbox,
   routeProjectOf,
 } from "@/upstream/routes";
-import { InboxPage, inbox } from "./inbox";
-import type { PageLayout } from "./page";
+
+import { pageAt, renderApp } from "../../tests/app";
+import { MemoryNavigationProvider } from "../../tests/navigation";
+import { render } from "../../tests/react";
+import { SRC_DIR } from "../../tests/source";
+import { pages } from "./routes";
+
+/** The route files: one for each page, beside the parts in its folder. */
+function routeFiles(): string[] {
+  return readdirSync(join(SRC_DIR, "pages"))
+    .filter((name) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) && name !== "page.ts")
+    .map((name) => name.replace(/\.tsx?$/, ""));
+}
+
+const mounted: { unmount(): void }[] = [];
+afterEach(() => {
+  for (const view of mounted.splice(0)) view.unmount();
+});
+
+describe("the route map", () => {
+  test("holds each route file, named by its page's id", () => {
+    expect(pages.map((page) => page.id).sort()).toEqual(routeFiles().sort());
+  });
+
+  test("PageRoutes draws the page an address opens", () => {
+    mounted.push(renderApp(<PageRoutes />, { path: "/nowhere" }));
+    expect(document.body.textContent).toContain("not found");
+  });
+
+  test("SHL-42 the old Replies address replaces itself with the Inbox's reply rows", () => {
+    const Address = () => {
+      const { pathname, search } = useAddress();
+      return <p>{pathname + search}</p>;
+    };
+    const view = render(
+      <MemoryNavigationProvider path="/replies">
+        <Routes>
+          <Route element={inbox.routes.replies.element} path={inbox.routes.replies.path} />
+          <Route element={<Address />} path={inbox.routes.home.path} />
+        </Routes>
+      </MemoryNavigationProvider>
+    );
+    mounted.push(view);
+    expect(view.container.textContent).toBe("/?type=reply");
+  });
+});
 
 describe("the route tree", () => {
   test("holds each path once", () => {

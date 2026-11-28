@@ -1,12 +1,10 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { act, type ReactNode } from "react";
-
+import { renderApp } from "../../tests/app";
 import { GlobalCommands } from "../../tests/global-shell";
-import { MemoryNavigationProvider } from "../../tests/navigation";
 import { holdShellReads } from "../../tests/network";
-import { render, settle } from "../../tests/react";
+import { settle } from "../../tests/react";
 import { shellChunksArrive } from "../../tests/shell-chunks";
 import { NavigationPanel } from "./navigation-panel";
 
@@ -24,11 +22,7 @@ afterEach(() => {
 
 function mount(children: ReactNode) {
   holdShellReads();
-  const view = render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryNavigationProvider path="/agents">{children}</MemoryNavigationProvider>
-    </QueryClientProvider>
-  );
+  const view = renderApp(children, { path: "/agents" });
   cleanups.push(() => view.unmount());
   return view.container;
 }

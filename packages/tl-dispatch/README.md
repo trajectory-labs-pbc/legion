@@ -15,6 +15,7 @@ replaces them one page at a time.
 | `src/data` | The hooks through which a view reads and writes Dispatch's data, the signed-in person (`session.ts`, the one file that reads it) and what a surface says of a failed write; only it and the seam reach the network |
 | `src/shell` | The frame every page renders in |
 | `src/pages` | One file per page: its named routes, the app that draws it and the upstream views it maps. A page this app serves keeps its parts in a folder of its name |
+| `src/app` | The composition root: the route map (`routes.ts`), the app's providers and the start; only `src/main.tsx` and the tests import it |
 | `src/features` | The domain parts several pages and the shell share: `needs-you`, the one mark for what waits on the reader, and `read-failure`, a failed read's alert with its Retry; only `needs-you` imports `@legion/ui/components/attention-mark` (`tests/needs-you.test.ts`) |
 
 `tests/layers.table.ts` holds the layers and their rules as data, with the list of the imports
@@ -112,7 +113,7 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
 `src/navigation` builds everything else from them:
 
 - `pageHref(route, params?, search?)`, `<PageLink page params? search>`, `<Redirect>`,
-  `usePageNavigate()`, `usePageParams(route)`, `usePageSearch(route)` and `useCurrentPage()`, each
+  `usePageNavigate()`, `usePageParams(route)`, `usePageSearch(route)` and `useCurrentRoute()`, each
   typed from the route's path. `params` is required only where the path binds a `:name`.
 - `<PageLink>` starts the route's `prefetch` reads when the pointer rests on it for 100 ms or it
   takes focus. The pointer leaving before then starts nothing. A read that started runs to its
@@ -120,13 +121,15 @@ alone reads: `/`-separated text, a `:name` param and a last `*` for the rest of 
 - `route-tree.tsx` builds a route tree from the pages it is handed, through `routerPath`.
 
 A route also declares its `layout`, whose type is the app's: navigation carries it and reads none
-of it. `PageLayout` in `src/pages/page.ts` says whether the page fills the viewport, has the
+of it. `PageLayout` in `src/shell/page-layout.ts` says whether the page fills the viewport, has the
 margin and frames itself as the outline issue page, and which issue, project and live view it
 shows. Where upstream's parsers decide, the layout is a function of the address.
 
-`src/pages/index.ts` lists the pages and hands them to `createRouteTree`, which gives the outlet
-(`PageRoutes`), `pageAt` and `useCurrentPage()`. The shell reads the address only through the
-layout `useCurrentPage()` returns. `src/pages/index.test.ts` holds every declaration to upstream's
+`src/navigation/route-tree.tsx` holds the app's one route tree: `RouteProvider`, the outlet
+(`PageRoutes`) and `useCurrentRoute<Layout>()`. The shell binds `PageLayout` to it in
+`src/shell/page-layout.ts`. `src/app/routes.ts` lists the pages, and the app's providers hand
+them to `RouteProvider`. The shell reads the address only through the layout
+`useCurrentRoute()` returns. `src/app/routes.test.tsx` holds every declaration to upstream's
 route rules.
 
 ### Changing the router
@@ -136,7 +139,8 @@ A move to another router (TanStack Router, say) changes these files of this pack
 - `src/navigation/router-path.ts`: the grammar written in the router's syntax (TanStack: `$name`
   for `:name` and `$` for `*`).
 - `src/navigation/provider.tsx`: the router provider. `tests/navigation.tsx`: the one tests use.
-- `src/navigation/route-tree.tsx`: `createRouteTree`: the outlet, `pageAt` and `useCurrentPage`.
+- `src/navigation/route-tree.tsx`: `createRouteTree`, `RouteProvider`, the outlet, `pageAt` and
+  `useCurrentRoute`.
   Each route's `element` becomes the new router's component there.
 - `src/navigation/page-link.tsx`: `PageLink`, `Redirect` and the prefetch on intent.
 - `src/navigation/hooks.ts`: `usePageNavigate`, `usePageParams`, `usePageSearch` and `useAddress`.
@@ -164,8 +168,9 @@ then, a swap means running both routers.
   (`global-commands.ts`).
 - One file per region: `shell-providers.tsx` (the providers upstream's pages read),
   `shell-frame.tsx`, `navigation-drawer.tsx`, `sidebar-region.tsx`, `content-panel.tsx` (the
-  card main and the margin sit in), `main-region.tsx`, `margin-region.tsx` and
-  `shell-dialogs.tsx`. Each takes the values it reads. The navigation
+  card main and the margin sit in), `main-region.tsx`, `margin-region.tsx`, `shell-dialogs.tsx`
+  and `shell-background.tsx` (the parts that draw nothing of their own until they open). Each
+  takes the values it reads. The navigation
   drawer is the UI package's sheet from the left (`navigation-drawer-view.tsx`), a chunk that
   loads when it first opens; the global keys still run in it.
 - `sidebar-data.ts` and `sidebar.tsx`: the sidebar's rows, from the reads of

@@ -1,7 +1,6 @@
 import { type ReactNode, type RefObject, useRef } from "react";
 import { PageFallback } from "@/loading/page-skeleton";
 import { useAddress } from "@/navigation/hooks";
-import { useCurrentPage } from "@/pages/index";
 import type { MarginDrawer } from "@/upstream/shell";
 import {
   MD_VIEWPORT_QUERY,
@@ -12,6 +11,7 @@ import {
   useMediaQuery,
 } from "@/upstream/shell";
 import { IssueFrameFallback, IssuePageFallback } from "./page-fallbacks";
+import { useCurrentRoute } from "./page-layout";
 import { useDetailsDrawer } from "./use-details-drawer";
 import { pageIdentityOf, useFocusMainOnPageChange } from "./use-focus-main";
 import { type ShellPreferences, useShellPreferences } from "./use-shell-preferences";
@@ -56,7 +56,7 @@ export function pageFallbackOf(issueFrame: boolean, issue: string | undefined): 
  */
 export function useShellLayout(): ShellLayout {
   const { pathname } = useAddress();
-  const layout = useCurrentPage()?.layout ?? {};
+  const layout = useCurrentRoute()?.layout ?? {};
   const preferences = useShellPreferences();
   const [issuePageChoice] = useIssuePageChoice();
   const issueFrame = issuePageChoice === "outline" && layout.outlineFrame === true;
