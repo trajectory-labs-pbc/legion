@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import type { InboxRow, MyReplyRow } from "@/upstream/contract";
 import { renderApp } from "../../../tests/app";
@@ -78,6 +79,20 @@ describe("the new Inbox's list", () => {
     await screen.findByText("Which release path?");
     expect(screen.queryByLabelText(/^Needs you/)).toBeNull();
     expect(headerOf("Which release path?")?.textContent).toContain("No priority");
+  });
+
+  test("a snoozed ask waits in Later, which starts folded and opens on a click", async () => {
+    await draw("/", [
+      ...ASKS,
+      ask("snoozed", "Ship on Friday?", { snoozed_until: "2099-01-01T00:00:00Z" }),
+    ]);
+    await screen.findByText("Which release path?");
+    const later = [...headers()].find((header) => header.textContent?.includes("Later"));
+    const trigger = later?.querySelector<HTMLElement>('[data-slot="collapsible-trigger"]');
+    expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText("Ship on Friday?")).toBeNull();
+    if (trigger) await userEvent.click(trigger);
+    expect(await screen.findByText("Ship on Friday?")).toBeDefined();
   });
 
   test("an empty list says that nothing needs the reader", async () => {

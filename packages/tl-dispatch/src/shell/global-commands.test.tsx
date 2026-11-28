@@ -143,10 +143,10 @@ describe("the shell's global commands", () => {
       ?.run();
     expect(calls).toEqual(["preview true"]);
     rerender({ inboxPreview: { on: true, turn: (on) => calls.push(`preview ${on}`) } });
-    expect(offered()).toEqual(["Leave the new Inbox preview"]);
+    expect(offered()).toEqual(["Leave the Inbox preview"]);
     appKeymap
       .actions()
-      .find((action) => action.label === "Leave the new Inbox preview")
+      .find((action) => action.label === "Leave the Inbox preview")
       ?.run();
     expect(calls).toEqual(["preview true", "preview false"]);
   });
