@@ -82,13 +82,13 @@ export function ReadFailure({
   /** `default` where the failure stands for a whole page. */
   size?: "default" | "compact";
 }) {
-  const alert = useRef<HTMLDivElement>(null);
-  const retry = useFocusHandOff(() => alert.current);
+  const box = useRef<HTMLDivElement>(null);
+  const retry = useFocusHandOff(() => box.current);
   const refused = fault.refusal !== undefined;
   return (
     <Alert
       className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-      ref={alert}
+      ref={box}
       size={size}
       tabIndex={refused ? -1 : undefined}
       variant="danger"
