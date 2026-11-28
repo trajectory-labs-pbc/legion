@@ -7,7 +7,7 @@ import { useUiPreferences } from "@/stores/ui-preferences";
 /** A sidebar section under a heading that folds it; this browser keeps the fold. */
 export function FoldSection({ children, heading }: { children: ReactNode; heading: string }) {
   const open = !useUiPreferences((s) => s.sidebarFolds[heading]);
-  const setSidebarFold = useUiPreferences((s) => s.setSidebarFold);
+  const toggleSidebarFold = useUiPreferences((s) => s.toggleSidebarFold);
   const bodyId = useId();
   return (
     <section>
@@ -15,7 +15,7 @@ export function FoldSection({ children, heading }: { children: ReactNode; headin
         <Button
           aria-controls={open ? bodyId : undefined}
           aria-expanded={open}
-          onClick={() => setSidebarFold(heading, open)}
+          onClick={() => toggleSidebarFold(heading)}
           size="xs"
           variant="ghost"
         >

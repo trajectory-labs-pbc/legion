@@ -1,9 +1,8 @@
 /** One key of upstream's, by its parameter; a browser that refuses storage keeps nothing. */
-export interface StoredKey<Param> {
+interface StoredKey<Param> {
   /** The name the value is stored under. */
   readonly name: (param: Param) => string;
   get(param: Param): string | undefined;
-  set(param: Param, value: string): void;
   remove(param: Param): void;
 }
 
@@ -20,9 +19,6 @@ function storedKey<Param>(name: (param: Param) => string): StoredKey<Param> {
   return {
     name,
     get: (param) => quietly(() => window.localStorage.getItem(name(param))) ?? undefined,
-    set(param, value) {
-      quietly(() => window.localStorage.setItem(name(param), value));
-    },
     remove(param) {
       quietly(() => window.localStorage.removeItem(name(param)));
     },

@@ -1,39 +1,48 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 /**
  * What a person sets in the UI and expects after a reload: today, the sidebar's folded sections.
  *
- * A change to the stored shape bumps `version` and adds a `migrate` from the older one. That
- * `migrate` throws for a newer version: `persist` would write its result back, and two tabs on two
- * builds would then rewrite the key without end. With no `migrate`, a newer version is left alone.
+ * A change to the stored shape bumps `version` and adds a `migrate` from the older one; that
+ * `migrate` throws for a newer version, or two tabs on two builds rewrite the key without end.
+ * With no `migrate`, a newer version is not read, but this tab's next change writes over it.
  */
 interface UiPreferences {
-  /** Whether each sidebar section is folded, by its heading; a missing heading is open. */
-  sidebarFolds: Readonly<Record<string, boolean>>;
-  setSidebarFold: (heading: string, folded: boolean) => void;
+  /** The headings of the folded sidebar sections. */
+  sidebarFolds: Readonly<Record<string, true>>;
+  toggleSidebarFold: (heading: string) => void;
 }
 
 export const useUiPreferences = create<UiPreferences>()(
   persist(
     (set) => ({
       sidebarFolds: {},
-      setSidebarFold: (heading, folded) =>
-        set((s) =>
-          s.sidebarFolds[heading] === folded
-            ? s
-            : { sidebarFolds: { ...s.sidebarFolds, [heading]: folded } }
-        ),
+      toggleSidebarFold: (heading) =>
+        set(({ sidebarFolds: { [heading]: folded, ...others } }) => ({
+          sidebarFolds: folded ? others : { ...others, [heading]: true },
+        })),
     }),
     {
       name: "tl-dispatch.ui-preferences",
       version: 1,
-      partialize: ({ sidebarFolds }) => ({ sidebarFolds }),
+      // Reads `localStorage` on each call. `persist` catches a refused read, but not a write.
+      storage: createJSONStorage(() => ({
+        getItem: (key) => window.localStorage.getItem(key),
+        setItem: (key, value) => {
+          try {
+            window.localStorage.setItem(key, value);
+          } catch {
+            // Refused storage keeps the state in memory only.
+          }
+        },
+        removeItem: (key) => window.localStorage.removeItem(key),
+      })),
     }
   )
 );
 
-// Another tab's change shows here, so two tabs never write over each other's preferences.
+// Another tab's change shows here, so this tab's next change does not write over it.
 window.addEventListener("storage", (event) => {
   if (event.key === useUiPreferences.persist.getOptions().name) {
     void useUiPreferences.persist.rehydrate();

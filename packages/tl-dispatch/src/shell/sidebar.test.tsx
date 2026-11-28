@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from "@/upstream/contract";
 import { renderApp } from "../../tests/app";
 import { compiledDeclarations } from "../../tests/design-rules";
 import { INBOX_TWO_FOR_READER, inboxReads, unasked } from "../../tests/inbox";
+import { refused, withLocalStorage } from "../../tests/local-storage";
 import { answerShellReads, holdShellReads, json, waitFor } from "../../tests/network";
 import { settle, sleep, tooltipOf } from "../../tests/react";
 import { useGlobalCommands } from "./global-commands";
@@ -327,6 +328,20 @@ describe("the sidebar", () => {
     expect(openOf(first)).toEqual([false, false]);
     for (const view of mounted.splice(0)) view.unmount();
     expect(openOf(mountView(data))).toEqual([false, false]);
+  });
+
+  test("a browser that refuses storage still folds a section", () => {
+    withLocalStorage(refused, () => {
+      const container = mountView({
+        destinations: [],
+        pinnedAgents: readOf([]),
+        inLiveView: false,
+        pinnedIssues: readOf([]),
+        projects: readOf([PROJECT]),
+      });
+      settle(() => foldOf(container, "Projects").click());
+      expect(openOf(container)).toEqual([false]);
+    });
   });
 
   test("while Retry asks again, the failure stays and its Retry shows it is busy", async () => {
