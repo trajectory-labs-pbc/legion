@@ -66,11 +66,14 @@ test("the palette turns the new Inbox on, which stays after a reload, and off ag
   await fold.press("Enter");
   await expect(fold).toHaveAttribute("aria-expanded", "false");
 
+  // The screenshots show the page at rest: no focus ring, and no colour mid-transition.
+  await fold.blur();
   for (const width of WIDTHS) {
     await page.setViewportSize({ height: 900, width });
     for (const colorScheme of SCHEMES) {
       await page.emulateMedia({ colorScheme });
       await page.screenshot({
+        animations: "disabled",
         path: testInfo.outputPath(`inbox-preview-${width}-${colorScheme}.png`),
       });
     }
